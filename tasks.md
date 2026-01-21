@@ -18,14 +18,14 @@
   * [X] uuid
   * [X] bcrypt or argon2
   * [X] jsonwebtoken
-  * [/] dotenv (optional)
+  * [X] dotenv (optional)
 
 ### **1.2 Basic Axum Server**
 
-* [/] Create `main.rs`
-* [ ] Setup Axum router
-* [ ] Setup SQLite connection pool
-* [ ] Start server on `127.0.0.1:3000`
+* [X] Create `main.rs`
+* [X] Setup Axum router
+* [X] Setup SQLite connection pool
+* [X] Start server on `127.0.0.1:3000`
 * [ ] Add health check endpoint:
 
   * [ ] `GET /health → "OK"`
