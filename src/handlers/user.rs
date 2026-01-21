@@ -35,20 +35,23 @@ pub async fn delete(State(pool): State<SqlitePool>) -> Result<Json<Vec<Users>>, 
 
 pub async fn create(
     State(pool): State<SqlitePool>,
-    create_user: Json<CreateUserPayload>,
+    Json(create_user): Json<CreateUserPayload>,
 ) -> Result<Json<CreateUserResponse>, AppError> {
-    let user_name = create_user.user_name.clone();
-    let user_password = create_user.user_password.clone();
-    let user_role = create_user.user_role.to_lowercase();
     let user_id = nanoid!();
 
-    sqlx::query(
-        "INSERT INTO users (user_id, user_name, user_password, user_role) VALUES ($1, $2, $3, $4)",
+    let CreateUserPayload {
+        user_name,
+        user_password,
+        user_role,
+    } = create_user;
+
+    sqlx::query!(
+        "INSERT INTO users (user_id, user_name, user_password, user_role) VALUES (?, ?, ?, ?)",
+        user_id,
+        user_name,
+        user_password,
+        user_role
     )
-    .bind(user_id)
-    .bind(user_name)
-    .bind(user_password)
-    .bind(user_role)
     .execute(&pool)
     .await
     .map_err(|e| {
