@@ -1,0 +1,16 @@
+[package]
+name = "flinderax"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+argon2 = "0.5.3"
+axum = "0.8.8"
+bacon = "3.22.0"
+dotenv = "0.15.0"
+jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
+serde = "1.0.228"
+serde_json = "1.0.149"
+sqlx = { version = "0.8.6", features = ["sqlite"] }
+tokio = { version = "1.49.0", features = ["full"] }
+uuid = "1.19.0"
