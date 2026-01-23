@@ -40,6 +40,7 @@ async fn main() -> Result<(), sqlx::Error> {
                     .on_response(DefaultOnResponse::new().level(Level::INFO)),
             ),
         );
+    info!("Running Server!");
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
