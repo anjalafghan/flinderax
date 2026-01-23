@@ -5,9 +5,9 @@ use std::env;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{info, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-mod models;
-
 mod handlers;
+mod middleware;
+mod models;
 mod routes;
 
 #[tokio::main]

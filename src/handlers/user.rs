@@ -36,7 +36,7 @@ pub async fn login(
     dotenvy::dotenv().map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let user = sqlx::query!(
-        "SELECT user_id, user_name, user_password FROM users WHERE user_name = ? ",
+        "SELECT user_id, user_name, user_password, user_role FROM users WHERE user_name = ? ",
         login_payload.user_name
     )
     .fetch_optional(&pool)
@@ -55,11 +55,41 @@ pub async fn login(
 
     let _ = verify_user(user.user_password, login_payload.user_password);
 
-    let token = get_paseto_token()?;
+    let user_id = user
+        .user_id
+        .as_deref()
+        .ok_or(AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Error getting user id".to_string(),
+        ))?
+        .to_string();
+    let token = get_paseto_token(&user_id, user.user_role)?;
 
     Ok(Json(LoginResponse {
         access_token: token,
     }))
+}
+
+fn get_paseto_token(user_id: &str, user_role: String) -> Result<String, AppError> {
+    let key_str = std::env::var("PASETO_KEY")
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let key_bytes = general_purpose::STANDARD
+        .decode(key_str)
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let key = PasetoSymmetricKey::<V4, Local>::from(Key::from(key_bytes.as_slice()));
+
+    let role_claim = CustomClaim::try_from(("role", user_role.as_str()))
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let token = PasetoBuilder::<V4, Local>::default()
+        .set_claim(SubjectClaim::from(user_id))
+        .set_claim(role_claim)
+        .build(&key)
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(token)
 }
 
 fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
@@ -77,23 +107,6 @@ fn verify_user(database_password: String, user_input_password: String) -> Result
             )
         })?;
     Ok(())
-}
-
-fn get_paseto_token() -> Result<String, AppError> {
-    let key_str = std::env::var("PASETO_KEY")
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let key_bytes = general_purpose::STANDARD
-        .decode(key_str)
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let key = PasetoSymmetricKey::<V4, Local>::from(Key::from(key_bytes.as_slice()));
-
-    let token = PasetoBuilder::<V4, Local>::default()
-        .build(&key)
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(token)
 }
 
 pub async fn delete(State(pool): State<SqlitePool>) -> Result<Json<Vec<Users>>, AppError> {
