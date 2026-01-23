@@ -34,3 +34,14 @@ pub struct GetUsers {
 pub struct CreateUserResponse {
     pub status: bool,
 }
+
+#[derive(Deserialize)]
+pub struct LoginPayload {
+    pub user_name: String,
+    pub user_password: String,
+}
+
+#[derive(Serialize)]
+pub struct LoginResponse {
+    pub access_token: String,
+}

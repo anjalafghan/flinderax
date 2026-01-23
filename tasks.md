@@ -26,7 +26,7 @@
 * [X] Setup Axum router
 * [X] Setup SQLite connection pool
 * [X] Start server on `127.0.0.1:3000`
-* [ ] Add health check endpoint:
+* [X] Add health check endpoint:
 
   * [ ] `GET /health → "OK"`
 
@@ -36,17 +36,17 @@
 
 ### **2.1 SQLite Setup**
 
-* [ ] Create `db.sqlite`
-* [ ] Install `sqlx-cli`
-* [ ] Create `migrations/` folder
+* [X] Create `db.sqlite`
+* [X] Install `sqlx-cli`
+* [X] Create `migrations/` folder
 
 ### **2.2 Create Tables (Migration #1)**
 
-* [ ] Create `users` table
-* [ ] Create `cards` table
-* [ ] Create `card_events` table
-* [ ] Create `card_running_state` table
-* [ ] Run `sqlx migrate run`
+* [X] Create `users` table
+* [X] Create `cards` table
+* [X] Create `card_events` table
+* [X] Create `card_running_state` table
+* [X] Run `sqlx migrate run`
 
 ---
 

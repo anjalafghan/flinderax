@@ -1,9 +1,9 @@
-use axum::{Router, routing::get};
+use axum::{routing::get, Router};
 use sqlx::SqlitePool;
 use std::env;
 
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{Level, info};
+use tracing::{info, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod models;
 
