@@ -8,7 +8,6 @@ use argon2::{
     Argon2,
 };
 use axum::{
-    body::Bytes,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},

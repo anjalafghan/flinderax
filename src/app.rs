@@ -9,11 +9,11 @@ use axum::{
 };
 use rusty_paseto::{
     core::{Local, V4},
-    prelude::{PasetoParser, SubjectClaim},
+    prelude::PasetoParser,
 };
 use sqlx::SqlitePool;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{error, info, Level};
+use tracing::{error, Level};
 
 use crate::routes;
 

@@ -1,18 +1,11 @@
-use crate::models::{CreateUserPayload, CreateUserResponse, GetUserResponse, GetUsers, Users};
-use base64::{engine::general_purpose, Engine};
+use crate::models::{GetUserResponse, GetUsers};
 
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Argon2,
-};
 use axum::{
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
-use nanoid::nanoid;
-use rusty_paseto::prelude::*;
 use sqlx::SqlitePool;
 use tracing::error;
 
@@ -22,28 +15,6 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         (self.0, self.1).into_response()
     }
-}
-
-fn get_paseto_token(user_id: &str, user_role: String) -> Result<String, AppError> {
-    let key_str = std::env::var("PASETO_KEY")
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let key_bytes = general_purpose::STANDARD
-        .decode(key_str)
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let key = PasetoSymmetricKey::<V4, Local>::from(Key::from(key_bytes.as_slice()));
-
-    let role_claim = CustomClaim::try_from(("role", user_role.as_str()))
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let token = PasetoBuilder::<V4, Local>::default()
-        .set_claim(SubjectClaim::from(user_id))
-        .set_claim(role_claim)
-        .build(&key)
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(token)
 }
 
 pub async fn delete(

@@ -74,11 +74,11 @@
 
 ### **3.3 Auth Middleware**
 
-* [ ] Create Axum middleware
-* [ ] Read `Authorization: Bearer <token>`
-* [ ] Validate JWT
-* [ ] Extract `user_id`
-* [ ] Pass `user_id` to handlers via `Extension`
+* [/] Create Axum middleware
+* [/] Read `Authorization: Bearer <token>`
+* [/] Validate JWT
+* [X] Extract `user_id`
+* [X] Pass `user_id` to handlers via `Extension`
 
 ---
 

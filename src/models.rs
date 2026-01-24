@@ -45,3 +45,16 @@ pub struct LoginPayload {
 pub struct LoginResponse {
     pub access_token: String,
 }
+
+#[derive(Deserialize)]
+pub struct CreateCardPayload {
+    pub card_name: String,
+    pub card_bank: String,
+    pub card_primary_color: (u8, u8, u8),
+    pub card_secondary_color: (u8, u8, u8),
+}
+#[derive(Serialize)]
+pub struct CreateCardResponse {
+    pub card_id: String,
+    pub status: bool,
+}
