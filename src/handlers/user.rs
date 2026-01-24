@@ -1,13 +1,8 @@
-use dotenvy;
-
-use crate::models::{
-    CreateUserPayload, CreateUserResponse, GetUserResponse, GetUsers, LoginPayload, LoginResponse,
-    Users,
-};
+use crate::models::{CreateUserPayload, CreateUserResponse, GetUserResponse, GetUsers, Users};
 use base64::{engine::general_purpose, Engine};
 
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
 };
 use axum::{
@@ -27,47 +22,6 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         (self.0, self.1).into_response()
     }
-}
-
-pub async fn login(
-    State(pool): State<SqlitePool>,
-    Json(login_payload): Json<LoginPayload>,
-) -> Result<Json<LoginResponse>, AppError> {
-    dotenvy::dotenv().map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let user = sqlx::query!(
-        "SELECT user_id, user_name, user_password, user_role FROM users WHERE user_name = ? ",
-        login_payload.user_name
-    )
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let user = match user {
-        Some(u) => u,
-        None => {
-            return Err(AppError(
-                StatusCode::UNAUTHORIZED,
-                "INVALID USERNAME or password".into(),
-            ))
-        }
-    };
-
-    let _ = verify_user(user.user_password, login_payload.user_password);
-
-    let user_id = user
-        .user_id
-        .as_deref()
-        .ok_or(AppError(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Error getting user id".to_string(),
-        ))?
-        .to_string();
-    let token = get_paseto_token(&user_id, user.user_role)?;
-
-    Ok(Json(LoginResponse {
-        access_token: token,
-    }))
 }
 
 fn get_paseto_token(user_id: &str, user_role: String) -> Result<String, AppError> {
@@ -92,75 +46,20 @@ fn get_paseto_token(user_id: &str, user_role: String) -> Result<String, AppError
     Ok(token)
 }
 
-fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
-    let parsed_hash = PasswordHash::new(&database_password)
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let argon2 = Argon2::default();
-
-    argon2
-        .verify_password(user_input_password.as_bytes(), &parsed_hash)
-        .map_err(|_| {
-            AppError(
-                StatusCode::UNAUTHORIZED,
-                "Invalid username or password".to_string(),
-            )
-        })?;
-    Ok(())
-}
-
-pub async fn delete(State(pool): State<SqlitePool>) -> Result<Json<Vec<Users>>, AppError> {
-    let users = sqlx::query_as::<_, Users>("SELECT user_id FROM users")
-        .fetch_all(&pool)
-        .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(users))
-}
-
-pub async fn create(
+pub async fn delete(
     State(pool): State<SqlitePool>,
-    Json(create_user): Json<CreateUserPayload>,
-) -> Result<Json<CreateUserResponse>, AppError> {
-    let user_id = nanoid!();
-
-    let CreateUserPayload {
-        user_name,
-        user_password,
-        user_role,
-    } = create_user;
-
-    let password_hash = get_password_hash(user_password)?;
-
-    sqlx::query!(
-        "INSERT INTO users (user_id, user_name, user_password, user_role) VALUES (?, ?, ?, ?)",
-        user_id,
-        user_name,
-        password_hash,
-        user_role
-    )
-    .execute(&pool)
-    .await
-    .map_err(|e| {
-        error!("Failed to insert user {}", e);
-        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
-
-    Ok(Json(CreateUserResponse { status: true }))
-}
-
-fn get_password_hash(user_password: String) -> Result<String, AppError> {
-    let argon2 = Argon2::default();
-    let salt = SaltString::generate(&mut OsRng);
-    let password_hash = argon2
-        .hash_password(user_password.as_bytes(), &salt)
+    user_name: String,
+) -> Result<Json<bool>, AppError> {
+    sqlx::query!("DELETE FROM users WHERE user_name  = ?", user_name)
+        .execute(&pool)
+        .await
         .map_err(|e| {
-            error!("Error hashing password {}", e);
+            error!("Failed to insert user {}", e);
             AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        })?
-        .to_string();
-
-    Ok(password_hash)
+        })?;
+    Ok(Json(true))
 }
+
 pub async fn get_user(
     State(pool): State<SqlitePool>,
 ) -> Result<Json<Vec<GetUserResponse>>, AppError> {

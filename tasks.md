@@ -54,23 +54,23 @@
 
 ### **3.1 User Registration**
 
-* [ ] Create endpoint: `POST /login/create/`
-* [ ] Parse JSON body (`user_name`, `password`)
-* [ ] Hash password
-* [ ] Generate `user_id = UUID`
-* [ ] Insert into `users` table
-* [ ] Return `201 Created`
+* [X] Create endpoint: `POST /login/create/`
+* [X] Parse JSON body (`user_name`, `password`)
+* [X] Hash password
+* [X] Generate `user_id = UUID`
+* [X] Insert into `users` table
+* [X] Return `201 Created`
 
 ### **3.2 User Login**
 
-* [ ] Create endpoint: `POST /login/login`
-* [ ] Fetch user by `user_name`
-* [ ] Verify password hash
-* [ ] Generate JWT with:
+* [X] Create endpoint: `POST /login/login`
+* [X] Fetch user by `user_name`
+* [X] Verify password hash
+* [X] Generate JWT with:
 
-  * [ ] user_id
-  * [ ] user_role
-* [ ] Return JWT token in response
+  * [X] user_id
+  * [X] user_role
+* [X] Return JWT token in response
 
 ### **3.3 Auth Middleware**
 

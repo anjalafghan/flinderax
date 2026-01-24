@@ -1,10 +1,9 @@
-use axum::{routing::get, Router};
 use sqlx::SqlitePool;
 use std::env;
 
-use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{info, Level};
+use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+mod app;
 mod handlers;
 mod middleware;
 mod models;
@@ -25,21 +24,13 @@ async fn main() -> Result<(), sqlx::Error> {
     dotenvy::dotenv().ok();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL missing");
+    info!("Database url is present {}", database_url);
     let pool = SqlitePool::connect(&database_url).await?;
     sqlx::migrate!().run(&pool).await?;
     info!("Database connected successfully");
 
     info!("Running migrations");
-    let app = Router::new()
-        .route("/", get(|| async { "Hello, World!" }))
-        .nest(
-            "/user",
-            routes::user::routes(pool.clone()).layer(
-                TraceLayer::new_for_http()
-                    .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-                    .on_response(DefaultOnResponse::new().level(Level::INFO)),
-            ),
-        );
+    let app = app::build_router(pool.clone());
     info!("Running Server!");
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
