@@ -13,7 +13,7 @@ use rusty_paseto::{
 };
 use sqlx::SqlitePool;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{error, Level};
+use tracing::{error, info, Level};
 
 use crate::routes;
 
@@ -38,6 +38,16 @@ pub fn build_router(pool: SqlitePool) -> Router {
                     .on_response(DefaultOnResponse::new().level(Level::INFO)),
             ),
         )
+        .nest(
+            "/card",
+            routes::card::routes(pool.clone())
+                .layer(
+                    TraceLayer::new_for_http()
+                        .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                        .on_response(DefaultOnResponse::new().level(Level::INFO)),
+                )
+                .layer(middleware::from_fn(token_validator_middleware)),
+        )
 }
 
 async fn token_validator_middleware(
@@ -48,8 +58,7 @@ async fn token_validator_middleware(
     match get_token(&headers) {
         Some(token) => {
             let (user_id, role) = parse_token(token)?;
-            request.extensions_mut().insert(user_id);
-            request.extensions_mut().insert(role);
+            request.extensions_mut().insert((user_id, role));
             let response = next.run(request).await;
             Ok(response)
         }
@@ -71,8 +80,7 @@ pub async fn token_validator_auth_middleware(
                     "User is not an admin".to_string(),
                 ));
             }
-            request.extensions_mut().insert(user_id);
-            request.extensions_mut().insert(role);
+            request.extensions_mut().insert((user_id, role));
             let response = next.run(request).await;
             Ok(response)
         }
@@ -107,7 +115,7 @@ fn parse_token(token: &str) -> Result<(String, String), AppError> {
                     )
                 })?
                 .to_string();
-
+            info!("USER ID and ROLE {} {} ", user_id, role);
             Ok((user_id, role))
         }
         Err(err) => {

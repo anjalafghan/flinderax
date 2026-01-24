@@ -7,7 +7,7 @@ pub fn routes(pool: SqlitePool) -> Router {
     Router::new()
         .route("/create", post(card::create_card))
         .route("/update", post(card::update))
-        .route("/delete", post(card::delete))
+        .route("/delete", post(card::delete_card))
         .route("/get", get(card::get_card))
         .with_state(pool)
 }

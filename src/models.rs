@@ -58,3 +58,13 @@ pub struct CreateCardResponse {
     pub card_id: String,
     pub status: bool,
 }
+
+#[derive(Deserialize)]
+pub struct DeleteCardPayload {
+    pub card_id: String,
+}
+#[derive(Serialize)]
+pub struct DeleteCardResponse {
+    pub card_id: String,
+    pub status: bool,
+}
