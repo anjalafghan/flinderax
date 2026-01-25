@@ -153,21 +153,56 @@ pub async fn insert_transaction(
     Extension((_user_id, _role)): Extension<(String, String)>,
     Json(insert_transaction): Json<InsertTransactionPayload>
 ) -> Result<Json<InsertTransactionResponse>, AppError> {
-
     let transaction_id = nanoid!();
+
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| {
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+
         
-    sqlx::query!("INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES  (?, ?, ?)",
+    sqlx::query!(
+        "INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES (?, ?, ?)",
         transaction_id,
         insert_transaction.card_id,
         insert_transaction.amount_due,
-        )
-        .execute(&pool)
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    
+    let result = sqlx::query!(
+        "UPDATE card_running_state
+         SET last_delta = ? - last_total_due,
+             last_total_due = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE card_id = ?
+           AND ? >= last_total_due
+         RETURNING last_delta",
+        insert_transaction.amount_due,
+        insert_transaction.amount_due,
+        insert_transaction.card_id,
+        insert_transaction.amount_due
+    )
+    .fetch_one(&mut *tx)  
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    
+    let last_delta = result.last_delta; 
+
+    tx.commit()
         .await
         .map_err(|e| {
-            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        } )?;
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
 
-    Ok(Json(InsertTransactionResponse{transaction_id,status:true}))
-
-
+    
+    Ok(Json(InsertTransactionResponse {
+        transaction_id,
+        amount_due: last_delta as f32,
+        status: true
+    }))
 }

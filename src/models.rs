@@ -88,5 +88,6 @@ pub struct InsertTransactionPayload {
 #[derive(Serialize)]
 pub struct InsertTransactionResponse {
     pub transaction_id: String,
+    pub amount_due: f32,
     pub status: bool,
 }
