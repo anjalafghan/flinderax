@@ -2,13 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use sqlx::FromRow;
 
-#[derive(FromRow, Debug, serde::Serialize)]
-pub struct Users {
-    user_id: String,
-    user_name: String,
-    user_role: String,
-}
-
 #[derive(serde::Deserialize, Clone)]
 pub struct CreateUserPayload {
     pub user_name: String,
@@ -54,7 +47,7 @@ pub struct CreateCardPayload {
     pub card_secondary_color: (u8, u8, u8),
 }
 #[derive(Serialize)]
-pub struct CreateCardResponse {
+pub struct CardResponse {
     pub card_id: String,
     pub status: bool,
 }
@@ -63,8 +56,37 @@ pub struct CreateCardResponse {
 pub struct DeleteCardPayload {
     pub card_id: String,
 }
-#[derive(Serialize)]
-pub struct DeleteCardResponse {
+
+#[derive(Deserialize)]
+pub struct UpdateCardPayload {
     pub card_id: String,
+    pub card_name: String,
+    pub card_bank: String,
+    pub card_primary_color: (u8, u8, u8),
+    pub card_secondary_color: (u8, u8, u8),
+}
+
+#[derive(Deserialize)]
+pub struct GetCardForUser {
+    pub card_id: String,
+}
+
+#[derive(Serialize)]
+pub struct ShowGetCardResponse {
+    pub card_id: String,
+    pub card_name: String,
+    pub card_bank: String,
+    pub card_primary_color: (u8, u8, u8),
+    pub card_secondary_color: (u8, u8, u8),
+}
+#[derive(Deserialize)]
+pub struct InsertTransactionPayload {
+    pub card_id: String,
+    pub amount_due: f32,
+}
+
+#[derive(Serialize)]
+pub struct InsertTransactionResponse {
+    pub transaction_id: String,
     pub status: bool,
 }

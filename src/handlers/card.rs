@@ -7,15 +7,15 @@ use nanoid::nanoid;
 use sqlx::SqlitePool;
 
 use crate::{
-    handlers::{color, common::AppError},
-    models::{CreateCardPayload, CreateCardResponse, DeleteCardPayload, DeleteCardResponse},
+    handlers::{color::{self,  pack, unpack}, common::AppError},
+    models::{CardResponse, CreateCardPayload, DeleteCardPayload, GetCardForUser, InsertTransactionPayload, InsertTransactionResponse, ShowGetCardResponse, UpdateCardPayload  },
 };
 
 pub async fn create_card(
     State(pool): State<SqlitePool>,
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(card_details): Json<CreateCardPayload>,
-) -> Result<Json<CreateCardResponse>, AppError> {
+) -> Result<Json<CardResponse>, AppError> {
 
     let card_id = nanoid!();
     let primary_color = color::pack(card_details.card_primary_color);
@@ -34,20 +34,94 @@ pub async fn create_card(
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(Json(CreateCardResponse{
+    Ok(Json(CardResponse{
         card_id,
         status : true
     }))
 }
 
-pub async fn update() {}
-pub async fn get_card() {}
+pub async fn update(State(pool): State<SqlitePool>, Extension((user_id, _role)): Extension<(String, String)>, Json(update_card_details):Json<UpdateCardPayload> ) -> Result<Json<CardResponse>, AppError> {
+
+    let card_primary_color = pack(update_card_details.card_primary_color);
+    let card_secondary_color = pack(update_card_details.card_secondary_color);
+    sqlx::query!(
+        "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ? WHERE  card_id = ? AND user_id = ?", 
+        update_card_details.card_name,
+        update_card_details.card_bank,
+        card_primary_color,
+        card_secondary_color ,
+        update_card_details.card_id,
+        user_id
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e|{
+            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })?;
+
+    Ok(Json(CardResponse { card_id: update_card_details.card_id, status: true }))
+}
+
+pub async fn get_card(
+    State(pool): State<SqlitePool>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+    Json(get_card): Json<GetCardForUser>
+) -> Result<Json<ShowGetCardResponse>, AppError> {
+    let card = sqlx::query!(
+        "SELECT card_id, card_name, card_bank, card_primary_color, card_secondary_color FROM cards WHERE card_id = ? AND user_id = ?",
+        get_card.card_id,
+        user_id
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or_else(|| AppError(
+        StatusCode::NOT_FOUND,
+        "Card not found or you don't have permission to view it".to_string()
+    ))?;
+
+    Ok(Json(ShowGetCardResponse {
+        card_id: card.card_id.unwrap(),
+        card_name: card.card_name,
+        card_bank: card.card_bank,
+        card_primary_color: unpack(card.card_primary_color),
+        card_secondary_color: unpack(card.card_secondary_color),
+    }))
+}
+
+
+pub async fn get_all_cards(
+    State(pool): State<SqlitePool>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+) -> Result<Json<Vec<ShowGetCardResponse>>, AppError> {  // Return Vec wrapped in Json
+    let cards = sqlx::query!(
+        "SELECT card_id, card_name, card_bank, card_primary_color, card_secondary_color FROM cards WHERE user_id = ?",
+        user_id
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // Map database rows to response objects
+    let response: Vec<ShowGetCardResponse> = cards
+        .into_iter()
+        .map(|card| ShowGetCardResponse {
+            card_id: card.card_id.unwrap(),
+            card_name: card.card_name,
+            card_bank: card.card_bank,
+            card_primary_color: unpack(card.card_primary_color),
+            card_secondary_color: unpack(card.card_secondary_color),
+        })
+        .collect();
+
+    Ok(Json(response))
+}
 
 pub async fn delete_card(
     State(pool): State<SqlitePool>,
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(card_details): Json<DeleteCardPayload>,
-) -> Result<Json<DeleteCardResponse>, AppError> {
+) -> Result<Json<CardResponse>, AppError> {
 
     let card_id =  card_details.card_id;
 
@@ -67,8 +141,33 @@ pub async fn delete_card(
         ));
     }
 
-    Ok(Json(DeleteCardResponse{
+    Ok(Json(CardResponse{
         card_id,
         status : true
     }))
+}
+
+
+pub async fn insert_transaction(
+    State(pool): State<SqlitePool>,
+    Extension((_user_id, _role)): Extension<(String, String)>,
+    Json(insert_transaction): Json<InsertTransactionPayload>
+) -> Result<Json<InsertTransactionResponse>, AppError> {
+
+    let transaction_id = nanoid!();
+        
+    sqlx::query!("INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES  (?, ?, ?)",
+        transaction_id,
+        insert_transaction.card_id,
+        insert_transaction.amount_due,
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        } )?;
+
+    Ok(Json(InsertTransactionResponse{transaction_id,status:true}))
+
+
 }
