@@ -93,9 +93,12 @@ export default function AuthPage() {
                     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-gray-900 to-black dark:from-gray-100 dark:to-white text-white dark:text-gray-900 shadow-xl rotate-3">
                         <Wallet className="h-8 w-8" />
                     </div>
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Flinderax</h1>
-                        <p className="text-muted-foreground font-medium">Control your wealth.</p>
+                    <div className="space-y-1">
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white opacity-80 uppercase tracking-[0.2em]">Flinderax</h1>
+                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white leading-none">Your real balance.</h2>
+                        <p className="text-muted-foreground font-medium text-lg leading-snug max-w-sm mx-auto pt-2">
+                            Separate what you’ve spent from what you can spend.
+                        </p>
                     </div>
                 </div>
 
