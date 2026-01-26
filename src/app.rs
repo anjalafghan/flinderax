@@ -89,8 +89,8 @@ pub async fn token_validator_auth_middleware(
 }
 
 fn get_token(headers: &HeaderMap) -> Option<&str> {
-    let token = headers.get("Authorization").unwrap().to_str().unwrap();
-    Some(token)
+    let header_value = headers.get("Authorization")?.to_str().ok()?;
+    header_value.strip_prefix("Bearer ").map(|t| t.trim()).or(Some(header_value))
 }
 
 fn parse_token(token: &str) -> Result<(String, String), AppError> {

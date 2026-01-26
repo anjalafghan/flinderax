@@ -78,6 +78,8 @@ pub struct ShowGetCardResponse {
     pub card_bank: String,
     pub card_primary_color: (u8, u8, u8),
     pub card_secondary_color: (u8, u8, u8),
+    pub last_total_due: Option<f64>,
+    pub last_delta: Option<f64>,
 }
 #[derive(Deserialize)]
 pub struct InsertTransactionPayload {
@@ -90,4 +92,16 @@ pub struct InsertTransactionResponse {
     pub transaction_id: String,
     pub amount_due: f32,
     pub status: bool,
+}
+
+#[derive(Deserialize, Serialize, FromRow)]
+pub struct CardTransactionHistory {
+    pub transaction_id: String,
+    pub total_due_input: f64,
+    pub timestamp: String,
+}
+
+#[derive(Deserialize)]
+pub struct GetHistoryPayload {
+    pub card_id: String,
 }

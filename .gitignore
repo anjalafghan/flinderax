@@ -1,5 +1,37 @@
+# Rust
 /target
-.idea
-.sqlx
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Node.js
+node_modules/
+.npm
+.node_repl_history
+*.tgz
+
+# Web / Build
+web/dist/
+web/dist
+dist/
+build/
+.cache/
+.parcel-cache/
+
+# Environment
 .env
+.env.*
+!.env.example
 .DS_Store
+
+# IDEs
+.idea
+.vscode
+*.swp
+*.iml
+
+# SQLx
+.sqlx
+flinderax.db
+flinderax.db-shm
+flinderax.db-wal

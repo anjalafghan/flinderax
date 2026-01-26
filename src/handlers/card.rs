@@ -94,7 +94,11 @@ pub async fn get_card(
     Json(get_card): Json<GetCardForUser>
 ) -> Result<Json<ShowGetCardResponse>, AppError> {
     let card = sqlx::query!(
-        "SELECT card_id, card_name, card_bank, card_primary_color, card_secondary_color FROM cards WHERE card_id = ? AND user_id = ?",
+        "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color,
+                crs.last_total_due, crs.last_delta
+         FROM cards c
+         LEFT JOIN card_running_state crs ON c.card_id = crs.card_id
+         WHERE c.card_id = ? AND c.user_id = ?",
         get_card.card_id,
         user_id
     )
@@ -112,6 +116,8 @@ pub async fn get_card(
         card_bank: card.card_bank,
         card_primary_color: unpack(card.card_primary_color),
         card_secondary_color: unpack(card.card_secondary_color),
+        last_total_due: Some(card.last_total_due),
+        last_delta: Some(card.last_delta),
     }))
 }
 
@@ -121,7 +127,11 @@ pub async fn get_all_cards(
     Extension((user_id, _role)): Extension<(String, String)>,
 ) -> Result<Json<Vec<ShowGetCardResponse>>, AppError> {  // Return Vec wrapped in Json
     let cards = sqlx::query!(
-        "SELECT card_id, card_name, card_bank, card_primary_color, card_secondary_color FROM cards WHERE user_id = ?",
+        "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color,
+                crs.last_total_due, crs.last_delta
+         FROM cards c
+         LEFT JOIN card_running_state crs ON c.card_id = crs.card_id
+         WHERE c.user_id = ?",
         user_id
     )
     .fetch_all(&pool)
@@ -136,6 +146,8 @@ pub async fn get_all_cards(
             card_bank: card.card_bank,
             card_primary_color: unpack(card.card_primary_color),
             card_secondary_color: unpack(card.card_secondary_color),
+            last_total_due: card.last_total_due,
+            last_delta: card.last_delta,
         })
         .collect();
 
@@ -233,9 +245,35 @@ pub async fn insert_transaction(
     })?;
 
     
+    
     Ok(Json(InsertTransactionResponse {
         transaction_id,
         amount_due: last_delta as f32,
         status: true
     }))
+}
+
+
+pub async fn get_history(
+    State(pool): State<SqlitePool>,
+    Extension((_user_id, _role)): Extension<(String, String)>,
+    Json(payload): Json<crate::models::GetHistoryPayload>,
+) -> Result<Json<Vec<crate::models::CardTransactionHistory>>, AppError> {
+    let history = sqlx::query_as!(
+        crate::models::CardTransactionHistory,
+        r#"SELECT 
+            transaction_id as "transaction_id!", 
+            total_due_input as "total_due_input!: f64", 
+            timestamp as "timestamp!: String"
+           FROM card_events 
+           WHERE card_id = ?
+           ORDER BY timestamp DESC"#,
+        payload.card_id
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+
+    Ok(Json(history))
 }
