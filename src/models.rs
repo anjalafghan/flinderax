@@ -1,6 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use sqlx::FromRow;
+use sqlx::SqlitePool;
+use redis::aio::ConnectionManager;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub db: SqlitePool,
+    pub redis: Option<ConnectionManager>,
+}
 
 #[derive(serde::Deserialize, Clone)]
 pub struct CreateUserPayload {
@@ -71,7 +79,7 @@ pub struct GetCardForUser {
     pub card_id: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ShowGetCardResponse {
     pub card_id: String,
     pub card_name: String,

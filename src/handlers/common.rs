@@ -1,6 +1,4 @@
-use dotenvy;
-
-use crate::models::{CreateUserPayload, CreateUserResponse, LoginPayload, LoginResponse};
+use crate::models::{AppState, CreateUserPayload, CreateUserResponse, LoginPayload, LoginResponse};
 use base64::{engine::general_purpose, Engine};
 
 use argon2::{
@@ -15,7 +13,6 @@ use axum::{
 };
 use nanoid::nanoid;
 use rusty_paseto::prelude::*;
-use sqlx::SqlitePool;
 use tracing::error;
 
 pub struct AppError(pub StatusCode, pub String);
@@ -27,7 +24,7 @@ impl IntoResponse for AppError {
 }
 
 pub async fn login(
-    State(pool): State<SqlitePool>,
+    State(state): State<AppState>,
     Json(login_payload): Json<LoginPayload>,
 ) -> Result<Json<LoginResponse>, AppError> {
     dotenvy::dotenv().map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -36,7 +33,7 @@ pub async fn login(
         "SELECT user_id, user_name, user_password, user_role FROM users WHERE user_name = ? ",
         login_payload.user_name
     )
-    .fetch_optional(&pool)
+    .fetch_optional(&state.db)
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -111,7 +108,7 @@ pub fn get_key() -> Result<PasetoSymmetricKey<V4, Local>, AppError> {
 }
 
 pub async fn register(
-    State(pool): State<SqlitePool>,
+    State(state): State<AppState>,
     Json(create_user): Json<CreateUserPayload>,
 ) -> Result<Json<CreateUserResponse>, AppError> {
     let user_id = nanoid!();
@@ -131,7 +128,7 @@ pub async fn register(
         password_hash,
         user_role
     )
-    .execute(&pool)
+    .execute(&state.db)
     .await
     .map_err(|e| {
         error!("Failed to insert user {}", e);

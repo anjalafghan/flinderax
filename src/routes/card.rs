@@ -1,9 +1,8 @@
-use axum::{routing::get, routing::post, Router};
-use sqlx::SqlitePool;
-
+use axum::{routing::{get, post}, Router};
+use crate::models::AppState;
 use crate::handlers::card;
 
-pub fn routes(pool: SqlitePool) -> Router {
+pub fn routes(state: AppState) -> Router {
     Router::new()
         .route("/create", post(card::create_card))
         .route("/update", post(card::update))
@@ -12,5 +11,5 @@ pub fn routes(pool: SqlitePool) -> Router {
         .route("/get_all_cards", get(card::get_all_cards))
         .route("/insert_transaction", post(card::insert_transaction))
         .route("/history", post(card::get_history))
-        .with_state(pool)
+        .with_state(state)
 }

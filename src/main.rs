@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use std::env;
 
-use tracing::info;
+use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod app;
 mod handlers;
@@ -30,7 +30,37 @@ async fn main() -> Result<(), sqlx::Error> {
     info!("Database connected successfully");
 
     info!("Running migrations");
-    let app = app::build_router(pool.clone());
+    info!("Initializing Redis...");
+    let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    
+    let redis_manager = match redis::Client::open(redis_url) {
+        Ok(client) => {
+            match tokio::time::timeout(
+                std::time::Duration::from_secs(2),
+                client.get_connection_manager()
+            ).await {
+                Ok(Ok(manager)) => {
+                    info!("Redis connected successfully");
+                    Some(manager)
+                }
+                _ => {
+                    error!("Redis connection timed out or failed. Running without cache.");
+                    None
+                }
+            }
+        }
+        Err(e) => {
+            error!("Failed to open Redis client: {}. Running without cache.", e);
+            None
+        }
+    };
+
+    let state = models::AppState {
+        db: pool.clone(),
+        redis: redis_manager,
+    };
+
+    let app = app::build_router(state);
     info!("Running Server!");
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

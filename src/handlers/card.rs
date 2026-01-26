@@ -1,31 +1,29 @@
 use axum::{
     extract::State,
-    http::{ StatusCode},
+    http::StatusCode,
     Extension, Json,
 };
 use nanoid::nanoid;
-use sqlx::SqlitePool;
-use tracing::error;
+use tracing::{error, info};
+use redis::AsyncCommands;
 
 use crate::{
-    handlers::{color::{self,  pack, unpack}, common::AppError},
-    models::{CardResponse, CreateCardPayload, DeleteCardPayload, GetCardForUser, InsertTransactionPayload, InsertTransactionResponse, ShowGetCardResponse, UpdateCardPayload  },
+    handlers::{color::{self, pack, unpack}, common::AppError},
+    models::{AppState, CardResponse, CreateCardPayload, DeleteCardPayload, GetCardForUser, InsertTransactionPayload, InsertTransactionResponse, ShowGetCardResponse, UpdateCardPayload},
 };
 
 pub async fn create_card(
-    State(pool): State<SqlitePool>,
+    State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(card_details): Json<CreateCardPayload>,
 ) -> Result<Json<CardResponse>, AppError> {
-
-
-    let mut tx = pool
+    let mut tx = state.db
         .begin()
         .await
         .map_err(|e| {
             error!("Error setting transaction check {} ", e);
-        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
+            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })?;
 
     let card_id = nanoid!();
     let primary_color = color::pack(card_details.card_primary_color);
@@ -34,7 +32,7 @@ pub async fn create_card(
     sqlx::query!(
         "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color) VALUES (?, ?, ?, ?, ?, ?)",
         card_id,
-        user_id, 
+        user_id,
         card_details.card_name,
         card_details.card_bank,
         primary_color,
@@ -44,52 +42,65 @@ pub async fn create_card(
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    sqlx::query!("INSERT INTO card_running_state (card_id, last_total_due, last_delta) VALUES (?, ?, ?)"
-        ,card_id,
+    sqlx::query!("INSERT INTO card_running_state (card_id, last_total_due, last_delta) VALUES (?, ?, ?)",
+        card_id,
         0.0,
         0.0)
         .execute(&mut *tx)
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-
     tx.commit()
         .await
         .map_err(|e| {
-        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
+            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })?;
 
+    // Invalidate cache
+    if let Some(mut redis) = state.redis.clone() {
+        let cache_key = format!("user_cards:{}", user_id);
+        let _: () = redis.del(cache_key).await.unwrap_or_default();
+    }
 
-    Ok(Json(CardResponse{
+    Ok(Json(CardResponse {
         card_id,
-        status : true
+        status: true
     }))
 }
 
-pub async fn update(State(pool): State<SqlitePool>, Extension((user_id, _role)): Extension<(String, String)>, Json(update_card_details):Json<UpdateCardPayload> ) -> Result<Json<CardResponse>, AppError> {
-
+pub async fn update(
+    State(state): State<AppState>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+    Json(update_card_details): Json<UpdateCardPayload>
+) -> Result<Json<CardResponse>, AppError> {
     let card_primary_color = pack(update_card_details.card_primary_color);
     let card_secondary_color = pack(update_card_details.card_secondary_color);
     sqlx::query!(
-        "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ? WHERE  card_id = ? AND user_id = ?", 
+        "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ? WHERE card_id = ? AND user_id = ?",
         update_card_details.card_name,
         update_card_details.card_bank,
         card_primary_color,
-        card_secondary_color ,
+        card_secondary_color,
         update_card_details.card_id,
         user_id
-        )
-        .execute(&pool)
-        .await
-        .map_err(|e|{
-            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        })?;
+    )
+    .execute(&state.db)
+    .await
+    .map_err(|e| {
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    // Invalidate cache
+    if let Some(mut redis) = state.redis.clone() {
+        let cache_key = format!("user_cards:{}", user_id);
+        let _: () = redis.del(cache_key).await.unwrap_or_default();
+    }
 
     Ok(Json(CardResponse { card_id: update_card_details.card_id, status: true }))
 }
 
 pub async fn get_card(
-    State(pool): State<SqlitePool>,
+    State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(get_card): Json<GetCardForUser>
 ) -> Result<Json<ShowGetCardResponse>, AppError> {
@@ -102,7 +113,7 @@ pub async fn get_card(
         get_card.card_id,
         user_id
     )
-    .fetch_optional(&pool)
+    .fetch_optional(&state.db)
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or_else(|| AppError(
@@ -121,11 +132,22 @@ pub async fn get_card(
     }))
 }
 
-
 pub async fn get_all_cards(
-    State(pool): State<SqlitePool>,
+    State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
-) -> Result<Json<Vec<ShowGetCardResponse>>, AppError> {  // Return Vec wrapped in Json
+) -> Result<Json<Vec<ShowGetCardResponse>>, AppError> {
+    let cache_key = format!("user_cards:{}", user_id);
+    
+    // Check Redis cache if available
+    if let Some(mut redis) = state.redis.clone() {
+        if let Ok(cached_data) = redis.get::<_, String>(&cache_key).await {
+            if let Ok(response) = serde_json::from_str::<Vec<ShowGetCardResponse>>(&cached_data) {
+                info!("Serving cards from cache for user {}", user_id);
+                return Ok(Json(response));
+            }
+        }
+    }
+
     let cards = sqlx::query!(
         "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color,
                 crs.last_total_due, crs.last_delta
@@ -134,7 +156,7 @@ pub async fn get_all_cards(
          WHERE c.user_id = ?",
         user_id
     )
-    .fetch_all(&pool)
+    .fetch_all(&state.db)
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -151,54 +173,65 @@ pub async fn get_all_cards(
         })
         .collect();
 
+    // Cache the result if Redis is available
+    if let Some(mut redis) = state.redis.clone() {
+        if let Ok(serialized) = serde_json::to_string(&response) {
+            let _: () = redis.set_ex(cache_key, serialized, 3600).await.unwrap_or_default();
+        }
+    }
+
     Ok(Json(response))
 }
 
 pub async fn delete_card(
-    State(pool): State<SqlitePool>,
+    State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(card_details): Json<DeleteCardPayload>,
 ) -> Result<Json<CardResponse>, AppError> {
-
-    let card_id =  card_details.card_id;
+    let card_id = card_details.card_id;
 
     let result = sqlx::query!(
-        " DELETE FROM cards WHERE card_id = ? AND user_id = ?",
+        "DELETE FROM cards WHERE card_id = ? AND user_id = ?",
         card_id,
         user_id
     )
-    .execute(&pool)
+    .execute(&state.db)
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if result.rows_affected() == 0 {
-          return Err(AppError(
+        return Err(AppError(
             StatusCode::NOT_FOUND,
             "Card not found or you don't have permission to delete it".to_string()
         ));
     }
 
-    Ok(Json(CardResponse{
+    // Invalidate cache
+    if let Some(mut redis) = state.redis.clone() {
+        let cache_key = format!("user_cards:{}", user_id);
+        let _: () = redis.del(cache_key).await.unwrap_or_default();
+    }
+
+    Ok(Json(CardResponse {
         card_id,
-        status : true
+        status: true
     }))
 }
 
-
 pub async fn insert_transaction(
-    State(pool): State<SqlitePool>,
-    Extension((_user_id, _role)): Extension<(String, String)>,
+    State(state): State<AppState>,
+    Extension((user_id, _role)): Extension<(String, String)>,
     Json(insert_transaction): Json<InsertTransactionPayload>
 ) -> Result<Json<InsertTransactionResponse>, AppError> {
     let transaction_id = nanoid!();
-    let mut tx = pool
+    let mut tx = state.db
         .begin()
         .await
         .map_err(|e| {
             error!("Error setting transaction check {} ", e);
             AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         })?;
-        
+
     sqlx::query!(
         "INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES (?, ?, ?)",
         transaction_id,
@@ -211,7 +244,7 @@ pub async fn insert_transaction(
         error!("Error setting card event {} ", e);
         AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
-    
+
     let result = sqlx::query!(
         "UPDATE card_running_state
          SET last_delta = ? - last_total_due,
@@ -223,20 +256,26 @@ pub async fn insert_transaction(
         insert_transaction.amount_due,
         insert_transaction.card_id
     )
-    .fetch_one(&mut *tx)  
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
         error!("Error setting card running state {} ", e);
         AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
-    
-    let last_delta = result.last_delta; 
+
+    let last_delta = result.last_delta;
     tx.commit()
         .await
         .map_err(|e| {
             AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         })?;
-    
+
+    // Invalidate cache
+    if let Some(mut redis) = state.redis.clone() {
+        let cache_key = format!("user_cards:{}", user_id);
+        let _: () = redis.del(cache_key).await.unwrap_or_default();
+    }
+
     Ok(Json(InsertTransactionResponse {
         transaction_id,
         amount_due: last_delta as f32,
@@ -244,9 +283,8 @@ pub async fn insert_transaction(
     }))
 }
 
-
 pub async fn get_history(
-    State(pool): State<SqlitePool>,
+    State(state): State<AppState>,
     Extension((_user_id, _role)): Extension<(String, String)>,
     Json(payload): Json<crate::models::GetHistoryPayload>,
 ) -> Result<Json<Vec<crate::models::CardTransactionHistory>>, AppError> {
@@ -261,10 +299,9 @@ pub async fn get_history(
            ORDER BY timestamp DESC"#,
         payload.card_id
     )
-    .fetch_all(&pool)
+    .fetch_all(&state.db)
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
 
     Ok(Json(history))
 }

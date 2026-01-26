@@ -11,18 +11,18 @@ use rusty_paseto::{
     core::{Local, V4},
     prelude::PasetoParser,
 };
-use sqlx::SqlitePool;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{error, info, Level};
 
+use crate::models::AppState;
 use crate::routes;
 
-pub fn build_router(pool: SqlitePool) -> Router {
+pub fn build_router(state: AppState) -> Router {
     Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .nest(
             "/user",
-            routes::user::routes(pool.clone())
+            routes::user::routes(state.clone())
                 .layer(
                     TraceLayer::new_for_http()
                         .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
@@ -32,7 +32,7 @@ pub fn build_router(pool: SqlitePool) -> Router {
         )
         .nest(
             "/common",
-            routes::common::routes(pool.clone()).layer(
+            routes::common::routes(state.clone()).layer(
                 TraceLayer::new_for_http()
                     .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
                     .on_response(DefaultOnResponse::new().level(Level::INFO)),
@@ -40,7 +40,7 @@ pub fn build_router(pool: SqlitePool) -> Router {
         )
         .nest(
             "/card",
-            routes::card::routes(pool.clone())
+            routes::card::routes(state.clone())
                 .layer(
                     TraceLayer::new_for_http()
                         .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
