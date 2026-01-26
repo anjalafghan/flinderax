@@ -139,6 +139,9 @@ export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance
                             autoFocus
                             className="text-2xl font-bold p-6 h-16"
                         />
+                        <p className="text-xs text-muted-foreground ml-1">
+                            Enter a negative value (e.g. -500) if you have overpaid.
+                        </p>
                     </div>
 
                     <div className="rounded-lg bg-muted p-4 text-center">

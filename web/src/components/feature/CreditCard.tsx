@@ -77,7 +77,9 @@ export function CreditCard({
                 <div className="space-y-4">
                     <div className="flex items-end justify-between">
                         <div className="space-y-0.5">
-                            <p className="text-[10px] uppercase tracking-wider font-semibold opacity-70">Current Balance</p>
+                            <p className="text-[10px] uppercase tracking-wider font-semibold opacity-70">
+                                {balance < 0 ? "Credit Balance" : "Current Balance"}
+                            </p>
                             <h3 className="text-2xl font-bold tracking-tight text-white drop-shadow-md">
                                 {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(balance)}
                             </h3>
