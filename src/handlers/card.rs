@@ -5,6 +5,7 @@ use axum::{
 };
 use nanoid::nanoid;
 use sqlx::SqlitePool;
+use tracing::error;
 
 use crate::{
     handlers::{color::{self,  pack, unpack}, common::AppError},
@@ -16,6 +17,15 @@ pub async fn create_card(
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(card_details): Json<CreateCardPayload>,
 ) -> Result<Json<CardResponse>, AppError> {
+
+
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| {
+            error!("Error setting transaction check {} ", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
 
     let card_id = nanoid!();
     let primary_color = color::pack(card_details.card_primary_color);
@@ -30,9 +40,25 @@ pub async fn create_card(
         primary_color,
         secondary_color
     )
-    .execute(&pool)
+    .execute(&mut *tx)
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    sqlx::query!("INSERT INTO card_running_state (card_id, last_total_due, last_delta) VALUES (?, ?, ?)"
+        ,card_id,
+        0.0,
+        0.0)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+
+    tx.commit()
+        .await
+        .map_err(|e| {
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
 
     Ok(Json(CardResponse{
         card_id,
@@ -102,7 +128,6 @@ pub async fn get_all_cards(
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Map database rows to response objects
     let response: Vec<ShowGetCardResponse> = cards
         .into_iter()
         .map(|card| ShowGetCardResponse {
@@ -159,6 +184,7 @@ pub async fn insert_transaction(
         .begin()
         .await
         .map_err(|e| {
+            error!("Error setting transaction check {} ", e);
         AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
 
@@ -172,7 +198,10 @@ pub async fn insert_transaction(
     )
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| {
+
+            error!("Error setting card event {} ", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())})?;
     
     let result = sqlx::query!(
         "UPDATE card_running_state
@@ -189,7 +218,11 @@ pub async fn insert_transaction(
     )
     .fetch_one(&mut *tx)  
     .await
-    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| {
+
+            error!("Error setting card running state{} ", e);
+
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())})?;
     
     let last_delta = result.last_delta; 
 
