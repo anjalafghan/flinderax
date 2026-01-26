@@ -22,13 +22,14 @@ export function Header() {
                 </div>
 
                 <div className="flex items-center gap-2 md:gap-4">
-                    <Button variant="outline" size="sm" onClick={() => navigate('/cards/new')} className="hidden md:flex">
-                        <Plus className="mr-2 h-4 w-4" /> Add Card
+                    <Button variant="outline" size="sm" onClick={() => navigate('/cards/new')} className="h-9 px-3 md:px-4">
+                        <Plus className="h-4 w-4 md:mr-2" />
+                        <span className="hidden md:inline">Add Card</span>
                     </Button>
 
                     <ModeToggle />
 
-                    <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
+                    <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="h-9 w-9">
                         <LogOut className="h-[1.2rem] w-[1.2rem]" />
                     </Button>
                 </div>

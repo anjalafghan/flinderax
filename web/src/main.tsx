@@ -6,7 +6,10 @@ import App from './App.tsx'
 import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from "@/context/ThemeContext"
 import { ErrorBoundary } from '@/components/ui/error-boundary'
-import './index.css'
+import "@fontsource/inter/400.css"
+import "@fontsource/inter/500.css"
+import "@fontsource/inter/600.css"
+import "@fontsource/inter/700.css"
 
 const queryClient = new QueryClient()
 
@@ -15,7 +18,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+          <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
             <AuthProvider>
               <App />
             </AuthProvider>
