@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { motion } from "framer-motion"
 import { ArrowDown, ArrowUp } from "lucide-react"
 import { cn } from "@/utils/cn"
@@ -11,10 +12,10 @@ interface CreditCardProps {
     primaryColor: [number, number, number]
     secondaryColor: [number, number, number]
     onClick?: () => void
-    variant?: 'platinum' | 'black' | 'custom' // Future proofing
+    variant?: 'platinum' | 'black' | 'custom'
 }
 
-export function CreditCard({
+export const CreditCard = memo(function CreditCard({
     name,
     bank,
     balance,
@@ -25,12 +26,6 @@ export function CreditCard({
 }: CreditCardProps) {
     const p = primaryColor
     const s = secondaryColor
-
-    // Logic: If colors are default black/grayish, enforce the "Elite Black" look.
-    // If colors are light/silver, enforce "Platinum".
-    // Otherwise, use the custom gradient but add the metallic overlay.
-
-    const isDark = (p[0] + p[1] + p[2]) / 3 < 100
 
     // We'll use the user's colors but add a "sheen" overlay
     const backgroundStyle = {
@@ -103,4 +98,4 @@ export function CreditCard({
             </div>
         </motion.div>
     )
-}
+})

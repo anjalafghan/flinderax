@@ -116,8 +116,8 @@ pub async fn get_card(
         card_bank: card.card_bank,
         card_primary_color: unpack(card.card_primary_color),
         card_secondary_color: unpack(card.card_secondary_color),
-        last_total_due: Some(card.last_total_due),
-        last_delta: Some(card.last_delta),
+        last_total_due: Some(card.last_total_due as f32),
+        last_delta: Some(card.last_delta as f32),
     }))
 }
 
@@ -146,8 +146,8 @@ pub async fn get_all_cards(
             card_bank: card.card_bank,
             card_primary_color: unpack(card.card_primary_color),
             card_secondary_color: unpack(card.card_secondary_color),
-            last_total_due: card.last_total_due,
-            last_delta: card.last_delta,
+            last_total_due: card.last_total_due.map(|v| v as f32),
+            last_delta: card.last_delta.map(|v| v as f32),
         })
         .collect();
 
@@ -254,7 +254,7 @@ pub async fn get_history(
         crate::models::CardTransactionHistory,
         r#"SELECT 
             transaction_id as "transaction_id!", 
-            total_due_input as "total_due_input!: f64", 
+            total_due_input as "total_due_input!: f32", 
             timestamp as "timestamp!: String"
            FROM card_events 
            WHERE card_id = ?

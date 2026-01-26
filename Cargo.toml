@@ -17,7 +17,14 @@ serde_json = "1.0.149"
 sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio-rustls", "migrate"] }
 sqlx-cli = "0.8.6"
 tokio = { version = "1.49.0", features = ["full"] }
-tower-http = { version = "0.6.8", features = ["trace"] }
+tower-http = { version = "0.6.8", features = ["trace", "compression-gzip"] }
 tracing = "0.1.44"
 tracing-subscriber = {version="0.3.22", features=["env-filter", "json"]}
 uuid = "1.19.0"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"

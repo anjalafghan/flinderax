@@ -18,7 +18,7 @@ export function Header() {
             <div className="container mx-auto flex h-16 items-center justify-between px-6">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
                     <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold">F</div>
-                    <span className="text-xl font-bold tracking-tight">Flinderax</span>
+                    <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Flinderax</span>
                 </div>
 
                 <div className="flex items-center gap-2 md:gap-4">
