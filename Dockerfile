@@ -16,5 +16,6 @@ RUN cargo build --release --bin flinderax
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
+RUN mkdir -p /data
 COPY --from=builder /app/target/release/flinderax /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/flinderax"]
