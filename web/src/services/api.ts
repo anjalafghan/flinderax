@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: '/', // Relying on Vite proxy
+    baseURL: import.meta.env.VITE_API_URL || 'https://flinderax-backend.fly.dev',
     headers: {
         'Content-Type': 'application/json',
     },

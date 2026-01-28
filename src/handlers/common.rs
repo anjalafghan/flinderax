@@ -27,7 +27,7 @@ pub async fn login(
     State(state): State<AppState>,
     Json(login_payload): Json<LoginPayload>,
 ) -> Result<Json<LoginResponse>, AppError> {
-    dotenvy::dotenv().map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    dotenvy::dotenv().ok();
 
     let user = sqlx::query!(
         "SELECT user_id, user_name, user_password, user_role FROM users WHERE user_name = ? ",

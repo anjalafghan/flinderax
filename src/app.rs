@@ -11,6 +11,7 @@ use rusty_paseto::{
     core::{Local, V4},
     prelude::PasetoParser,
 };
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{error, Level};
 
@@ -47,6 +48,12 @@ pub fn build_router(state: AppState) -> Router {
                         .on_response(DefaultOnResponse::new().level(Level::INFO)),
                 )
                 .layer(middleware::from_fn(token_validator_middleware)),
+        )
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
         )
 }
 
