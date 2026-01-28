@@ -1,2 +1,7 @@
 fly.toml
 .git/
+.env
+target/
+web/
+node_modules/
+dist/
