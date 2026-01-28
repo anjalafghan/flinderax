@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE card_running_state\n         SET last_delta = ? - last_total_due,\n             last_total_due = ?,\n             updated_at = CURRENT_TIMESTAMP\n         WHERE card_id = ?\n         RETURNING last_delta",
+  "describe": {
+    "columns": [
+      {
+        "name": "last_delta",
+        "ordinal": 0,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2b5ff9301028686aa50a76b76d55a3af51499616bf73b1f566a4316cbc6b5b08"
+}

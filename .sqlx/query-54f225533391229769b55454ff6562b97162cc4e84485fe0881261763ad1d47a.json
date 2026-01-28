@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT user_id, user_name, user_password, user_role FROM users WHERE user_name = ? ",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_password",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_role",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "54f225533391229769b55454ff6562b97162cc4e84485fe0881261763ad1d47a"
+}

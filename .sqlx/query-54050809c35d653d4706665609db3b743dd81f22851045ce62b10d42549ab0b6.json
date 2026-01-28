@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "54050809c35d653d4706665609db3b743dd81f22851045ce62b10d42549ab0b6"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ? WHERE card_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "b73c4772a89d35a92620049653a36ac948ef519b5d7137e138a8b270d3e773fd"
+}
