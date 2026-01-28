@@ -1,5 +1,6 @@
-use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::env;
+use std::str::FromStr;
 
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -25,7 +26,11 @@ async fn main() -> Result<(), sqlx::Error> {
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL missing");
     info!("Database url is present {}", database_url);
-    let pool = SqlitePool::connect(&database_url).await?;
+    
+    let options = SqliteConnectOptions::from_str(&database_url)?
+        .create_if_missing(true);
+    
+    let pool = SqlitePool::connect_with(options).await?;
     sqlx::migrate!().run(&pool).await?;
     info!("Database connected successfully");
 
