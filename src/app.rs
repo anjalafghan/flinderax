@@ -12,7 +12,7 @@ use rusty_paseto::{
     prelude::PasetoParser,
 };
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{error, info, Level};
+use tracing::{error, Level};
 
 use crate::models::AppState;
 use crate::routes;
@@ -90,7 +90,10 @@ pub async fn token_validator_auth_middleware(
 
 fn get_token(headers: &HeaderMap) -> Option<&str> {
     let header_value = headers.get("Authorization")?.to_str().ok()?;
-    header_value.strip_prefix("Bearer ").map(|t| t.trim()).or(Some(header_value))
+    header_value
+        .strip_prefix("Bearer ")
+        .map(|t| t.trim())
+        .or(Some(header_value))
 }
 
 fn parse_token(token: &str) -> Result<(String, String), AppError> {
@@ -115,7 +118,6 @@ fn parse_token(token: &str) -> Result<(String, String), AppError> {
                     )
                 })?
                 .to_string();
-            info!("USER ID and ROLE {} {} ", user_id, role);
             Ok((user_id, role))
         }
         Err(err) => {
