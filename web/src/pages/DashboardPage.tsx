@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { CreditCard } from "@/components/feature/CreditCard"
 import { Header } from "@/components/layout/Header"
 
-interface CardData {
+export interface CardData {
     card_id: string
     card_name: string
     card_bank: string
@@ -41,7 +41,7 @@ export default function DashboardPage() {
     })
 
     // Safe reduce in case cards is undefined (e.g. during loading or error)
-    const totalDue = cards?.reduce((acc, card) => acc + (card.last_total_due || 0), 0) || 0
+    const totalDue = cards?.reduce((acc: number, card: CardData) => acc + (card.last_total_due || 0), 0) || 0
 
     return (
         <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
@@ -69,7 +69,7 @@ export default function DashboardPage() {
                         </div>
                     ) : (
                         <div className="relative w-full flex justify-center items-center">
-                            {cards.map((card, index) => {
+                            {cards.map((card: CardData, index: number) => {
                                 // Calculate position relative to active index
                                 const offset = index - activeIndex;
                                 const isActive = offset === 0;
@@ -156,7 +156,7 @@ export default function DashboardPage() {
 
                 {/* Pagination Dots */}
                 <div className="flex justify-center gap-2 mt-12 md:mt-8 mb-12 md:mb-16">
-                    {cards?.map((_, idx) => (
+                    {cards?.map((_: CardData, idx: number) => (
                         <button
                             key={idx}
                             onClick={() => setActiveIndex(idx)}

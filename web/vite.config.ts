@@ -3,22 +3,23 @@ import react from '@vitejs/plugin-react'
 import path from "path"
 import { visualizer } from "rollup-plugin-visualizer"
 import { compression } from 'vite-plugin-compression2'
-import InjectPreload from 'unplugin-inject-preload/vite'
+// import InjectPreload from 'unplugin-inject-preload/vite'
 
 import tailwind from '@tailwindcss/vite'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production'
+  const apiUrl = isProd ? 'https://flinderax-backend.fly.dev' : 'http://0.0.0.0:3000'
 
   return {
     plugins: [
       react(),
       tailwind(),
-      InjectPreload({
+      /* InjectPreload({
         files: [
           {
-            outputMatch: /inter-latin(-ext)?-(400|500|600|700)-normal.*\.woff2$/,
+            outputMatch: /inter-latin(-ext)?-(400|700)-normal.*\.woff2$/,
             attributes: {
               type: 'font/woff2',
               as: 'font',
@@ -26,7 +27,13 @@ export default defineConfig(({ mode }) => {
             },
           },
         ],
-      }),
+      }), */
+      {
+        name: 'html-transform',
+        transformIndexHtml(html: string) {
+          return html.replace(/__API_URL__/g, apiUrl)
+        }
+      },
       isProd && visualizer({
         open: false,
         filename: "bundle-analysis.html",
@@ -74,28 +81,43 @@ export default defineConfig(({ mode }) => {
         compress: {
           drop_console: true,
           drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.debug'],
-          passes: 2,
+          pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+          passes: 3,
+          ecma: 2020,
+          module: true,
+          toplevel: true,
         },
         format: {
           comments: false,
+          ascii_only: true,
         },
         mangle: {
           safari10: true,
+          toplevel: true,
         },
       } as any,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-            'query-vendor': ['@tanstack/react-query'],
-            'ui-vendor': ['framer-motion', 'lucide-react', 'sonner'],
-            'api-vendor': ['axios'],
+          manualChunks(id) {
+            // Group large core libraries
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+                return 'react-core';
+              }
+              if (id.includes('@tanstack')) {
+                return 'query-core';
+              }
+              if (id.includes('framer-motion') || id.includes('lucide-react')) {
+                return 'ui-libs';
+              }
+              // Catch-all for other small modules to prevent too many small files
+              return 'vendor-misc';
+            }
           },
         },
       },
-      chunkSizeWarningLimit: 1000,
-      reportCompressedSize: true,
+      chunkSizeWarningLimit: 600,
+      reportCompressedSize: false,
       cssMinify: 'lightningcss',
     },
   }

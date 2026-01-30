@@ -26,7 +26,7 @@ export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance
             const amountFloat = parseFloat(amount)
             if (isNaN(amountFloat)) throw new Error("Invalid amount")
 
-            const res = await api.post("/card/insert_transaction", {
+            const res = await api.post<{ amount_due: number }>("/card/insert_transaction", {
                 card_id: cardId,
                 amount_due: amountFloat,
             })

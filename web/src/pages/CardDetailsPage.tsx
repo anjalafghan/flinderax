@@ -1,27 +1,32 @@
-import { useState } from "react"
+import { useState, lazy, Suspense } from "react"
+import type { CardData } from "./DashboardPage"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Trash2, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { ArrowLeft, Trash2, TrendingUp, TrendingDown, Minus, RefreshCcw } from "lucide-react"
 import { toast } from "sonner"
 
 import api from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { CreditCard } from "@/components/feature/CreditCard"
-import { UpdateTransactionModal } from "@/components/feature/UpdateTransactionModal"
 import { Header } from "@/components/layout/Header"
 import { cn } from "@/utils/cn"
+
+const UpdateTransactionModal = lazy(() => import("@/components/feature/UpdateTransactionModal").then(m => ({ default: m.UpdateTransactionModal })))
+const ConfirmationModal = lazy(() => import("@/components/ui/ConfirmationModal").then(m => ({ default: m.ConfirmationModal })))
 
 export default function CardDetailsPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 
     // Fetch Card Details
     const cardQuery = useQuery({
         queryKey: ['card', id],
         queryFn: async () => {
-            const res = await api.post('/card/get_card', { card_id: id })
+            const res = await api.post<CardData>('/card/get_card', { card_id: id })
             return res.data
         },
         enabled: !!id
@@ -31,7 +36,7 @@ export default function CardDetailsPage() {
     const historyQuery = useQuery({
         queryKey: ['history', id],
         queryFn: async () => {
-            const res = await api.post('/card/history', { card_id: id })
+            const res = await api.post<any[]>('/card/history', { card_id: id })
             return res.data
         },
         enabled: !!id
@@ -46,7 +51,27 @@ export default function CardDetailsPage() {
             queryClient.invalidateQueries({ queryKey: ['cards'] })
             navigate('/')
         },
-        onError: () => toast.error("Failed to delete card")
+        onError: () => {
+            toast.error("Failed to delete card")
+            setIsDeleteConfirmOpen(false)
+        }
+    })
+
+    const resetMutation = useMutation({
+        mutationFn: async () => {
+            await api.post('/card/reset', { card_id: id })
+        },
+        onSuccess: () => {
+            toast.success("Transaction history reset")
+            queryClient.invalidateQueries({ queryKey: ['card', id] })
+            queryClient.invalidateQueries({ queryKey: ['history', id] })
+            queryClient.invalidateQueries({ queryKey: ['cards'] })
+            setIsResetConfirmOpen(false)
+        },
+        onError: () => {
+            toast.error("Failed to reset transactions")
+            setIsResetConfirmOpen(false)
+        }
     })
 
     if (cardQuery.isLoading) return <div className="p-8 text-center text-muted-foreground">Loading details...</div>
@@ -65,17 +90,24 @@ export default function CardDetailsPage() {
                     <Button variant="ghost" className="pl-0" onClick={() => navigate(-1)}>
                         <ArrowLeft className="mr-2 h-4 w-4" /> Back
                     </Button>
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                            if (confirm("Are you sure you want to delete this card?")) {
-                                deleteMutation.mutate()
-                            }
-                        }}
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete Card
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsResetConfirmOpen(true)}
+                            disabled={resetMutation.isPending}
+                        >
+                            <RefreshCcw className={cn("mr-2 h-4 w-4", resetMutation.isPending && "animate-spin")} /> Reset History
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setIsDeleteConfirmOpen(true)}
+                            disabled={deleteMutation.isPending}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete Card
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="grid gap-6 md:gap-8 md:grid-cols-[1.2fr,1fr]">
@@ -147,12 +179,36 @@ export default function CardDetailsPage() {
                     </div>
                 </div>
 
-                <UpdateTransactionModal
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    cardId={id!}
-                    currentBalance={card.last_total_due || 0}
-                />
+                <Suspense fallback={null}>
+                    <UpdateTransactionModal
+                        isOpen={isModalOpen}
+                        onClose={() => setIsModalOpen(false)}
+                        cardId={id!}
+                        currentBalance={card.last_total_due || 0}
+                    />
+
+                    <ConfirmationModal
+                        isOpen={isResetConfirmOpen}
+                        onClose={() => setIsResetConfirmOpen(false)}
+                        onConfirm={() => resetMutation.mutate()}
+                        title="Reset Transaction History"
+                        description="Are you sure you want to reset all transactions for this card? This will set the balance to zero and cannot be undone."
+                        confirmText="Reset History"
+                        variant="destructive"
+                        isPending={resetMutation.isPending}
+                    />
+
+                    <ConfirmationModal
+                        isOpen={isDeleteConfirmOpen}
+                        onClose={() => setIsDeleteConfirmOpen(false)}
+                        onConfirm={() => deleteMutation.mutate()}
+                        title="Delete Credit Card"
+                        description={`Are you sure you want to delete "${card.card_name}"? All transaction history and settings for this card will be permanently removed.`}
+                        confirmText="Delete Card"
+                        variant="destructive"
+                        isPending={deleteMutation.isPending}
+                    />
+                </Suspense>
             </div>
         </div>
     )

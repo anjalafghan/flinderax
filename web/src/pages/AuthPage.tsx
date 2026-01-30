@@ -27,7 +27,7 @@ export default function AuthPage() {
 
     const loginMutation = useMutation({
         mutationFn: async () => {
-            const res = await api.post("/common/login", {
+            const res = await api.post<{ access_token: string }>("/common/login", {
                 user_name: loginUser,
                 user_password: loginPass,
             })
@@ -46,7 +46,7 @@ export default function AuthPage() {
     const registerMutation = useMutation({
         mutationFn: async () => {
             // Backend requires user_role
-            const res = await api.post("/common/register", {
+            const res = await api.post<any>("/common/register", {
                 user_name: regUser,
                 user_password: regPass,
                 user_role: "user",
