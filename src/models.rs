@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use redis::aio::ConnectionManager;
 use sqlx::FromRow;
 use sqlx::SqlitePool;
-use redis::aio::ConnectionManager;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -111,5 +111,10 @@ pub struct CardTransactionHistory {
 
 #[derive(Deserialize)]
 pub struct GetHistoryPayload {
+    pub card_id: String,
+}
+
+#[derive(Deserialize)]
+pub struct ResetTransactionsPayload {
     pub card_id: String,
 }

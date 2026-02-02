@@ -1,29 +1,75 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{header, StatusCode},
+    response::IntoResponse,
     Extension, Json,
 };
+use chrono::DateTime;
 use nanoid::nanoid;
-use tracing::{error, info};
+use prost::Message;
 use redis::AsyncCommands;
+use tracing::{error, info};
 
 use crate::{
-    handlers::{color::{self, pack, unpack}, common::AppError},
-    models::{AppState, CardResponse, CreateCardPayload, DeleteCardPayload, GetCardForUser, InsertTransactionPayload, InsertTransactionResponse, ShowGetCardResponse, UpdateCardPayload},
+    handlers::{
+        color::{self, pack, unpack},
+        common::AppError,
+    },
+    models::{
+        AppState, CardResponse, CreateCardPayload, DeleteCardPayload, GetCardForUser,
+        InsertTransactionPayload, InsertTransactionResponse, ResetTransactionsPayload,
+        ShowGetCardResponse, UpdateCardPayload,
+    },
 };
+struct Timestamp {
+    seconds: i64,
+    nanos: i32,
+}
+
+fn parse_timestamp(timestamp_str: &str) -> Timestamp {
+    if let Ok(dt) = DateTime::parse_from_rfc3339(timestamp_str) {
+        Timestamp {
+            seconds: dt.timestamp(),
+            nanos: dt.timestamp_subsec_nanos() as i32,
+        }
+    } else {
+        use chrono::NaiveDateTime;
+        if let Ok(naive_dt) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S") {
+            let dt = naive_dt.and_utc();
+            Timestamp {
+                seconds: dt.timestamp(),
+                nanos: dt.timestamp_subsec_nanos() as i32,
+            }
+        } else {
+            Timestamp {
+                seconds: 0,
+                nanos: 0,
+            }
+        }
+    }
+}
+
+impl From<crate::models::CardTransactionHistory> for crate::proto::CardTransactionHistory {
+    fn from(value: crate::models::CardTransactionHistory) -> Self {
+        let timestamp = parse_timestamp(&value.timestamp);
+        crate::proto::CardTransactionHistory {
+            transaction_id: value.transaction_id,
+            total_due_input: value.total_due_input,
+            timestamp_seconds: timestamp.seconds,
+            timestamp_nanos: timestamp.nanos,
+        }
+    }
+}
 
 pub async fn create_card(
     State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(card_details): Json<CreateCardPayload>,
 ) -> Result<Json<CardResponse>, AppError> {
-    let mut tx = state.db
-        .begin()
-        .await
-        .map_err(|e| {
-            error!("Error setting transaction check {} ", e);
-            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        })?;
+    let mut tx = state.db.begin().await.map_err(|e| {
+        error!("Error setting transaction check {} ", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
 
     let card_id = nanoid!();
     let primary_color = color::pack(card_details.card_primary_color);
@@ -42,19 +88,19 @@ pub async fn create_card(
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    sqlx::query!("INSERT INTO card_running_state (card_id, last_total_due, last_delta) VALUES (?, ?, ?)",
+    sqlx::query!(
+        "INSERT INTO card_running_state (card_id, last_total_due, last_delta) VALUES (?, ?, ?)",
         card_id,
         0.0,
-        0.0)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        0.0
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     tx.commit()
         .await
-        .map_err(|e| {
-            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        })?;
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // Invalidate cache
     if let Some(mut redis) = state.redis.clone() {
@@ -64,14 +110,14 @@ pub async fn create_card(
 
     Ok(Json(CardResponse {
         card_id,
-        status: true
+        status: true,
     }))
 }
 
 pub async fn update(
     State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
-    Json(update_card_details): Json<UpdateCardPayload>
+    Json(update_card_details): Json<UpdateCardPayload>,
 ) -> Result<Json<CardResponse>, AppError> {
     let card_primary_color = pack(update_card_details.card_primary_color);
     let card_secondary_color = pack(update_card_details.card_secondary_color);
@@ -96,13 +142,16 @@ pub async fn update(
         let _: () = redis.del(cache_key).await.unwrap_or_default();
     }
 
-    Ok(Json(CardResponse { card_id: update_card_details.card_id, status: true }))
+    Ok(Json(CardResponse {
+        card_id: update_card_details.card_id,
+        status: true,
+    }))
 }
 
 pub async fn get_card(
     State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
-    Json(get_card): Json<GetCardForUser>
+    Json(get_card): Json<GetCardForUser>,
 ) -> Result<Json<ShowGetCardResponse>, AppError> {
     let card = sqlx::query!(
         "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color,
@@ -116,10 +165,12 @@ pub async fn get_card(
     .fetch_optional(&state.db)
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or_else(|| AppError(
-        StatusCode::NOT_FOUND,
-        "Card not found or you don't have permission to view it".to_string()
-    ))?;
+    .ok_or_else(|| {
+        AppError(
+            StatusCode::NOT_FOUND,
+            "Card not found or you don't have permission to view it".to_string(),
+        )
+    })?;
 
     Ok(Json(ShowGetCardResponse {
         card_id: card.card_id.unwrap(),
@@ -137,7 +188,7 @@ pub async fn get_all_cards(
     Extension((user_id, _role)): Extension<(String, String)>,
 ) -> Result<Json<Vec<ShowGetCardResponse>>, AppError> {
     let cache_key = format!("user_cards:{}", user_id);
-    
+
     // Check Redis cache if available
     if let Some(mut redis) = state.redis.clone() {
         if let Ok(cached_data) = redis.get::<_, String>(&cache_key).await {
@@ -176,7 +227,10 @@ pub async fn get_all_cards(
     // Cache the result if Redis is available
     if let Some(mut redis) = state.redis.clone() {
         if let Ok(serialized) = serde_json::to_string(&response) {
-            let _: () = redis.set_ex(cache_key, serialized, 3600).await.unwrap_or_default();
+            let _: () = redis
+                .set_ex(cache_key, serialized, 3600)
+                .await
+                .unwrap_or_default();
         }
     }
 
@@ -202,7 +256,7 @@ pub async fn delete_card(
     if result.rows_affected() == 0 {
         return Err(AppError(
             StatusCode::NOT_FOUND,
-            "Card not found or you don't have permission to delete it".to_string()
+            "Card not found or you don't have permission to delete it".to_string(),
         ));
     }
 
@@ -214,23 +268,20 @@ pub async fn delete_card(
 
     Ok(Json(CardResponse {
         card_id,
-        status: true
+        status: true,
     }))
 }
 
 pub async fn insert_transaction(
     State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
-    Json(insert_transaction): Json<InsertTransactionPayload>
+    Json(insert_transaction): Json<InsertTransactionPayload>,
 ) -> Result<Json<InsertTransactionResponse>, AppError> {
     let transaction_id = nanoid!();
-    let mut tx = state.db
-        .begin()
-        .await
-        .map_err(|e| {
-            error!("Error setting transaction check {} ", e);
-            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        })?;
+    let mut tx = state.db.begin().await.map_err(|e| {
+        error!("Error setting transaction check {} ", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
 
     sqlx::query!(
         "INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES (?, ?, ?)",
@@ -266,9 +317,7 @@ pub async fn insert_transaction(
     let last_delta = result.last_delta;
     tx.commit()
         .await
-        .map_err(|e| {
-            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        })?;
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // Invalidate cache
     if let Some(mut redis) = state.redis.clone() {
@@ -279,7 +328,7 @@ pub async fn insert_transaction(
     Ok(Json(InsertTransactionResponse {
         transaction_id,
         amount_due: last_delta as f32,
-        status: true
+        status: true,
     }))
 }
 
@@ -287,21 +336,96 @@ pub async fn get_history(
     State(state): State<AppState>,
     Extension((_user_id, _role)): Extension<(String, String)>,
     Json(payload): Json<crate::models::GetHistoryPayload>,
-) -> Result<Json<Vec<crate::models::CardTransactionHistory>>, AppError> {
+) -> Result<impl IntoResponse, AppError> {
     let history = sqlx::query_as!(
         crate::models::CardTransactionHistory,
-        r#"SELECT 
-            transaction_id as "transaction_id!", 
-            total_due_input as "total_due_input!: f32", 
-            timestamp as "timestamp!: String"
-           FROM card_events 
-           WHERE card_id = ?
-           ORDER BY timestamp DESC"#,
+        r#"
+        SELECT transaction_id as "transaction_id!",
+        total_due_input as "total_due_input!: f32",
+        timestamp as "timestamp!: String"
+        FROM card_events
+        WHERE card_id = ?
+        ORDER BY timestamp DESC"#,
         payload.card_id
     )
     .fetch_all(&state.db)
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(Json(history))
+    let proto_histories: Vec<crate::proto::CardTransactionHistory> =
+        history.into_iter().map(|h| h.into()).collect();
+
+    let response = crate::proto::CardHistoryList {
+        histories: proto_histories,
+    };
+
+    let mut buf = Vec::new();
+    response.encode(&mut buf).map_err(|e: prost::EncodeError| {
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    Ok(([(header::CONTENT_TYPE, "application/x-protobuf")], buf))
+}
+
+pub async fn reset_transactions(
+    State(state): State<AppState>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+    Json(payload): Json<ResetTransactionsPayload>,
+) -> Result<Json<CardResponse>, AppError> {
+    let card_id = &payload.card_id;
+
+    let card_exists = sqlx::query!(
+        "SELECT card_id FROM cards WHERE card_id = ? AND user_id = ?",
+        card_id,
+        user_id
+    )
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if card_exists.is_none() {
+        return Err(AppError(
+            StatusCode::NOT_FOUND,
+            "Card not found or you don't have permission to reset it".to_string(),
+        ));
+    }
+
+    let mut tx = state.db.begin().await.map_err(|e| {
+        error!("Error starting transaction: {}", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    sqlx::query!("DELETE FROM card_events WHERE card_id = ?", card_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            error!("Error deleting card events: {}", e);
+            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })?;
+
+    sqlx::query!(
+        "UPDATE card_running_state SET last_total_due = 0, last_delta = 0, updated_at = CURRENT_TIMESTAMP WHERE card_id = ?",
+        card_id
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| {
+        error!("Error resetting card running state: {}", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    tx.commit().await.map_err(|e| {
+        error!("Error committing transaction: {}", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    if let Some(mut redis) = state.redis.clone() {
+        let cache_key = format!("user_cards:{}", user_id);
+        let _: () = redis.del(cache_key).await.unwrap_or_default();
+    }
+
+    Ok(Json(CardResponse {
+        card_id: card_id.to_string(),
+        status: true,
+    }))
 }

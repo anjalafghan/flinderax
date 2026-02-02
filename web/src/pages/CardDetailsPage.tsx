@@ -6,6 +6,7 @@ import { ArrowLeft, Trash2, TrendingUp, TrendingDown, Minus, RefreshCcw } from "
 import { toast } from "sonner"
 
 import api from "@/services/api"
+import { decodeCardHistoryList } from "@/proto/decoder"
 import { Button } from "@/components/ui/button"
 import { CreditCard } from "@/components/feature/CreditCard"
 import { Header } from "@/components/layout/Header"
@@ -32,12 +33,13 @@ export default function CardDetailsPage() {
         enabled: !!id
     })
 
-    // Fetch History
+    // Fetch History (protobuf)
     const historyQuery = useQuery({
         queryKey: ['history', id],
         queryFn: async () => {
-            const res = await api.post<any[]>('/card/history', { card_id: id })
-            return res.data
+            const buffer = await api.postProtobuf('/card/history', { card_id: id })
+            const decoded = await decodeCardHistoryList(buffer)
+            return decoded.histories
         },
         enabled: !!id
     })

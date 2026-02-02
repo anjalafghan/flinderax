@@ -98,23 +98,12 @@ export default defineConfig(({ mode }) => {
       } as any,
       rollupOptions: {
         output: {
-          manualChunks(id) {
-            // Group large core libraries
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-                return 'react-core';
-              }
-              if (id.includes('@tanstack')) {
-                return 'query-core';
-              }
-              if (id.includes('framer-motion') || id.includes('lucide-react')) {
-                return 'ui-libs';
-              }
-              // Catch-all for other small modules to prevent too many small files
-              return 'vendor-misc';
-            }
-          },
-        },
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-framer': ['framer-motion'],
+            'vendor-ui': ['class-variance-authority', 'clsx', 'tailwind-merge', 'lucide-react'],
+          }
+        }
       },
       chunkSizeWarningLimit: 600,
       reportCompressedSize: false,

@@ -1,0 +1,13 @@
+syntax = "proto3";
+package flinderax_backend;
+
+message CardTransactionHistory{
+  string transaction_id = 1;
+  float total_due_input =  2;
+  int64 timestamp_seconds = 3;
+  int32 timestamp_nanos = 4;
+}
+
+message CardHistoryList {
+  repeated CardTransactionHistory histories = 1;
+}

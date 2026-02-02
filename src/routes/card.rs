@@ -11,5 +11,6 @@ pub fn routes(state: AppState) -> Router {
         .route("/get_all_cards", get(card::get_all_cards))
         .route("/insert_transaction", post(card::insert_transaction))
         .route("/history", post(card::get_history))
+        .route("/reset", post(card::reset_transactions))
         .with_state(state)
 }

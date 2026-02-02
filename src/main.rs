@@ -10,6 +10,10 @@ mod middleware;
 mod models;
 mod routes;
 
+pub mod proto {
+    include!(concat!(env!("OUT_DIR"), "/flinderax_backend.rs"));
+}
+
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
     tracing_subscriber::registry()
@@ -26,10 +30,9 @@ async fn main() -> Result<(), sqlx::Error> {
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL missing");
     info!("Database url is present {}", database_url);
-    
-    let options = SqliteConnectOptions::from_str(&database_url)?
-        .create_if_missing(true);
-    
+
+    let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
+
     let pool = SqlitePool::connect_with(options).await?;
     sqlx::migrate!().run(&pool).await?;
     info!("Database connected successfully");
@@ -37,13 +40,15 @@ async fn main() -> Result<(), sqlx::Error> {
     info!("Running migrations");
     info!("Initializing Redis...");
     let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-    
+
     let redis_manager = match redis::Client::open(redis_url) {
         Ok(client) => {
             match tokio::time::timeout(
                 std::time::Duration::from_secs(2),
-                client.get_connection_manager()
-            ).await {
+                client.get_connection_manager(),
+            )
+            .await
+            {
                 Ok(Ok(manager)) => {
                     info!("Redis connected successfully");
                     Some(manager)

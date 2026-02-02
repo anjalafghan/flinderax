@@ -24,10 +24,21 @@ export default function DashboardPage() {
     const [activeIndex, setActiveIndex] = useState(0)
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
 
+    const [showCarousel, setShowCarousel] = useState(false)
+
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth)
         window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
+
+        // Defer heavy carousel rendering to allow LCP element to paint first
+        const t = setTimeout(() => {
+            setShowCarousel(true)
+        }, 100)
+
+        return () => {
+            window.removeEventListener('resize', handleResize)
+            clearTimeout(t)
+        }
     }, [])
 
     const isMobile = windowWidth < 640
@@ -58,9 +69,11 @@ export default function DashboardPage() {
                     </p>
                 </div>
 
-                {/* 3D Carousel Area */}
+                {/* 3D Carousel Area - Deferred */}
                 <div className="relative mx-auto max-w-5xl h-[300px] md:h-[400px] flex items-center justify-center perspective-[1000px] overflow-hidden sm:overflow-visible">
-                    {isLoading ? (
+                    {!showCarousel ? (
+                        <div className="text-muted-foreground">Loading visualization...</div>
+                    ) : isLoading ? (
                         <div className="text-muted-foreground animate-pulse">Loading cards...</div>
                     ) : !cards || cards.length === 0 ? (
                         <div className="text-center px-4">

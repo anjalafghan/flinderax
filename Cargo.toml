@@ -15,11 +15,14 @@ serde = {version = "1.0.228", features=["derive"]}
 serde_json = "1.0.149"
 sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio-rustls", "migrate"] }
 sqlx-cli = "0.8.6"
-redis = { version = "0.29.0", features = ["tokio-comp", "connection-manager"] }
+redis = { version = "1.0.3", features = ["tokio-comp", "connection-manager"] }
 tokio = { version = "1.49.0", features = ["full"] }
 tower-http = { version = "0.6.8", features = ["trace", "compression-gzip", "cors"] }
 tracing = "0.1.44"
 tracing-subscriber = {version="0.3.22", features=["env-filter", "json"]}
+prost = "0.14.3"
+prost-types = "0.14.3"
+chrono = "0.4.43"
 
 [profile.release]
 opt-level = 3
@@ -27,3 +30,6 @@ lto = "fat"
 codegen-units = 1
 strip = true
 panic = "abort"
+
+[build-dependencies]
+prost-build = "0.14.3"
