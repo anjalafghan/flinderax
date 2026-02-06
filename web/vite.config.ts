@@ -11,6 +11,7 @@ import tailwind from '@tailwindcss/vite'
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production'
   const apiUrl = isProd ? 'https://flinderax-backend.fly.dev' : 'http://0.0.0.0:3000'
+  const siteUrl = isProd ? 'https://flinderax.fly.dev' : 'http://localhost:5173'
 
   return {
     plugins: [
@@ -31,7 +32,9 @@ export default defineConfig(({ mode }) => {
       {
         name: 'html-transform',
         transformIndexHtml(html: string) {
-          return html.replace(/__API_URL__/g, apiUrl)
+          return html
+            .replace(/__API_URL__/g, apiUrl)
+            .replace(/__SITE_URL__/g, siteUrl)
         }
       },
       isProd && visualizer({

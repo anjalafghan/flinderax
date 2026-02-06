@@ -1,0 +1,16 @@
+# Flinderax Robots.txt
+# https://www.robotstxt.org/
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow sensitive/non-public areas
+Disallow: /api/
+Disallow: /auth
+
+# Sitemap location (update with production URL)
+Sitemap: __SITE_URL__/sitemap.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
