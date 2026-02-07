@@ -1,6 +1,7 @@
-use crate::handlers::common::{get_key, AppError};
+use crate::handlers::common::AppError;
+use std::sync::Arc;
 use axum::{
-    extract::Request,
+    extract::{Request, State},
     http::{HeaderMap, StatusCode},
     middleware::{self, Next},
     response::Response,
@@ -9,7 +10,7 @@ use axum::{
 };
 use rusty_paseto::{
     core::{Local, V4},
-    prelude::PasetoParser,
+    prelude::{PasetoParser, PasetoSymmetricKey},
 };
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
@@ -29,7 +30,10 @@ pub fn build_router(state: AppState) -> Router {
                         .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
                         .on_response(DefaultOnResponse::new().level(Level::INFO)),
                 )
-                .layer(middleware::from_fn(token_validator_middleware)),
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    token_validator_middleware,
+                )),
         )
         .nest(
             "/common",
@@ -47,7 +51,10 @@ pub fn build_router(state: AppState) -> Router {
                         .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
                         .on_response(DefaultOnResponse::new().level(Level::INFO)),
                 )
-                .layer(middleware::from_fn(token_validator_middleware)),
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    token_validator_middleware,
+                )),
         )
         .layer(
             CorsLayer::new()
@@ -58,13 +65,14 @@ pub fn build_router(state: AppState) -> Router {
 }
 
 async fn token_validator_middleware(
+    State(state): State<AppState>,
     headers: HeaderMap,
     mut request: Request,
     next: Next,
 ) -> Result<Response, AppError> {
     match get_token(&headers) {
         Some(token) => {
-            let (user_id, role) = parse_token(token)?;
+            let (user_id, role) = parse_token(token, &state.paseto_key)?;
             request.extensions_mut().insert((user_id, role));
             let response = next.run(request).await;
             Ok(response)
@@ -74,13 +82,14 @@ async fn token_validator_middleware(
 }
 
 pub async fn token_validator_auth_middleware(
+    State(state): State<AppState>,
     headers: HeaderMap,
     mut request: Request,
     next: Next,
 ) -> Result<Response, AppError> {
     match get_token(&headers) {
         Some(token) => {
-            let (user_id, role) = parse_token(token)?;
+            let (user_id, role) = parse_token(token, &state.paseto_key)?;
             if role != "admin" {
                 return Err(AppError(
                     StatusCode::FORBIDDEN,
@@ -103,9 +112,11 @@ fn get_token(headers: &HeaderMap) -> Option<&str> {
         .or(Some(header_value))
 }
 
-fn parse_token(token: &str) -> Result<(String, String), AppError> {
-    let key = get_key()?;
-    match PasetoParser::<V4, Local>::default().parse(token, &key) {
+fn parse_token(
+    token: &str,
+    key: &Arc<PasetoSymmetricKey<V4, Local>>,
+) -> Result<(String, String), AppError> {
+    match PasetoParser::<V4, Local>::default().parse(token, key) {
         Ok(json_value) => {
             let user_id = json_value["sub"]
                 .as_str()

@@ -4,11 +4,11 @@ use axum::{
     response::IntoResponse,
     Extension, Json,
 };
-use chrono::DateTime;
+use time::{format_description::well_known::Rfc3339, OffsetDateTime, PrimitiveDateTime, macros::format_description};
 use nanoid::nanoid;
 use prost::Message;
 use redis::AsyncCommands;
-use tracing::{error, info};
+use tracing::error;
 
 use crate::{
     handlers::{
@@ -27,18 +27,18 @@ struct Timestamp {
 }
 
 fn parse_timestamp(timestamp_str: &str) -> Timestamp {
-    if let Ok(dt) = DateTime::parse_from_rfc3339(timestamp_str) {
+    if let Ok(dt) = OffsetDateTime::parse(timestamp_str, &Rfc3339) {
         Timestamp {
-            seconds: dt.timestamp(),
-            nanos: dt.timestamp_subsec_nanos() as i32,
+            seconds: dt.unix_timestamp(),
+            nanos: dt.nanosecond() as i32,
         }
     } else {
-        use chrono::NaiveDateTime;
-        if let Ok(naive_dt) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S") {
-            let dt = naive_dt.and_utc();
+        let format = format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
+        if let Ok(primitive_dt) = PrimitiveDateTime::parse(timestamp_str, &format) {
+            let dt = primitive_dt.assume_utc();
             Timestamp {
-                seconds: dt.timestamp(),
-                nanos: dt.timestamp_subsec_nanos() as i32,
+                seconds: dt.unix_timestamp(),
+                nanos: dt.nanosecond() as i32,
             }
         } else {
             Timestamp {
@@ -57,6 +57,20 @@ impl From<crate::models::CardTransactionHistory> for crate::proto::CardTransacti
             total_due_input: value.total_due_input,
             timestamp_seconds: timestamp.seconds,
             timestamp_nanos: timestamp.nanos,
+        }
+    }
+}
+
+impl From<crate::models::ShowGetCardResponse> for crate::proto::Card {
+    fn from(param: crate::models::ShowGetCardResponse) -> Self {
+        crate::proto::Card {
+            card_id: param.card_id,
+            card_name: param.card_name,
+            card_bank: param.card_bank,
+            card_primary_color: color::pack(param.card_primary_color),
+            card_secondary_color: color::pack(param.card_secondary_color),
+            last_total_due: param.last_total_due,
+            last_delta: param.last_delta,
         }
     }
 }
@@ -104,7 +118,7 @@ pub async fn create_card(
 
     // Invalidate cache
     if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards:{}", user_id);
+        let cache_key = format!("user_cards_proto_v2:{}", user_id);
         let _: () = redis.del(cache_key).await.unwrap_or_default();
     }
 
@@ -138,7 +152,7 @@ pub async fn update(
 
     // Invalidate cache
     if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards:{}", user_id);
+        let cache_key = format!("user_cards_proto_v2:{}", user_id);
         let _: () = redis.del(cache_key).await.unwrap_or_default();
     }
 
@@ -186,16 +200,13 @@ pub async fn get_card(
 pub async fn get_all_cards(
     State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
-) -> Result<Json<Vec<ShowGetCardResponse>>, AppError> {
-    let cache_key = format!("user_cards:{}", user_id);
+) -> Result<impl IntoResponse, AppError> {
+    let cache_key = format!("user_cards_proto_v2:{}", user_id);
 
     // Check Redis cache if available
     if let Some(mut redis) = state.redis.clone() {
-        if let Ok(cached_data) = redis.get::<_, String>(&cache_key).await {
-            if let Ok(response) = serde_json::from_str::<Vec<ShowGetCardResponse>>(&cached_data) {
-                info!("Serving cards from cache for user {}", user_id);
-                return Ok(Json(response));
-            }
+        if let Ok(Some(cached_data)) = redis.get::<_, Option<Vec<u8>>>(&cache_key).await {
+            return Ok(([(header::CONTENT_TYPE, "application/x-protobuf")], cached_data));
         }
     }
 
@@ -211,30 +222,35 @@ pub async fn get_all_cards(
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let response: Vec<ShowGetCardResponse> = cards
+    let proto_cards: Vec<crate::proto::Card> = cards
         .into_iter()
-        .map(|card| ShowGetCardResponse {
+        .map(|card| crate::proto::Card {
             card_id: card.card_id.unwrap(),
             card_name: card.card_name,
             card_bank: card.card_bank,
-            card_primary_color: unpack(card.card_primary_color),
-            card_secondary_color: unpack(card.card_secondary_color),
+            card_primary_color: card.card_primary_color as i32,
+            card_secondary_color: card.card_secondary_color as i32,
             last_total_due: card.last_total_due.map(|v| v as f32),
             last_delta: card.last_delta.map(|v| v as f32),
         })
         .collect();
 
+    let card_list = crate::proto::CardList { cards: proto_cards };
+
+    let mut buf = Vec::new();
+    card_list.encode(&mut buf).map_err(|e: prost::EncodeError| {
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
     // Cache the result if Redis is available
     if let Some(mut redis) = state.redis.clone() {
-        if let Ok(serialized) = serde_json::to_string(&response) {
-            let _: () = redis
-                .set_ex(cache_key, serialized, 3600)
-                .await
-                .unwrap_or_default();
-        }
+        let _: () = redis
+            .set_ex(cache_key, buf.clone(), 3600)
+            .await
+            .unwrap_or_default();
     }
 
-    Ok(Json(response))
+    Ok(([(header::CONTENT_TYPE, "application/x-protobuf")], buf))
 }
 
 pub async fn delete_card(
@@ -262,7 +278,7 @@ pub async fn delete_card(
 
     // Invalidate cache
     if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards:{}", user_id);
+        let cache_key = format!("user_cards_proto_v2:{}", user_id);
         let _: () = redis.del(cache_key).await.unwrap_or_default();
     }
 
@@ -321,7 +337,7 @@ pub async fn insert_transaction(
 
     // Invalidate cache
     if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards:{}", user_id);
+        let cache_key = format!("user_cards_proto_v2:{}", user_id);
         let _: () = redis.del(cache_key).await.unwrap_or_default();
     }
 
@@ -420,7 +436,7 @@ pub async fn reset_transactions(
     })?;
 
     if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards:{}", user_id);
+        let cache_key = format!("user_cards_proto_v2:{}", user_id);
         let _: () = redis.del(cache_key).await.unwrap_or_default();
     }
 

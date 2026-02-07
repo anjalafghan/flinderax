@@ -11,3 +11,17 @@ message CardTransactionHistory{
 message CardHistoryList {
   repeated CardTransactionHistory histories = 1;
 }
+
+message Card {
+  string card_id = 1;
+  string card_name = 2;
+  string card_bank = 3;
+  int32 card_primary_color = 4;
+  int32 card_secondary_color = 5;
+  optional float last_total_due = 6;
+  optional float last_delta = 7;
+}
+
+message CardList {
+  repeated Card cards = 1;
+}

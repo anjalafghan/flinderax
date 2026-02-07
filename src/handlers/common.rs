@@ -1,5 +1,4 @@
 use crate::models::{AppState, CreateUserPayload, CreateUserResponse, LoginPayload, LoginResponse};
-use base64::{engine::general_purpose, Engine};
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
@@ -13,6 +12,7 @@ use axum::{
 };
 use nanoid::nanoid;
 use rusty_paseto::prelude::*;
+use std::sync::Arc;
 use tracing::error;
 
 pub struct AppError(pub StatusCode, pub String);
@@ -57,7 +57,7 @@ pub async fn login(
             "Error getting user id".to_string(),
         ))?
         .to_string();
-    let token = get_paseto_token(&user_id, user.user_role)?;
+    let token = get_paseto_token(&user_id, user.user_role, &state.paseto_key)?;
 
     Ok(Json(LoginResponse {
         access_token: token,
@@ -80,32 +80,23 @@ fn verify_user(database_password: String, user_input_password: String) -> Result
     Ok(())
 }
 
-fn get_paseto_token(user_id: &str, user_role: String) -> Result<String, AppError> {
-    let key = get_key()?;
-
+fn get_paseto_token(
+    user_id: &str,
+    user_role: String,
+    key: &Arc<PasetoSymmetricKey<V4, Local>>,
+) -> Result<String, AppError> {
     let role_claim = CustomClaim::try_from(("role", user_role.as_str()))
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let token = PasetoBuilder::<V4, Local>::default()
         .set_claim(SubjectClaim::from(user_id))
         .set_claim(role_claim)
-        .build(&key)
+        .build(key)
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(token)
 }
 
-pub fn get_key() -> Result<PasetoSymmetricKey<V4, Local>, AppError> {
-    let key_str = std::env::var("PASETO_KEY")
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let key_bytes = general_purpose::STANDARD
-        .decode(key_str)
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(PasetoSymmetricKey::<V4, Local>::from(Key::from(
-        key_bytes.as_slice(),
-    )))
-}
 
 pub async fn register(
     State(state): State<AppState>,

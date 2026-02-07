@@ -1,6 +1,7 @@
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::env;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -29,7 +30,6 @@ async fn main() -> Result<(), sqlx::Error> {
     dotenvy::dotenv().ok();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL missing");
-    info!("Database url is present {}", database_url);
 
     let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
 
@@ -65,9 +65,18 @@ async fn main() -> Result<(), sqlx::Error> {
         }
     };
 
+    let key_str = env::var("PASETO_KEY").expect("PASETO_KEY missing");
+    let key_bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, key_str)
+        .expect("Failed to decode PASETO_KEY");
+    let paseto_key = Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<
+        rusty_paseto::core::V4,
+        rusty_paseto::core::Local,
+    >::from(rusty_paseto::prelude::Key::from(key_bytes.as_slice())));
+
     let state = models::AppState {
         db: pool.clone(),
         redis: redis_manager,
+        paseto_key,
     };
 
     let app = app::build_router(state);

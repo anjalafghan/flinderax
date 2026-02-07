@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use redis::aio::ConnectionManager;
@@ -8,6 +9,7 @@ use sqlx::SqlitePool;
 pub struct AppState {
     pub db: SqlitePool,
     pub redis: Option<ConnectionManager>,
+    pub paseto_key: Arc<rusty_paseto::prelude::PasetoSymmetricKey<rusty_paseto::core::V4, rusty_paseto::core::Local>>,
 }
 
 #[derive(serde::Deserialize, Clone)]

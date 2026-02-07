@@ -116,6 +116,35 @@ const api = {
         }
 
         return await response.arrayBuffer();
+    },
+
+    getProtobuf: async (url: string): Promise<ArrayBuffer> => {
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
+
+        const response = await fetch(fullUrl, {
+            method: 'GET',
+            headers,
+        });
+
+        if (response.status === 401) {
+            handleUnauthorized();
+            return new Promise(() => { });
+        }
+
+        if (!response.ok) {
+            const errorBody = await response.text().catch(() => '');
+            throw new Error(errorBody || `Request failed with status ${response.status}`);
+        }
+
+        return await response.arrayBuffer();
     }
 
 };

@@ -5,3 +5,11 @@ target/
 web/
 node_modules/
 dist/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+load-test.js
+*.md
+.github/
+.vscode/

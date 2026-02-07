@@ -10,7 +10,7 @@ use crate::handlers::user;
 pub fn routes(state: AppState) -> Router {
     Router::new()
         .route("/delete", post(user::delete))
-        .layer(middleware::from_fn(token_validator_auth_middleware))
+        .layer(middleware::from_fn_with_state(state.clone(), token_validator_auth_middleware))
         .route("/get", get(user::get_user))
         .with_state(state)
 }
