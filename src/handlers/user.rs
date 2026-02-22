@@ -33,7 +33,7 @@ pub async fn get_user(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<GetUserResponse>>, AppError> {
     let db_users: Vec<GetUsers> = sqlx::query_as::<_, GetUsers>(
-        "SELECT user_id, user_name, user_password, user_role FROM users",
+        "SELECT user_id, user_name,  user_role FROM users",
     )
     .fetch_all(&state.db)
     .await
@@ -47,7 +47,6 @@ pub async fn get_user(
         .map(|v| GetUserResponse {
             user_id: v.user_id,
             user_name: v.user_name,
-            user_password: v.user_password,
             user_role: v.user_role,
         })
         .collect();

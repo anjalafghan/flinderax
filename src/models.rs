@@ -22,7 +22,6 @@ pub struct CreateUserPayload {
 pub struct GetUserResponse {
     pub user_id: String,
     pub user_name: String,
-    pub user_password: String,
     pub user_role: String,
 }
 
@@ -47,6 +46,7 @@ pub struct LoginPayload {
 #[derive(Serialize)]
 pub struct LoginResponse {
     pub access_token: String,
+    pub expires_at: i64,
 }
 
 #[derive(Deserialize)]

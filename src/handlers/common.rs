@@ -13,6 +13,7 @@ use axum::{
 use nanoid::nanoid;
 use rusty_paseto::prelude::*;
 use std::sync::Arc;
+use time::{Duration, OffsetDateTime};
 use tracing::error;
 
 pub struct AppError(pub StatusCode, pub String);
@@ -47,7 +48,7 @@ pub async fn login(
         }
     };
 
-    let _ = verify_user(user.user_password, login_payload.user_password);
+    verify_user(user.user_password, login_payload.user_password)?;
 
     let user_id = user
         .user_id
@@ -57,10 +58,13 @@ pub async fn login(
             "Error getting user id".to_string(),
         ))?
         .to_string();
-    let token = get_paseto_token(&user_id, user.user_role, &state.paseto_key)?;
+
+    let expiration = OffsetDateTime::now_utc() + Duration::hours(24);
+    let token = get_paseto_token(&user_id, user.user_role, &state.paseto_key, expiration)?;
 
     Ok(Json(LoginResponse {
         access_token: token,
+        expires_at: expiration.unix_timestamp(),
     }))
 }
 fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
@@ -84,6 +88,7 @@ fn get_paseto_token(
     user_id: &str,
     user_role: String,
     key: &Arc<PasetoSymmetricKey<V4, Local>>,
+    expiration: OffsetDateTime,
 ) -> Result<String, AppError> {
     let role_claim = CustomClaim::try_from(("role", user_role.as_str()))
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -91,12 +96,19 @@ fn get_paseto_token(
     let token = PasetoBuilder::<V4, Local>::default()
         .set_claim(SubjectClaim::from(user_id))
         .set_claim(role_claim)
+        .set_claim(
+            ExpirationClaim::try_from(
+                expiration
+                    .format(&time::format_description::well_known::Rfc3339)
+                    .unwrap(),
+            )
+            .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?,
+        )
         .build(key)
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(token)
 }
-
 
 pub async fn register(
     State(state): State<AppState>,

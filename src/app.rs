@@ -116,7 +116,10 @@ fn parse_token(
     token: &str,
     key: &Arc<PasetoSymmetricKey<V4, Local>>,
 ) -> Result<(String, String), AppError> {
-    match PasetoParser::<V4, Local>::default().parse(token, key) {
+    match PasetoParser::<V4, Local>::default()
+        .check_claim(rusty_paseto::prelude::ExpirationClaim::default())
+        .parse(token, key) 
+    {
         Ok(json_value) => {
             let user_id = json_value["sub"]
                 .as_str()
