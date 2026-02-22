@@ -27,7 +27,7 @@ export default function AuthPage() {
 
     const loginMutation = useMutation({
         mutationFn: async () => {
-            const res = await api.post<{ access_token: string }>("/common/login", {
+            const res = await api.post<{ access_token: string, expires_at: number }>("/common/login", {
                 user_name: loginUser,
                 user_password: loginPass,
             })
@@ -35,7 +35,7 @@ export default function AuthPage() {
         },
         onSuccess: (data) => {
             toast.success("Welcome back!")
-            login(data.access_token)
+            login(data.access_token, data.expires_at)
             navigate("/")
         },
         onError: (error: any) => {
