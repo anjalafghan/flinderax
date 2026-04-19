@@ -11,6 +11,7 @@ interface CreditCardProps {
     lastDelta: number
     primaryColor: [number, number, number]
     secondaryColor: [number, number, number]
+    last4Digits?: string | null
     onClick?: () => void
     variant?: 'platinum' | 'black' | 'custom'
 }
@@ -22,6 +23,7 @@ export const CreditCard = memo(function CreditCard({
     lastDelta,
     primaryColor,
     secondaryColor,
+    last4Digits,
     onClick,
 }: CreditCardProps) {
     const p = primaryColor
@@ -91,7 +93,9 @@ export const CreditCard = memo(function CreditCard({
                     </div>
 
                     <div className="flex justify-between items-center font-mono text-[10px] md:text-sm opacity-90">
-                        <span className="tracking-[0.15em] md:tracking-[0.2em] shadow-black drop-shadow-sm">•••• •••• •••• ••••</span>
+                        <span className="tracking-[0.15em] md:tracking-[0.2em] shadow-black drop-shadow-sm">
+                            {last4Digits ? `•••• •••• •••• ${last4Digits}` : '•••• •••• •••• ••••'}
+                        </span>
                         <span className="font-sans uppercase text-[8px] md:text-[10px] font-bold tracking-widest">{name}</span>
                     </div>
                 </div>

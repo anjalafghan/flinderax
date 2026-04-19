@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { X, ArrowRight } from "lucide-react"
+import { X, ArrowRight, Check, Clock } from "lucide-react"
 
 import api from "@/services/api"
 import { Button } from "@/components/ui/button"
@@ -16,100 +16,112 @@ interface UpdateTransactionModalProps {
     currentBalance: number
 }
 
+interface TransactionResponse {
+    transaction_id: string
+    amount_due: number
+    status: boolean
+}
+
+interface DeferUpdateResponse {
+    batch_id: string
+    item_id: string
+    total_pending: number
+    status: boolean
+}
+
 export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance }: UpdateTransactionModalProps) {
     const [amount, setAmount] = useState<string>("")
-    const [showSuggestion, setShowSuggestion] = useState<{ delta: number, newBalance: number } | null>(null)
+    const [showDeferredConfirm, setShowDeferredConfirm] = useState<{ totalPending: number } | null>(null)
+    const [showConfirmTransfer, setShowConfirmTransfer] = useState<{ delta: number } | null>(null)
     const queryClient = useQueryClient()
 
-    const transactionMutation = useMutation({
-        mutationFn: async () => {
-            const amountFloat = parseFloat(amount)
-            if (isNaN(amountFloat)) throw new Error("Invalid amount")
-
-            const res = await api.post<{ amount_due: number }>("/card/insert_transaction", {
+    const confirmTransferMutation = useMutation({
+        mutationFn: async (delta: number) => {
+            const res = await api.post<TransactionResponse>("/card/insert_transaction", {
                 card_id: cardId,
-                amount_due: amountFloat,
+                amount_due: delta,
             })
             return res.data
         },
         onSuccess: (data) => {
-            // Calculate delta locally for immediate feedback if backend doesn't return it conveniently in the response object shape we expect
-            // But the endpoint actually returns `amount_due` which is the delta in the `InsertTransactionResponse` struct based on backend code!
-            // Wait, let's double check backend.
-            // struct InsertTransactionResponse { amount_due: f32 (which is assigned last_delta), ... }
-
-            const delta = data.amount_due;
-            const newBalance = parseFloat(amount); // The input total
-
-            if (delta > 0) {
-                setShowSuggestion({ delta, newBalance })
-                // Don't close immediately if we have a suggestion
-                queryClient.invalidateQueries({ queryKey: [] }) // Invalidate all
-            } else {
-                toast.success("Balance updated successfully")
+            if (data.status) {
+                toast.success(`Transfer of ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(data.amount_due)} confirmed`)
                 handleClose()
             }
         },
         onError: (error: any) => {
-            toast.error("Failed to add transaction")
+            toast.error("Failed to confirm transfer")
+            console.error(error)
+        }
+    })
+
+    const deferMutation = useMutation({
+        mutationFn: async (delta: number) => {
+            const res = await api.post<DeferUpdateResponse>("/card/defer_update", {
+                card_id: cardId,
+                amount: delta,
+            })
+            return res.data
+        },
+        onSuccess: (data) => {
+            if (data.status) {
+                setShowDeferredConfirm({ totalPending: data.total_pending })
+            }
+        },
+        onError: (error: any) => {
+            toast.error("Failed to defer payment")
             console.error(error)
         }
     })
 
     const handleClose = () => {
         setAmount("")
-        setShowSuggestion(null)
+        setShowDeferredConfirm(null)
+        setShowConfirmTransfer(null)
         onClose()
-        // Refresh data on close
         queryClient.invalidateQueries({ queryKey: ['card', cardId] })
         queryClient.invalidateQueries({ queryKey: ['history', cardId] })
         queryClient.invalidateQueries({ queryKey: ['cards'] })
+        queryClient.invalidateQueries({ queryKey: ['deferred-status'] })
     }
 
     if (!isOpen) return null
 
-    // If showing suggestion state
-    if (showSuggestion) {
+    if (showDeferredConfirm) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                <Card className="w-full max-w-md animate-in fade-in zoom-in duration-200 border-l-4 border-l-orange-500">
+                <Card className="w-full max-w-md animate-in fade-in zoom-in duration-200 border-l-4 border-l-blue-500">
                     <CardHeader className="flex flex-row items-start justify-between pb-2">
                         <div>
-                            <CardTitle className="text-xl font-bold">Transfer Required</CardTitle>
-                            <p className="text-sm text-muted-foreground mt-1">Your credit card balance has increased.</p>
+                            <CardTitle className="text-xl font-bold">Payment Deferred</CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">Amount added to pending batch.</p>
                         </div>
                         <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 rounded-full">
                             <X className="h-4 w-4" />
                         </Button>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-2">
-                        <div className="rounded-lg bg-orange-50 p-4 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/50">
+                        <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50">
                             <div className="flex flex-col gap-1 items-center text-center">
-                                <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                                    You need to transfer
+                                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                    Total Pending
                                 </span>
-                                <span className="text-3xl font-extrabold text-orange-600 dark:text-orange-400">
-                                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(showSuggestion.delta)}
+                                <span className="text-3xl font-extrabold text-blue-600 dark:text-blue-400">
+                                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(showDeferredConfirm.totalPending)}
                                 </span>
-                                <span className="text-xs text-orange-700/80 dark:text-orange-300/80 mt-1">
-                                    form your Savings Account to your Credit Card Payment Account.
+                                <span className="text-xs text-blue-700/80 dark:text-blue-300/80 mt-1">
+                                    across all cards
                                 </span>
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Previous Balance</span>
-                                <span>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(currentBalance)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm font-bold">
-                                <span>New Total Balance</span>
-                                <span>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(showSuggestion.newBalance)}</span>
-                            </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            <span>Settle all pending payments at once from your dashboard</span>
                         </div>
 
-                        <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white" onClick={handleClose}>
-                            I've made the transfer <ArrowRight className="ml-2 h-4 w-4" />
+                        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={handleClose}>
+                            Got it <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                     </CardContent>
                 </Card>
@@ -117,7 +129,74 @@ export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance
         )
     }
 
+    if (showConfirmTransfer) {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                <Card className="w-full max-w-md animate-in fade-in zoom-in duration-200 border-l-4 border-l-green-500">
+                    <CardHeader className="flex flex-row items-start justify-between pb-2">
+                        <div>
+                            <CardTitle className="text-xl font-bold">Confirm Transfer</CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">Transfer the amount to your credit card account.</p>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 rounded-full">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-2">
+                        <div className="rounded-lg bg-green-50 p-4 dark:bg-green-950/30 border border-green-100 dark:border-green-900/50">
+                            <div className="flex flex-col gap-1 items-center text-center">
+                                <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                                    You need to transfer
+                                </span>
+                                <span className="text-3xl font-extrabold text-green-600 dark:text-green-400">
+                                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(showConfirmTransfer.delta)}
+                                </span>
+                                <span className="text-xs text-green-700/80 dark:text-green-300/80 mt-1">
+                                    from your Savings Account to your Credit Card Payment Account
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <Button variant="outline" className="flex-1" onClick={() => setShowConfirmTransfer(null)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1 bg-green-600 hover:bg-green-700"
+                                onClick={() => confirmTransferMutation.mutate(showConfirmTransfer.delta)}
+                                disabled={confirmTransferMutation.isPending}
+                            >
+                                {confirmTransferMutation.isPending ? "Confirming..." : "I've transferred"}
+                                <Check className="ml-2 h-4 w-4" />
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
     const calculatedDelta = amount ? (parseFloat(amount) - currentBalance) : 0
+
+    const handleConfirmTransfer = () => {
+        if (calculatedDelta > 0) {
+            setShowConfirmTransfer({ delta: calculatedDelta })
+        } else if (calculatedDelta < 0) {
+            confirmTransferMutation.mutate(calculatedDelta)
+        } else {
+            toast.info("No change in balance")
+            handleClose()
+        }
+    }
+
+    const handleDeferPayment = () => {
+        if (calculatedDelta === 0) {
+            toast.info("No change in balance")
+            handleClose()
+            return
+        }
+        deferMutation.mutate(calculatedDelta)
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -145,7 +224,7 @@ export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance
                     </div>
 
                     <div className="rounded-lg bg-muted p-4 text-center">
-                        <span className="text-sm text-muted-foreground">Change from previous</span>
+                        <span className="text-sm text-muted-foreground">Amount to transfer</span>
                         <div className={`text-2xl font-bold ${calculatedDelta > 0 ? 'text-destructive' : 'text-green-500'}`}>
                             {calculatedDelta > 0 ? '+' : ''}
                             {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(calculatedDelta)}
@@ -156,12 +235,32 @@ export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance
                         <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
                         <Button
                             className="flex-1"
-                            onClick={() => transactionMutation.mutate()}
-                            disabled={!amount || transactionMutation.isPending}
+                            onClick={handleDeferPayment}
+                            disabled={!amount || deferMutation.isPending}
                         >
-                            {transactionMutation.isPending ? "Updating..." : "Update"}
+                            {deferMutation.isPending ? "Deferring..." : "Defer Payment"}
                         </Button>
                     </div>
+
+                    {calculatedDelta > 0 && (
+                        <Button
+                            className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            onClick={handleConfirmTransfer}
+                        >
+                            <Check className="mr-2 h-4 w-4" />
+                            I've transferred {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(calculatedDelta)}
+                        </Button>
+                    )}
+
+                    {calculatedDelta < 0 && (
+                        <Button
+                            className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            onClick={handleConfirmTransfer}
+                        >
+                            <Check className="mr-2 h-4 w-4" />
+                            Confirm Overpayment Refund
+                        </Button>
+                    )}
                 </CardContent>
             </Card>
         </div>

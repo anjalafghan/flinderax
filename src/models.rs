@@ -55,6 +55,7 @@ pub struct CreateCardPayload {
     pub card_bank: String,
     pub card_primary_color: (u8, u8, u8),
     pub card_secondary_color: (u8, u8, u8),
+    pub last_4_digits: Option<String>,
 }
 #[derive(Serialize)]
 pub struct CardResponse {
@@ -74,6 +75,7 @@ pub struct UpdateCardPayload {
     pub card_bank: String,
     pub card_primary_color: (u8, u8, u8),
     pub card_secondary_color: (u8, u8, u8),
+    pub last_4_digits: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -88,6 +90,7 @@ pub struct ShowGetCardResponse {
     pub card_bank: String,
     pub card_primary_color: (u8, u8, u8),
     pub card_secondary_color: (u8, u8, u8),
+    pub last_4_digits: Option<String>,
     pub last_total_due: Option<f32>,
     pub last_delta: Option<f32>,
 }
@@ -119,4 +122,46 @@ pub struct GetHistoryPayload {
 #[derive(Deserialize)]
 pub struct ResetTransactionsPayload {
     pub card_id: String,
+}
+
+#[derive(Deserialize)]
+pub struct DeferUpdatePayload {
+    pub card_id: String,
+    pub amount: f32,
+}
+
+#[derive(Serialize)]
+pub struct DeferUpdateResponse {
+    pub batch_id: String,
+    pub item_id: String,
+    pub total_pending: f32,
+    pub status: bool,
+}
+
+#[derive(Serialize)]
+pub struct DeferredBatchStatus {
+    pub batch_id: String,
+    pub total_amount: f32,
+    pub status: String,
+    pub items: Vec<DeferredItemStatus>,
+}
+
+#[derive(Serialize)]
+pub struct DeferredItemStatus {
+    pub item_id: String,
+    pub card_id: String,
+    pub card_name: Option<String>,
+    pub amount: f32,
+}
+
+#[derive(Deserialize)]
+pub struct SettleDeferredPayload {
+    pub batch_id: String,
+}
+
+#[derive(Serialize)]
+pub struct SettleDeferredResponse {
+    pub batch_id: String,
+    pub total_settled: f32,
+    pub status: bool,
 }

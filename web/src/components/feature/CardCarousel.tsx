@@ -13,6 +13,7 @@ export interface CardData {
     card_bank: string
     card_primary_color: [number, number, number]
     card_secondary_color: [number, number, number]
+    last_4_digits: string | null
     last_total_due: number | null
     last_delta: number | null
 }
@@ -150,6 +151,7 @@ export const CardCarousel = memo(function CardCarousel({
                                 lastDelta={card.last_delta || 0}
                                 primaryColor={card.card_primary_color}
                                 secondaryColor={card.card_secondary_color}
+                                last4Digits={card.last_4_digits}
                             />
                             {isActive && (
                                 <motion.div

@@ -24,6 +24,7 @@ message Card {
   int32 card_secondary_color = 5;
   optional float last_total_due = 6;
   optional float last_delta = 7;
+  optional string last_4_digits = 8;
 }
 
 message CardList {
@@ -62,6 +63,7 @@ export interface Card {
     card_secondary_color: number;
     last_total_due: number | null;
     last_delta: number | null;
+    last_4_digits: string | null;
 }
 
 export interface CardList {
@@ -117,6 +119,7 @@ export async function decodeCardList(buffer: ArrayBuffer): Promise<CardList> {
         card_secondary_color: c.cardSecondaryColor || c.card_secondary_color || 0,
         last_total_due: c.lastTotalDue ?? c.last_total_due ?? null,
         last_delta: c.lastDelta ?? c.last_delta ?? null,
+        last_4_digits: c.last4Digits ?? c.last_4_digits ?? null,
     }));
 
     return { cards };

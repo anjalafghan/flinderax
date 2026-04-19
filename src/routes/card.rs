@@ -12,5 +12,9 @@ pub fn routes(state: AppState) -> Router {
         .route("/insert_transaction", post(card::insert_transaction))
         .route("/history", post(card::get_history))
         .route("/reset", post(card::reset_transactions))
+        .route("/defer_update", post(card::defer_update))
+        .route("/defer_status", get(card::get_deferred_status))
+        .route("/defer_settle", post(card::settle_deferred))
+        .route("/defer_cancel", post(card::cancel_deferred))
         .with_state(state)
 }

@@ -20,6 +20,7 @@ message Card {
   int32 card_secondary_color = 5;
   optional float last_total_due = 6;
   optional float last_delta = 7;
+  optional string last_4_digits = 8;
 }
 
 message CardList {

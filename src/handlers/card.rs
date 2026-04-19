@@ -18,7 +18,8 @@ use crate::{
     models::{
         AppState, CardResponse, CreateCardPayload, DeleteCardPayload, GetCardForUser,
         InsertTransactionPayload, InsertTransactionResponse, ResetTransactionsPayload,
-        ShowGetCardResponse, UpdateCardPayload,
+        ShowGetCardResponse, UpdateCardPayload, DeferUpdatePayload, DeferUpdateResponse,
+        DeferredBatchStatus, DeferredItemStatus, SettleDeferredPayload, SettleDeferredResponse,
     },
 };
 struct Timestamp {
@@ -71,6 +72,7 @@ impl From<crate::models::ShowGetCardResponse> for crate::proto::Card {
             card_secondary_color: color::pack(param.card_secondary_color),
             last_total_due: param.last_total_due,
             last_delta: param.last_delta,
+            last_4_digits: param.last_4_digits,
         }
     }
 }
@@ -90,13 +92,14 @@ pub async fn create_card(
     let secondary_color = color::pack(card_details.card_secondary_color);
 
     sqlx::query!(
-        "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color, last_4_digits) VALUES (?, ?, ?, ?, ?, ?, ?)",
         card_id,
         user_id,
         card_details.card_name,
         card_details.card_bank,
         primary_color,
-        secondary_color
+        secondary_color,
+        card_details.last_4_digits
     )
     .execute(&mut *tx)
     .await
@@ -136,11 +139,12 @@ pub async fn update(
     let card_primary_color = pack(update_card_details.card_primary_color);
     let card_secondary_color = pack(update_card_details.card_secondary_color);
     sqlx::query!(
-        "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ? WHERE card_id = ? AND user_id = ?",
+        "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ?, last_4_digits = ? WHERE card_id = ? AND user_id = ?",
         update_card_details.card_name,
         update_card_details.card_bank,
         card_primary_color,
         card_secondary_color,
+        update_card_details.last_4_digits,
         update_card_details.card_id,
         user_id
     )
@@ -168,7 +172,7 @@ pub async fn get_card(
     Json(get_card): Json<GetCardForUser>,
 ) -> Result<Json<ShowGetCardResponse>, AppError> {
     let card = sqlx::query!(
-        "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color,
+        "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color, c.last_4_digits,
                 crs.last_total_due, crs.last_delta
          FROM cards c
          LEFT JOIN card_running_state crs ON c.card_id = crs.card_id
@@ -192,6 +196,7 @@ pub async fn get_card(
         card_bank: card.card_bank,
         card_primary_color: unpack(card.card_primary_color),
         card_secondary_color: unpack(card.card_secondary_color),
+        last_4_digits: card.last_4_digits,
         last_total_due: Some(card.last_total_due as f32),
         last_delta: Some(card.last_delta as f32),
     }))
@@ -211,7 +216,7 @@ pub async fn get_all_cards(
     }
 
     let cards = sqlx::query!(
-        "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color,
+        "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color, c.last_4_digits,
                 crs.last_total_due, crs.last_delta
          FROM cards c
          LEFT JOIN card_running_state crs ON c.card_id = crs.card_id
@@ -230,8 +235,9 @@ pub async fn get_all_cards(
             card_bank: card.card_bank,
             card_primary_color: card.card_primary_color as i32,
             card_secondary_color: card.card_secondary_color as i32,
-            last_total_due: card.last_total_due.map(|v| v as f32),
-            last_delta: card.last_delta.map(|v| v as f32),
+            last_total_due: Some(card.last_total_due as f32),
+            last_delta: Some(card.last_delta as f32),
+            last_4_digits: card.last_4_digits,
         })
         .collect();
 
@@ -315,8 +321,7 @@ pub async fn insert_transaction(
     let result = sqlx::query!(
         "UPDATE card_running_state
          SET last_delta = ? - last_total_due,
-             last_total_due = ?,
-             updated_at = CURRENT_TIMESTAMP
+             last_total_due = ?
          WHERE card_id = ?
          RETURNING last_delta",
         insert_transaction.amount_due,
@@ -420,7 +425,7 @@ pub async fn reset_transactions(
         })?;
 
     sqlx::query!(
-        "UPDATE card_running_state SET last_total_due = 0, last_delta = 0, updated_at = CURRENT_TIMESTAMP WHERE card_id = ?",
+        "UPDATE card_running_state SET last_total_due = 0, last_delta = 0 WHERE card_id = ?",
         card_id
     )
     .execute(&mut *tx)
@@ -442,6 +447,251 @@ pub async fn reset_transactions(
 
     Ok(Json(CardResponse {
         card_id: card_id.to_string(),
+        status: true,
+    }))
+}
+
+pub async fn defer_update(
+    State(state): State<AppState>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+    Json(payload): Json<DeferUpdatePayload>,
+) -> Result<Json<DeferUpdateResponse>, AppError> {
+    let card_id = &payload.card_id;
+
+    let card_exists = sqlx::query!(
+        "SELECT card_id FROM cards WHERE card_id = ? AND user_id = ?",
+        card_id,
+        user_id
+    )
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if card_exists.is_none() {
+        return Err(AppError(
+            StatusCode::NOT_FOUND,
+            "Card not found or you don't have permission to modify it".to_string(),
+        ));
+    }
+
+    let mut tx = state.db.begin().await.map_err(|e| {
+        error!("Error starting transaction: {}", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    let batch_id = sqlx::query!(
+        "SELECT batch_id FROM deferred_payment_batches WHERE user_id = ? AND status = 'pending' LIMIT 1",
+        user_id
+    )
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let batch_id = if let Some(b) = batch_id {
+        b.batch_id.unwrap()
+    } else {
+        let new_batch_id = nanoid!();
+        sqlx::query!(
+            "INSERT INTO deferred_payment_batches (batch_id, user_id, total_amount, status) VALUES (?, ?, 0, 'pending')",
+            new_batch_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        new_batch_id
+    };
+
+    let item_id = nanoid!();
+    sqlx::query!(
+        "INSERT INTO deferred_payment_items (item_id, batch_id, card_id, amount) VALUES (?, ?, ?, ?)",
+        item_id,
+        batch_id,
+        card_id,
+        payload.amount
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    sqlx::query!(
+        "UPDATE deferred_payment_batches SET total_amount = total_amount + ? WHERE batch_id = ?",
+        payload.amount,
+        batch_id
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    tx.commit()
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let total = sqlx::query!(
+        "SELECT total_amount FROM deferred_payment_batches WHERE batch_id = ?",
+        batch_id
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(DeferUpdateResponse {
+        batch_id,
+        item_id,
+        total_pending: total.total_amount as f32,
+        status: true,
+    }))
+}
+
+pub async fn get_deferred_status(
+    State(state): State<AppState>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+) -> Result<Json<Option<DeferredBatchStatus>>, AppError> {
+    let batch = sqlx::query!(
+        "SELECT batch_id, total_amount, status FROM deferred_payment_batches WHERE user_id = ? AND status = 'pending' LIMIT 1",
+        user_id
+    )
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if let Some(b) = batch {
+        let items = sqlx::query!(
+            "SELECT di.item_id, di.card_id, di.amount, c.card_name
+             FROM deferred_payment_items di
+             JOIN cards c ON di.card_id = c.card_id
+             WHERE di.batch_id = ?",
+            b.batch_id
+        )
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        let item_statuses: Vec<DeferredItemStatus> = items
+            .into_iter()
+            .map(|i| DeferredItemStatus {
+                item_id: i.item_id.unwrap(),
+                card_id: i.card_id,
+                card_name: Some(i.card_name),
+                amount: i.amount as f32,
+            })
+            .collect();
+
+        Ok(Json(Some(DeferredBatchStatus {
+            batch_id: b.batch_id.unwrap(),
+            total_amount: b.total_amount as f32,
+            status: b.status,
+            items: item_statuses,
+        })))
+    } else {
+        Ok(Json(None))
+    }
+}
+
+pub async fn settle_deferred(
+    State(state): State<AppState>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+    Json(payload): Json<SettleDeferredPayload>,
+) -> Result<Json<SettleDeferredResponse>, AppError> {
+    let mut tx = state.db.begin().await.map_err(|e| {
+        error!("Error starting transaction: {}", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    let batch = sqlx::query!(
+        "SELECT batch_id, total_amount FROM deferred_payment_batches WHERE batch_id = ? AND user_id = ? AND status = 'pending'",
+        payload.batch_id,
+        user_id
+    )
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let batch = batch.ok_or_else(|| {
+        AppError(StatusCode::NOT_FOUND, "Batch not found or already settled".to_string())
+    })?;
+
+    let items = sqlx::query!(
+        "SELECT card_id, amount FROM deferred_payment_items WHERE batch_id = ?",
+        payload.batch_id
+    )
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    for item in &items {
+        let transaction_id = nanoid!();
+        sqlx::query!(
+            "INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES (?, ?, ?)",
+            transaction_id,
+            item.card_id,
+            item.amount
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        sqlx::query!(
+            "UPDATE card_running_state
+             SET last_delta = ? - last_total_due,
+                 last_total_due = ?
+             WHERE card_id = ?",
+            item.amount,
+            item.amount,
+            item.card_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    }
+
+    sqlx::query!(
+        "UPDATE deferred_payment_batches SET status = 'settled' WHERE batch_id = ?",
+        payload.batch_id
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    tx.commit()
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if let Some(mut redis) = state.redis.clone() {
+        let cache_key = format!("user_cards_proto_v2:{}", user_id);
+        let _: () = redis.del(cache_key).await.unwrap_or_default();
+    }
+
+    Ok(Json(SettleDeferredResponse {
+        batch_id: payload.batch_id,
+        total_settled: batch.total_amount as f32,
+        status: true,
+    }))
+}
+
+pub async fn cancel_deferred(
+    State(state): State<AppState>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+    Json(payload): Json<SettleDeferredPayload>,
+) -> Result<Json<CardResponse>, AppError> {
+    let result = sqlx::query!(
+        "UPDATE deferred_payment_batches SET status = 'cancelled' WHERE batch_id = ? AND user_id = ? AND status = 'pending'",
+        payload.batch_id,
+        user_id
+    )
+    .execute(&state.db)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError(
+            StatusCode::NOT_FOUND,
+            "Batch not found or already processed".to_string(),
+        ));
+    }
+
+    Ok(Json(CardResponse {
+        card_id: payload.batch_id,
         status: true,
     }))
 }

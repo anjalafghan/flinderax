@@ -2,7 +2,7 @@ import { useState, lazy, Suspense } from "react"
 import type { CardData } from "./DashboardPage"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Trash2, TrendingUp, TrendingDown, Minus, RefreshCcw } from "lucide-react"
+import { ArrowLeft, Trash2, TrendingUp, TrendingDown, Minus, RefreshCcw, Settings } from "lucide-react"
 import { toast } from "sonner"
 
 import api from "@/services/api"
@@ -14,6 +14,7 @@ import { cn } from "@/utils/cn"
 
 const UpdateTransactionModal = lazy(() => import("@/components/feature/UpdateTransactionModal").then(m => ({ default: m.UpdateTransactionModal })))
 const ConfirmationModal = lazy(() => import("@/components/ui/ConfirmationModal").then(m => ({ default: m.ConfirmationModal })))
+const EditCardModal = lazy(() => import("@/components/feature/EditCardModal").then(m => ({ default: m.EditCardModal })))
 
 export default function CardDetailsPage() {
     const { id } = useParams<{ id: string }>()
@@ -22,6 +23,7 @@ export default function CardDetailsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+    const [isEditCardOpen, setIsEditCardOpen] = useState(false)
 
     // Fetch Card Details
     const cardQuery = useQuery({
@@ -96,6 +98,13 @@ export default function CardDetailsPage() {
                         <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => setIsEditCardOpen(true)}
+                        >
+                            <Settings className="mr-2 h-4 w-4" /> Edit Card
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => setIsResetConfirmOpen(true)}
                             disabled={resetMutation.isPending}
                         >
@@ -124,6 +133,7 @@ export default function CardDetailsPage() {
                                 lastDelta={card.last_delta || 0}
                                 primaryColor={card.card_primary_color}
                                 secondaryColor={card.card_secondary_color}
+                                last4Digits={card.last_4_digits}
                                 variant="custom"
                             />
                         </div>
@@ -209,6 +219,17 @@ export default function CardDetailsPage() {
                         confirmText="Delete Card"
                         variant="destructive"
                         isPending={deleteMutation.isPending}
+                    />
+
+                    <EditCardModal
+                        isOpen={isEditCardOpen}
+                        onClose={() => setIsEditCardOpen(false)}
+                        cardId={card.card_id}
+                        currentName={card.card_name}
+                        currentBank={card.card_bank}
+                        currentPrimaryColor={card.card_primary_color}
+                        currentSecondaryColor={card.card_secondary_color}
+                        currentLast4Digits={card.last_4_digits}
                     />
                 </Suspense>
             </div>

@@ -30,6 +30,7 @@ export default function CreateCardPage() {
     const [bank, setBank] = useState("Bank Name")
     const [primaryColor, setPrimaryColor] = useState("#1e293b")
     const [secondaryColor, setSecondaryColor] = useState("#334155")
+    const [last4Digits, setLast4Digits] = useState("")
 
     const createCardMutation = useMutation({
         mutationFn: async () => {
@@ -38,6 +39,7 @@ export default function CreateCardPage() {
                 card_bank: bank,
                 card_primary_color: hexToRgb(primaryColor),
                 card_secondary_color: hexToRgb(secondaryColor),
+                last_4_digits: last4Digits || null,
             })
         },
         onSuccess: () => {
@@ -72,6 +74,16 @@ export default function CreateCardPage() {
                         <div className="space-y-2">
                             <Label>Bank Name</Label>
                             <Input value={bank} onChange={e => setBank(e.target.value)} placeholder="e.g. Chase" />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Last 4 Digits (Optional)</Label>
+                            <Input
+                                value={last4Digits}
+                                onChange={e => setLast4Digits(e.target.value)}
+                                placeholder="e.g. 1234"
+                                maxLength={4}
+                            />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
