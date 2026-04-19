@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { X } from "lucide-react"
@@ -48,8 +48,8 @@ export function EditCardModal({
 }: EditCardModalProps) {
     const [name, setName] = useState(currentName)
     const [bank, setBank] = useState(currentBank)
-    const [primaryColor, setPrimaryColor] = useState(rgbToHex(...currentPrimaryColor))
-    const [secondaryColor, setSecondaryColor] = useState(rgbToHex(...currentSecondaryColor))
+    const [primaryColor, setPrimaryColor] = useState(() => rgbToHex(...currentPrimaryColor))
+    const [secondaryColor, setSecondaryColor] = useState(() => rgbToHex(...currentSecondaryColor))
     const [last4Digits, setLast4Digits] = useState(currentLast4Digits || "")
     const queryClient = useQueryClient()
 
@@ -60,6 +60,16 @@ export function EditCardModal({
         setSecondaryColor(rgbToHex(...currentSecondaryColor))
         setLast4Digits(currentLast4Digits || "")
     }, [currentName, currentBank, currentPrimaryColor, currentSecondaryColor, currentLast4Digits])
+
+    const handleNameChange = useCallback((value: string) => setName(value), [])
+    const handleBankChange = useCallback((value: string) => setBank(value), [])
+    const handleLast4DigitsChange = useCallback((value: string) => setLast4Digits(value), [])
+    const handlePrimaryColorChange = useCallback((value: string) => setPrimaryColor(value), [])
+    const handleSecondaryColorChange = useCallback((value: string) => setSecondaryColor(value), [])
+
+    const primaryColorRgb = useMemo(() => hexToRgb(primaryColor), [primaryColor])
+    const secondaryColorRgb = useMemo(() => hexToRgb(secondaryColor), [secondaryColor])
+    const previewLast4Digits = useMemo(() => last4Digits || currentLast4Digits || null, [last4Digits, currentLast4Digits])
 
     const updateMutation = useMutation({
         mutationFn: async () => {
@@ -78,7 +88,7 @@ export function EditCardModal({
             queryClient.invalidateQueries({ queryKey: ['card', cardId] })
             onClose()
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast.error("Failed to update card")
             console.error(error)
         }
@@ -98,19 +108,19 @@ export function EditCardModal({
                 <CardContent className="space-y-4 pt-4">
                     <div className="space-y-2">
                         <Label>Card Name / Nickname</Label>
-                        <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Travel Rewards" />
+                        <Input value={name} onChange={e => handleNameChange(e.target.value)} placeholder="e.g. Travel Rewards" />
                     </div>
 
                     <div className="space-y-2">
                         <Label>Bank Name</Label>
-                        <Input value={bank} onChange={e => setBank(e.target.value)} placeholder="e.g. Chase" />
+                        <Input value={bank} onChange={e => handleBankChange(e.target.value)} placeholder="e.g. Chase" />
                     </div>
 
                     <div className="space-y-2">
                         <Label>Last 4 Digits</Label>
                         <Input
                             value={last4Digits}
-                            onChange={e => setLast4Digits(e.target.value)}
+                            onChange={e => handleLast4DigitsChange(e.target.value)}
                             placeholder="e.g. 1234"
                             maxLength={4}
                             pattern="[0-9]{0,4}"
@@ -125,9 +135,9 @@ export function EditCardModal({
                             bank={bank || "BANK"}
                             balance={0}
                             lastDelta={0}
-                            primaryColor={hexToRgb(primaryColor)}
-                            secondaryColor={hexToRgb(secondaryColor)}
-                            last4Digits={last4Digits || currentLast4Digits || "1234"}
+                            primaryColor={primaryColorRgb}
+                            secondaryColor={secondaryColorRgb}
+                            last4Digits={previewLast4Digits}
                         />
                     </div>
 
@@ -138,12 +148,12 @@ export function EditCardModal({
                                 <Input
                                     type="color"
                                     value={primaryColor}
-                                    onChange={e => setPrimaryColor(e.target.value)}
+                                    onChange={e => handlePrimaryColorChange(e.target.value)}
                                     className="h-10 w-20 p-1 cursor-pointer"
                                 />
                                 <Input
                                     value={primaryColor}
-                                    onChange={e => setPrimaryColor(e.target.value)}
+                                    onChange={e => handlePrimaryColorChange(e.target.value)}
                                     className="uppercase"
                                     maxLength={7}
                                 />
@@ -156,12 +166,12 @@ export function EditCardModal({
                                 <Input
                                     type="color"
                                     value={secondaryColor}
-                                    onChange={e => setSecondaryColor(e.target.value)}
+                                    onChange={e => handleSecondaryColorChange(e.target.value)}
                                     className="h-10 w-20 p-1 cursor-pointer"
                                 />
                                 <Input
                                     value={secondaryColor}
-                                    onChange={e => setSecondaryColor(e.target.value)}
+                                    onChange={e => handleSecondaryColorChange(e.target.value)}
                                     className="uppercase"
                                     maxLength={7}
                                 />
