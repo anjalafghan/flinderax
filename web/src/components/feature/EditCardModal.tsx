@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { CreditCard } from "@/components/feature/CreditCard"
 
 interface EditCardModalProps {
     isOpen: boolean
@@ -106,13 +107,27 @@ export function EditCardModal({
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Last 4 Digits (Optional)</Label>
+                        <Label>Last 4 Digits</Label>
                         <Input
                             value={last4Digits}
                             onChange={e => setLast4Digits(e.target.value)}
                             placeholder="e.g. 1234"
                             maxLength={4}
                             pattern="[0-9]{0,4}"
+                        />
+                    </div>
+
+                    <div className="rounded-xl border border-border p-6">
+                        <Label className="mb-2 text-sm font-medium">Preview</Label>
+                        <CreditCard
+                            id="preview"
+                            name={name || "CARD NAME"}
+                            bank={bank || "BANK"}
+                            balance={0}
+                            lastDelta={0}
+                            primaryColor={hexToRgb(primaryColor)}
+                            secondaryColor={hexToRgb(secondaryColor)}
+                            last4Digits={last4Digits || currentLast4Digits || "1234"}
                         />
                     </div>
 

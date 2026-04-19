@@ -134,7 +134,7 @@ export default function CreateCardPage() {
                         </Button>
                     </div>
 
-                    {/* Preview */}
+                     {/* Preview */}
                     <div className="flex flex-col gap-4">
                         <Label>Preview</Label>
                         <div className="flex items-center justify-center rounded-xl bg-gray-100 p-8 dark:bg-gray-800">
@@ -146,6 +146,7 @@ export default function CreateCardPage() {
                                 lastDelta={0}
                                 primaryColor={hexToRgb(primaryColor)}
                                 secondaryColor={hexToRgb(secondaryColor)}
+                                last4Digits={last4Digits || "1234"}
                             />
                         </div>
                         <p className="text-center text-xs text-muted-foreground">

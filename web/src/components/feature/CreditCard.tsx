@@ -29,6 +29,8 @@ export const CreditCard = memo(function CreditCard({
     const p = primaryColor
     const s = secondaryColor
 
+    console.log('[CreditCard] last4Digits:', last4Digits, 'type:', typeof last4Digits, 'length:', last4Digits?.length)
+
     // We'll use the user's colors but add a "sheen" overlay
     const backgroundStyle = {
         background: `linear-gradient(135deg, rgb(${p[0]}, ${p[1]}, ${p[2]}), rgb(${s[0]}, ${s[1]}, ${s[2]}))`
@@ -94,7 +96,7 @@ export const CreditCard = memo(function CreditCard({
 
                     <div className="flex justify-between items-center font-mono text-[10px] md:text-sm opacity-90">
                         <span className="tracking-[0.15em] md:tracking-[0.2em] shadow-black drop-shadow-sm">
-                            {last4Digits ? `•••• •••• •••• ${last4Digits}` : '•••• •••• •••• ••••'}
+                            {typeof last4Digits === 'string' && last4Digits.length === 4 ? `•••• •••• •••• ${last4Digits}` : '•••• •••• •••• ••••'}
                         </span>
                         <span className="font-sans uppercase text-[8px] md:text-[10px] font-bold tracking-widest">{name}</span>
                     </div>

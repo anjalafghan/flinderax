@@ -65,6 +65,8 @@ export default function DashboardPage() {
             const buffer = await api.getProtobuf('/card/get_all_cards')
             const decoded = await decodeCardList(buffer)
 
+            console.log('[DashboardPage] decoded.cards:', decoded.cards.map(c => ({ last_4_digits: c.last_4_digits })))
+
             return decoded.cards.map(c => ({
                 card_id: c.card_id,
                 card_name: c.card_name,

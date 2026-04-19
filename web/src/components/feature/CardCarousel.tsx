@@ -93,6 +93,11 @@ export const CardCarousel = memo(function CardCarousel({
 
                 if (isFar && cards.length > 5) return null; // Cull only very far cards
 
+                // Log for debugging
+                if (typeof console !== 'undefined') {
+                    console.log('[CardCarousel] card.last4Digits:', card.last_4_digits, 'isActive:', isActive)
+                }
+
                 return (
                     <motion.div
                         key={card.card_id}

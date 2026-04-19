@@ -108,8 +108,10 @@ export async function decodeCardList(buffer: ArrayBuffer): Promise<CardList> {
         longs: Number,
         enums: String,
         bytes: String,
-        defaults: true, // Include optional fields with defaults if missing
+        defaults: false, // Don't include defaults for optional fields
     }) as any;
+
+    console.log('[decodeCardList] raw object.cards:', JSON.stringify(object.cards, null, 2));
 
     const cards = (object.cards || []).map((c: any) => ({
         card_id: c.cardId || c.card_id || '',
@@ -119,9 +121,10 @@ export async function decodeCardList(buffer: ArrayBuffer): Promise<CardList> {
         card_secondary_color: c.cardSecondaryColor || c.card_secondary_color || 0,
         last_total_due: c.lastTotalDue ?? c.last_total_due ?? null,
         last_delta: c.lastDelta ?? c.last_delta ?? null,
-        last_4_digits: c.last4Digits ?? c.last_4_digits ?? null,
+        last_4_digits: c.last_4Digits ?? c.last4Digits ?? c.last_4_digits ?? null,
     }));
 
+    console.log('[decodeCardList] mapped cards:', cards);
     return { cards };
 }
 
