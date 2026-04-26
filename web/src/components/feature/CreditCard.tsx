@@ -75,7 +75,7 @@ export const CreditCard = memo(function CreditCard({
                     <div className="flex items-end justify-between">
                         <div className="space-y-0.5">
                             <p className="text-[8px] md:text-[10px] uppercase tracking-wider font-semibold opacity-70">
-                                {balance < 0 ? "Credit Balance" : "Current Balance"}
+                                {balance < 0 ? "Credit Balance" : "Total Due"}
                             </p>
                             <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white drop-shadow-md">
                                 {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(balance)}

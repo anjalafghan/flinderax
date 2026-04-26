@@ -36,18 +36,16 @@ export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance
     const queryClient = useQueryClient()
 
     const confirmTransferMutation = useMutation({
-        mutationFn: async (delta: number) => {
+        mutationFn: async (amountDue: number) => {
             const res = await api.post<TransactionResponse>("/card/insert_transaction", {
                 card_id: cardId,
-                amount_due: delta,
+                amount_due: amountDue,
             })
             return res.data
         },
-        onSuccess: (data) => {
-            if (data.status) {
-                toast.success(`Transfer of ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(data.amount_due)} confirmed`)
-                handleClose()
-            }
+        onSuccess: () => {
+            toast.success(`Transfer of ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Math.abs(parseFloat(amount)))} confirmed`)
+            handleClose()
         },
         onError: (error: any) => {
             toast.error("Failed to confirm transfer")
@@ -163,7 +161,7 @@ export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance
                             </Button>
                             <Button
                                 className="flex-1 bg-green-600 hover:bg-green-700"
-                                onClick={() => confirmTransferMutation.mutate(showConfirmTransfer.delta)}
+                                onClick={() => confirmTransferMutation.mutate(parseFloat(amount))}
                                 disabled={confirmTransferMutation.isPending}
                             >
                                 {confirmTransferMutation.isPending ? "Confirming..." : "I've transferred"}
@@ -179,10 +177,11 @@ export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance
     const calculatedDelta = amount ? (parseFloat(amount) - currentBalance) : 0
 
     const handleConfirmTransfer = () => {
+        const amountValue = parseFloat(amount)
         if (calculatedDelta > 0) {
             setShowConfirmTransfer({ delta: calculatedDelta })
         } else if (calculatedDelta < 0) {
-            confirmTransferMutation.mutate(calculatedDelta)
+            confirmTransferMutation.mutate(amountValue)
         } else {
             toast.info("No change in balance")
             handleClose()
@@ -195,7 +194,7 @@ export function UpdateTransactionModal({ isOpen, onClose, cardId, currentBalance
             handleClose()
             return
         }
-        deferMutation.mutate(calculatedDelta)
+        deferMutation.mutate(parseFloat(amount))
     }
 
     return (
