@@ -1,29 +1,28 @@
 use crate::handlers::common::AppError;
-use std::sync::Arc;
 use axum::{
+    Router,
     extract::{Request, State},
     http::{HeaderMap, StatusCode},
     middleware::{self, Next},
     response::Response,
-    routing::get,
-    Router,
 };
 use rusty_paseto::{
     core::{Local, V4},
     prelude::{PasetoParser, PasetoSymmetricKey},
 };
+use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{error, Level};
+use tracing::{Level, error};
 
 use crate::models::AppState;
 use crate::routes;
 
 pub fn build_router(state: AppState) -> Router {
     Router::new()
-        .route("/", get(|| async { "Hello, World!" }))
         .nest(
-            "/user",
+            "/api/user",
             routes::user::routes(state.clone())
                 .layer(
                     TraceLayer::new_for_http()
@@ -36,7 +35,7 @@ pub fn build_router(state: AppState) -> Router {
                 )),
         )
         .nest(
-            "/common",
+            "/api/common",
             routes::common::routes(state.clone()).layer(
                 TraceLayer::new_for_http()
                     .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
@@ -44,7 +43,7 @@ pub fn build_router(state: AppState) -> Router {
             ),
         )
         .nest(
-            "/card",
+            "/api/card",
             routes::card::routes(state.clone())
                 .layer(
                     TraceLayer::new_for_http()
@@ -61,6 +60,10 @@ pub fn build_router(state: AppState) -> Router {
                 .allow_origin(Any)
                 .allow_methods(Any)
                 .allow_headers(Any),
+        )
+        .fallback_service(
+            ServeDir::new("/app/dist")
+                .not_found_service(tower_http::services::ServeFile::new("/app/dist/index.html")),
         )
 }
 
@@ -118,7 +121,7 @@ fn parse_token(
 ) -> Result<(String, String), AppError> {
     match PasetoParser::<V4, Local>::default()
         .check_claim(rusty_paseto::prelude::ExpirationClaim::default())
-        .parse(token, key) 
+        .parse(token, key)
     {
         Ok(json_value) => {
             let user_id = json_value["sub"]

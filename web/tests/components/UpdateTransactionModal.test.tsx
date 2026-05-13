@@ -93,7 +93,7 @@ describe('UpdateTransactionModal', () => {
     })
 
     await waitFor(() => {
-      expect(mockPost).toHaveBeenCalledWith('/card/insert_transaction', {
+      expect(mockPost).toHaveBeenCalledWith('/api/card/insert_transaction', {
         card_id: 'test-card-id',
         amount_due: 2000,
       })

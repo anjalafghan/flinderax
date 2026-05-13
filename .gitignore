@@ -4,6 +4,7 @@
 **/*.rs.bk
 Cargo.lock
 
+
 # Node.js
 node_modules/
 .npm
@@ -35,3 +36,6 @@ build/
 flinderax.db
 flinderax.db-shm
 flinderax.db-wal
+*.db
+Dockerfile
+
