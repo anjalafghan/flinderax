@@ -67,27 +67,29 @@ export function UpdateTransactionModal({
     },
   });
 
-  const deferMutation = useMutation({
-    mutationFn: async (delta: number) => {
-      const res = await api.post<DeferUpdateResponse>(
-        "/api/card/defer_update",
-        {
-          card_id: cardId,
-          amount: delta,
-        },
-      );
-      return res.data;
-    },
-    onSuccess: (data) => {
-      if (data.status) {
-        setShowDeferredConfirm({ totalPending: data.total_pending });
-      }
-    },
-    onError: (error: any) => {
-      toast.error("Failed to defer payment");
-      console.error(error);
-    },
-  });
+   const deferMutation = useMutation({
+     mutationFn: async (delta: number) => {
+       const res = await api.post<DeferUpdateResponse>(
+         "/api/card/defer_update",
+         {
+           card_id: cardId,
+           amount: delta,
+         },
+       );
+       return res.data;
+     },
+     onSuccess: (data) => {
+       if (data.status) {
+         setShowDeferredConfirm({ totalPending: data.total_pending });
+         // Immediately invalidate so the pending payment UI appears
+         queryClient.invalidateQueries({ queryKey: ["deferred-status"] });
+       }
+     },
+     onError: (error: any) => {
+       toast.error("Failed to defer payment");
+       console.error(error);
+     },
+   });
 
   const handleClose = () => {
     setAmount("");

@@ -17,49 +17,52 @@ export default defineConfig(({ mode }) => {
     ? "https://flinderax-backend.fly.dev"
     : "http://localhost:5173";
 
-  return {
-    plugins: [
-      react(),
-      tailwind(),
-      /* InjectPreload({
-        files: [
-          {
-            outputMatch: /inter-latin(-ext)?-(400|700)-normal.*\.woff2$/,
-            attributes: {
-              type: 'font/woff2',
-              as: 'font',
-              crossorigin: 'anonymous',
-            },
-          },
-        ],
-      }), */
-      {
-        name: "html-transform",
-        transformIndexHtml(html: string) {
-          return html
-            .replace(/__API_URL__/g, apiUrl)
-            .replace(/__SITE_URL__/g, siteUrl);
-        },
+   return {
+     plugins: [
+       react(),
+       tailwind(),
+       /* InjectPreload({
+         files: [
+           {
+             outputMatch: /inter-latin(-ext)?-(400|700)-normal.*\.woff2$/,
+             attributes: {
+               type: 'font/woff2',
+               as: 'font',
+               crossorigin: 'anonymous',
+             },
+           },
+         ],
+       }), */
+       {
+         name: "html-transform",
+         transformIndexHtml(html: string) {
+           return html
+             .replace(/__API_URL__/g, apiUrl)
+             .replace(/__SITE_URL__/g, siteUrl);
+         },
+       },
+       isProd &&
+         visualizer({
+           open: false,
+           filename: "bundle-analysis.html",
+           gzipSize: true,
+           brotliSize: true,
+         }),
+       isProd &&
+         compression({
+           algorithms: ["brotliCompress"],
+           exclude: [/\.(br)$/, /\.(gz)$/],
+         }),
+       isProd &&
+         compression({
+           algorithms: ["gzip"],
+           exclude: [/\.(br)$/, /\.(gz)$/],
+         }),
+      ].filter(Boolean) as any,
+      define: {
+        'import.meta.env.VITE_API_URL': JSON.stringify(isProd ? "https://flinderax-backend.fly.dev" : "http://0.0.0.0:3000"),
       },
-      isProd &&
-        visualizer({
-          open: false,
-          filename: "bundle-analysis.html",
-          gzipSize: true,
-          brotliSize: true,
-        }),
-      isProd &&
-        compression({
-          algorithms: ["brotliCompress"],
-          exclude: [/\.(br)$/, /\.(gz)$/],
-        }),
-      isProd &&
-        compression({
-          algorithms: ["gzip"],
-          exclude: [/\.(br)$/, /\.(gz)$/],
-        }),
-    ].filter(Boolean) as any,
-    resolve: {
+      resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
       },

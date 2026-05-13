@@ -2,15 +2,16 @@ import { useState, lazy, Suspense } from "react";
 import type { CardData } from "./DashboardPage";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Trash2,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  RefreshCcw,
-  Settings,
-} from "lucide-react";
+ import {
+   ArrowLeft,
+   Trash2,
+   TrendingUp,
+   TrendingDown,
+   Minus,
+   RefreshCcw,
+   Settings,
+   X,
+ } from "lucide-react";
 import { toast } from "sonner";
 
 import api from "@/services/api";
@@ -85,24 +86,42 @@ export default function CardDetailsPage() {
     },
   });
 
-  const resetMutation = useMutation({
-    mutationFn: async () => {
-      await api.post("/api/card/reset", { card_id: id });
-    },
-    onSuccess: () => {
-      toast.success("Transaction history reset");
-      queryClient.invalidateQueries({ queryKey: ["card", id] });
-      queryClient.invalidateQueries({ queryKey: ["history", id] });
-      queryClient.invalidateQueries({ queryKey: ["cards"] });
-      setIsResetConfirmOpen(false);
-    },
-    onError: () => {
-      toast.error("Failed to reset transactions");
-      setIsResetConfirmOpen(false);
-    },
-  });
+   const resetMutation = useMutation({
+     mutationFn: async () => {
+       await api.post("/api/card/reset", { card_id: id });
+     },
+     onSuccess: () => {
+       toast.success("Transaction history reset");
+       queryClient.invalidateQueries({ queryKey: ["card", id] });
+       queryClient.invalidateQueries({ queryKey: ["history", id] });
+       queryClient.invalidateQueries({ queryKey: ["cards"] });
+       setIsResetConfirmOpen(false);
+     },
+     onError: () => {
+       toast.error("Failed to reset transactions");
+       setIsResetConfirmOpen(false);
+     },
+   });
 
-  if (cardQuery.isLoading)
+   const deleteTransactionMutation = useMutation({
+     mutationFn: async (transactionId: string) => {
+       await api.post("/api/card/delete_transaction", {
+         card_id: id,
+         transaction_id: transactionId,
+       });
+     },
+     onSuccess: () => {
+       toast.success("Transaction deleted");
+       queryClient.invalidateQueries({ queryKey: ["history", id] });
+       queryClient.invalidateQueries({ queryKey: ["card", id] });
+       queryClient.invalidateQueries({ queryKey: ["cards"] });
+     },
+     onError: () => {
+       toast.error("Failed to delete transaction");
+      },
+    });
+
+   if (cardQuery.isLoading)
     return (
       <div className="p-8 text-center text-muted-foreground">
         Loading details...
@@ -203,37 +222,48 @@ export default function CardDetailsPage() {
                       new Date(a.timestamp).getTime(),
                   );
 
-                  return sorted.map((tx: any, index: number) => {
-                    const previousTx = sorted[index + 1];
-                    const previousAmount = previousTx
-                      ? previousTx.total_due_input
-                      : 0;
-                    const delta = tx.total_due_input - previousAmount;
+                   return sorted.map((tx: any, index: number) => {
+                     const previousTx = sorted[index + 1];
+                     const previousAmount = previousTx
+                       ? previousTx.total_due_input
+                       : 0;
+                     const delta = tx.total_due_input - previousAmount;
 
-                    return (
-                      <div
-                        key={tx.transaction_id}
-                        className="flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-all hover:bg-accent/5"
-                      >
-                        <div className="space-y-0.5">
-                          <p className="font-bold text-base">
-                            {new Intl.NumberFormat("en-IN", {
-                              style: "currency",
-                              currency: "INR",
-                            }).format(tx.total_due_input)}
-                          </p>
-                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                            {new Date(tx.timestamp).toLocaleDateString(
-                              undefined,
-                              { month: "short", day: "numeric" },
-                            )}{" "}
-                            at{" "}
-                            {new Date(tx.timestamp).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
+                     return (
+                       <div
+                         key={tx.transaction_id}
+                         className="flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-all hover:bg-accent/5 group relative"
+                       >
+                         <button
+                           onClick={() => {
+                             if (window.confirm("Delete this transaction?")) {
+                               deleteTransactionMutation.mutate(tx.transaction_id);
+                             }
+                           }}
+                           className="absolute right-2 top-2 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                           aria-label="Delete transaction"
+                         >
+                           <X className="h-4 w-4" />
+                         </button>
+                         <div className="space-y-0.5">
+                           <p className="font-bold text-base">
+                             {new Intl.NumberFormat("en-IN", {
+                               style: "currency",
+                               currency: "INR",
+                             }).format(tx.total_due_input)}
+                           </p>
+                           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                             {new Date(tx.timestamp).toLocaleDateString(
+                               undefined,
+                               { month: "short", day: "numeric" },
+                             )}{" "}
+                             at{" "}
+                             {new Date(tx.timestamp).toLocaleTimeString([], {
+                               hour: "2-digit",
+                               minute: "2-digit",
+                             })}
+                           </p>
+                         </div>
 
                         <div
                           className={cn(

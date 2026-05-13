@@ -107,11 +107,17 @@ pub struct InsertTransactionResponse {
     pub status: bool,
 }
 
-#[derive(Deserialize, Serialize, FromRow)]
+#[derive(Deserialize, Serialize)]
 pub struct CardTransactionHistory {
     pub transaction_id: String,
     pub total_due_input: f32,
     pub timestamp: String,
+}
+
+#[derive(Serialize)]
+pub struct DeleteTransactionResponse {
+    pub transaction_id: String,
+    pub status: bool,
 }
 
 #[derive(Deserialize)]
@@ -122,6 +128,12 @@ pub struct GetHistoryPayload {
 #[derive(Deserialize)]
 pub struct ResetTransactionsPayload {
     pub card_id: String,
+}
+
+#[derive(Deserialize)]
+pub struct DeleteTransactionPayload {
+    pub card_id: String,
+    pub transaction_id: String,
 }
 
 #[derive(Deserialize)]

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Clock } from "lucide-react";
+ import { ArrowRight, Clock, X } from "lucide-react";
 import { toast } from "sonner";
 
 import api from "@/services/api";
@@ -91,33 +91,52 @@ export default function DashboardPage() {
     },
   });
 
-  const settleMutation = useMutation({
-    mutationFn: async (batchId: string) => {
-      const res = await api.post<{
-        batch_id: string;
-        total_settled: number;
-        status: boolean;
-      }>("/api/card/defer_settle", { batch_id: batchId });
-      return res.data;
-    },
-    onSuccess: (data) => {
-      if (data.status) {
-        toast.success(
-          `Settled ${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(data.total_settled)} successfully!`,
-        );
-        setShowSettleConfirm(false);
-        setPendingToSettle(null);
-        queryClient.invalidateQueries({ queryKey: ["deferred-status"] });
-        queryClient.invalidateQueries({ queryKey: ["cards"] });
-      }
-    },
-    onError: (error: any) => {
-      toast.error("Failed to settle payments");
-      console.error(error);
-    },
-  });
+   const settleMutation = useMutation({
+     mutationFn: async (batchId: string) => {
+       const res = await api.post<{
+         batch_id: string;
+         total_settled: number;
+         status: boolean;
+       }>("/api/card/defer_settle", { batch_id: batchId });
+       return res.data;
+     },
+     onSuccess: (data) => {
+       if (data.status) {
+         toast.success(
+           `Settled ${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(data.total_settled)} successfully!`,
+         );
+         setShowSettleConfirm(false);
+         setPendingToSettle(null);
+         queryClient.invalidateQueries({ queryKey: ["deferred-status"] });
+         queryClient.invalidateQueries({ queryKey: ["cards"] });
+       }
+     },
+     onError: (error: any) => {
+       toast.error("Failed to settle payments");
+       console.error(error);
+     },
+   });
 
-  const handleSettle = () => {
+   const cancelDeferredMutation = useMutation({
+     mutationFn: async (batchId: string) => {
+       const res = await api.post<{ status: boolean }>("/api/card/defer_cancel", {
+         batch_id: batchId,
+       });
+       return res.data;
+     },
+     onSuccess: (data) => {
+       if (data.status) {
+         toast.success("Pending payments cancelled");
+         queryClient.invalidateQueries({ queryKey: ["deferred-status"] });
+       }
+     },
+     onError: (error: any) => {
+       toast.error("Failed to cancel payments");
+       console.error(error);
+     },
+    });
+
+   const handleSettle = () => {
     if (deferredStatus) {
       setPendingToSettle({
         batchId: deferredStatus.batch_id,
@@ -158,7 +177,7 @@ export default function DashboardPage() {
     }
   }, [cards]);
 
-  const hasPendingDeferred = deferredStatus && deferredStatus.total_amount > 0;
+   const hasPendingDeferred = deferredStatus && deferredStatus.total_amount !== 0;
 
   return (
     <div className="h-[100dvh] w-full bg-background text-foreground transition-colors duration-300 overflow-hidden flex flex-col">
@@ -210,11 +229,23 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {hasPendingDeferred && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-8 pb-4 px-4 border-t border-border/50">
-          <div className="container mx-auto max-w-md">
-            <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30 p-4">
-              <div className="flex items-center justify-between gap-4">
+       {hasPendingDeferred && (
+         <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-8 pb-4 px-4 border-t border-border/50">
+           <div className="container mx-auto max-w-md relative">
+             <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30 p-4">
+               <button
+                 onClick={() => {
+                   if (deferredStatus) {
+                     cancelDeferredMutation.mutate(deferredStatus.batch_id);
+                   }
+                 }}
+                 className="absolute -top-2 -right-2 rounded-full p-1.5 bg-background border border-border shadow-sm hover:bg-accent hover:text-destructive transition-colors z-10"
+                 aria-label="Dismiss pending payments"
+                 disabled={cancelDeferredMutation.isPending}
+               >
+                 <X className="h-4 w-4" />
+               </button>
+               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-900/50">
                     <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />

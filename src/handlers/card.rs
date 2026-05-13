@@ -10,18 +10,19 @@ use prost::Message;
 use redis::AsyncCommands;
 use tracing::error;
 
-use crate::{
-    handlers::{
-        color::{self, pack, unpack},
-        common::AppError,
-    },
-    models::{
-        AppState, CardResponse, CreateCardPayload, DeleteCardPayload, GetCardForUser,
-        InsertTransactionPayload, InsertTransactionResponse, ResetTransactionsPayload,
-        ShowGetCardResponse, UpdateCardPayload, DeferUpdatePayload, DeferUpdateResponse,
-        DeferredBatchStatus, DeferredItemStatus, SettleDeferredPayload, SettleDeferredResponse,
-    },
-};
+ use crate::{
+     handlers::{
+         color::{self, pack, unpack},
+         common::AppError,
+     },
+     models::{
+         AppState, CardResponse, CreateCardPayload, DeleteCardPayload, DeleteTransactionPayload,
+         DeleteTransactionResponse, GetCardForUser,
+         InsertTransactionPayload, InsertTransactionResponse, ResetTransactionsPayload,
+         ShowGetCardResponse, UpdateCardPayload, DeferUpdatePayload, DeferUpdateResponse,
+         DeferredBatchStatus, DeferredItemStatus, SettleDeferredPayload, SettleDeferredResponse,
+     },
+ };
 struct Timestamp {
     seconds: i64,
     nanos: i32,
@@ -451,6 +452,136 @@ pub async fn reset_transactions(
     }))
 }
 
+pub async fn delete_transaction(
+    State(state): State<AppState>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+    Json(payload): Json<DeleteTransactionPayload>,
+) -> Result<Json<DeleteTransactionResponse>, AppError> {
+    let card_id = &payload.card_id;
+    let transaction_id = &payload.transaction_id;
+
+    // Verify card belongs to user
+    let card_exists = sqlx::query!(
+        "SELECT card_id FROM cards WHERE card_id = ? AND user_id = ?",
+        card_id,
+        user_id
+    )
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if card_exists.is_none() {
+        return Err(AppError(
+            StatusCode::NOT_FOUND,
+            "Card not found or you don't have permission to delete transactions".to_string(),
+        ));
+    }
+
+    let mut tx = state.db.begin().await.map_err(|e| {
+        error!("Error starting transaction: {}", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    // Delete the transaction
+    let result = sqlx::query!(
+        "DELETE FROM card_events WHERE transaction_id = ? AND card_id = ?",
+        transaction_id,
+        card_id
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError(
+            StatusCode::NOT_FOUND,
+            "Transaction not found".to_string(),
+        ));
+    }
+
+    // Recalculate last_total_due and last_delta from remaining transactions
+    let latest_tx = sqlx::query_as!(
+        crate::models::CardTransactionHistory,
+        r#"
+        SELECT 
+            transaction_id as "transaction_id!",
+            total_due_input as "total_due_input!: f32",
+            timestamp as "timestamp!: String"
+        FROM card_events
+        WHERE card_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 1
+        "#,
+        card_id
+    )
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let (new_total_due, new_delta) = if let Some(latest) = latest_tx {
+        // Get the second latest to calculate delta
+        let second_latest = sqlx::query_as!(
+            crate::models::CardTransactionHistory,
+            r#"
+            SELECT 
+                transaction_id as "transaction_id!",
+                total_due_input as "total_due_input!: f32",
+                timestamp as "timestamp!: String"
+            FROM card_events
+            WHERE card_id = ? AND transaction_id != ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+            "#,
+            card_id,
+            latest.transaction_id
+        )
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        let delta = if let Some(prev) = second_latest {
+            latest.total_due_input - prev.total_due_input
+        } else {
+            // Only one transaction left - delta equals total
+            latest.total_due_input
+        };
+        (latest.total_due_input, delta)
+    } else {
+        // No transactions left
+        (0.0, 0.0)
+    };
+
+    let new_total_due_f32 = new_total_due as f32;
+    let new_delta_f32 = new_delta as f32;
+
+    // Update the running state
+    sqlx::query!(
+        "UPDATE card_running_state SET last_total_due = ?, last_delta = ? WHERE card_id = ?",
+        new_total_due_f32,
+        new_delta_f32,
+        card_id
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    tx.commit().await.map_err(|e| {
+        error!("Error committing transaction: {}", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    // Invalidate cache
+    if let Some(mut redis) = state.redis.clone() {
+        let cache_key = format!("user_cards_proto_v2:{}", user_id);
+        let _: () = redis.del(cache_key).await.unwrap_or_default();
+    }
+
+    Ok(Json(DeleteTransactionResponse {
+        transaction_id: transaction_id.to_string(),
+        status: true,
+    }))
+}
+
 pub async fn defer_update(
     State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
@@ -621,23 +752,41 @@ pub async fn settle_deferred(
 
     for item in &items {
         let transaction_id = nanoid!();
+
+        // Get current total before this item's settlement
+        let current_state = sqlx::query!(
+            "SELECT last_total_due FROM card_running_state WHERE card_id = ?",
+            item.card_id
+        )
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        let old_total: f32 = if let Some(state) = current_state {
+            state.last_total_due as f32
+        } else {
+            0.0
+        };
+
+        let delta = item.amount as f32;
+        let new_total = old_total + delta;
+
+        // Insert the transaction event with the new total after settlement
         sqlx::query!(
             "INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES (?, ?, ?)",
             transaction_id,
             item.card_id,
-            item.amount
+            new_total
         )
         .execute(&mut *tx)
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+        // Update running state
         sqlx::query!(
-            "UPDATE card_running_state
-             SET last_delta = ? - last_total_due,
-                 last_total_due = ?
-             WHERE card_id = ?",
-            item.amount,
-            item.amount,
+            "UPDATE card_running_state SET last_total_due = ?, last_delta = ? WHERE card_id = ?",
+            new_total,
+            delta,
             item.card_id
         )
         .execute(&mut *tx)
