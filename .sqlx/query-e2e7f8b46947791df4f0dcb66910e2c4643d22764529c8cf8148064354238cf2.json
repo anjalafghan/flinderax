@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT account_id AS \"account_id!\", name, kind, balance_paise,\n                  locked AS \"locked: bool\", interest_bps, maturity_date,\n                  updated_at AS \"updated_at: String\"\n           FROM accounts WHERE user_id = ? ORDER BY rowid",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "kind",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "balance_paise",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "locked: bool",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "interest_bps",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "maturity_date",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at: String",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "e2e7f8b46947791df4f0dcb66910e2c4643d22764529c8cf8148064354238cf2"
+}

@@ -8,6 +8,7 @@ import { decodeCardList } from "@/proto/decoder";
 import { Header } from "@/components/layout/Header";
 import { CardCarousel } from "@/components/feature/CardCarousel";
 import { Button } from "@/components/ui/button";
+import { PlannerSummary } from "@/components/feature/PlannerSummary";
 
 export interface CardData {
   card_id: string;
@@ -18,6 +19,10 @@ export interface CardData {
   last_4_digits: string | null;
   last_total_due: number | null;
   last_delta: number | null;
+  /** Only present on the single-card endpoint, not the protobuf list. */
+  statement_day?: number | null;
+  due_day?: number | null;
+  credit_limit_paise?: number | null;
 }
 
 interface DeferredItem {
@@ -180,14 +185,18 @@ export default function DashboardPage() {
    const hasPendingDeferred = deferredStatus && deferredStatus.total_amount !== 0;
 
   return (
-    <div className="h-[100dvh] w-full bg-background text-foreground transition-colors duration-300 overflow-hidden flex flex-col">
+    <div className="min-h-[100dvh] w-full bg-background text-foreground transition-colors duration-300 flex flex-col overflow-x-clip">
       <Header />
 
-      <main className="flex-1 container mx-auto px-4 py-4 md:py-12 flex flex-col justify-center overflow-hidden">
-        <div className="mb-4 md:mb-16 text-center space-y-2 md:space-y-4 shrink-0">
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight px-2">
-            Explore Your Credit Cards.
-          </h1>
+      <main className={`flex-1 container mx-auto px-4 py-4 md:py-8 flex flex-col ${hasPendingDeferred ? "pb-32" : ""}`}>
+        <div className="mx-auto mb-8 w-full max-w-5xl">
+          <PlannerSummary />
+        </div>
+
+        <div className="mb-4 md:mb-10 text-center space-y-2 md:space-y-4 shrink-0">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight px-2">
+            Your Credit Cards
+          </h2>
           <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto px-4">
             Find the perfect card for your needs. Manage your{" "}
             {new Intl.NumberFormat("en-IN", {

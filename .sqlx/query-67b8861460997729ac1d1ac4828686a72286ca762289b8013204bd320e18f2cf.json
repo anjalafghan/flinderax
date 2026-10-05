@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM card_emis WHERE emi_id = ? AND card_id IN (SELECT card_id FROM cards WHERE user_id = ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "67b8861460997729ac1d1ac4828686a72286ca762289b8013204bd320e18f2cf"
+}

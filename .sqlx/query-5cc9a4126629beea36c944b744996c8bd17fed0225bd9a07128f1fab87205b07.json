@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT p.card_id, SUM(p.amount_paise) AS \"total!: i64\"\n           FROM pending_charges p JOIN cards c ON c.card_id = p.card_id\n           WHERE c.user_id = ? AND p.cleared_at IS NULL\n             AND p.created_at >= datetime('now', '-30 days') GROUP BY p.card_id",
+  "describe": {
+    "columns": [
+      {
+        "name": "card_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "total!: i64",
+        "ordinal": 1,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "5cc9a4126629beea36c944b744996c8bd17fed0225bd9a07128f1fab87205b07"
+}

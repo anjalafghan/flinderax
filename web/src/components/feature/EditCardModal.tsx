@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard } from "@/components/feature/CreditCard";
+import { MoneyInput } from "@/components/ui/money-input";
+import { paiseToInput, toPaise } from "@/utils/money";
+
+const parseDay = (v: string): number | null => {
+  const n = Number(v);
+  return v.trim() && Number.isInteger(n) && n >= 1 && n <= 31 ? n : null;
+};
 
 interface EditCardModalProps {
   isOpen: boolean;
@@ -19,6 +26,9 @@ interface EditCardModalProps {
   currentPrimaryColor: [number, number, number];
   currentSecondaryColor: [number, number, number];
   currentLast4Digits: string | null;
+  currentStatementDay?: number | null;
+  currentDueDay?: number | null;
+  currentCreditLimitPaise?: number | null;
 }
 
 function rgbToHex(r: number, g: number, b: number): string {
@@ -45,6 +55,9 @@ export function EditCardModal({
   currentPrimaryColor,
   currentSecondaryColor,
   currentLast4Digits,
+  currentStatementDay,
+  currentDueDay,
+  currentCreditLimitPaise,
 }: EditCardModalProps) {
   const [name, setName] = useState(currentName);
   const [bank, setBank] = useState(currentBank);
@@ -55,6 +68,9 @@ export function EditCardModal({
     rgbToHex(...currentSecondaryColor),
   );
   const [last4Digits, setLast4Digits] = useState(currentLast4Digits || "");
+  const [statementDay, setStatementDay] = useState(currentStatementDay ? String(currentStatementDay) : "");
+  const [dueDay, setDueDay] = useState(currentDueDay ? String(currentDueDay) : "");
+  const [creditLimit, setCreditLimit] = useState(currentCreditLimitPaise ? paiseToInput(currentCreditLimitPaise) : "");
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -63,12 +79,18 @@ export function EditCardModal({
     setPrimaryColor(rgbToHex(...currentPrimaryColor));
     setSecondaryColor(rgbToHex(...currentSecondaryColor));
     setLast4Digits(currentLast4Digits || "");
+    setStatementDay(currentStatementDay ? String(currentStatementDay) : "");
+    setDueDay(currentDueDay ? String(currentDueDay) : "");
+    setCreditLimit(currentCreditLimitPaise ? paiseToInput(currentCreditLimitPaise) : "");
   }, [
     currentName,
     currentBank,
     currentPrimaryColor,
     currentSecondaryColor,
     currentLast4Digits,
+    currentStatementDay,
+    currentDueDay,
+    currentCreditLimitPaise,
   ]);
 
   const handleNameChange = useCallback((value: string) => setName(value), []);
@@ -98,6 +120,12 @@ export function EditCardModal({
 
   const updateMutation = useMutation({
     mutationFn: async () => {
+      if ((statementDay.trim() && parseDay(statementDay) === null) || (dueDay.trim() && parseDay(dueDay) === null)) {
+        throw new Error("Statement day and due day must be between 1 and 31");
+      }
+      if (creditLimit.trim() && toPaise(creditLimit) === null) {
+        throw new Error("Credit limit must be an amount");
+      }
       await api.post("/api/card/update", {
         card_id: cardId,
         card_name: name,
@@ -105,16 +133,22 @@ export function EditCardModal({
         card_primary_color: hexToRgb(primaryColor),
         card_secondary_color: hexToRgb(secondaryColor),
         last_4_digits: last4Digits || null,
+        // omitted/empty keeps the stored value
+        statement_day: parseDay(statementDay),
+        due_day: parseDay(dueDay),
+        credit_limit_paise: creditLimit.trim() ? toPaise(creditLimit) : null,
       });
     },
     onSuccess: () => {
       toast.success("Card updated successfully");
       queryClient.invalidateQueries({ queryKey: ["cards"] });
       queryClient.invalidateQueries({ queryKey: ["card", cardId] });
+      queryClient.invalidateQueries({ queryKey: ["card-breakdown", cardId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
       onClose();
     },
     onError: (error: unknown) => {
-      toast.error("Failed to update card");
+      toast.error(error instanceof Error && error.message.startsWith("Statement") ? error.message : "Failed to update card");
       console.error(error);
     },
   });
@@ -163,6 +197,21 @@ export function EditCardModal({
               maxLength={4}
               pattern="[0-9]{0,4}"
             />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="edit-statement-day">Statement day</Label>
+              <Input id="edit-statement-day" inputMode="numeric" maxLength={2} value={statementDay} onChange={(e) => setStatementDay(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-due-day">Due day</Label>
+              <Input id="edit-due-day" inputMode="numeric" maxLength={2} value={dueDay} onChange={(e) => setDueDay(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-limit">Limit</Label>
+              <MoneyInput id="edit-limit" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
+            </div>
           </div>
 
           <div className="rounded-xl border border-border p-6">

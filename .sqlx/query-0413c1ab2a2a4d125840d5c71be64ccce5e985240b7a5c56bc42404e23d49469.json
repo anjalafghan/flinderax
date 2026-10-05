@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE income_sources SET label = ?, amount_paise = ?, day_of_month = ?, account_id = ?\n         WHERE income_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "0413c1ab2a2a4d125840d5c71be64ccce5e985240b7a5c56bc42404e23d49469"
+}

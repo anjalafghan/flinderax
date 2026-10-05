@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT label, amount_paise, day_of_month, account_id FROM income_sources WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "label",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "day_of_month",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "account_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "a2bdb0ed18b45c038dfbab2134e3744521b7f28df5554dd1a6e1157e0ce0a89c"
+}

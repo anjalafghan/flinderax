@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT batch_id, total_amount, status FROM deferred_payment_batches WHERE user_id = ? AND status = 'pending' LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_amount",
+        "ordinal": 1,
+        "type_info": "Float"
+      },
+      {
+        "name": "status",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "6f9bd3ae6553d5e90f9a29f5a5dde9319c3c9db8f4a4c3efed632182903ccc9a"
+}

@@ -13,7 +13,7 @@ use tracing::error;
  use crate::{
      handlers::{
          color::{self, pack, unpack},
-         common::AppError,
+         common::{invalidate_cards_cache, validate_day, AppError},
      },
      models::{
          AppState, CardResponse, CreateCardPayload, DeleteCardPayload, DeleteTransactionPayload,
@@ -88,19 +88,23 @@ pub async fn create_card(
         AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
 
+    validate_cycle(&card_details.statement_day, &card_details.due_day)?;
     let card_id = nanoid!();
     let primary_color = color::pack(card_details.card_primary_color);
     let secondary_color = color::pack(card_details.card_secondary_color);
 
     sqlx::query!(
-        "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color, last_4_digits) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color, last_4_digits, statement_day, due_day, credit_limit_paise) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         card_id,
         user_id,
         card_details.card_name,
         card_details.card_bank,
         primary_color,
         secondary_color,
-        card_details.last_4_digits
+        card_details.last_4_digits,
+        card_details.statement_day,
+        card_details.due_day,
+        card_details.credit_limit_paise
     )
     .execute(&mut *tx)
     .await
@@ -137,15 +141,22 @@ pub async fn update(
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(update_card_details): Json<UpdateCardPayload>,
 ) -> Result<Json<CardResponse>, AppError> {
+    validate_cycle(&update_card_details.statement_day, &update_card_details.due_day)?;
     let card_primary_color = pack(update_card_details.card_primary_color);
     let card_secondary_color = pack(update_card_details.card_secondary_color);
     sqlx::query!(
-        "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ?, last_4_digits = ? WHERE card_id = ? AND user_id = ?",
+        "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ?, last_4_digits = ?,
+                statement_day = COALESCE(?, statement_day), due_day = COALESCE(?, due_day),
+                credit_limit_paise = COALESCE(?, credit_limit_paise)
+         WHERE card_id = ? AND user_id = ?",
         update_card_details.card_name,
         update_card_details.card_bank,
         card_primary_color,
         card_secondary_color,
         update_card_details.last_4_digits,
+        update_card_details.statement_day,
+        update_card_details.due_day,
+        update_card_details.credit_limit_paise,
         update_card_details.card_id,
         user_id
     )
@@ -174,6 +185,7 @@ pub async fn get_card(
 ) -> Result<Json<ShowGetCardResponse>, AppError> {
     let card = sqlx::query!(
         "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color, c.last_4_digits,
+                c.statement_day, c.due_day, c.credit_limit_paise,
                 crs.last_total_due, crs.last_delta
          FROM cards c
          LEFT JOIN card_running_state crs ON c.card_id = crs.card_id
@@ -200,6 +212,9 @@ pub async fn get_card(
         last_4_digits: card.last_4_digits,
         last_total_due: Some(card.last_total_due as f32),
         last_delta: Some(card.last_delta as f32),
+        statement_day: card.statement_day,
+        due_day: card.due_day,
+        credit_limit_paise: card.credit_limit_paise,
     }))
 }
 
@@ -295,22 +310,19 @@ pub async fn delete_card(
     }))
 }
 
-pub async fn insert_transaction(
-    State(state): State<AppState>,
-    Extension((user_id, _role)): Extension<(String, String)>,
-    Json(insert_transaction): Json<InsertTransactionPayload>,
-) -> Result<Json<InsertTransactionResponse>, AppError> {
+/// Appends a `card_events` row and moves `card_running_state` to `amount`, returning
+/// `(transaction_id, delta)`. Shared by the plain "insert transaction" flow and bank snapshots.
+pub(crate) async fn record_total(
+    tx: &mut sqlx::SqliteConnection,
+    card_id: &str,
+    amount: f32,
+) -> Result<(String, f64), AppError> {
     let transaction_id = nanoid!();
-    let mut tx = state.db.begin().await.map_err(|e| {
-        error!("Error setting transaction check {} ", e);
-        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
-
     sqlx::query!(
         "INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES (?, ?, ?)",
         transaction_id,
-        insert_transaction.card_id,
-        insert_transaction.amount_due,
+        card_id,
+        amount,
     )
     .execute(&mut *tx)
     .await
@@ -325,9 +337,9 @@ pub async fn insert_transaction(
              last_total_due = ?
          WHERE card_id = ?
          RETURNING last_delta",
-        insert_transaction.amount_due,
-        insert_transaction.amount_due,
-        insert_transaction.card_id
+        amount,
+        amount,
+        card_id
     )
     .fetch_one(&mut *tx)
     .await
@@ -336,16 +348,60 @@ pub async fn insert_transaction(
         AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
 
-    let last_delta = result.last_delta;
+    Ok((transaction_id, result.last_delta))
+}
+
+pub(crate) fn validate_cycle(statement_day: &Option<i64>, due_day: &Option<i64>) -> Result<(), AppError> {
+    if let Some(d) = statement_day {
+        validate_day(*d, "statement_day")?;
+    }
+    if let Some(d) = due_day {
+        validate_day(*d, "due_day")?;
+    }
+    Ok(())
+}
+
+/// 404s unless `card_id` belongs to `user_id`.
+pub(crate) async fn ensure_card_owned(
+    db: &sqlx::SqlitePool,
+    card_id: &str,
+    user_id: &str,
+) -> Result<(), AppError> {
+    let owned = sqlx::query!(
+        "SELECT card_id FROM cards WHERE card_id = ? AND user_id = ?",
+        card_id,
+        user_id
+    )
+    .fetch_optional(db)
+    .await?;
+    if owned.is_none() {
+        return Err(AppError(
+            StatusCode::NOT_FOUND,
+            "Card not found or you don't have permission to modify it".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+pub async fn insert_transaction(
+    State(state): State<AppState>,
+    Extension((user_id, _role)): Extension<(String, String)>,
+    Json(insert_transaction): Json<InsertTransactionPayload>,
+) -> Result<Json<InsertTransactionResponse>, AppError> {
+    ensure_card_owned(&state.db, &insert_transaction.card_id, &user_id).await?;
+    let mut tx = state.db.begin().await.map_err(|e| {
+        error!("Error setting transaction check {} ", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    let (transaction_id, last_delta) =
+        record_total(&mut tx, &insert_transaction.card_id, insert_transaction.amount_due).await?;
+
     tx.commit()
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Invalidate cache
-    if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards_proto_v2:{}", user_id);
-        let _: () = redis.del(cache_key).await.unwrap_or_default();
-    }
+    invalidate_cards_cache(&state, &user_id).await;
 
     Ok(Json(InsertTransactionResponse {
         transaction_id,

@@ -17,12 +17,12 @@ serde_json = "1.0.149"
 sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio-rustls", "migrate"] }
 redis = { version = "1.0.3", features = ["tokio-comp", "connection-manager"] }
 tokio = { version = "1.49.0", features = ["full"] }
-tower-http = { version = "0.6.8", features = ["trace", "compression-gzip", "cors", "fs"] }
+tower-http = { version = "0.6.8", features = ["trace", "compression-gzip", "cors", "fs", "compression-br"] }
 tracing = "0.1.44"
 tracing-subscriber = {version="0.3.22", features=["env-filter", "json"]}
 prost = "0.14.3"
 prost-types = "0.14.3"
-time = { version = "0.3.36", features = ["formatting", "parsing", "macros"] }
+time = { version = "0.3.36", features = ["formatting", "parsing", "macros", "serde-human-readable"] }
 
 [profile.release]
 opt-level = 3

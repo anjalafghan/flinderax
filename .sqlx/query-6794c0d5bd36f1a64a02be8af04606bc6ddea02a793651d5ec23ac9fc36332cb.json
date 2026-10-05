@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO deferred_payment_batches (batch_id, user_id, total_amount, status) VALUES (?, ?, 0, 'pending')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "6794c0d5bd36f1a64a02be8af04606bc6ddea02a793651d5ec23ac9fc36332cb"
+}

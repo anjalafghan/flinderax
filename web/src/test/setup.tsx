@@ -1,19 +1,11 @@
-import "@testing-library/jest-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { afterEach } from "vitest";
+import { GlobalRegistrator } from "@happy-dom/global-registrator";
+import { afterEach, expect } from "bun:test";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false },
-    mutations: { retry: false },
-  },
-});
+// Must run before testing-library is imported so `document` exists.
+GlobalRegistrator.register({ url: "http://localhost/" });
 
-afterEach(() => {
-  queryClient.clear();
-});
+const matchers = await import("@testing-library/jest-dom/matchers");
+expect.extend(matchers as never);
 
-export const wrapper = ({ children }: { children: ReactNode }) => (
-  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-);
+const { cleanup } = await import("@testing-library/react");
+afterEach(() => cleanup());

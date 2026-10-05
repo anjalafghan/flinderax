@@ -9,6 +9,7 @@ mod app;
 mod handlers;
 mod middleware;
 mod models;
+mod planner;
 mod routes;
 
 pub mod proto {
@@ -82,7 +83,11 @@ async fn main() -> Result<(), sqlx::Error> {
     let app = app::build_router(state);
     info!("Running Server!");
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
+        .await
+        .unwrap();
+    info!("Serving API and web app (from {}) on port {}", app::static_dir(), port);
 
     axum::serve(listener, app).await.unwrap();
     Ok(())

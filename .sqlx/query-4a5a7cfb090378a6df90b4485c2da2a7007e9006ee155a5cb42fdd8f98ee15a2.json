@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE deferred_payment_batches SET status = 'cancelled' WHERE batch_id = ? AND user_id = ? AND status = 'pending'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "4a5a7cfb090378a6df90b4485c2da2a7007e9006ee155a5cb42fdd8f98ee15a2"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO income_sources (income_id, user_id, label, amount_paise, day_of_month, account_id) VALUES (?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "7458fcad64bc46227d3c93465d59085e33faba58d1b8b25f7ea6305441ab7390"
+}

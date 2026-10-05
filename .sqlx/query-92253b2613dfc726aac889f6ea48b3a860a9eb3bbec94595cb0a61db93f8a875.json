@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE pending_charges SET cleared_at = CURRENT_TIMESTAMP\n         WHERE charge_id = ? AND cleared_at IS NULL\n           AND card_id IN (SELECT card_id FROM cards WHERE user_id = ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "92253b2613dfc726aac889f6ea48b3a860a9eb3bbec94595cb0a61db93f8a875"
+}

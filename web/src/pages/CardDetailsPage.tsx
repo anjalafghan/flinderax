@@ -19,6 +19,10 @@ import { decodeCardHistoryList } from "@/proto/decoder";
 import { Button } from "@/components/ui/button";
 import { CreditCard } from "@/components/feature/CreditCard";
 import { Header } from "@/components/layout/Header";
+import { useBreakdown } from "@/hooks/usePlanner";
+import { CardBreakdownPanel } from "@/components/feature/CardBreakdownPanel";
+import { CardSnapshotForm } from "@/components/feature/CardSnapshotForm";
+import { CardLoansSection } from "@/components/feature/CardLoansSection";
 import { cn } from "@/utils/cn";
 
 const UpdateTransactionModal = lazy(() =>
@@ -57,6 +61,8 @@ export default function CardDetailsPage() {
     },
     enabled: !!id,
   });
+
+  const breakdownQuery = useBreakdown(id);
 
   // Fetch History (protobuf)
   const historyQuery = useQuery({
@@ -140,11 +146,11 @@ export default function CardDetailsPage() {
 
       <div className="container mx-auto px-4 py-8 max-w-4xl space-y-8">
         {/* Header Actions */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="ghost" className="pl-0" onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -303,6 +309,16 @@ export default function CardDetailsPage() {
           </div>
         </div>
 
+        {breakdownQuery.data && (
+          <>
+            <div className="grid gap-6 md:grid-cols-2">
+              <CardBreakdownPanel breakdown={breakdownQuery.data} />
+              <CardSnapshotForm cardId={card.card_id} />
+            </div>
+            <CardLoansSection cardId={card.card_id} breakdown={breakdownQuery.data} />
+          </>
+        )}
+
         <Suspense fallback={null}>
           <UpdateTransactionModal
             isOpen={isModalOpen}
@@ -342,6 +358,9 @@ export default function CardDetailsPage() {
             currentPrimaryColor={card.card_primary_color}
             currentSecondaryColor={card.card_secondary_color}
             currentLast4Digits={card.last_4_digits}
+            currentStatementDay={card.statement_day}
+            currentDueDay={card.due_day}
+            currentCreditLimitPaise={card.credit_limit_paise}
           />
         </Suspense>
       </div>

@@ -9,6 +9,8 @@ const AuthPage = lazy(() => import('./pages/AuthPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const CreateCardPage = lazy(() => import('./pages/CreateCardPage'))
 const CardDetailsPage = lazy(() => import('./pages/CardDetailsPage'))
+const AccountsPage = lazy(() => import('./pages/AccountsPage'))
+const PlanPage = lazy(() => import('./pages/PlanPage'))
 
 // Simple loading fallback
 const PageLoader = () => (
@@ -49,6 +51,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <CardDetailsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/accounts"
+            element={
+              <ProtectedRoute>
+                <AccountsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/plan"
+            element={
+              <ProtectedRoute>
+                <PlanPage />
               </ProtectedRoute>
             }
           />

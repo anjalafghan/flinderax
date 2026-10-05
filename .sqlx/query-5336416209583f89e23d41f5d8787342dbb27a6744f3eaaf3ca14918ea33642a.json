@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT card_id, amount FROM deferred_payment_items WHERE batch_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "card_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount",
+        "ordinal": 1,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "5336416209583f89e23d41f5d8787342dbb27a6744f3eaaf3ca14918ea33642a"
+}

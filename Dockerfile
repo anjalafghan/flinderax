@@ -1,12 +1,15 @@
-# Stage 1: Build React frontend
-FROM node:20-alpine AS frontend
-WORKDIR /app
-COPY web/package*.json ./
-RUN npm ci
-COPY web/ ./
-RUN npm run build
+# One image, one server: the Rust binary serves the API and the built web app.
 
-# Stage 2: Build Rust backend
+# Stage 1: build the web app with Bun
+FROM oven/bun:1 AS frontend
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY web/package.json web/
+RUN bun install --frozen-lockfile
+COPY web/ web/
+RUN bun run --cwd web build
+
+# Stage 2: build the Rust server
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 RUN apt-get update && apt-get install -y protobuf-compiler
@@ -22,6 +25,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo chef cook --release --recipe-path recipe.json
 
 COPY . .
+# Compile-time SQL checks use the committed .sqlx data (run `cargo sqlx prepare` after changing queries).
 ENV SQLX_OFFLINE=true
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
@@ -32,6 +36,7 @@ FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 RUN mkdir -p /data
 COPY --from=builder /app/target/release/flinderax /usr/local/bin
-COPY --from=frontend /app/dist ./dist
+COPY --from=frontend /app/web/dist ./dist
+ENV STATIC_DIR=/app/dist
 EXPOSE 3000
 ENTRYPOINT ["/usr/local/bin/flinderax"]

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT \n            transaction_id as \"transaction_id!\",\n            total_due_input as \"total_due_input!: f32\",\n            timestamp as \"timestamp!: String\"\n        FROM card_events\n        WHERE card_id = ?\n        ORDER BY timestamp DESC\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "transaction_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_due_input!: f32",
+        "ordinal": 1,
+        "type_info": "Float"
+      },
+      {
+        "name": "timestamp!: String",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "2e0427153dcd605e61905778edac1387d2c197f13fdd3429ade2fcb3b5d15acf"
+}
