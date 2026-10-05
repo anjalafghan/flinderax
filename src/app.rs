@@ -5,6 +5,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     middleware::{self, Next},
     response::Response,
+    routing::any,
 };
 use rusty_paseto::{
     core::{Local, V4},
@@ -12,23 +13,54 @@ use rusty_paseto::{
 };
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::services::ServeDir;
+use tower_http::compression::CompressionLayer;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{Level, error};
 
 use crate::models::AppState;
 use crate::routes;
 
+/// Directory holding the built web app (`bun run build` output). One server serves both
+/// the API and the SPA, so there is nothing else to run.
+pub fn static_dir() -> String {
+    std::env::var("STATIC_DIR").unwrap_or_else(|_| "web/dist".to_string())
+}
+
+fn trace_layer() -> TraceLayer<
+    tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>,
+    DefaultMakeSpan,
+    tower_http::trace::DefaultOnRequest,
+    DefaultOnResponse,
+> {
+    TraceLayer::new_for_http()
+        .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+        .on_response(DefaultOnResponse::new().level(Level::INFO))
+}
+
+/// `router` behind the PASETO token check.
+fn protected(state: &AppState, router: Router) -> Router {
+    router
+        .layer(trace_layer())
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            token_validator_middleware,
+        ))
+}
+
+async fn api_not_found() -> AppError {
+    AppError(StatusCode::NOT_FOUND, "Not found".to_string())
+}
+
 pub fn build_router(state: AppState) -> Router {
+    let dir = static_dir();
+    let index = format!("{dir}/index.html");
+
     Router::new()
         .nest(
             "/api/user",
             routes::user::routes(state.clone())
-                .layer(
-                    TraceLayer::new_for_http()
-                        .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-                        .on_response(DefaultOnResponse::new().level(Level::INFO)),
-                )
+                .layer(trace_layer())
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
                     token_validator_middleware,
@@ -36,35 +68,22 @@ pub fn build_router(state: AppState) -> Router {
         )
         .nest(
             "/api/common",
-            routes::common::routes(state.clone()).layer(
-                TraceLayer::new_for_http()
-                    .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-                    .on_response(DefaultOnResponse::new().level(Level::INFO)),
-            ),
+            routes::common::routes(state.clone()).layer(trace_layer()),
         )
-        .nest(
-            "/api/card",
-            routes::card::routes(state.clone())
-                .layer(
-                    TraceLayer::new_for_http()
-                        .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-                        .on_response(DefaultOnResponse::new().level(Level::INFO)),
-                )
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    token_validator_middleware,
-                )),
-        )
+        .nest("/api/card", protected(&state, routes::card::routes(state.clone())))
+        .nest("/api/account", protected(&state, routes::account::routes(state.clone())))
+        .nest("/api/plan", protected(&state, routes::plan::routes(state.clone())))
+        .nest("/api/dashboard", protected(&state, routes::dashboard::routes(state.clone())))
+        // Unknown API paths must 404 instead of falling through to the SPA's index.html.
+        .route("/api/{*rest}", any(api_not_found))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
                 .allow_methods(Any)
                 .allow_headers(Any),
         )
-        .fallback_service(
-            ServeDir::new("/app/dist")
-                .not_found_service(tower_http::services::ServeFile::new("/app/dist/index.html")),
-        )
+        .layer(CompressionLayer::new())
+        .fallback_service(ServeDir::new(&dir).fallback(ServeFile::new(index)))
 }
 
 async fn token_validator_middleware(

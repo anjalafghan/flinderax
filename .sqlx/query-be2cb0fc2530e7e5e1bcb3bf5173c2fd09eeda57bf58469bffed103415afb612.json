@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE accounts SET balance_paise = ?, updated_at = CURRENT_TIMESTAMP WHERE account_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "be2cb0fc2530e7e5e1bcb3bf5173c2fd09eeda57bf58469bffed103415afb612"
+}

@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT c.card_id AS \"card_id!\", c.card_name, c.statement_day, c.due_day,\n                  s.total_due_paise AS \"total_due_paise?: i64\", s.outstanding_paise AS \"outstanding_paise?: i64\",\n                  s.created_at AS \"snapshot_at?: String\"\n           FROM cards c\n           LEFT JOIN card_snapshots s ON s.snapshot_id = (\n               SELECT snapshot_id FROM card_snapshots\n               WHERE card_id = c.card_id ORDER BY created_at DESC, rowid DESC LIMIT 1)\n           WHERE c.user_id = ? AND (? IS NULL OR c.card_id = ?)\n           ORDER BY c.created_at",
+  "describe": {
+    "columns": [
+      {
+        "name": "card_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "card_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "statement_day",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "due_day",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "total_due_paise?: i64",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "outstanding_paise?: i64",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "snapshot_at?: String",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8cb61feed295455a3d563fc4ff7753ee15a90dbd61da2b4ef4dec20471b34741"
+}

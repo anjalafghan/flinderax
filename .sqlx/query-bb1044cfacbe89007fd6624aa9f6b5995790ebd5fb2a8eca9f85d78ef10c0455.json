@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT batch_id FROM deferred_payment_batches WHERE user_id = ? AND status = 'pending' LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "bb1044cfacbe89007fd6624aa9f6b5995790ebd5fb2a8eca9f85d78ef10c0455"
+}

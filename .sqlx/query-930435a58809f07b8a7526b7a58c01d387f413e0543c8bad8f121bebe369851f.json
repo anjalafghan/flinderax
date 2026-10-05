@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT cushion_paise, next_period_living_paise, week_start FROM user_settings WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "cushion_paise",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "next_period_living_paise",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "week_start",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "930435a58809f07b8a7526b7a58c01d387f413e0543c8bad8f121bebe369851f"
+}

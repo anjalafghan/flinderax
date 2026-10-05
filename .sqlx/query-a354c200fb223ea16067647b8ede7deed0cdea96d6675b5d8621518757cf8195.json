@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO card_snapshots (snapshot_id, card_id, total_due_paise, outstanding_paise, unbilled_spent_paise, unbilled_credit_paise)\n         VALUES (?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "a354c200fb223ea16067647b8ede7deed0cdea96d6675b5d8621518757cf8195"
+}

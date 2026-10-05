@@ -56,6 +56,9 @@ pub struct CreateCardPayload {
     pub card_primary_color: (u8, u8, u8),
     pub card_secondary_color: (u8, u8, u8),
     pub last_4_digits: Option<String>,
+    pub statement_day: Option<i64>,
+    pub due_day: Option<i64>,
+    pub credit_limit_paise: Option<i64>,
 }
 #[derive(Serialize)]
 pub struct CardResponse {
@@ -76,6 +79,10 @@ pub struct UpdateCardPayload {
     pub card_primary_color: (u8, u8, u8),
     pub card_secondary_color: (u8, u8, u8),
     pub last_4_digits: Option<String>,
+    /// Omitted fields keep their stored value.
+    pub statement_day: Option<i64>,
+    pub due_day: Option<i64>,
+    pub credit_limit_paise: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -93,6 +100,9 @@ pub struct ShowGetCardResponse {
     pub last_4_digits: Option<String>,
     pub last_total_due: Option<f32>,
     pub last_delta: Option<f32>,
+    pub statement_day: Option<i64>,
+    pub due_day: Option<i64>,
+    pub credit_limit_paise: Option<i64>,
 }
 #[derive(Deserialize)]
 pub struct InsertTransactionPayload {

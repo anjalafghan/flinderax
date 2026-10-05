@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color, c.last_4_digits,\n                crs.last_total_due, crs.last_delta\n         FROM cards c\n         LEFT JOIN card_running_state crs ON c.card_id = crs.card_id\n         WHERE c.user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "card_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "card_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "card_bank",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "card_primary_color",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "card_secondary_color",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "last_4_digits",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_total_due",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "last_delta",
+        "ordinal": 7,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "3dc8ebf069920a311488c59405950523d8c980a0ddab3db97d924d129338c3a3"
+}

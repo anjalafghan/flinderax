@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT total_amount FROM deferred_payment_batches WHERE batch_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "total_amount",
+        "ordinal": 0,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "79a4e2e75439b69c49fd48daacc4857031162f3783faed3b93b53250c974fb58"
+}

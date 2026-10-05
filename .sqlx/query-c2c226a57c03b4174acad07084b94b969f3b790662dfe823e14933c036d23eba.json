@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO pending_charges (charge_id, card_id, label, amount_paise) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "c2c226a57c03b4174acad07084b94b969f3b790662dfe823e14933c036d23eba"
+}

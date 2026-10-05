@@ -1,8 +1,15 @@
-import { useNavigate } from "react-router-dom"
-import { Plus, LogOut } from "lucide-react"
+import { NavLink, useNavigate } from "react-router-dom"
+import { Plus, LogOut, Landmark, ListChecks } from "lucide-react"
+import { cn } from "@/utils/cn"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/ui/mode-toggle"
 import { useAuth } from "@/context/AuthContext"
+
+const navClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+        "inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+        isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+    )
 
 export function Header() {
     const navigate = useNavigate()
@@ -15,11 +22,22 @@ export function Header() {
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md dark:bg-background/80 dark:border-white/10">
-            <div className="container mx-auto flex h-16 items-center justify-between px-6">
+            <div className="container mx-auto flex h-16 items-center justify-between gap-2 px-4 md:px-6">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
                     <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold">F</div>
                     <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Flinderax</span>
                 </div>
+
+                <nav aria-label="Main" className="flex items-center gap-1">
+                    <NavLink to="/accounts" className={navClass} title="Accounts">
+                        <Landmark className="h-4 w-4" />
+                        <span className="hidden md:inline">Accounts</span>
+                    </NavLink>
+                    <NavLink to="/plan" className={navClass} title="Plan">
+                        <ListChecks className="h-4 w-4" />
+                        <span className="hidden md:inline">Plan</span>
+                    </NavLink>
+                </nav>
 
                 <div className="flex items-center gap-2 md:gap-4">
                     <Button variant="outline" size="sm" onClick={() => navigate('/cards/new')} className="h-9 px-3 md:px-4">

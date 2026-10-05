@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO deferred_payment_items (item_id, batch_id, card_id, amount) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "d24e45a645903ca280c2ff16a5738a968a8b81c7660355ce8237d7b0ff7489b2"
+}

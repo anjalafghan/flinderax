@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE card_emis SET label = ?, monthly_paise = ?, remaining_principal_paise = ?, months_left = ?,\n                as_of_month = ?\n         WHERE emi_id = ? AND card_id IN (SELECT card_id FROM cards WHERE user_id = ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "e18e8258ed713c6df43d0808aa7dc910cc9ab9ef48497cd49aaa7a82f3662999"
+}

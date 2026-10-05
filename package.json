@@ -1,5 +1,15 @@
 {
-  "dependencies": {
+  "name": "flinderax",
+  "private": true,
+  "workspaces": ["web"],
+  "scripts": {
+    "dev": "bun scripts/dev.ts",
+    "build": "bun run --cwd web build",
+    "start": "bun run build && cargo run --release",
+    "test": "cargo test --bin flinderax && bun run --cwd web test",
+    "typecheck": "bun run --cwd web typecheck"
+  },
+  "devDependencies": {
     "autocannon": "^8.0.0"
   }
 }

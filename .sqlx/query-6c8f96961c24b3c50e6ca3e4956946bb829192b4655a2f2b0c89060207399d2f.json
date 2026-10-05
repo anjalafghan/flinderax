@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM card_events WHERE transaction_id = ? AND card_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "6c8f96961c24b3c50e6ca3e4956946bb829192b4655a2f2b0c89060207399d2f"
+}

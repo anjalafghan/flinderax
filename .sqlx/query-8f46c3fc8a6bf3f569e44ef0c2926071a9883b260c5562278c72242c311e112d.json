@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO commitments (commitment_id, user_id, label, amount_paise, day_of_month, account_id, category, active, start_month, end_month)\n         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "8f46c3fc8a6bf3f569e44ef0c2926071a9883b260c5562278c72242c311e112d"
+}

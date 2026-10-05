@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT e.card_id, e.monthly_paise, e.remaining_principal_paise, e.months_left,\n                  COALESCE(e.as_of_month, strftime('%Y-%m', e.created_at)) AS \"as_of_month!: String\"\n           FROM card_emis e JOIN cards c ON c.card_id = e.card_id\n           WHERE c.user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "card_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "monthly_paise",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "remaining_principal_paise",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "months_left",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "as_of_month!: String",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "077656e2cca4a0104226929691ebeeaba1ad177827ba20df2112461ab11e8a58"
+}

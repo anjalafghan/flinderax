@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO user_settings (user_id, cushion_paise, next_period_living_paise, week_start) VALUES (?, ?, ?, ?)\n         ON CONFLICT(user_id) DO UPDATE SET cushion_paise = excluded.cushion_paise,\n            next_period_living_paise = excluded.next_period_living_paise, week_start = excluded.week_start",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "c43331d7e551c43b7cf1131194767a843a70e7f7d502ee059aa1f17dc78076f7"
+}

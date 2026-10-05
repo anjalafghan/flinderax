@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT label, amount_paise, day_of_month, account_id, active AS \"active: bool\", start_month, end_month\n           FROM commitments WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "label",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "day_of_month",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "account_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "active: bool",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "start_month",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_month",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "f851717f92eaee667a95bc5ca79db53f06638ea0df849c7bb0a8325f4deed6fa"
+}

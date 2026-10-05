@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE accounts SET name = ?, kind = ?, locked = ?, interest_bps = ?, maturity_date = ?\n         WHERE account_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "667a3256cab9c1523444a32cf5cd1245a126a8af485e6a5ea9c4ebc2f8094558"
+}

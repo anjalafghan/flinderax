@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE deferred_payment_batches SET status = 'settled' WHERE batch_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "33efb9ae8da0807b1faa1bf0814558e7cc75c83e98503921d24caea2c7deac90"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE deferred_payment_batches SET total_amount = total_amount + ? WHERE batch_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "4736c9cb9d276bc0d803650a7e14256fb200b93eb9962934cc304c673026801d"
+}

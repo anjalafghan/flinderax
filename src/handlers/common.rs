@@ -24,6 +24,56 @@ impl IntoResponse for AppError {
     }
 }
 
+impl From<sqlx::Error> for AppError {
+    fn from(e: sqlx::Error) -> Self {
+        error!("database error: {}", e);
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    }
+}
+
+pub fn bad_request(msg: impl Into<String>) -> AppError {
+    AppError(StatusCode::BAD_REQUEST, msg.into())
+}
+
+pub fn not_found(msg: impl Into<String>) -> AppError {
+    AppError(StatusCode::NOT_FOUND, msg.into())
+}
+
+/// Drops the cached protobuf card list for this user (same key the card handlers use).
+pub async fn invalidate_cards_cache(state: &AppState, user_id: &str) {
+    if let Some(mut redis) = state.redis.clone() {
+        let key = format!("user_cards_proto_v2:{}", user_id);
+        let _: () = redis::AsyncCommands::del(&mut redis, key).await.unwrap_or_default();
+    }
+}
+
+/// Today's date for planning. Bank cycles are local, so the offset is configurable
+/// (`FLINDERAX_UTC_OFFSET_MINUTES`, default +330 = IST).
+pub fn today_local() -> time::Date {
+    let minutes: i64 = std::env::var("FLINDERAX_UTC_OFFSET_MINUTES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(330);
+    (OffsetDateTime::now_utc() + Duration::minutes(minutes)).date()
+}
+
+pub fn validate_day(day: i64, what: &str) -> Result<(), AppError> {
+    if (1..=31).contains(&day) {
+        Ok(())
+    } else {
+        Err(bad_request(format!("{what} must be between 1 and 31")))
+    }
+}
+
+pub fn validate_year_month(v: &Option<String>, what: &str) -> Result<(), AppError> {
+    match v {
+        Some(s) if crate::planner::parse_year_month(s).is_none() => {
+            Err(bad_request(format!("{what} must look like 2026-12")))
+        }
+        _ => Ok(()),
+    }
+}
+
 pub async fn login(
     State(state): State<AppState>,
     Json(login_payload): Json<LoginPayload>,

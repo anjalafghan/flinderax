@@ -23,7 +23,7 @@ build/
 .env
 .env.*
 !.env.example
-.DS_Store
+**/.DS_Store
 
 # IDEs
 .idea
@@ -31,8 +31,7 @@ build/
 *.swp
 *.iml
 
-# SQLx
-.sqlx
+# SQLx offline query data is committed (the Docker build needs it)
 flinderax.db
 flinderax.db-shm
 flinderax.db-wal
