@@ -11,7 +11,6 @@ primary_region = 'bom'
 [env]
   PORT = '3000'
   DATABASE_URL = 'sqlite:/data/flinderax.db'
-  PASETO_KEY = 'mK8QnZ3A1Xz5dJ0F9kqH2B4yW7E6S0LxU8cRVaTMe2o='
 
 [http_service]
   internal_port = 3000
