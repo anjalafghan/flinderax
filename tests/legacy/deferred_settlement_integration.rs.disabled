@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
@@ -6,7 +7,7 @@ use axum::{
 use serde_json::json;
 use sqlx::{SqlitePool, Row};
 use std::time::Duration;
-usetokio::time::sleep;
+use tokio::time::sleep;
 use flinderax::{
     models::AppState,
     handlers::card::{
@@ -101,7 +102,7 @@ async fn create_test_user(db: &SqlitePool) -> String {
 
 // Helper to create a test card and return card_id
 async fn create_test_card(db: &SqlitePool, user_id: &str, card_name: &str, initial_balance: f32) -> String {
-    let card_id = format!("card_{}", rand::thread_rng().gen::<u64>());
+    let card_id = format!("card_{}", rand::thread_rng().r#gen::<u64>());
     let card_primary_color = 0x112233;
     let card_secondary_color = 0x445566;
 
@@ -176,7 +177,7 @@ async fn test_settle_deferred_single_card_positive_amount() {
             redis: None,
             paseto_key: Arc::new( rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()),
         };
-        let payload = card::DeferUpdatePayload {
+        let payload = flinderax::models::DeferUpdatePayload {
             card_id: card_id.clone(),
             amount: 1000.0,
         };
@@ -193,7 +194,7 @@ async fn test_settle_deferred_single_card_positive_amount() {
     // Verify deferred batch was created
     let status = get_deferred_status(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
     )
     .await
     .unwrap();
@@ -209,10 +210,10 @@ async fn test_settle_deferred_single_card_positive_amount() {
     assert_eq!(delta, 0.0);
 
     // Now settle the deferred batch
-    let settle_payload = card::SettleDeferredPayload { batch_id };
+    let settle_payload = flinderax::models::SettleDeferredPayload { batch_id };
     let settle_res = settle_deferred(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
         axum::Json(settle_payload),
     )
     .await
@@ -254,7 +255,7 @@ async fn test_settle_deferred_single_card_negative_amount() {
             redis: None,
             paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()),
         };
-        let payload = card::DeferUpdatePayload {
+        let payload = flinderax::models::DeferUpdatePayload {
             card_id: card_id.clone(),
             amount: -1000.0,
         };
@@ -273,10 +274,10 @@ async fn test_settle_deferred_single_card_negative_amount() {
     assert_eq!(balance, 5000.0);
 
     // Settle
-    let settle_payload = card::SettleDeferredPayload { batch_id };
+    let settle_payload = flinderax::models::SettleDeferredPayload { batch_id };
     let settle_res = settle_deferred(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
         axum::Json(settle_payload),
     )
     .await
@@ -320,7 +321,7 @@ async fn test_settle_deferred_multiple_cards() {
         let _ = defer_update(
             state.clone(),
             axum::extract::Extension((user_id.clone(), "user".to_string())),
-            axum::Json(card::DeferUpdatePayload {
+            axum::Json(flinderax::models::DeferUpdatePayload {
                 card_id: card1_id.clone(),
                 amount: 2000.0,
             }),
@@ -331,7 +332,7 @@ async fn test_settle_deferred_multiple_cards() {
         let res = defer_update(
             state,
             axum::extract::Extension((user_id.clone(), "user".to_string())),
-            axum::Json(card::DeferUpdatePayload {
+            axum::Json(flinderax::models::DeferUpdatePayload {
                 card_id: card2_id.clone(),
                 amount: -1500.0,
             }),
@@ -344,7 +345,7 @@ async fn test_settle_deferred_multiple_cards() {
     // Verify batch has two items
     let status = get_deferred_status(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
     )
     .await
     .unwrap();
@@ -359,10 +360,10 @@ async fn test_settle_deferred_multiple_cards() {
     assert_eq!(b2, 8000.0);
 
     // Settle the batch
-    let settle_payload = card::SettleDeferredPayload { batch_id };
+    let settle_payload = flinderax::models::SettleDeferredPayload { batch_id };
     let settle_res = settle_deferred(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
         axum::Json(settle_payload),
     )
     .await
@@ -445,7 +446,7 @@ async fn test_settle_preserves_existing_transactions() {
         let res = defer_update(
             state,
             axum::extract::Extension((user_id.clone(), "user".to_string())),
-            axum::Json(card::DeferUpdatePayload {
+            axum::Json(flinderax::models::DeferUpdatePayload {
                 card_id: card_id.clone(),
                 amount: 2000.0,
             }),
@@ -461,10 +462,10 @@ async fn test_settle_preserves_existing_transactions() {
     assert_eq!(delta, 3000.0); // last_delta from the original transaction
 
     // Settle
-    let settle_payload = card::SettleDeferredPayload { batch_id };
+    let settle_payload = flinderax::models::SettleDeferredPayload { batch_id };
     let settle_res = settle_deferred(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
         axum::Json(settle_payload),
     )
     .await
@@ -503,8 +504,8 @@ async fn test_multiple_deferred_items_same_card() {
     // First defer: +500
     let res1 = defer_update(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
-        axum::Json(card::DeferUpdatePayload {
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
+        axum::Json(flinderax::models::DeferUpdatePayload {
             card_id: card_id.clone(),
             amount: 500.0,
         }),
@@ -515,8 +516,8 @@ async fn test_multiple_deferred_items_same_card() {
     // Second defer: +300 (still same batch)
     let res2 = defer_update(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
-        axum::Json(card::DeferUpdatePayload {
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
+        axum::Json(flinderax::models::DeferUpdatePayload {
             card_id: card_id.clone(),
             amount: 300.0,
         }),
@@ -532,7 +533,7 @@ async fn test_multiple_deferred_items_same_card() {
     // Check batch total = 800
     let status = get_deferred_status(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
     )
     .await
     .unwrap();
@@ -545,10 +546,10 @@ async fn test_multiple_deferred_items_same_card() {
     assert_eq!(balance, 1000.0);
 
     // Settle
-    let settle_payload = card::SettleDeferredPayload { batch_id };
+    let settle_payload = flinderax::models::SettleDeferredPayload { batch_id };
     let settle_res = settle_deferred(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
         axum::Json(settle_payload),
     )
     .await
@@ -596,7 +597,7 @@ async fn test_settle_cancelled_batch_fails() {
         let res = defer_update(
             state,
             axum::extract::Extension((user_id.clone(), "user".to_string())),
-            axum::Json(card::DeferUpdatePayload {
+            axum::Json(flinderax::models::DeferUpdatePayload {
                 card_id: card_id.clone(),
                 amount: 1000.0,
             }),
@@ -607,10 +608,10 @@ async fn test_settle_cancelled_batch_fails() {
     };
 
     // Cancel the batch
-    let cancel_payload = card::SettleDeferredPayload { batch_id: batch_id.clone() };
+    let cancel_payload = flinderax::models::SettleDeferredPayload { batch_id: batch_id.clone() };
     let _ = card::cancel_deferred(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
         axum::Json(cancel_payload),
     )
     .await
@@ -619,8 +620,8 @@ async fn test_settle_cancelled_batch_fails() {
     // Try to settle cancelled batch - should fail
     let settle_res = settle_deferred(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
-        axum::Json(card::SettleDeferredPayload { batch_id }),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
+        axum::Json(flinderax::models::SettleDeferredPayload { batch_id }),
     )
     .await;
     assert!(settle_res.is_err());
@@ -646,7 +647,7 @@ async fn test_settle_updates_batch_status() {
         let res = defer_update(
             state,
             axum::extract::Extension((user_id.clone(), "user".to_string())),
-            axum::Json(card::DeferUpdatePayload {
+            axum::Json(flinderax::models::DeferUpdatePayload {
                 card_id: card_id.clone(),
                 amount: 500.0,
             }),
@@ -667,10 +668,10 @@ async fn test_settle_updates_batch_status() {
     assert_eq!(status_before.status, "pending");
 
     // Settle
-    let settle_payload = card::SettleDeferredPayload { batch_id };
+    let settle_payload = flinderax::models::SettleDeferredPayload { batch_id };
     let _ = settle_deferred(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
         axum::Json(settle_payload),
     )
     .await
@@ -693,22 +694,15 @@ async fn test_settle_invalid_batch_fails() {
     let user_id = create_test_user(&db).await;
 
     // Try settling a non-existent batch
-    let settle_payload = card::SettleDeferredPayload {
+    let settle_payload = flinderax::models::SettleDeferredPayload {
         batch_id: "nonexistent".to_string(),
     };
     let res = settle_deferred(
         AppState { db: db.clone(), redis: None, paseto_key: Arc::new(rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::generate(&mut rand::thread_rng()).unwrap()) },
-        axum::extraction::Extension((user_id.clone(), "user".to_string())),
+        axum::extract::Extension((user_id.clone(), "user".to_string())),
         axum::Json(settle_payload),
     )
     .await;
     assert!(res.is_err());
 }
 
-// Helper to call get_deferred_status (since it's not public in the module)
-mod card {
-    pub use crate::handlers::card::*;
-    pub type DeferUpdateResponse = crate::models::DeferUpdateResponse;
-    pub type SettleDeferredPayload = crate::models::SettleDeferredPayload;
-    pub type DeferredBatchStatus = crate::models::DeferredBatchStatus;
-}

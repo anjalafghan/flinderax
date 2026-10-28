@@ -5,16 +5,7 @@ use std::sync::Arc;
 
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-mod app;
-mod handlers;
-mod middleware;
-mod models;
-mod planner;
-mod routes;
-
-pub mod proto {
-    include!(concat!(env!("OUT_DIR"), "/flinderax_backend.rs"));
-}
+use flinderax::{app, models};
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
