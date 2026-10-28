@@ -48,11 +48,12 @@ function Field({
 }
 
 /** "Update from bank app": copy the four numbers the bank shows. */
-export function CardSnapshotForm({ cardId }: { cardId: string }) {
+export function CardSnapshotForm({ cardId, isFirst }: { cardId: string; isFirst: boolean }) {
   const [totalDue, setTotalDue] = useState("");
   const [outstanding, setOutstanding] = useState("");
   const [unbilledSpent, setUnbilledSpent] = useState("");
   const [unbilledCredit, setUnbilledCredit] = useState("");
+  const [starting, setStarting] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const save = usePlannerMutation(
@@ -80,6 +81,7 @@ export function CardSnapshotForm({ cardId }: { cardId: string }) {
         outstanding_paise: out,
         unbilled_spent_paise: spent,
         unbilled_credit_paise: credit,
+        ...(isFirst ? { starting_balance: starting } : {}),
       },
       {
         onSuccess: () => {
@@ -93,7 +95,7 @@ export function CardSnapshotForm({ cardId }: { cardId: string }) {
   };
 
   return (
-    <Card>
+    <Card id="snapshot-form">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">Update from bank app</CardTitle>
         <p className="text-sm text-muted-foreground">Copy the numbers exactly as your bank app shows them.</p>
@@ -106,6 +108,25 @@ export function CardSnapshotForm({ cardId }: { cardId: string }) {
             <Field id="unbilled-spent" label="Unbilled spent" help={HELP.unbilled_spent} value={unbilledSpent} onChange={setUnbilledSpent} optional />
             <Field id="unbilled-credit" label="Unbilled credit" help={HELP.unbilled_credit} value={unbilledCredit} onChange={setUnbilledCredit} optional />
           </div>
+          {isFirst && (
+            <fieldset className="space-y-2 rounded-lg border p-3 text-sm">
+              <legend className="px-1 font-medium">What are these numbers?</legend>
+              <label className="flex items-start gap-2">
+                <input type="radio" name="first-kind" className="mt-1" checked={starting} onChange={() => setStarting(true)} />
+                <span>
+                  <span className="font-medium">My starting balance.</span> It was already owed before I began using
+                  Flinderax, so don't count it as spending this month.
+                </span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input type="radio" name="first-kind" className="mt-1" checked={!starting} onChange={() => setStarting(false)} />
+                <span>
+                  <span className="font-medium">New spending.</span> The card was at zero and I've spent this since,
+                  so count it against this month's spending.
+                </span>
+              </label>
+            </fieldset>
+          )}
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={save.isPending}>
             {save.isPending ? "Saving..." : "Save snapshot"}

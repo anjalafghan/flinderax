@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import { planApi } from "@/services/api";
-import type { Account, Commitment, Income } from "@/services/types";
-import { keys, useAccounts, useCommitments, useIncomes, usePlannerMutation, useSettings } from "@/hooks/usePlanner";
+import type { Account, Bucket, Commitment, Income } from "@/services/types";
+import { keys, useAccounts, useCommitments, useIncomes, usePlannerMutation, useSettings, useSummary } from "@/hooks/usePlanner";
 import { Header } from "@/components/layout/Header";
 import { AccountSelect } from "@/components/feature/AccountSelect";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,14 @@ import { InfoTip } from "@/components/ui/info-tip";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
-import { formatINR, paiseToInput, toPaise } from "@/utils/money";
+import { formatINR, formatPercent, paiseToInput, parseAmountOrPercent, toPaise } from "@/utils/money";
 import { ordinal } from "@/utils/dates";
+import { BUCKET_HELP, BUCKET_LABEL, defaultBucket } from "@/utils/buckets";
 import { cn } from "@/utils/cn";
 
-const CATEGORIES = ["sip", "house", "bills", "donation", "subscription", "rd", "other"];
+const CATEGORIES = ["bills", "gym", "house", "sip", "rd", "subscription", "donation", "entertainment", "other"];
+const BUCKETS: Bucket[] = ["needs", "savings", "wants"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const parseDay = (v: string): number | null => {
   const n = Number(v);
@@ -109,18 +112,32 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
 function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) {
   const refresh = [keys.commitments];
   const update = usePlannerMutation(planApi.updateCommitment, refresh);
-  const remove = usePlannerMutation(planApi.removeCommitment, refresh, { success: "Commitment removed" });
+  const remove = usePlannerMutation(planApi.removeCommitment, refresh, { success: "Removed" });
+  const when =
+    c.frequency === "yearly"
+      ? `yearly${c.due_month ? ` in ${MONTHS[c.due_month - 1]}` : ", month not set"} on the ${ordinal(c.day_of_month)}`
+      : `on the ${ordinal(c.day_of_month)}`;
   return (
     <li className={cn("flex items-center justify-between gap-2 rounded-lg border p-3 text-sm", !c.active && "opacity-60")}>
       <div className="min-w-0">
         <p className="truncate font-medium">{c.label}</p>
         <p className="text-xs text-muted-foreground">
-          {formatINR(c.amount_paise)} on the {ordinal(c.day_of_month)} · {accountName(accounts, c.account_id)} · {c.category}
+          {formatINR(c.amount_paise)} {when} · {accountName(accounts, c.account_id)}
+          {c.to_account_id && ` → ${accountName(accounts, c.to_account_id)}`} · {BUCKET_LABEL[c.bucket]}
+          {c.frequency === "yearly" && ` · ${formatINR(Math.floor(c.amount_paise / 12))}/month set aside`}
           {c.start_month && ` · from ${c.start_month}`}
           {c.end_month && ` · until ${c.end_month}`}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        <Select
+          aria-label={`Bucket for ${c.label}`}
+          className="h-9 w-auto px-2 text-xs"
+          value={c.bucket}
+          onChange={(e) => update.mutate({ ...c, bucket: e.target.value as Bucket })}
+        >
+          {BUCKETS.map((b) => <option key={b} value={b}>{BUCKET_LABEL[b]}</option>)}
+        </Select>
         <Button variant="outline" size="sm" onClick={() => update.mutate({ ...c, active: !c.active })} disabled={update.isPending}>
           {c.active ? "Pause" : "Resume"}
         </Button>
@@ -139,10 +156,13 @@ function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) 
 
 function CommitmentsSection({ accounts }: { accounts: Account[] }) {
   const { data: commitments } = useCommitments();
-  const blank = { label: "", amount: "", day: "", account: "", category: "sip", start: "", end: "" };
+  const blank = {
+    label: "", amount: "", day: "", account: "", to: "", category: "bills", bucket: "needs" as Bucket,
+    yearly: false, dueMonth: "", start: "", end: "",
+  };
   const [f, setF] = useState(blank);
   const [error, setError] = useState<string | null>(null);
-  const create = usePlannerMutation(planApi.createCommitment, [keys.commitments], { success: "Commitment added" });
+  const create = usePlannerMutation(planApi.createCommitment, [keys.commitments], { success: "Added" });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,7 +178,11 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
         amount_paise: amount,
         day_of_month: day,
         account_id: f.account || null,
+        to_account_id: f.to || null,
         category: f.category,
+        bucket: f.bucket,
+        frequency: f.yearly ? "yearly" : "monthly",
+        due_month: f.yearly && f.dueMonth ? Number(f.dueMonth) : null,
         active: true,
         start_month: f.start || null,
         end_month: f.end || null,
@@ -171,7 +195,10 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">Fixed payments</CardTitle>
-        <p className="text-sm text-muted-foreground">SIPs, rent, donations, subscriptions, an RD instalment, a bills fund...</p>
+        <p className="text-sm text-muted-foreground">
+          Anything paid on a fixed day: SIPs, house, phone and internet, gym, subscriptions, an RD instalment. Yearly bills
+          are set aside a twelfth a month. Each counts toward Needs, Savings or Spending.
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <ul className="space-y-2">
@@ -181,10 +208,10 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
         <form onSubmit={submit} className="grid grid-cols-2 gap-2 border-t pt-4" noValidate>
           <div className="space-y-1">
             <Label htmlFor="cm-label">Name</Label>
-            <Input id="cm-label" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} placeholder="e.g. SIP" />
+            <Input id="cm-label" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} placeholder="e.g. Phone bill" />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="cm-amount">Amount</Label>
+            <Label htmlFor="cm-amount">{f.yearly ? "Amount per year" : "Amount"}</Label>
             <MoneyInput id="cm-amount" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
           </div>
           <div className="space-y-1">
@@ -195,13 +222,46 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
             <Label htmlFor="cm-account">Paid from</Label>
             <AccountSelect id="cm-account" accounts={accounts} value={f.account} onChange={(v) => setF({ ...f, account: v })} />
           </div>
+          <label className="col-span-2 flex items-center gap-2 text-sm">
+            <input type="checkbox" className="h-4 w-4" checked={f.yearly} onChange={(e) => setF({ ...f, yearly: e.target.checked })} />
+            Yearly bill (set aside monthly, due once a year)
+          </label>
+          {f.yearly && (
+            <div className="col-span-2 space-y-1">
+              <Label htmlFor="cm-due-month">Due month (leave empty if you don't remember)</Label>
+              <Select id="cm-due-month" value={f.dueMonth} onChange={(e) => setF({ ...f, dueMonth: e.target.value })}>
+                <option value="">Not sure yet</option>
+                {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+              </Select>
+            </div>
+          )}
           <div className="space-y-1">
             <Label htmlFor="cm-category">Category</Label>
-            <Select id="cm-category" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>
+            <Select
+              id="cm-category"
+              value={f.category}
+              onChange={(e) => setF({ ...f, category: e.target.value, bucket: defaultBucket(e.target.value) })}
+            >
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="cm-bucket">Counts toward</Label>
+              <InfoTip text={BUCKET_HELP[f.bucket]} />
+            </div>
+            <Select id="cm-bucket" value={f.bucket} onChange={(e) => setF({ ...f, bucket: e.target.value as Bucket })}>
+              {BUCKETS.map((b) => <option key={b} value={b}>{BUCKET_LABEL[b]}</option>)}
+            </Select>
+          </div>
+          <div className="col-span-2 space-y-1">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="cm-to">Goes into (optional)</Label>
+              <InfoTip text="For an RD or FD top-up: the account the money ends up in, so the projection grows it. Leave empty if the money just leaves (a SIP, a bill)." />
+            </div>
+            <AccountSelect id="cm-to" accounts={accounts} value={f.to} onChange={(v) => setF({ ...f, to: v })} />
+          </div>
+          <div className="grid grid-cols-2 gap-2 col-span-2">
             <div className="space-y-1">
               <Label htmlFor="cm-start" className="text-xs">First month</Label>
               <Input id="cm-start" type="month" value={f.start} onChange={(e) => setF({ ...f, start: e.target.value })} />
@@ -225,51 +285,137 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
 
 function SettingsSection() {
   const { data } = useSettings();
-  const [cushion, setCushion] = useState("");
-  const [living, setLiving] = useState("");
+  const { data: summary } = useSummary();
+  const [spending, setSpending] = useState("");
+  const [allocDay, setAllocDay] = useState("10");
+  const [floor, setFloor] = useState("");
+  const [months, setMonths] = useState("3");
   const [error, setError] = useState<string | null>(null);
-  const save = usePlannerMutation(planApi.updateSettings, [keys.settings], { success: "Settings saved" });
+  const save = usePlannerMutation(planApi.updateSettings, [keys.settings], { success: "Saved" });
 
   useEffect(() => {
     if (data) {
-      setCushion(paiseToInput(data.cushion_paise));
-      setLiving(paiseToInput(data.next_period_living_paise));
+      setSpending(
+        data.spending_bps != null
+          ? formatPercent(data.spending_bps)
+          : data.spending_paise == null
+            ? ""
+            : paiseToInput(data.spending_paise),
+      );
+      setAllocDay(String(data.allocation_day));
+      setFloor(data.savings_floor_paise == null ? "" : paiseToInput(data.savings_floor_paise));
+      setMonths(String(data.recovery_months));
     }
   }, [data]);
 
+  const income = summary?.budget.income_paise ?? 0;
+  const spendParsed = parseAmountOrPercent(spending);
+  // what the spending box works out to in rupees a month (a percentage follows your income)
+  const spendPaise =
+    spendParsed.kind === "amount"
+      ? spendParsed.paise
+      : spendParsed.kind === "percent"
+        ? Math.floor((income * spendParsed.bps) / 10_000)
+        : spendParsed.kind === "empty"
+          ? Math.floor((income * 20) / 100)
+          : null;
+  const rest = income > 0 && summary && spendPaise !== null ? income - summary.budget.needs_paise - spendPaise : null;
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const c = toPaise(cushion);
-    const l = toPaise(living);
-    if (c === null || l === null || c < 0 || l < 0 || !data) return setError("Both amounts must be zero or more.");
+    const fl = floor.trim() ? toPaise(floor) : null;
+    const day = parseDay(allocDay);
+    const m = Number(months);
+    if (spendParsed.kind === "invalid") {
+      return setError("Spending must be an amount like 18875 or a percentage like 25%.");
+    }
+    if (floor.trim() && (fl === null || fl < 0)) {
+      return setError("The floor must be zero or more.");
+    }
+    if (day === null || !Number.isInteger(m) || m < 1 || m > 24) {
+      return setError("Allocation day must be 1-31 and months between 1 and 24.");
+    }
+    if (!data) return;
     setError(null);
-    save.mutate({ ...data, cushion_paise: c, next_period_living_paise: l });
+    save.mutate({
+      ...data,
+      spending_paise: spendParsed.kind === "amount" ? spendParsed.paise : null,
+      spending_bps: spendParsed.kind === "percent" ? spendParsed.bps : null,
+      allocation_day: day,
+      savings_floor_paise: fl,
+      recovery_months: m,
+    });
   };
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Settings</CardTitle>
+        <CardTitle className="text-lg">Budget</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Needs are your listed bills. You set how much to spend each month; everything left over is savings.
+        </p>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2" noValidate>
           <div className="space-y-1">
             <div className="flex items-center gap-1.5">
-              <Label htmlFor="cushion">Safety cushion</Label>
-              <InfoTip text="Money you never plan to spend. Safe to Spend is calculated after leaving this untouched." />
+              <Label htmlFor="spending">Spending per month</Label>
+              <InfoTip text="Food, other travel and fun: the pot you can swipe against. Type an amount (18875) or a percentage of your income (25%). Empty = 20% of your income." />
             </div>
-            <MoneyInput id="cushion" value={cushion} onChange={(e) => setCushion(e.target.value)} />
+            <Input
+              id="spending"
+              inputMode="decimal"
+              value={spending}
+              onChange={(e) => setSpending(e.target.value)}
+              placeholder="18875 or 25%"
+              aria-invalid={spendParsed.kind === "invalid"}
+            />
+            {spendParsed.kind === "invalid" && (
+              <p className="text-xs text-destructive">Use an amount like 18875 or a percentage like 25%.</p>
+            )}
+            {spendParsed.kind === "percent" && spendPaise !== null && income > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {formatPercent(spendParsed.bps)} of {formatINR(income)} = {formatINR(spendPaise)} a month, and it follows your income.
+              </p>
+            )}
+            {rest !== null && <p className="text-xs text-muted-foreground">That leaves {formatINR(rest)} a month for savings.</p>}
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-1.5">
-              <Label htmlFor="living">Living costs next period</Label>
-              <InfoTip text="Food, travel and everyday spending you expect after your next payday. It's set aside so the month after is covered too." />
+              <Label htmlFor="alloc-day">Savings move by day</Label>
+              <InfoTip text="The day of the month your needs money and the rest of your savings should have moved to the reserve account." />
             </div>
-            <MoneyInput id="living" value={living} onChange={(e) => setLiving(e.target.value)} />
+            <Input id="alloc-day" inputMode="numeric" maxLength={2} value={allocDay} onChange={(e) => setAllocDay(e.target.value)} />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="floor">Savings floor in the reserve</Label>
+              <InfoTip text="Savings in the reserve account that card bills must never eat. You'll be warned if it drops below this." />
+            </div>
+            <div className="flex gap-2">
+              <MoneyInput id="floor" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="No floor" />
+              {summary && summary.pots.reserve.account_name && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => setFloor(paiseToInput(Math.max(0, summary.pots.reserve.free_savings_paise)))}
+                >
+                  Use today's free savings
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="months">Pay an overspend back over (months)</Label>
+              <InfoTip text="If you spend more than planned, the working page shows how much to rebuild each month for this many months so no FD is touched." />
+            </div>
+            <Input id="months" inputMode="numeric" maxLength={2} value={months} onChange={(e) => setMonths(e.target.value)} />
           </div>
           {error && <p role="alert" className="text-sm text-destructive sm:col-span-2">{error}</p>}
           <Button type="submit" className="sm:col-span-2" disabled={save.isPending || !data}>
-            Save settings
+            Save budget
           </Button>
         </form>
       </CardContent>

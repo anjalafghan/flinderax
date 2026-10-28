@@ -23,6 +23,7 @@ export interface CardData {
   statement_day?: number | null;
   due_day?: number | null;
   credit_limit_paise?: number | null;
+  pay_from_account_id?: string | null;
 }
 
 interface DeferredItem {

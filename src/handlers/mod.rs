@@ -4,5 +4,7 @@ pub mod card_cycle;
 pub mod color;
 pub mod common;
 pub mod dashboard;
+pub mod moves;
 pub mod plan;
+pub mod projection;
 pub mod user;

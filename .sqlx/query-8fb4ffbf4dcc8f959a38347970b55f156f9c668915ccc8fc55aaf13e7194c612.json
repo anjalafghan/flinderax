@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id,\n                  category, active AS \"active: bool\", start_month, end_month\n           FROM commitments WHERE user_id = ? ORDER BY day_of_month, rowid",
+  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id,\n                  category, bucket, frequency, due_month, to_account_id, active AS \"active: bool\", start_month, end_month\n           FROM commitments WHERE user_id = ? ORDER BY day_of_month, rowid",
   "describe": {
     "columns": [
       {
@@ -34,18 +34,38 @@
         "type_info": "Text"
       },
       {
-        "name": "active: bool",
+        "name": "bucket",
         "ordinal": 6,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "start_month",
+        "name": "frequency",
         "ordinal": 7,
         "type_info": "Text"
       },
       {
-        "name": "end_month",
+        "name": "due_month",
         "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "to_account_id",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "active: bool",
+        "ordinal": 10,
+        "type_info": "Integer"
+      },
+      {
+        "name": "start_month",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_month",
+        "ordinal": 12,
         "type_info": "Text"
       }
     ],
@@ -60,9 +80,13 @@
       true,
       false,
       false,
+      false,
+      true,
+      true,
+      false,
       true,
       true
     ]
   },
-  "hash": "f80ecda9cc99d492956ffd0d91fe09b29e3a5ef02ef5fa2594febfe433cb866a"
+  "hash": "8fb4ffbf4dcc8f959a38347970b55f156f9c668915ccc8fc55aaf13e7194c612"
 }

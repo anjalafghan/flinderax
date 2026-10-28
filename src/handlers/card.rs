@@ -13,6 +13,7 @@ use tracing::error;
  use crate::{
      handlers::{
          color::{self, pack, unpack},
+         account::ensure_account_owned,
          common::{invalidate_cards_cache, validate_day, AppError},
      },
      models::{
@@ -89,12 +90,13 @@ pub async fn create_card(
     })?;
 
     validate_cycle(&card_details.statement_day, &card_details.due_day)?;
+    ensure_account_owned(&state.db, &card_details.pay_from_account_id, &user_id).await?;
     let card_id = nanoid!();
     let primary_color = color::pack(card_details.card_primary_color);
     let secondary_color = color::pack(card_details.card_secondary_color);
 
     sqlx::query!(
-        "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color, last_4_digits, statement_day, due_day, credit_limit_paise) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color, last_4_digits, statement_day, due_day, credit_limit_paise, pay_from_account_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         card_id,
         user_id,
         card_details.card_name,
@@ -104,7 +106,8 @@ pub async fn create_card(
         card_details.last_4_digits,
         card_details.statement_day,
         card_details.due_day,
-        card_details.credit_limit_paise
+        card_details.credit_limit_paise,
+        card_details.pay_from_account_id
     )
     .execute(&mut *tx)
     .await
@@ -142,12 +145,14 @@ pub async fn update(
     Json(update_card_details): Json<UpdateCardPayload>,
 ) -> Result<Json<CardResponse>, AppError> {
     validate_cycle(&update_card_details.statement_day, &update_card_details.due_day)?;
+    ensure_account_owned(&state.db, &update_card_details.pay_from_account_id, &user_id).await?;
     let card_primary_color = pack(update_card_details.card_primary_color);
     let card_secondary_color = pack(update_card_details.card_secondary_color);
     sqlx::query!(
         "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ?, last_4_digits = ?,
                 statement_day = COALESCE(?, statement_day), due_day = COALESCE(?, due_day),
-                credit_limit_paise = COALESCE(?, credit_limit_paise)
+                credit_limit_paise = COALESCE(?, credit_limit_paise),
+                pay_from_account_id = COALESCE(?, pay_from_account_id)
          WHERE card_id = ? AND user_id = ?",
         update_card_details.card_name,
         update_card_details.card_bank,
@@ -157,6 +162,7 @@ pub async fn update(
         update_card_details.statement_day,
         update_card_details.due_day,
         update_card_details.credit_limit_paise,
+        update_card_details.pay_from_account_id,
         update_card_details.card_id,
         user_id
     )
@@ -185,7 +191,7 @@ pub async fn get_card(
 ) -> Result<Json<ShowGetCardResponse>, AppError> {
     let card = sqlx::query!(
         "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color, c.last_4_digits,
-                c.statement_day, c.due_day, c.credit_limit_paise,
+                c.statement_day, c.due_day, c.credit_limit_paise, c.pay_from_account_id,
                 crs.last_total_due, crs.last_delta
          FROM cards c
          LEFT JOIN card_running_state crs ON c.card_id = crs.card_id
@@ -215,6 +221,7 @@ pub async fn get_card(
         statement_day: card.statement_day,
         due_day: card.due_day,
         credit_limit_paise: card.credit_limit_paise,
+        pay_from_account_id: card.pay_from_account_id,
     }))
 }
 

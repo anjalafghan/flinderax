@@ -38,3 +38,42 @@ export function paiseToInput(paise: number): string {
   const frac = abs % 100;
   return frac === 0 ? `${sign}${rupeesPart}` : `${sign}${rupeesPart}.${String(frac).padStart(2, "0").replace(/0$/, "")}`;
 }
+
+/** 4_520_000 -> "₹45.2k", 12_345_600 -> "₹1.2L", 150_000_000 -> "₹15L", for chart axes. */
+export function formatCompactINR(paise: number): string {
+  const sign = paise < 0 ? "-" : "";
+  const r = Math.abs(paise) / 100;
+  const trim = (n: number) => String(Math.round(n * 10) / 10);
+  if (r >= 10_000_000) return `${sign}₹${trim(r / 10_000_000)}Cr`;
+  if (r >= 100_000) return `${sign}₹${trim(r / 100_000)}L`;
+  if (r >= 1_000) return `${sign}₹${trim(r / 1_000)}k`;
+  return `${sign}₹${Math.round(r)}`;
+}
+
+export type AmountOrPercent =
+  | { kind: "empty" }
+  | { kind: "amount"; paise: number }
+  | { kind: "percent"; bps: number }
+  | { kind: "invalid" };
+
+/**
+ * "18875" / "₹18,875" -> an amount; "25%" / "22.5 %" -> a percentage in basis points (2500 = 25%);
+ * "" -> empty. Anything else (or a percentage over 100) is invalid.
+ */
+export function parseAmountOrPercent(text: string): AmountOrPercent {
+  const t = text.trim();
+  if (t === "") return { kind: "empty" };
+  if (t.endsWith("%")) {
+    const num = t.slice(0, -1).trim();
+    if (!/^\d{1,3}(\.\d{1,2})?$/.test(num)) return { kind: "invalid" };
+    const bps = Math.round(Number(num) * 100);
+    return bps >= 0 && bps <= 10_000 ? { kind: "percent", bps } : { kind: "invalid" };
+  }
+  const paise = toPaise(t);
+  return paise === null || paise < 0 ? { kind: "invalid" } : { kind: "amount", paise };
+}
+
+/** 2500 -> "25%", 2250 -> "22.5%". */
+export function formatPercent(bps: number): string {
+  return `${bps / 100}%`;
+}

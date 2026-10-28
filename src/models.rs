@@ -16,6 +16,8 @@ pub struct AppState {
 pub struct CreateUserPayload {
     pub user_name: String,
     pub user_password: String,
+    /// Ignored: self-registration always creates a plain `user`. Kept so older clients still parse.
+    #[serde(default)]
     pub user_role: String,
 }
 #[derive(serde::Serialize)]
@@ -59,6 +61,7 @@ pub struct CreateCardPayload {
     pub statement_day: Option<i64>,
     pub due_day: Option<i64>,
     pub credit_limit_paise: Option<i64>,
+    pub pay_from_account_id: Option<String>,
 }
 #[derive(Serialize)]
 pub struct CardResponse {
@@ -83,6 +86,7 @@ pub struct UpdateCardPayload {
     pub statement_day: Option<i64>,
     pub due_day: Option<i64>,
     pub credit_limit_paise: Option<i64>,
+    pub pay_from_account_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -103,6 +107,7 @@ pub struct ShowGetCardResponse {
     pub statement_day: Option<i64>,
     pub due_day: Option<i64>,
     pub credit_limit_paise: Option<i64>,
+    pub pay_from_account_id: Option<String>,
 }
 #[derive(Deserialize)]
 pub struct InsertTransactionPayload {

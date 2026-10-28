@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT account_id AS \"account_id!\", name, balance_paise, locked AS \"locked: bool\",\n                  updated_at AS \"updated_at: String\"\n           FROM accounts WHERE user_id = ?",
+  "query": "SELECT account_id AS \"account_id!\", name, balance_paise, locked AS \"locked: bool\", role,\n                  updated_at AS \"updated_at: String\"\n           FROM accounts WHERE user_id = ?",
   "describe": {
     "columns": [
       {
@@ -24,8 +24,13 @@
         "type_info": "Integer"
       },
       {
-        "name": "updated_at: String",
+        "name": "role",
         "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at: String",
+        "ordinal": 5,
         "type_info": "Datetime"
       }
     ],
@@ -37,8 +42,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "4dbd373ce0b33184489a248dadccfbeefc21c6661a964142296c8863783006d1"
+  "hash": "2ab3626ff0aae595298fa47ad16462f8c524bef60722e2d229209439d1bb6ba1"
 }

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT move_key, mode, SUM(amount_paise) AS \"total!: i64\" FROM moves WHERE user_id = ? GROUP BY move_key, mode",
+  "describe": {
+    "columns": [
+      {
+        "name": "move_key",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "mode",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "total!: i64",
+        "ordinal": 2,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "85537c4ba07a579c239b6bfb9785cc51577b0b328a36813c425137425954db0b"
+}

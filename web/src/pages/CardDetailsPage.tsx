@@ -25,11 +25,6 @@ import { CardSnapshotForm } from "@/components/feature/CardSnapshotForm";
 import { CardLoansSection } from "@/components/feature/CardLoansSection";
 import { cn } from "@/utils/cn";
 
-const UpdateTransactionModal = lazy(() =>
-  import("@/components/feature/UpdateTransactionModal").then((m) => ({
-    default: m.UpdateTransactionModal,
-  })),
-);
 const ConfirmationModal = lazy(() =>
   import("@/components/ui/ConfirmationModal").then((m) => ({
     default: m.ConfirmationModal,
@@ -45,7 +40,6 @@ export default function CardDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isEditCardOpen, setIsEditCardOpen] = useState(false);
@@ -202,9 +196,11 @@ export default function CardDetailsPage() {
 
             <Button
               className="w-full text-lg h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl shadow-lg"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() =>
+                document.getElementById("snapshot-form")?.scrollIntoView({ behavior: "smooth", block: "center" })
+              }
             >
-              Update Transaction
+              Update from bank app
             </Button>
           </div>
 
@@ -313,20 +309,13 @@ export default function CardDetailsPage() {
           <>
             <div className="grid gap-6 md:grid-cols-2">
               <CardBreakdownPanel breakdown={breakdownQuery.data} />
-              <CardSnapshotForm cardId={card.card_id} />
+              <CardSnapshotForm cardId={card.card_id} isFirst={breakdownQuery.data.last_updated === null} />
             </div>
             <CardLoansSection cardId={card.card_id} breakdown={breakdownQuery.data} />
           </>
         )}
 
         <Suspense fallback={null}>
-          <UpdateTransactionModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            cardId={id!}
-            currentBalance={card.last_total_due || 0}
-          />
-
           <ConfirmationModal
             isOpen={isResetConfirmOpen}
             onClose={() => setIsResetConfirmOpen(false)}
@@ -361,6 +350,7 @@ export default function CardDetailsPage() {
             currentStatementDay={card.statement_day}
             currentDueDay={card.due_day}
             currentCreditLimitPaise={card.credit_limit_paise}
+            currentPayFrom={card.pay_from_account_id}
           />
         </Suspense>
       </div>

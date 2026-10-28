@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT amount_paise, mode, from_account_id, to_account_id FROM moves WHERE move_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "amount_paise",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "mode",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "from_account_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "to_account_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "12c0053d1c2f73d9c0f92508251a679bea28527628596b8aeb8906dffe626e20"
+}

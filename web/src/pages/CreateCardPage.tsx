@@ -13,6 +13,8 @@ import { CreditCard } from "@/components/feature/CreditCard";
 import { InfoTip } from "@/components/ui/info-tip";
 import { MoneyInput } from "@/components/ui/money-input";
 import { toPaise } from "@/utils/money";
+import { Select } from "@/components/ui/select";
+import { useAccounts } from "@/hooks/usePlanner";
 
 const parseDay = (v: string): number | null => {
   const n = Number(v);
@@ -42,6 +44,8 @@ export default function CreateCardPage() {
   const [statementDay, setStatementDay] = useState("");
   const [dueDay, setDueDay] = useState("");
   const [creditLimit, setCreditLimit] = useState("");
+  const [payFrom, setPayFrom] = useState("");
+  const { data: accounts } = useAccounts();
 
   const createCardMutation = useMutation({
     mutationFn: async () => {
@@ -60,6 +64,7 @@ export default function CreateCardPage() {
         statement_day: parseDay(statementDay),
         due_day: parseDay(dueDay),
         credit_limit_paise: creditLimit.trim() ? toPaise(creditLimit) : null,
+        pay_from_account_id: payFrom || null,
       });
     },
     onSuccess: () => {
@@ -138,6 +143,15 @@ export default function CreateCardPage() {
               <div className="space-y-2">
                 <Label htmlFor="credit-limit">Credit limit</Label>
                 <MoneyInput id="credit-limit" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pay-from">Bill is paid from</Label>
+                <Select id="pay-from" value={payFrom} onChange={(e) => setPayFrom(e.target.value)}>
+                  <option value="">Reserve account</option>
+                  {accounts?.filter((a) => !a.locked).map((a) => (
+                    <option key={a.account_id} value={a.account_id}>{a.name}</option>
+                  ))}
+                </Select>
               </div>
             </div>
 

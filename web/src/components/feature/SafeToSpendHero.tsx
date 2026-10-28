@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import type { DashboardSummary, Status } from "@/services/types";
 import { formatDay } from "@/utils/dates";
@@ -20,9 +21,10 @@ const TONE: Record<Status, { box: string; label: string }> = {
   },
 };
 
+/** The one number: what is safe to spend from now until the next payday. */
 export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
   const tone = TONE[summary.status];
-  const low = summary.lowest_point;
+  const spendName = summary.pots.spending.account_name ?? "your spending account";
   return (
     <section
       aria-label="Safe to spend"
@@ -30,7 +32,9 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
       className={cn("rounded-3xl border p-6 md:p-8", tone.box)}
     >
       <div className="flex items-center justify-between gap-2 text-sm font-medium">
-        <span>Safe to spend until {formatDay(summary.until)}</span>
+        <span>
+          Safe to spend until {formatDay(summary.until)} ({summary.days_left} days)
+        </span>
         <span className="rounded-full bg-background/60 px-3 py-1 text-xs font-semibold">{tone.label}</span>
       </div>
       <p className="mt-3 text-5xl font-extrabold tracking-tight tabular-nums md:text-6xl">
@@ -40,28 +44,33 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
         {formatINR(summary.per_week_paise)} <span className="text-sm font-medium opacity-80">per week</span>
       </p>
 
-      <dl className="mt-5 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
-        {summary.period_label && (
-          <div className="flex justify-between gap-4">
-            <dt className="opacity-80">This period</dt>
-            <dd className="font-medium">{summary.period_label}</dd>
-          </div>
-        )}
-        {summary.next_income && (
-          <div className="flex justify-between gap-4">
-            <dt className="opacity-80">Next income</dt>
-            <dd className="font-medium">
-              {summary.next_income.label}, arrives {formatDay(summary.next_income.arrives)}
-            </dd>
-          </div>
-        )}
-        <div className="flex justify-between gap-4">
-          <dt className="opacity-80">Lowest balance</dt>
-          <dd className="font-medium tabular-nums">
-            {formatINR(low.amount_paise)} on {formatDay(low.date)}
-          </dd>
-        </div>
-      </dl>
+      <p className="mt-3 text-sm opacity-90">
+        {summary.spending.tracked
+          ? `${formatINR(summary.spending.spent_paise)} spent on your cards since tracking began, out of a ${formatINR(summary.spending.allowance_paise)} monthly allowance.`
+          : "Spending isn't tracked yet. Update a card from your bank app to start."}
+      </p>
+
+      {summary.short_by_paise > 0 && (
+        <p className="mt-3 text-sm font-medium">
+          {spendName} is short by {formatINR(summary.short_by_paise)} for the moves below. Mark what you've already
+          dealt with, or skip this month's savings top-up.
+        </p>
+      )}
+      {summary.spending.tracked && summary.spending.overspend_paise > 0 && (
+        <p className="mt-3 text-sm font-medium">
+          You've gone {formatINR(summary.spending.overspend_paise)} over this month's spending allowance.
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span className="opacity-80">
+          Only this period's money.{" "}
+          {summary.next_income ? `${summary.next_income.label} (arrives ${formatDay(summary.next_income.arrives)}) is not counted.` : ""}
+        </span>
+        <Link to="/working" className="font-semibold underline underline-offset-4">
+          See the working
+        </Link>
+      </div>
 
       {summary.stale.length > 0 && (
         <ul className="mt-4 space-y-1 text-sm">

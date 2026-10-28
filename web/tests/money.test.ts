@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatINR, paiseToInput, toPaise } from "@/utils/money";
+import { formatCompactINR, formatINR, formatPercent, paiseToInput, parseAmountOrPercent, toPaise } from "@/utils/money";
 
 describe("toPaise", () => {
   it("parses whole and decimal rupees without float error", () => {
@@ -42,5 +42,46 @@ describe("paiseToInput", () => {
     for (const p of [0, 7, 50, 100, 123405, 123450, -5000]) {
       expect(toPaise(paiseToInput(p))).toBe(p);
     }
+  });
+});
+
+describe("formatCompactINR", () => {
+  it("uses k, L and Cr like Indian chart axes", () => {
+    expect(formatCompactINR(0)).toBe("₹0");
+    expect(formatCompactINR(45_000)).toBe("₹450");
+    expect(formatCompactINR(4_520_000)).toBe("₹45.2k");
+    expect(formatCompactINR(12_345_600)).toBe("₹1.2L");
+    expect(formatCompactINR(150_000_000)).toBe("₹15L");
+    expect(formatCompactINR(-5_000_000)).toBe("-₹50k");
+    expect(formatCompactINR(30_000_000_000)).toBe("₹30Cr");
+  });
+});
+
+describe("parseAmountOrPercent", () => {
+  it("reads percentages as basis points", () => {
+    expect(parseAmountOrPercent("25%")).toEqual({ kind: "percent", bps: 2500 });
+    expect(parseAmountOrPercent(" 22.5 % ")).toEqual({ kind: "percent", bps: 2250 });
+    expect(parseAmountOrPercent("33.33%")).toEqual({ kind: "percent", bps: 3333 });
+    expect(parseAmountOrPercent("0%")).toEqual({ kind: "percent", bps: 0 });
+    expect(parseAmountOrPercent("100%")).toEqual({ kind: "percent", bps: 10000 });
+  });
+
+  it("reads plain numbers as rupee amounts", () => {
+    expect(parseAmountOrPercent("18875")).toEqual({ kind: "amount", paise: 1_887_500 });
+    expect(parseAmountOrPercent("₹18,875.50")).toEqual({ kind: "amount", paise: 1_887_550 });
+  });
+
+  it("treats blank as empty and junk as invalid", () => {
+    expect(parseAmountOrPercent("  ")).toEqual({ kind: "empty" });
+    for (const bad of ["abc", "%", "25 %%", "101%", "-5%", "12.345%", "-100"]) {
+      expect(parseAmountOrPercent(bad)).toEqual({ kind: "invalid" });
+    }
+  });
+});
+
+describe("formatPercent", () => {
+  it("drops needless decimals", () => {
+    expect(formatPercent(2500)).toBe("25%");
+    expect(formatPercent(2250)).toBe("22.5%");
   });
 });

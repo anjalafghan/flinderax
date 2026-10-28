@@ -12,7 +12,7 @@ use rusty_paseto::{
     prelude::{PasetoParser, PasetoSymmetricKey},
 };
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
@@ -52,6 +52,23 @@ async fn api_not_found() -> AppError {
     AppError(StatusCode::NOT_FOUND, "Not found".to_string())
 }
 
+/// The web app is served by this same server, so cross-origin access is off unless
+/// `CORS_ORIGINS` (comma-separated) lists origins that may call the API.
+fn cors_layer() -> CorsLayer {
+    let origins: Vec<_> = std::env::var("CORS_ORIGINS")
+        .unwrap_or_default()
+        .split(',')
+        .filter_map(|o| o.trim().parse().ok())
+        .collect();
+    if origins.is_empty() {
+        return CorsLayer::new();
+    }
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::list(origins))
+        .allow_methods(Any)
+        .allow_headers(Any)
+}
+
 pub fn build_router(state: AppState) -> Router {
     let dir = static_dir();
     let index = format!("{dir}/index.html");
@@ -74,14 +91,10 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/account", protected(&state, routes::account::routes(state.clone())))
         .nest("/api/plan", protected(&state, routes::plan::routes(state.clone())))
         .nest("/api/dashboard", protected(&state, routes::dashboard::routes(state.clone())))
+        .nest("/api/moves", protected(&state, routes::moves::routes(state.clone())))
         // Unknown API paths must 404 instead of falling through to the SPA's index.html.
         .route("/api/{*rest}", any(api_not_found))
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
-        )
+        .layer(cors_layer())
         .layer(CompressionLayer::new())
         .fallback_service(ServeDir::new(&dir).fallback(ServeFile::new(index)))
 }

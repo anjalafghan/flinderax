@@ -1,0 +1,42 @@
+import { Undo2 } from "lucide-react";
+
+import { movesApi } from "@/services/api";
+import { keys, useMoves, usePlannerMutation } from "@/hooks/usePlanner";
+import { Button } from "@/components/ui/button";
+import { formatINR } from "@/utils/money";
+
+const LABEL = { moved: "Moved", already_covered: "Already there", skipped: "Skipped" } as const;
+
+export function RecentMoves() {
+  const { data } = useMoves();
+  const undo = usePlannerMutation(movesApi.undo, [keys.moves, keys.accounts], { success: "Undone" });
+  if (!data || data.length === 0) return null;
+  return (
+    <section aria-label="Recent moves" className="space-y-3">
+      <h2 className="text-lg font-bold tracking-tight">What you've recorded</h2>
+      <ul className="divide-y rounded-xl border">
+        {data.slice(0, 8).map((m) => (
+          <li key={m.move_id} className="flex items-center justify-between gap-3 p-3 text-sm">
+            <div className="min-w-0">
+              <p className="font-medium">
+                {LABEL[m.mode]} {formatINR(m.amount_paise)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {m.kind === "allocation" ? "Savings top-up" : "Card bill"} · {m.created_at.slice(0, 10)}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={undo.isPending}
+              onClick={() => undo.mutate(m.move_id)}
+              title="Undo this (balances go back too)"
+            >
+              <Undo2 className="mr-1 h-4 w-4" /> Undo
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

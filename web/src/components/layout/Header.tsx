@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom"
-import { Plus, LogOut, Landmark, ListChecks } from "lucide-react"
+import { Plus, LogOut, Landmark, ListChecks, LineChart } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/ui/mode-toggle"
@@ -25,13 +25,17 @@ export function Header() {
             <div className="container mx-auto flex h-16 items-center justify-between gap-2 px-4 md:px-6">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
                     <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold">F</div>
-                    <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Flinderax</span>
+                    <span className="hidden text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:inline">Flinderax</span>
                 </div>
 
                 <nav aria-label="Main" className="flex items-center gap-1">
                     <NavLink to="/accounts" className={navClass} title="Accounts">
                         <Landmark className="h-4 w-4" />
                         <span className="hidden md:inline">Accounts</span>
+                    </NavLink>
+                    <NavLink to="/what-if" className={navClass} title="What-if">
+                        <LineChart className="h-4 w-4" />
+                        <span className="hidden md:inline">What-if</span>
                     </NavLink>
                     <NavLink to="/plan" className={navClass} title="Plan">
                         <ListChecks className="h-4 w-4" />

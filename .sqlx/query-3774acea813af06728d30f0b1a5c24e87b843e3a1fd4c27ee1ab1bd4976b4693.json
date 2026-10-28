@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ?, last_4_digits = ?,\n                statement_day = COALESCE(?, statement_day), due_day = COALESCE(?, due_day),\n                credit_limit_paise = COALESCE(?, credit_limit_paise),\n                pay_from_account_id = COALESCE(?, pay_from_account_id)\n         WHERE card_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "3774acea813af06728d30f0b1a5c24e87b843e3a1fd4c27ee1ab1bd4976b4693"
+}

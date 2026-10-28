@@ -1,6 +1,10 @@
 import type {
   Account,
-  AccountKind,
+  AccountUpdate,
+  MoveRow,
+  Projection,
+  RecordMove,
+  ScenarioItem,
   CardBreakdown,
   Commitment,
   DashboardSummary,
@@ -89,14 +93,7 @@ export const accountApi = {
   list: () => data(api.get<Account[]>("/api/account/list")),
   create: (a: NewAccount) =>
     data(api.post<{ account_id: string; status: boolean }>("/api/account/create", a)),
-  update: (a: {
-    account_id: string;
-    name: string;
-    kind: AccountKind;
-    locked: boolean;
-    interest_bps?: number | null;
-    maturity_date?: string | null;
-  }) => data(api.post<Ok>("/api/account/update", a)),
+  update: (a: AccountUpdate) => data(api.post<Ok>("/api/account/update", a)),
   updateBalance: (account_id: string, balance_paise: number) =>
     data(api.post<Ok>("/api/account/update_balance", { account_id, balance_paise })),
   remove: (account_id: string) => data(api.post<Ok>("/api/account/delete", { account_id })),
@@ -114,6 +111,8 @@ export const planApi = {
   removeIncome: (id: string) => data(api.post<Ok>("/api/plan/income/delete", { id })),
 
   settings: () => data(api.get<PlanSettings>("/api/plan/settings/get")),
+  project: (body: { months?: number; spend_pct?: number; items: ScenarioItem[] }) =>
+    data(api.post<Projection>("/api/plan/project", body)),
   updateSettings: (s: PlanSettings) => data(api.post<Ok>("/api/plan/settings/update", s)),
 };
 
@@ -127,4 +126,10 @@ export const cardPlanApi = {
   createPending: (p: { card_id: string; label: string; amount_paise: number }) =>
     data(api.post<Id>("/api/card/pending/create", p)),
   clearPending: (charge_id: string) => data(api.post<Ok>("/api/card/pending/clear", { charge_id })),
+};
+
+export const movesApi = {
+  record: (m: RecordMove) => data(api.post<{ move_id: string; status: boolean }>("/api/moves/record", m)),
+  undo: (move_id: string) => data(api.post<Ok>("/api/moves/undo", { move_id })),
+  list: () => data(api.get<MoveRow[]>("/api/moves/list")),
 };

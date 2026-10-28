@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { accountApi, cardPlanApi, dashboardApi, planApi } from "@/services/api";
+import { accountApi, cardPlanApi, dashboardApi, movesApi, planApi } from "@/services/api";
 
 export const keys = {
   summary: ["dashboard-summary"] as const,
@@ -9,6 +9,7 @@ export const keys = {
   commitments: ["commitments"] as const,
   incomes: ["incomes"] as const,
   settings: ["plan-settings"] as const,
+  moves: ["moves"] as const,
   breakdown: (cardId: string) => ["card-breakdown", cardId] as const,
 };
 
@@ -16,6 +17,7 @@ export const useSummary = () => useQuery({ queryKey: keys.summary, queryFn: dash
 export const useAccounts = () => useQuery({ queryKey: keys.accounts, queryFn: accountApi.list });
 export const useCommitments = () => useQuery({ queryKey: keys.commitments, queryFn: planApi.commitments });
 export const useIncomes = () => useQuery({ queryKey: keys.incomes, queryFn: planApi.incomes });
+export const useMoves = () => useQuery({ queryKey: keys.moves, queryFn: movesApi.list });
 export const useSettings = () => useQuery({ queryKey: keys.settings, queryFn: planApi.settings });
 export const useBreakdown = (cardId: string | undefined) =>
   useQuery({
