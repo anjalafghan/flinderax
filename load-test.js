@@ -21,7 +21,7 @@ const { URL } = require('url');
 // Configuration
 const ENV = process.argv[2] || 'local';
 const BASE_URL = ENV === 'production'
-    ? 'https://flinderax-backend.fly.dev'
+    ? 'https://flinderax.fly.dev'
     : 'http://localhost:3000';
 
 // Test credentials (make sure this user exists in your database)
