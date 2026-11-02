@@ -7,6 +7,9 @@
 //!   posts for days in `(baseline, today]`;
 //! * a fixed payment dated today is still "upcoming" for the engine, so payments post for days
 //!   in `[baseline, today)`.
+//!
+//! A posting is skipped when a bank alert already recorded it (same account and direction, within
+//! a couple of days and 5% of the amount): the alert's own balance already includes it.
 
 use std::collections::HashMap;
 
@@ -16,6 +19,27 @@ use super::{commitment_dates, occurrences, CommitmentIn, IncomeIn};
 
 /// Never reach back further than this, however old a baseline is.
 pub const MAX_LOOKBACK_DAYS: i64 = 92;
+/// How far apart an alert and a scheduled date may be and still be the same money.
+pub const MATCH_WINDOW_DAYS: i64 = 2;
+
+/// A transaction already recorded from a bank alert.
+#[derive(Debug, Clone)]
+pub struct Seen {
+    pub account_id: String,
+    pub on: Date,
+    /// Signed: + credit, - debit.
+    pub amount: i64,
+}
+
+fn already_seen(p: &Posting, seen: &[Seen]) -> bool {
+    let tolerance = (p.amount.abs() / 20).max(100);
+    seen.iter().any(|s| {
+        s.account_id == p.account_id
+            && s.amount.signum() == p.amount.signum()
+            && (s.amount - p.amount).abs() <= tolerance
+            && (s.on - p.on).whole_days().abs() <= MATCH_WINDOW_DAYS
+    })
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SourceKind {
@@ -49,6 +73,7 @@ pub fn due_postings(
     incomes: &[(String, IncomeIn)],
     commitments: &[(String, CommitmentIn)],
     baselines: &HashMap<String, Date>,
+    seen: &[Seen],
     today: Date,
 ) -> Vec<Posting> {
     let floor = today - Duration::days(MAX_LOOKBACK_DAYS);
@@ -91,6 +116,7 @@ pub fn due_postings(
         }
     }
 
+    out.retain(|p| !already_seen(p, seen));
     out.sort_by(|a, b| a.on.cmp(&b.on).then_with(|| a.source_id.cmp(&b.source_id)));
     out
 }
@@ -131,7 +157,7 @@ mod tests {
     #[test]
     fn income_posts_after_baseline_up_to_today() {
         let b = base(&[("hdfc", date!(2026 - 10 - 20))]);
-        let p = due_postings(&[income(1, 90_000, "hdfc")], &[], &b, date!(2026 - 11 - 01));
+        let p = due_postings(&[income(1, 90_000, "hdfc")], &[], &b, &[], date!(2026 - 11 - 01));
         assert_eq!(p.len(), 1);
         assert_eq!((p[0].on, p[0].amount), (date!(2026 - 11 - 01), 9_000_000));
     }
@@ -139,29 +165,29 @@ mod tests {
     #[test]
     fn income_on_baseline_day_is_already_in_the_balance() {
         let b = base(&[("hdfc", date!(2026 - 11 - 01))]);
-        assert!(due_postings(&[income(1, 90_000, "hdfc")], &[], &b, date!(2026 - 11 - 05)).is_empty());
+        assert!(due_postings(&[income(1, 90_000, "hdfc")], &[], &b, &[], date!(2026 - 11 - 05)).is_empty());
     }
 
     #[test]
     fn payment_due_today_is_left_to_the_planner() {
         let b = base(&[("hdfc", date!(2026 - 10 - 20))]);
         let today = date!(2026 - 11 - 05);
-        assert!(due_postings(&[], &[sip(5, 10_000, "hdfc", None)], &b, today).is_empty());
-        let p = due_postings(&[], &[sip(5, 10_000, "hdfc", None)], &b, today + Duration::days(1));
+        assert!(due_postings(&[], &[sip(5, 10_000, "hdfc", None)], &b, &[], today).is_empty());
+        let p = due_postings(&[], &[sip(5, 10_000, "hdfc", None)], &b, &[], today + Duration::days(1));
         assert_eq!((p[0].on, p[0].amount), (date!(2026 - 11 - 05), -1_000_000));
     }
 
     #[test]
     fn payment_on_baseline_day_still_posts() {
         let b = base(&[("hdfc", date!(2026 - 11 - 05))]);
-        let p = due_postings(&[], &[sip(5, 10_000, "hdfc", None)], &b, date!(2026 - 11 - 06));
+        let p = due_postings(&[], &[sip(5, 10_000, "hdfc", None)], &b, &[], date!(2026 - 11 - 06));
         assert_eq!(p.len(), 1);
     }
 
     #[test]
     fn transfer_debits_one_account_and_credits_the_other() {
         let b = base(&[("hdfc", date!(2026 - 10 - 01)), ("rd", date!(2026 - 10 - 01))]);
-        let p = due_postings(&[], &[sip(10, 5_000, "hdfc", Some("rd"))], &b, date!(2026 - 10 - 15));
+        let p = due_postings(&[], &[sip(10, 5_000, "hdfc", Some("rd"))], &b, &[], date!(2026 - 10 - 15));
         let mut amounts: Vec<(String, i64)> = p.iter().map(|x| (x.account_id.clone(), x.amount)).collect();
         amounts.sort();
         assert_eq!(amounts, vec![("hdfc".into(), -500_000), ("rd".into(), 500_000)]);
@@ -169,14 +195,26 @@ mod tests {
 
     #[test]
     fn accounts_without_a_baseline_are_untouched() {
-        let p = due_postings(&[income(1, 90_000, "hdfc")], &[], &HashMap::new(), date!(2026 - 11 - 05));
+        let p = due_postings(&[income(1, 90_000, "hdfc")], &[], &HashMap::new(), &[], date!(2026 - 11 - 05));
         assert!(p.is_empty());
+    }
+
+    #[test]
+    fn postings_already_seen_in_an_alert_are_skipped() {
+        let b = base(&[("hdfc", date!(2026 - 10 - 20))]);
+        let salary_alert = Seen { account_id: "hdfc".into(), on: date!(2026 - 10 - 31), amount: 9_010_000 };
+        let p = due_postings(&[income(1, 90_000, "hdfc")], &[], &b, &[salary_alert.clone()], date!(2026 - 11 - 02));
+        assert!(p.is_empty(), "{p:?}");
+        let other_account = Seen { account_id: "kotak".into(), ..salary_alert.clone() };
+        let wrong_sign = Seen { amount: -9_000_000, ..salary_alert };
+        let p = due_postings(&[income(1, 90_000, "hdfc")], &[], &b, &[other_account, wrong_sign], date!(2026 - 11 - 02));
+        assert_eq!(p.len(), 1);
     }
 
     #[test]
     fn lookback_is_capped() {
         let b = base(&[("hdfc", date!(2025 - 01 - 01))]);
-        let p = due_postings(&[income(1, 1, "hdfc")], &[], &b, date!(2026 - 11 - 05));
+        let p = due_postings(&[income(1, 1, "hdfc")], &[], &b, &[], date!(2026 - 11 - 05));
         assert!(p.len() <= 4, "{p:?}");
         assert!(p.iter().all(|x| x.on >= date!(2026 - 11 - 05) - Duration::days(MAX_LOOKBACK_DAYS)));
     }

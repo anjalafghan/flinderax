@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO merchant_rules (user_id, pattern, category) VALUES (?, ?, ?)\n             ON CONFLICT(user_id, pattern) DO UPDATE SET category = excluded.category",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "19ba1f330a9b9c4ed2e00f092baf60a95846db0a04e77b5cf31af5290dded302"
+}

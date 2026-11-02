@@ -13,6 +13,7 @@ import { NetWorthPanel } from "@/components/feature/NetWorthPanel";
 import { CardUtilization } from "@/components/feature/CardUtilization";
 import { MaturityList } from "@/components/feature/MaturityList";
 import { AutoPostings } from "@/components/feature/AutoPostings";
+import { SpendingPanel } from "@/components/feature/SpendingPanel";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 
 export interface CardData {
@@ -245,6 +246,8 @@ export default function DashboardPage() {
             />
           ))}
         </div>
+
+        <SpendingPanel />
 
         {history && (
           <div className="mx-auto mb-8 w-full max-w-5xl space-y-6">

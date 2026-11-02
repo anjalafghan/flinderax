@@ -6,7 +6,7 @@
     "dev": "bun scripts/dev.ts",
     "build": "bun run --cwd web build",
     "start": "bun run build && cargo run --release",
-    "test": "cargo test --bin flinderax && bun run --cwd web test",
+    "test": "cargo test && bun run --cwd web test",
     "typecheck": "bun run --cwd web typecheck"
   },
   "devDependencies": {

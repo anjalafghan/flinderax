@@ -31,6 +31,8 @@ pub struct AccountRow {
     /// payout | renew_principal | renew_all
     pub renewal: String,
     pub payout_account_id: Option<String>,
+    /// Matches bank alerts ("A/c XX1234") to this account.
+    pub last_4_digits: Option<String>,
     pub updated_at: String,
 }
 
@@ -59,6 +61,7 @@ pub struct CreateAccountPayload {
     pub institution: Option<String>,
     pub renewal: Option<String>,
     pub payout_account_id: Option<String>,
+    pub last_4_digits: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -73,6 +76,7 @@ pub struct UpdateAccountPayload {
     pub institution: Option<String>,
     pub renewal: Option<String>,
     pub payout_account_id: Option<String>,
+    pub last_4_digits: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -94,6 +98,15 @@ fn validate_extras(role: &Option<String>, renewal: &Option<String>) -> Result<()
         return Err(bad_request("renewal must be payout, renew_principal or renew_all"));
     }
     Ok(())
+}
+
+/// `Some("1234")` for 3-4 digits, `None` for blank; anything else is a 400.
+fn clean_last4(v: Option<String>) -> Result<Option<String>, AppError> {
+    match v.as_deref().map(str::trim) {
+        None | Some("") => Ok(None),
+        Some(d) if (3..=4).contains(&d.len()) && d.chars().all(|c| c.is_ascii_digit()) => Ok(Some(d.to_string())),
+        Some(_) => Err(bad_request("last_4_digits must be 3 or 4 digits")),
+    }
 }
 
 fn validate(name: &str, kind: &str, maturity: &Option<String>) -> Result<(), AppError> {
@@ -123,9 +136,10 @@ pub async fn create(
     let role = p.role.unwrap_or_else(|| "other".into());
     let renewal = p.renewal.unwrap_or_else(|| "payout".into());
     let today = today_local().to_string();
+    let last4 = clean_last4(p.last_4_digits)?;
     sqlx::query!(
-        "INSERT INTO accounts (account_id, user_id, name, kind, balance_paise, locked, interest_bps, maturity_date, role, institution, renewal, payout_account_id, balance_set_on)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO accounts (account_id, user_id, name, kind, balance_paise, locked, interest_bps, maturity_date, role, institution, renewal, payout_account_id, balance_set_on, last_4_digits)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         account_id,
         user_id,
         p.name,
@@ -138,7 +152,8 @@ pub async fn create(
         p.institution,
         renewal,
         p.payout_account_id,
-        today
+        today,
+        last4
     )
     .execute(&state.db)
     .await?;
@@ -155,9 +170,10 @@ pub async fn update(
     ensure_account_owned(&state.db, &p.payout_account_id, &user_id).await?;
     let role = p.role.unwrap_or_else(|| "other".into());
     let renewal = p.renewal.unwrap_or_else(|| "payout".into());
+    let last4 = clean_last4(p.last_4_digits)?;
     let res = sqlx::query!(
         "UPDATE accounts SET name = ?, kind = ?, locked = ?, interest_bps = ?, maturity_date = ?,
-                role = ?, institution = ?, renewal = ?, payout_account_id = ?
+                role = ?, institution = ?, renewal = ?, payout_account_id = ?, last_4_digits = ?
          WHERE account_id = ? AND user_id = ?",
         p.name,
         p.kind,
@@ -168,6 +184,7 @@ pub async fn update(
         p.institution,
         renewal,
         p.payout_account_id,
+        last4,
         p.account_id,
         user_id
     )
@@ -211,7 +228,7 @@ pub async fn list(
         AccountRow,
         r#"SELECT account_id AS "account_id!", name, kind, balance_paise,
                   locked AS "locked: bool", interest_bps, maturity_date, role, institution, renewal,
-                  payout_account_id, updated_at AS "updated_at: String"
+                  payout_account_id, last_4_digits, updated_at AS "updated_at: String"
            FROM accounts WHERE user_id = ? ORDER BY rowid"#,
         user_id
     )

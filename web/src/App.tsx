@@ -13,6 +13,7 @@ const AccountsPage = lazy(() => import('./pages/AccountsPage'))
 const PlanPage = lazy(() => import('./pages/PlanPage'))
 const WorkingPage = lazy(() => import('./pages/WorkingPage'))
 const WhatIfPage = lazy(() => import('./pages/WhatIfPage'))
+const SpendingPage = lazy(() => import('./pages/SpendingPage'))
 
 // Simple loading fallback
 const PageLoader = () => (
@@ -85,6 +86,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <WhatIfPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/spending"
+            element={
+              <ProtectedRoute>
+                <SpendingPage />
               </ProtectedRoute>
             }
           />

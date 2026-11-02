@@ -4,12 +4,13 @@
 
 use std::collections::HashMap;
 
-use time::{macros::format_description, Date};
+use time::{macros::format_description, Date, Duration};
 
 use crate::{
     handlers::{common::AppError, plan::load_settings},
     planner::{
-        autopost::due_postings, parse_year_month, Bucket, CommitmentIn, Freq, IncomeIn,
+        autopost::{due_postings, Seen, MATCH_WINDOW_DAYS, MAX_LOOKBACK_DAYS},
+        parse_year_month, Bucket, CommitmentIn, Freq, IncomeIn,
     },
 };
 
@@ -82,7 +83,23 @@ pub async fn apply(db: &sqlx::SqlitePool, user_id: &str, today: Date) -> Result<
     })
     .collect();
 
-    let due = due_postings(&incomes, &commitments, &baselines, today);
+    let since = (today - Duration::days(MAX_LOOKBACK_DAYS + MATCH_WINDOW_DAYS)).to_string();
+    let seen: Vec<Seen> = sqlx::query!(
+        r#"SELECT account_id AS "account_id!", occurred_on, direction, amount_paise FROM transactions
+           WHERE user_id = ? AND account_id IS NOT NULL AND occurred_on >= ?"#,
+        user_id,
+        since
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .filter_map(|t| {
+        let sign = if t.direction == "credit" { 1 } else { -1 };
+        Some(Seen { account_id: t.account_id, on: parse_date(&t.occurred_on)?, amount: sign * t.amount_paise })
+    })
+    .collect();
+
+    let due = due_postings(&incomes, &commitments, &baselines, &seen, today);
     if due.is_empty() {
         return Ok(());
     }

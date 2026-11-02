@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT pattern, category FROM merchant_rules WHERE user_id = ? ORDER BY pattern",
+  "describe": {
+    "columns": [
+      {
+        "name": "pattern",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "category",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "237bd507fdeb17f94f5fda18662133cca584a7c39117fdb9d2eb5eebbf1f14c4"
+}

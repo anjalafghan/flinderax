@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE transactions SET category = ?, merchant = ? WHERE txn_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "d93bfc85e772503553342d60da3d1ff01b4b8c04bd6e0628c83010e2f882cb37"
+}

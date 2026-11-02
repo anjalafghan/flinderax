@@ -35,6 +35,14 @@ const RENEWAL_LABEL: Record<Renewal, string> = {
 };
 const STALE_DAYS = 7;
 
+/** "" -> null (no digits set); "1234" -> "1234"; anything else -> undefined (invalid). */
+const parseLast4 = (v: string): string | null | undefined => {
+  const t = v.trim();
+  if (!t) return null;
+  return /^\d{4}$/.test(t) ? t : undefined;
+};
+const LAST4_ERROR = "Last 4 digits must be exactly 4 numbers.";
+
 /** Role, where an FD is held, rate, maturity and what happens when it matures. */
 function AccountDetails({ account, accounts }: { account: Account; accounts: Account[] }) {
   const isDeposit = account.kind === "fd" || account.kind === "rd";
@@ -44,13 +52,16 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
   const [maturity, setMaturity] = useState(account.maturity_date ?? "");
   const [renewal, setRenewal] = useState<Renewal>(account.renewal);
   const [payout, setPayout] = useState(account.payout_account_id ?? "");
+  const [last4, setLast4] = useState(account.last_4_digits ?? "");
   const [error, setError] = useState<string | null>(null);
   const save = usePlannerMutation(accountApi.update, [keys.accounts], { success: "Saved" });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const pct = rate.trim() ? Number(rate) : null;
+    const digits = parseLast4(last4);
     if (pct !== null && !(pct >= 0)) return setError("Interest rate must be a number.");
+    if (digits === undefined) return setError(LAST4_ERROR);
     setError(null);
     save.mutate({
       account_id: account.account_id,
@@ -59,6 +70,7 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
       locked: account.locked,
       role: isDeposit ? "other" : role,
       institution: institution.trim() || null,
+      last_4_digits: digits,
       interest_bps: isDeposit && pct !== null ? Math.round(pct * 100) : null,
       maturity_date: isDeposit && maturity ? maturity : null,
       renewal,
@@ -85,6 +97,17 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
         <div className="space-y-1">
           <Label htmlFor={`inst-${account.account_id}`}>{isDeposit ? "Where is it held?" : "Bank / branch (optional)"}</Label>
           <Input id={`inst-${account.account_id}`} value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="e.g. SBI, Post Office" />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`l4-${account.account_id}`}>Last 4 digits of account (optional)</Label>
+          <Input
+            id={`l4-${account.account_id}`}
+            inputMode="numeric"
+            maxLength={4}
+            value={last4}
+            onChange={(e) => setLast4(e.target.value)}
+            placeholder="e.g. 1234"
+          />
         </div>
         {isDeposit && (
           <>
@@ -138,6 +161,7 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
         locked: !account.locked,
         role: account.role,
         institution: account.institution,
+        last_4_digits: account.last_4_digits,
         interest_bps: account.interest_bps,
         maturity_date: account.maturity_date,
         renewal: account.renewal,
@@ -167,6 +191,7 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
           <p className="text-xs text-muted-foreground">
             {KIND_LABEL[account.kind]}
             {account.institution && ` · ${account.institution}`}
+            {account.last_4_digits && ` · ••${account.last_4_digits}`}
             {account.interest_bps != null && ` · ${(account.interest_bps / 100).toFixed(2)}%`}
             {account.maturity_date && ` · matures ${formatDay(account.maturity_date)} ${account.maturity_date.slice(0, 4)}`}
           </p>
@@ -224,6 +249,7 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
   const [role, setRole] = useState<AccountRole>("other");
   const [locked, setLocked] = useState<boolean | null>(null); // null = default for the kind
   const [institution, setInstitution] = useState("");
+  const [last4, setLast4] = useState("");
   const [rate, setRate] = useState("");
   const [maturity, setMaturity] = useState("");
   const [renewal, setRenewal] = useState<Renewal>("payout");
@@ -239,7 +265,9 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
     const pct = rate.trim() ? Number(rate) : null;
     if (!name.trim()) return setError("Give the account a name.");
     if (paise === null) return setError("Balance must be an amount.");
+    const digits = parseLast4(last4);
     if (pct !== null && !(pct >= 0)) return setError("Interest rate must be a number.");
+    if (digits === undefined) return setError(LAST4_ERROR);
     setError(null);
     create.mutate(
       {
@@ -249,6 +277,7 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
         locked: locked ?? undefined,
         role: isSavings ? "other" : role,
         institution: institution.trim() || null,
+        last_4_digits: digits,
         interest_bps: isSavings && pct !== null ? Math.round(pct * 100) : null,
         maturity_date: isSavings && maturity ? maturity : null,
         renewal: isSavings ? renewal : "payout",
@@ -261,6 +290,7 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
           setRate("");
           setMaturity("");
           setInstitution("");
+          setLast4("");
           setLocked(null);
           setPayout("");
         },
@@ -292,6 +322,17 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
           <div className="space-y-1">
             <Label htmlFor="acc-balance">Balance</Label>
             <MoneyInput id="acc-balance" value={balance} onChange={(e) => setBalance(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="acc-last4">Last 4 digits of account (optional)</Label>
+            <Input
+              id="acc-last4"
+              inputMode="numeric"
+              maxLength={4}
+              value={last4}
+              onChange={(e) => setLast4(e.target.value)}
+              placeholder="e.g. 1234"
+            />
           </div>
           {!isSavings ? (
             <div className="space-y-1">

@@ -1,9 +1,13 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { accountApi, cardPlanApi, dashboardApi, getDashboardHistory, movesApi, planApi } from "@/services/api";
+import { accountApi, cardPlanApi, dashboardApi, getDashboardHistory, ingestApi, movesApi, planApi } from "@/services/api";
 
 export const keys = {
+  txns: ["ingest-transactions"] as const,
+  spendSummary: ["ingest-summary"] as const,
+  ingestKey: ["ingest-key"] as const,
+  ingestRules: ["ingest-rules"] as const,
   summary: ["dashboard-summary"] as const,
   accounts: ["accounts"] as const,
   commitments: ["commitments"] as const,
@@ -25,6 +29,18 @@ export const useDashboardHistory = (months = 12) =>
     queryFn: () => getDashboardHistory(months),
     retry: 1,
   });
+export const useTransactions = (month: string) =>
+  useQuery({ queryKey: [...keys.txns, month], queryFn: () => ingestApi.transactions(month) });
+export const useSpendSummary = (months = 6) =>
+  useQuery({
+    queryKey: [...keys.spendSummary, months],
+    queryFn: () => ingestApi.summary(months),
+    retry: 1,
+  });
+export const useIngestKey = () => useQuery({ queryKey: keys.ingestKey, queryFn: ingestApi.keyStatus });
+export const useIngestRules = () => useQuery({ queryKey: keys.ingestRules, queryFn: ingestApi.rules });
+/** Everything a spending write can change. The dashboard summary and history are added by usePlannerMutation. */
+export const INGEST_INVALIDATE: QueryKey[] = [keys.txns, keys.spendSummary, keys.ingestRules];
 export const useSettings = () => useQuery({ queryKey: keys.settings, queryFn: planApi.settings });
 export const useBreakdown = (cardId: string | undefined) =>
   useQuery({

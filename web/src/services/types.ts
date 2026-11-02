@@ -19,6 +19,8 @@ export interface Account {
   institution: string | null;
   renewal: Renewal;
   payout_account_id: string | null;
+  /** Matches bank alerts to this account. */
+  last_4_digits: string | null;
   updated_at: string;
 }
 
@@ -33,6 +35,7 @@ export interface NewAccount {
   institution?: string | null;
   renewal?: Renewal;
   payout_account_id?: string | null;
+  last_4_digits?: string | null;
 }
 
 export type AccountUpdate = Omit<NewAccount, "balance_paise"> & { account_id: string; locked: boolean };
@@ -367,4 +370,74 @@ export interface DashboardHistory {
   /** The 10 most recent, newest first. */
   auto_postings: HistoryAutoPosting[];
   auto_post: boolean;
+}
+
+// ---------- spending (automatic transaction tracking) ----------
+
+export type TxnDirection = "debit" | "credit";
+export type TxnSource = "sms" | "email" | "paste" | "manual";
+
+export interface Txn {
+  txn_id: string;
+  /** YYYY-MM-DD. */
+  occurred_on: string;
+  direction: TxnDirection;
+  /** Always positive; `direction` gives the sign. */
+  amount_paise: number;
+  merchant: string | null;
+  category: string;
+  card_id: string | null;
+  account_id: string | null;
+  /** Card or account name. */
+  source_name: string | null;
+  last4: string | null;
+  source: TxnSource;
+  created_at: string;
+}
+
+export interface NewTxn {
+  occurred_on: string;
+  direction: TxnDirection;
+  amount_paise: number;
+  merchant: string | null;
+  category: string;
+}
+
+export interface UpdateTxnCategory {
+  txn_id: string;
+  category: string;
+  merchant?: string | null;
+  /** Make "this merchant -> this category" a rule. */
+  remember: boolean;
+}
+
+export interface ParseResult {
+  status: "created" | "duplicate" | "unrecognized";
+  transaction: Txn | null;
+  balance_updated: { account_name: string; balance_paise: number } | null;
+}
+
+export interface SpendMonth {
+  /** "YYYY-MM". */
+  month: string;
+  spent_paise: number;
+  by_category: { category: string; amount_paise: number }[];
+}
+
+export interface SpendSummary {
+  /** Oldest to newest; the last entry is the current month. */
+  months: SpendMonth[];
+  top_merchants: { merchant: string; amount_paise: number; count: number }[];
+  uncategorized_count: number;
+}
+
+export interface IngestKeyStatus {
+  has_key: boolean;
+  created_at: string | null;
+  last_used_at: string | null;
+}
+
+export interface IngestRule {
+  pattern: string;
+  category: string;
 }

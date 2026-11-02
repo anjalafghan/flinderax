@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, merchant, category, source, dedupe_key)\n         VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "4faf0aa602ddf992c5b89f815d9d99c8d9ea87823c0897017ed41351d7e9ae58"
+}

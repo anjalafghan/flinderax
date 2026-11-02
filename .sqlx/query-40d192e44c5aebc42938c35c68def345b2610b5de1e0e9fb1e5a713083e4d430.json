@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.txn_id AS \"txn_id!\", t.occurred_on, t.direction, t.amount_paise, t.merchant, t.category,\n                      t.card_id, t.account_id, COALESCE(c.card_name, a.name) AS \"source_name?: String\", t.last4, t.source,\n                      t.created_at AS \"created_at!: String\"\n               FROM transactions t\n               LEFT JOIN cards c ON c.card_id = t.card_id\n               LEFT JOIN accounts a ON a.account_id = t.account_id\n               WHERE t.user_id = ? AND t.occurred_on >= ? AND t.occurred_on < ?\n               ORDER BY t.occurred_on DESC, t.created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "txn_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "occurred_on",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "direction",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "merchant",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "category",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "card_id",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "account_id",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "source_name?: String",
+        "ordinal": 8,
+        "type_info": "Null"
+      },
+      {
+        "name": "last4",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "source",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 11,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      null,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "40d192e44c5aebc42938c35c68def345b2610b5de1e0e9fb1e5a713083e4d430"
+}

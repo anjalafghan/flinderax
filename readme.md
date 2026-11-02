@@ -2,7 +2,7 @@
 
 A manual-entry money planner. Its home screen answers one question: **how much can I spend until my next salary without missing anything?**
 
-It shows one big *Safe to Spend* number (plus a per-week figure), a plain-English breakdown of each credit card, and a short "do this today" list (e.g. "Move ₹8,000 Kotak → HDFC before 10 Oct"). There is no bank integration; you copy numbers from your bank apps.
+It shows one big *Safe to Spend* number (plus a per-week figure), a plain-English breakdown of each credit card, and a short "do this today" list (e.g. "Move ₹8,000 Kotak → HDFC before 10 Oct"). There is no bank integration: balances follow your salary and bills automatically, bank alert SMS/emails your phone forwards become categorised transactions, and you correct a number only when it drifts.
 
 ## One server
 
@@ -68,6 +68,29 @@ Spending so far is inferred from card snapshots, so nothing is logged by hand: `
 
 **What-if and projections (`/what-if`, `src/planner/projection.rs`):** add an RD, an FD or a one-off spend and the page recomputes live: balances for the next 12-60 months with and without it, which pot absorbs the cost (savings first vs spending first) and at what amount each starts to hurt, months where an account would fall short, and a goal check (target amount and date). FDs/RDs compound quarterly; an FD can pay out, renew the principal only, or renew principal and interest. A statement day counts as passed on the day itself; days are clamped to month length (31 -> 28/30).
 
+## Tracking with almost no typing
+
+**Balances move on their own.** Salary is added and fixed payments are taken off the linked account on their dates (`src/planner/autopost.rs`, applied lazily whenever balances are read, never twice). Typing a balance resets the starting point. Turn it off in Plan settings. Every balance change is kept in `balance_history`, which feeds the net-worth chart on the dashboard (`GET /api/dashboard/history`).
+
+**Bank alerts become transactions.** Generate a key on the Spending page, then have your phone forward bank SMS/emails to `POST /api/hook/ingest` with header `X-Ingest-Key: <key>` and body `{"text": "<message>", "source": "sms"}`. `src/alerts.rs` reads the amount, direction, last digits, merchant, date and "Avl Bal"; OTPs, reminders and offers are ignored; the same alert is stored once. Set each bank account's last 4 digits (Accounts page) so alerts update its balance and auto-posting skips what an alert already recorded. Re-categorise a transaction with "Remember" ticked and every future one from that merchant follows.
+
+- **iPhone:** Shortcuts → Automation → Message, sender contains your bank's ID (HDFCBK, KOTAKB...) → Run Immediately → *Get Contents of URL* (POST, header `X-Ingest-Key`, JSON body `text` = Shortcut Input, `source` = `sms`).
+- **Android:** any SMS-to-webhook forwarder with the same URL, header and body.
+- **Gmail:** filter bank alerts into a label `bank-alerts`, then in Google Apps Script (run every 15 minutes with a time trigger):
+
+```js
+const URL = "https://your-app.fly.dev/api/hook/ingest", KEY = "fx_...";
+function forwardAlerts() {
+  for (const t of GmailApp.search("label:bank-alerts is:unread", 0, 50)) {
+    for (const m of t.getMessages().filter((m) => m.isUnread())) {
+      UrlFetchApp.fetch(URL, { method: "post", contentType: "application/json",
+        headers: { "X-Ingest-Key": KEY }, payload: JSON.stringify({ text: m.getPlainBody().slice(0, 2000), source: "email" }) });
+      m.markRead();
+    }
+  }
+}
+```
+
 ## Adding and removing things
 
 Everything is data, nothing is hard-coded: accounts (`bank`, `cash`, `fd`, `rd`), fixed payments (SIPs, rent, an RD instalment with optional first/last month), income sources, card EMIs and pending charges all have create/update/delete endpoints and screens (Accounts, Plan, card page).
@@ -84,3 +107,6 @@ Everything is data, nothing is hard-coded: accounts (`bank`, `cash`, `fd`, `rd`)
 | Dashboard | `GET /api/dashboard/summary` |
 | Ledger | `/api/moves/{record,undo}`, `GET /api/moves/list` |
 | Projection | `POST /api/plan/project` (what-if items in, baseline + scenario out) |
+| History | `GET /api/dashboard/history?months=12` |
+| Spending | `/api/ingest/{parse,transactions/create,transactions/update,transactions/delete,rules/delete,key/rotate}`; `GET` `/api/ingest/{transactions?month=,summary?months=,rules,key/status}` |
+| Phone hook | `POST /api/hook/ingest` (header `X-Ingest-Key`, no bearer token) |

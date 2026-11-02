@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT account_id AS \"account_id!\", name, kind, balance_paise,\n                  locked AS \"locked: bool\", interest_bps, maturity_date, role, institution, renewal,\n                  payout_account_id, updated_at AS \"updated_at: String\"\n           FROM accounts WHERE user_id = ? ORDER BY rowid",
+  "query": "SELECT account_id AS \"account_id!\", name, kind, balance_paise,\n                  locked AS \"locked: bool\", interest_bps, maturity_date, role, institution, renewal,\n                  payout_account_id, last_4_digits, updated_at AS \"updated_at: String\"\n           FROM accounts WHERE user_id = ? ORDER BY rowid",
   "describe": {
     "columns": [
       {
@@ -59,8 +59,13 @@
         "type_info": "Text"
       },
       {
-        "name": "updated_at: String",
+        "name": "last_4_digits",
         "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at: String",
+        "ordinal": 12,
         "type_info": "Datetime"
       }
     ],
@@ -79,8 +84,9 @@
       true,
       false,
       true,
+      true,
       false
     ]
   },
-  "hash": "28a5d0c8b7f64471161827c63c6bbe954d4c15f3df84003faa7d390db43cd89c"
+  "hash": "2a1d0aea46d13d3755fc2b05678789e6804adc52f1279872f2d96c61d686dad6"
 }

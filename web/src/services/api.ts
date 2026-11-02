@@ -17,6 +17,13 @@ import type {
   DashboardHistory,
   PlanSettings,
   SnapshotInput,
+  IngestKeyStatus,
+  IngestRule,
+  NewTxn,
+  ParseResult,
+  SpendSummary,
+  Txn,
+  UpdateTxnCategory,
 } from "./types";
 
 // The Rust server serves both the API and this app, so every request is same-origin.
@@ -137,4 +144,21 @@ export const movesApi = {
   record: (m: RecordMove) => data(api.post<{ move_id: string; status: boolean }>("/api/moves/record", m)),
   undo: (move_id: string) => data(api.post<Ok>("/api/moves/undo", { move_id })),
   list: () => data(api.get<MoveRow[]>("/api/moves/list")),
+};
+
+// ---------- spending (automatic transaction tracking) ----------
+
+export const ingestApi = {
+  transactions: (month?: string) =>
+    data(api.get<Txn[]>(`/api/ingest/transactions${month ? `?month=${encodeURIComponent(month)}` : ""}`)),
+  updateCategory: (u: UpdateTxnCategory) =>
+    data(api.post<{ status: boolean; recategorized: number }>("/api/ingest/transactions/update", u)),
+  removeTxn: (txn_id: string) => data(api.post<Ok>("/api/ingest/transactions/delete", { txn_id })),
+  createTxn: (t: NewTxn) => data(api.post<{ txn_id: string; status: boolean }>("/api/ingest/transactions/create", t)),
+  parse: (text: string) => data(api.post<ParseResult>("/api/ingest/parse", { text })),
+  summary: (months = 6) => data(api.get<SpendSummary>(`/api/ingest/summary?months=${months}`)),
+  keyStatus: () => data(api.get<IngestKeyStatus>("/api/ingest/key/status")),
+  rotateKey: () => data(api.post<{ key: string }>("/api/ingest/key/rotate", {})),
+  rules: () => data(api.get<IngestRule[]>("/api/ingest/rules")),
+  deleteRule: (pattern: string) => data(api.post<Ok>("/api/ingest/rules/delete", { pattern })),
 };

@@ -187,3 +187,44 @@ async fn dashboard_history_starts_from_the_first_balance() {
 
     assert_eq!(get(&app, "/api/dashboard/history?months=6", Some(&t)).await, StatusCode::OK);
 }
+
+async fn hook_post(app: &Router, key: &str, text: &str) -> (StatusCode, Value) {
+    let req = Request::post("/api/hook/ingest")
+        .header("content-type", "application/json")
+        .header("x-ingest-key", key)
+        .body(Body::from(json!({"text": text, "source": "sms"}).to_string()))
+        .unwrap();
+    let res = app.clone().oneshot(req).await.unwrap();
+    let status = res.status();
+    let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
+}
+
+#[tokio::test]
+async fn bank_alerts_arrive_through_the_hook() {
+    let app = test_app().await;
+    post(&app, "10.0.0.22", "/api/common/register", json!({"user_name": "smsuser", "user_password": "correct horse"})).await;
+    let t = login_token(&app, "10.0.0.22", "smsuser", "correct horse").await;
+    let (s, b) = authed_post(&app, &t, "/api/account/create",
+        json!({"name": "HDFC", "kind": "bank", "balance_paise": 100, "last_4_digits": "1234"})).await;
+    assert!(s.is_success(), "{b}");
+
+    assert_eq!(hook_post(&app, "fx_nope", "Rs 1 debited").await.0, StatusCode::UNAUTHORIZED);
+
+    let (_, b) = authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
+    let key = serde_json::from_str::<Value>(&b).unwrap()["key"].as_str().unwrap().to_string();
+
+    let sms = "Update! INR 1,00,000.00 deposited in HDFC Bank A/c XX1234 for NEFT Cr-ACME CORP. Avl bal INR 1,25,000.00.";
+    let (s, v) = hook_post(&app, &key, sms).await;
+    assert_eq!(s, StatusCode::OK, "{v}");
+    assert_eq!(v["status"], "created");
+    assert_eq!(v["transaction"]["category"], "income");
+    assert_eq!(v["balance_updated"]["balance_paise"], 12_500_000);
+
+    assert_eq!(hook_post(&app, &key, sms).await.1["status"], "duplicate");
+    assert_eq!(hook_post(&app, &key, "Your OTP is 123456 for Rs 500").await.1["status"], "unrecognized");
+
+    // Rotating the key retires the old one.
+    authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
+    assert_eq!(hook_post(&app, &key, sms).await.0, StatusCode::UNAUTHORIZED);
+}

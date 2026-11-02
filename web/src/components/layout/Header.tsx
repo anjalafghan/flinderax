@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom"
-import { Plus, LogOut, Landmark, ListChecks, LineChart } from "lucide-react"
+import { Plus, LogOut, Landmark, ListChecks, LineChart, Receipt } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/ui/mode-toggle"
@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext"
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-        "inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+        "inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium md:px-3 transition-colors hover:bg-accent hover:text-accent-foreground",
         isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground",
     )
 
@@ -36,6 +36,10 @@ export function Header() {
                     <NavLink to="/what-if" className={navClass} title="What-if">
                         <LineChart className="h-4 w-4" />
                         <span className="hidden md:inline">What-if</span>
+                    </NavLink>
+                    <NavLink to="/spending" className={navClass} title="Spending">
+                        <Receipt className="h-4 w-4" />
+                        <span className="hidden md:inline">Spending</span>
                     </NavLink>
                     <NavLink to="/plan" className={navClass} title="Plan">
                         <ListChecks className="h-4 w-4" />
