@@ -9,6 +9,11 @@ import { Header } from "@/components/layout/Header";
 import { CardCarousel } from "@/components/feature/CardCarousel";
 import { Button } from "@/components/ui/button";
 import { PlannerSummary } from "@/components/feature/PlannerSummary";
+import { NetWorthPanel } from "@/components/feature/NetWorthPanel";
+import { CardUtilization } from "@/components/feature/CardUtilization";
+import { MaturityList } from "@/components/feature/MaturityList";
+import { AutoPostings } from "@/components/feature/AutoPostings";
+import { useDashboardHistory } from "@/hooks/usePlanner";
 
 export interface CardData {
   card_id: string;
@@ -88,6 +93,9 @@ export default function DashboardPage() {
       })) as CardData[];
     },
   });
+
+  // Tracker data is optional: if this fails, the section is simply hidden.
+  const { data: history } = useDashboardHistory(12);
 
   const { data: deferredStatus } = useQuery({
     queryKey: ["deferred-status"],
@@ -237,6 +245,17 @@ export default function DashboardPage() {
             />
           ))}
         </div>
+
+        {history && (
+          <div className="mx-auto mb-8 w-full max-w-5xl space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <NetWorthPanel months={history.months} />
+              <CardUtilization cards={history.cards} />
+            </div>
+            <MaturityList items={history.maturities} />
+            <AutoPostings items={history.auto_postings} enabled={history.auto_post} />
+          </div>
+        )}
       </main>
 
        {hasPendingDeferred && (

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT h.account_id AS \"account_id!\", h.balance_paise, h.recorded_at AS \"recorded_at: String\"\n           FROM balance_history h JOIN accounts a ON a.account_id = h.account_id\n           WHERE a.user_id = ? ORDER BY h.recorded_at, h.history_id",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "balance_paise",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "recorded_at: String",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "cf99918e3ae73a2c7ef40a77f4de244d886e40f614c9c280f510adce19603b60"
+}

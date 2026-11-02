@@ -290,6 +290,7 @@ function SettingsSection() {
   const [allocDay, setAllocDay] = useState("10");
   const [floor, setFloor] = useState("");
   const [months, setMonths] = useState("3");
+  const [autoPost, setAutoPost] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const save = usePlannerMutation(planApi.updateSettings, [keys.settings], { success: "Saved" });
 
@@ -305,6 +306,7 @@ function SettingsSection() {
       setAllocDay(String(data.allocation_day));
       setFloor(data.savings_floor_paise == null ? "" : paiseToInput(data.savings_floor_paise));
       setMonths(String(data.recovery_months));
+      setAutoPost(data.auto_post);
     }
   }, [data]);
 
@@ -344,6 +346,7 @@ function SettingsSection() {
       allocation_day: day,
       savings_floor_paise: fl,
       recovery_months: m,
+      auto_post: autoPost,
     });
   };
 
@@ -412,6 +415,21 @@ function SettingsSection() {
               <InfoTip text="If you spend more than planned, the working page shows how much to rebuild each month for this many months so no FD is touched." />
             </div>
             <Input id="months" inputMode="numeric" maxLength={2} value={months} onChange={(e) => setMonths(e.target.value)} />
+          </div>
+          <div className="flex items-start gap-3 sm:col-span-2">
+            <input
+              id="auto-post"
+              type="checkbox"
+              className="mt-0.5 h-4 w-4"
+              checked={autoPost}
+              onChange={(e) => setAutoPost(e.target.checked)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="auto-post">Update balances automatically on payday and bill dates</Label>
+              <p className="text-xs text-muted-foreground">
+                Salary is added and fixed payments are taken off your account balances on their dates. You only re-type a balance when it drifts.
+              </p>
+            </div>
           </div>
           {error && <p role="alert" className="text-sm text-destructive sm:col-span-2">{error}</p>}
           <Button type="submit" className="sm:col-span-2" disabled={save.isPending || !data}>

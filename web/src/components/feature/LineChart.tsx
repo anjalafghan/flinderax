@@ -19,7 +19,17 @@ const H = 260;
 const PAD = { l: 52, r: 12, t: 12, b: 28 };
 
 /** A small dependency-free line chart. Money in paise; markers flag months to worry about. */
-export function LineChart({ labels, series, markers = [] }: { labels: string[]; series: ChartSeries[]; markers?: ChartMarker[] }) {
+export function LineChart({
+  labels,
+  series,
+  markers = [],
+  ariaLabel = "Projection chart",
+}: {
+  labels: string[];
+  series: ChartSeries[];
+  markers?: ChartMarker[];
+  ariaLabel?: string;
+}) {
   const all = series.flatMap((s) => s.values);
   if (labels.length < 2 || all.length === 0) return null;
   let min = Math.min(0, ...all);
@@ -35,7 +45,7 @@ export function LineChart({ labels, series, markers = [] }: { labels: string[]; 
 
   return (
     <figure>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Projection chart" className="w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel} className="w-full">
         {ticks.map((t) => (
           <g key={t}>
             <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} className="stroke-border" strokeWidth={1} />

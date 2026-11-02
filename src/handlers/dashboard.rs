@@ -1,10 +1,18 @@
 //! `GET /api/dashboard/summary`: loads everything for the user and runs the pure planner.
+//! `GET /api/dashboard/history`: net worth over time and the other tracker panels.
 
-use axum::{extract::State, Extension, Json};
+use std::collections::{HashMap, HashSet};
+
+use axum::{
+    extract::{Query, State},
+    Extension, Json,
+};
+use serde::{Deserialize, Serialize};
 use time::{macros::format_description, Date};
 
 use crate::{
     handlers::{
+        autopost,
         card_cycle::{load_breakdowns, spent_this_period},
         common::{today_local, AppError},
         moves::coverage,
@@ -12,7 +20,8 @@ use crate::{
     },
     models::AppState,
     planner::{
-        self, parse_year_month, AccountIn, AllocationState, Bucket, CardIn, CommitmentIn, Freq, IncomeIn,
+        self,
+        history::{monthly_net_worth, MonthPoint, Point}, parse_year_month, AccountIn, AllocationState, Bucket, CardIn, CommitmentIn, Freq, IncomeIn,
         PlanInput, Role, SettingsIn, Summary,
     },
 };
@@ -128,6 +137,155 @@ pub async fn summary(
     State(state): State<AppState>,
     Extension((user_id, _)): Extension<(String, String)>,
 ) -> Result<Json<Summary>, AppError> {
-    let input = load_input(&state.db, &user_id, today_local()).await?;
+    let today = today_local();
+    autopost::apply(&state.db, &user_id, today).await?;
+    let input = load_input(&state.db, &user_id, today).await?;
     Ok(Json(planner::compute(&input)))
+}
+
+#[derive(Deserialize)]
+pub struct HistoryQuery {
+    pub months: Option<u32>,
+}
+
+#[derive(Serialize)]
+pub struct CardUse {
+    pub card_id: String,
+    pub name: String,
+    pub outstanding_paise: i64,
+    pub limit_paise: Option<i64>,
+    /// outstanding / limit in basis points; `null` without a limit.
+    pub utilization_bps: Option<i64>,
+}
+
+#[derive(Serialize)]
+pub struct Maturity {
+    pub account_id: String,
+    pub name: String,
+    pub kind: String,
+    pub balance_paise: i64,
+    pub maturity_date: String,
+    pub days_left: i64,
+}
+
+#[derive(Serialize)]
+pub struct AutoPostingRow {
+    pub occurs_on: String,
+    pub label: String,
+    pub account_name: String,
+    pub amount_paise: i64,
+}
+
+#[derive(Serialize)]
+pub struct History {
+    pub months: Vec<MonthPoint>,
+    pub cards: Vec<CardUse>,
+    pub maturities: Vec<Maturity>,
+    pub auto_postings: Vec<AutoPostingRow>,
+    pub auto_post: bool,
+}
+
+/// `GET /api/dashboard/history?months=12`: net worth by month, card usage, FD/RD maturities and
+/// recent automatic postings.
+pub async fn history(
+    State(state): State<AppState>,
+    Extension((user_id, _)): Extension<(String, String)>,
+    Query(q): Query<HistoryQuery>,
+) -> Result<Json<History>, AppError> {
+    let db = &state.db;
+    let today = today_local();
+    autopost::apply(db, &user_id, today).await?;
+    let months = q.months.unwrap_or(12).clamp(1, 60);
+
+    let accounts = sqlx::query!(
+        r#"SELECT account_id AS "account_id!", name, kind, balance_paise, locked AS "locked: bool", maturity_date
+           FROM accounts WHERE user_id = ?"#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?;
+    let locked: HashSet<String> = accounts.iter().filter(|a| a.locked).map(|a| a.account_id.clone()).collect();
+
+    let balances: Vec<Point> = sqlx::query!(
+        r#"SELECT h.account_id AS "account_id!", h.balance_paise, h.recorded_at AS "recorded_at: String"
+           FROM balance_history h JOIN accounts a ON a.account_id = h.account_id
+           WHERE a.user_id = ? ORDER BY h.recorded_at, h.history_id"#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .filter_map(|r| Some(Point { at: parse_db_date(&r.recorded_at)?, id: r.account_id, value: r.balance_paise }))
+    .collect();
+
+    let snapshots = sqlx::query!(
+        r#"SELECT s.card_id AS "card_id!", s.outstanding_paise, s.created_at AS "created_at: String"
+           FROM card_snapshots s JOIN cards c ON c.card_id = s.card_id
+           WHERE c.user_id = ? ORDER BY s.created_at, s.rowid"#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?;
+    let debts: Vec<Point> = snapshots
+        .iter()
+        .filter_map(|r| Some(Point { at: parse_db_date(&r.created_at)?, id: r.card_id.clone(), value: r.outstanding_paise }))
+        .collect();
+
+    let series = monthly_net_worth(&balances, |id| locked.contains(id), &debts, today, months);
+
+    let latest: HashMap<&str, i64> = snapshots.iter().map(|s| (s.card_id.as_str(), s.outstanding_paise)).collect();
+    let cards = sqlx::query!(
+        r#"SELECT card_id AS "card_id!", card_name, credit_limit_paise FROM cards WHERE user_id = ? ORDER BY rowid"#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .map(|c| {
+        let outstanding = latest.get(c.card_id.as_str()).copied().unwrap_or(0).max(0);
+        let limit = c.credit_limit_paise.filter(|l| *l > 0);
+        CardUse {
+            utilization_bps: limit.map(|l| outstanding * 10_000 / l),
+            card_id: c.card_id,
+            name: c.card_name,
+            outstanding_paise: outstanding,
+            limit_paise: limit,
+        }
+    })
+    .collect();
+
+    let mut maturities: Vec<Maturity> = accounts
+        .iter()
+        .filter_map(|a| {
+            let raw = a.maturity_date.as_ref()?;
+            let days_left = (parse_db_date(raw)? - today).whole_days();
+            (days_left >= 0).then(|| Maturity {
+                account_id: a.account_id.clone(),
+                name: a.name.clone(),
+                kind: a.kind.clone(),
+                balance_paise: a.balance_paise,
+                maturity_date: raw.clone(),
+                days_left,
+            })
+        })
+        .collect();
+    maturities.sort_by_key(|m| m.days_left);
+
+    let auto_postings = sqlx::query_as!(
+        AutoPostingRow,
+        r#"SELECT p.occurs_on, p.label, a.name AS account_name, p.amount_paise
+           FROM auto_postings p JOIN accounts a ON a.account_id = p.account_id
+           WHERE p.user_id = ? ORDER BY p.occurs_on DESC, p.created_at DESC LIMIT 10"#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    Ok(Json(History {
+        months: series,
+        cards,
+        maturities,
+        auto_postings,
+        auto_post: load_settings(db, &user_id).await?.auto_post,
+    }))
 }

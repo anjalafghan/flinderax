@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT spending_paise, spending_bps, allocation_day, savings_floor_paise, recovery_months, week_start\n         FROM user_settings WHERE user_id = ?",
+  "query": "SELECT spending_paise, spending_bps, allocation_day, savings_floor_paise, recovery_months, week_start,\n                  auto_post AS \"auto_post: bool\"\n           FROM user_settings WHERE user_id = ?",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,11 @@
         "name": "week_start",
         "ordinal": 5,
         "type_info": "Integer"
+      },
+      {
+        "name": "auto_post: bool",
+        "ordinal": 6,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -43,8 +48,9 @@
       false,
       true,
       false,
+      false,
       false
     ]
   },
-  "hash": "69b92b9c3a79ae326be0fb85866b27a4835acb6f80f5a1713273439cc1615e46"
+  "hash": "f3f8921c82791ed86a5e9f6e67a79095136ec2d2581ecd23c748e9b77c6af6da"
 }

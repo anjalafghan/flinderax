@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO auto_postings (user_id, source_kind, source_id, account_id, occurs_on, label, amount_paise)\n             VALUES (?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "b26274bbc3da8fa985898207ba622b05ca0cf6b23097cebcdc25d14cc106df68"
+}

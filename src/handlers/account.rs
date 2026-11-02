@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use time::{macros::format_description, Date};
 
 use crate::{
-    handlers::common::{bad_request, not_found, AppError},
+    handlers::{
+        autopost,
+        common::{bad_request, not_found, today_local, AppError},
+    },
     models::AppState,
 };
 
@@ -119,9 +122,10 @@ pub async fn create(
     let locked = p.locked.unwrap_or(matches!(p.kind.as_str(), "fd" | "rd"));
     let role = p.role.unwrap_or_else(|| "other".into());
     let renewal = p.renewal.unwrap_or_else(|| "payout".into());
+    let today = today_local().to_string();
     sqlx::query!(
-        "INSERT INTO accounts (account_id, user_id, name, kind, balance_paise, locked, interest_bps, maturity_date, role, institution, renewal, payout_account_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO accounts (account_id, user_id, name, kind, balance_paise, locked, interest_bps, maturity_date, role, institution, renewal, payout_account_id, balance_set_on)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         account_id,
         user_id,
         p.name,
@@ -133,7 +137,8 @@ pub async fn create(
         role,
         p.institution,
         renewal,
-        p.payout_account_id
+        p.payout_account_id,
+        today
     )
     .execute(&state.db)
     .await?;
@@ -179,9 +184,13 @@ pub async fn update_balance(
     Extension((user_id, _)): User,
     Json(p): Json<UpdateBalancePayload>,
 ) -> Result<Json<StatusResponse>, AppError> {
+    // Typing a balance makes it the new baseline for auto-posting.
+    let today = today_local().to_string();
     let res = sqlx::query!(
-        "UPDATE accounts SET balance_paise = ?, updated_at = CURRENT_TIMESTAMP WHERE account_id = ? AND user_id = ?",
+        "UPDATE accounts SET balance_paise = ?, balance_set_on = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE account_id = ? AND user_id = ?",
         p.balance_paise,
+        today,
         p.account_id,
         user_id
     )
@@ -197,6 +206,7 @@ pub async fn list(
     State(state): State<AppState>,
     Extension((user_id, _)): User,
 ) -> Result<Json<Vec<AccountRow>>, AppError> {
+    autopost::apply(&state.db, &user_id, today_local()).await?;
     let rows = sqlx::query_as!(
         AccountRow,
         r#"SELECT account_id AS "account_id!", name, kind, balance_paise,

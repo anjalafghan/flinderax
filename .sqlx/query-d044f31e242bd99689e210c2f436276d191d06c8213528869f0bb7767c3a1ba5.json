@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT income_id AS \"income_id!\", label, amount_paise, day_of_month, account_id\n           FROM income_sources WHERE user_id = ? AND account_id IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "name": "income_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "label",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "day_of_month",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "account_id",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "d044f31e242bd99689e210c2f436276d191d06c8213528869f0bb7767c3a1ba5"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO user_settings (user_id, spending_paise, spending_bps, allocation_day, savings_floor_paise, recovery_months, week_start, auto_post)\n         VALUES (?, ?, ?, ?, ?, ?, ?, ?)\n         ON CONFLICT(user_id) DO UPDATE SET spending_paise = excluded.spending_paise, spending_bps = excluded.spending_bps,\n            allocation_day = excluded.allocation_day, savings_floor_paise = excluded.savings_floor_paise,\n            recovery_months = excluded.recovery_months, week_start = excluded.week_start, auto_post = excluded.auto_post",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "0d4918848315610b00b955e43e57d00b14c0cb45547bda366c2ebb2463cef88a"
+}

@@ -138,3 +138,52 @@ async fn internal_errors_do_not_leak_details() {
     let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
     assert_eq!(&body[..], b"Internal server error");
 }
+
+async fn authed_post(app: &Router, token: &str, path: &str, body: Value) -> (StatusCode, String) {
+    let req = Request::post(path)
+        .header("content-type", "application/json")
+        .header("authorization", format!("Bearer {token}"))
+        .body(Body::from(body.to_string()))
+        .unwrap();
+    let res = app.clone().oneshot(req).await.unwrap();
+    let status = res.status();
+    let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    (status, String::from_utf8_lossy(&bytes).into_owned())
+}
+
+#[tokio::test]
+async fn card_history_is_only_visible_to_its_owner() {
+    let app = test_app().await;
+    for name in ["owner", "snoop"] {
+        let (s, b) = post(&app, "10.0.0.20", "/api/common/register",
+            json!({"user_name": name, "user_password": "correct horse"})).await;
+        assert!(s.is_success(), "{s} {b}");
+    }
+    let owner = login_token(&app, "10.0.0.20", "owner", "correct horse").await;
+    let snoop = login_token(&app, "10.0.0.20", "snoop", "correct horse").await;
+
+    let (s, b) = authed_post(&app, &owner, "/api/card/create", json!({
+        "card_name": "Millennia", "card_bank": "HDFC",
+        "card_primary_color": [0, 0, 0], "card_secondary_color": [255, 255, 255]
+    })).await;
+    assert!(s.is_success(), "{s} {b}");
+    let card_id = serde_json::from_str::<Value>(&b).unwrap()["card_id"].as_str().unwrap().to_string();
+
+    let (s, _) = authed_post(&app, &owner, "/api/card/history", json!({"card_id": card_id})).await;
+    assert_eq!(s, StatusCode::OK);
+    let (s, _) = authed_post(&app, &snoop, "/api/card/history", json!({"card_id": card_id})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn dashboard_history_starts_from_the_first_balance() {
+    let app = test_app().await;
+    post(&app, "10.0.0.21", "/api/common/register",
+        json!({"user_name": "tracker", "user_password": "correct horse"})).await;
+    let t = login_token(&app, "10.0.0.21", "tracker", "correct horse").await;
+    let (s, b) = authed_post(&app, &t, "/api/account/create",
+        json!({"name": "HDFC", "kind": "bank", "balance_paise": 5_000_000, "role": "spending"})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+
+    assert_eq!(get(&app, "/api/dashboard/history?months=6", Some(&t)).await, StatusCode::OK);
+}

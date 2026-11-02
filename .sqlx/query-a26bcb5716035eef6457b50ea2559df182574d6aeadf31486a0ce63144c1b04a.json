@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT card_id AS \"card_id!\", card_name, credit_limit_paise FROM cards WHERE user_id = ? ORDER BY rowid",
+  "describe": {
+    "columns": [
+      {
+        "name": "card_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "card_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "credit_limit_paise",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "a26bcb5716035eef6457b50ea2559df182574d6aeadf31486a0ce63144c1b04a"
+}

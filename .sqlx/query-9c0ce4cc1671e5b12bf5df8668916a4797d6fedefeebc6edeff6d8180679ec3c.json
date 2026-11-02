@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id, bucket,\n                  frequency, due_month, to_account_id, active AS \"active: bool\", start_month, end_month\n           FROM commitments\n           WHERE user_id = ? AND active = 1 AND (account_id IS NOT NULL OR to_account_id IS NOT NULL)",
+  "describe": {
+    "columns": [
+      {
+        "name": "commitment_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "label",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "day_of_month",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "account_id",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "bucket",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "frequency",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "due_month",
+        "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "to_account_id",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "active: bool",
+        "ordinal": 9,
+        "type_info": "Integer"
+      },
+      {
+        "name": "start_month",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_month",
+        "ordinal": 11,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "9c0ce4cc1671e5b12bf5df8668916a4797d6fedefeebc6edeff6d8180679ec3c"
+}

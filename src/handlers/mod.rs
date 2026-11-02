@@ -1,4 +1,5 @@
 pub mod account;
+pub mod autopost;
 pub mod card;
 pub mod card_cycle;
 pub mod color;

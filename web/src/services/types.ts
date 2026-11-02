@@ -81,6 +81,8 @@ export interface PlanSettings {
   /** Pay periods over which an overspend is paid back. */
   recovery_months: number;
   week_start: number;
+  /** When on, the server adds salary and subtracts fixed payments on their dates (default true). */
+  auto_post: boolean;
 }
 
 export interface SnapshotInput {
@@ -314,4 +316,55 @@ export interface Projection {
   baseline: Series;
   scenario: Series | null;
   impacts: ItemImpact[];
+}
+
+// ---------- dashboard history ----------
+
+export interface HistoryMonth {
+  /** "YYYY-MM". */
+  month: string;
+  liquid_paise: number;
+  locked_paise: number;
+  card_debt_paise: number;
+  net_worth_paise: number;
+}
+
+export interface HistoryCard {
+  card_id: string;
+  name: string;
+  outstanding_paise: number;
+  /** null when no credit limit is set. */
+  limit_paise: number | null;
+  /** 1234 = 12.34%. null when no credit limit is set. */
+  utilization_bps: number | null;
+}
+
+export interface HistoryMaturity {
+  account_id: string;
+  name: string;
+  kind: AccountKind;
+  balance_paise: number;
+  /** YYYY-MM-DD. */
+  maturity_date: string;
+  days_left: number;
+}
+
+export interface HistoryAutoPosting {
+  /** YYYY-MM-DD. */
+  occurs_on: string;
+  label: string;
+  account_name: string;
+  /** Signed: + credit, - debit. */
+  amount_paise: number;
+}
+
+export interface DashboardHistory {
+  /** Oldest to newest; the last entry is the current month. May be empty. */
+  months: HistoryMonth[];
+  cards: HistoryCard[];
+  /** Upcoming only, soonest first. */
+  maturities: HistoryMaturity[];
+  /** The 10 most recent, newest first. */
+  auto_postings: HistoryAutoPosting[];
+  auto_post: boolean;
 }

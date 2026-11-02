@@ -12,7 +12,9 @@
 //! Safe to spend covers the CURRENT PAY PERIOD only (today up to the next payday); the next salary
 //! is never used.
 
+pub mod autopost;
 pub mod cycle;
+pub mod history;
 pub mod projection;
 
 use serde::Serialize;
@@ -471,7 +473,7 @@ pub fn format_inr(paise: i64) -> String {
 }
 
 /// Every date in `[from, to)` on which a "day of month" recurrence falls (clamped per month).
-fn occurrences(day: u8, from: Date, to: Date) -> Vec<Date> {
+pub(crate) fn occurrences(day: u8, from: Date, to: Date) -> Vec<Date> {
     let mut out = Vec::new();
     let mut anchor = from;
     for _ in 0..=((to - from).whole_days() / 28 + 2) {

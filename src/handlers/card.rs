@@ -419,9 +419,10 @@ pub async fn insert_transaction(
 
 pub async fn get_history(
     State(state): State<AppState>,
-    Extension((_user_id, _role)): Extension<(String, String)>,
+    Extension((user_id, _role)): Extension<(String, String)>,
     Json(payload): Json<crate::models::GetHistoryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
+    ensure_card_owned(&state.db, &payload.card_id, &user_id).await?;
     let history = sqlx::query_as!(
         crate::models::CardTransactionHistory,
         r#"

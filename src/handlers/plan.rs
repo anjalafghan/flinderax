@@ -348,18 +348,26 @@ pub struct Settings {
     pub recovery_months: i64,
     /// 0 = Sunday .. 6 = Saturday
     pub week_start: i64,
+    /// Post salary and fixed payments to balances on their dates (see `handlers::autopost`).
+    #[serde(default = "default_auto_post")]
+    pub auto_post: bool,
+}
+
+fn default_auto_post() -> bool {
+    true
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { spending_paise: None, spending_bps: None, allocation_day: 10, savings_floor_paise: None, recovery_months: 3, week_start: 1 }
+        Self { spending_paise: None, spending_bps: None, allocation_day: 10, savings_floor_paise: None, recovery_months: 3, week_start: 1, auto_post: true }
     }
 }
 
 pub async fn load_settings(db: &sqlx::SqlitePool, user_id: &str) -> Result<Settings, AppError> {
     let row = sqlx::query!(
-        "SELECT spending_paise, spending_bps, allocation_day, savings_floor_paise, recovery_months, week_start
-         FROM user_settings WHERE user_id = ?",
+        r#"SELECT spending_paise, spending_bps, allocation_day, savings_floor_paise, recovery_months, week_start,
+                  auto_post AS "auto_post: bool"
+           FROM user_settings WHERE user_id = ?"#,
         user_id
     )
     .fetch_optional(db)
@@ -371,6 +379,7 @@ pub async fn load_settings(db: &sqlx::SqlitePool, user_id: &str) -> Result<Setti
         savings_floor_paise: r.savings_floor_paise,
         recovery_months: r.recovery_months,
         week_start: r.week_start,
+        auto_post: r.auto_post,
     }))
 }
 
@@ -403,18 +412,19 @@ pub async fn settings_update(
         return Err(bad_request("week_start must be between 0 and 6"));
     }
     sqlx::query!(
-        "INSERT INTO user_settings (user_id, spending_paise, spending_bps, allocation_day, savings_floor_paise, recovery_months, week_start)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+        "INSERT INTO user_settings (user_id, spending_paise, spending_bps, allocation_day, savings_floor_paise, recovery_months, week_start, auto_post)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id) DO UPDATE SET spending_paise = excluded.spending_paise, spending_bps = excluded.spending_bps,
             allocation_day = excluded.allocation_day, savings_floor_paise = excluded.savings_floor_paise,
-            recovery_months = excluded.recovery_months, week_start = excluded.week_start",
+            recovery_months = excluded.recovery_months, week_start = excluded.week_start, auto_post = excluded.auto_post",
         user_id,
         p.spending_paise,
         p.spending_bps,
         p.allocation_day,
         p.savings_floor_paise,
         p.recovery_months,
-        p.week_start
+        p.week_start,
+        p.auto_post
     )
     .execute(&state.db)
     .await?;

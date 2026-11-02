@@ -14,6 +14,7 @@ import type {
   NewCommitment,
   NewEmi,
   NewIncome,
+  DashboardHistory,
   PlanSettings,
   SnapshotInput,
 } from "./types";
@@ -85,8 +86,12 @@ const data = <T>(p: Promise<ApiResponse<T>>) => p.then((r) => r.data);
 type Id = { id: string; status: boolean };
 type Ok = { status: boolean };
 
+export const getDashboardHistory = (months = 12) =>
+  data(api.get<DashboardHistory>(`/api/dashboard/history?months=${months}`));
+
 export const dashboardApi = {
   summary: () => data(api.get<DashboardSummary>("/api/dashboard/summary")),
+  history: getDashboardHistory,
 };
 
 export const accountApi = {
