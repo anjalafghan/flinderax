@@ -54,15 +54,14 @@ export function CardLoansSection({ cardId, breakdown }: { cardId: string; breakd
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-3xl">EMIs</CardTitle>
-          <p className="text-xs text-muted-foreground">Enter once. Months left and balance count down by themselves.</p>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-[24px]">EMIs</CardTitle>
+          <p className="max-w-prose text-sm text-muted-foreground">Enter once. Months left and balance count down by themselves.</p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {breakdown.emis.length === 0 && <p className="text-sm text-muted-foreground">No EMIs on this card.</p>}
-          <ul className="space-y-2">
+        <CardContent className="space-y-6">
+          <ul className="ledger">
             {breakdown.emis.map((e) => (
-              <li key={e.emi_id} className="flex items-center justify-between gap-2 glass rounded-2xl p-3 text-sm">
+              <li key={e.emi_id} className="ledger-row text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{e.label}</p>
                   <p className="text-xs text-muted-foreground">
@@ -74,7 +73,7 @@ export function CardLoansSection({ cardId, breakdown }: { cardId: string; breakd
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 shrink-0"
+                  className="h-9 w-9 shrink-0"
                   aria-label={`Remove ${e.label}`}
                   onClick={() => window.confirm(`Remove EMI "${e.label}"?`) && removeEmi.mutate(e.emi_id)}
                 >
@@ -83,40 +82,42 @@ export function CardLoansSection({ cardId, breakdown }: { cardId: string; breakd
               </li>
             ))}
           </ul>
-          <form onSubmit={submitEmi} className="grid grid-cols-2 gap-2 border-t pt-4" noValidate>
-            <div className="col-span-2 space-y-1">
+          {breakdown.emis.length === 0 && <p className="empty-note">No EMIs on this card.</p>}
+          <form onSubmit={submitEmi} className="form-grid border-t border-border pt-6" noValidate>
+            <div className="field col-span-full">
               <Label htmlFor="emi-label">EMI name</Label>
               <Input id="emi-label" value={emi.label} onChange={(e) => setEmi({ ...emi, label: e.target.value })} placeholder="e.g. AC EMI" />
             </div>
-            <div className="space-y-1">
+            <div className="field">
               <Label htmlFor="emi-monthly">Monthly</Label>
               <MoneyInput id="emi-monthly" value={emi.monthly} onChange={(e) => setEmi({ ...emi, monthly: e.target.value })} />
             </div>
-            <div className="space-y-1">
+            <div className="field">
               <Label htmlFor="emi-months">Months left</Label>
               <Input id="emi-months" inputMode="numeric" value={emi.months} onChange={(e) => setEmi({ ...emi, months: e.target.value })} />
             </div>
-            <div className="col-span-2 space-y-1">
+            <div className="field col-span-full">
               <Label htmlFor="emi-remaining">Remaining principal</Label>
               <MoneyInput id="emi-remaining" value={emi.remaining} onChange={(e) => setEmi({ ...emi, remaining: e.target.value })} />
             </div>
-            <Button type="submit" variant="outline" className="col-span-2" disabled={addEmi.isPending}>
-              <Plus className="mr-2 h-4 w-4" /> Add EMI
-            </Button>
+            <div className="form-actions">
+              <Button type="submit" disabled={addEmi.isPending}>
+                <Plus className="mr-2 h-4 w-4" /> Add EMI
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-3xl">Pending charges</CardTitle>
-          <p className="text-xs text-muted-foreground">Spends that haven't posted to the card yet. They drop off by themselves after 30 days.</p>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-[24px]">Pending charges</CardTitle>
+          <p className="max-w-prose text-sm text-muted-foreground">Spends that haven't posted to the card yet. They drop off by themselves after 30 days.</p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {breakdown.pending_charges.length === 0 && <p className="text-sm text-muted-foreground">Nothing pending.</p>}
-          <ul className="space-y-2">
+        <CardContent className="space-y-6">
+          <ul className="ledger">
             {breakdown.pending_charges.map((c) => (
-              <li key={c.charge_id} className="flex items-center justify-between gap-2 glass rounded-2xl p-3 text-sm">
+              <li key={c.charge_id} className="ledger-row text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{c.label}</p>
                   <p className="text-xs text-muted-foreground">{formatINR(c.amount_paise)}</p>
@@ -133,18 +134,21 @@ export function CardLoansSection({ cardId, breakdown }: { cardId: string; breakd
               </li>
             ))}
           </ul>
-          <form onSubmit={submitCharge} className="grid grid-cols-2 gap-2 border-t pt-4" noValidate>
-            <div className="space-y-1">
+          {breakdown.pending_charges.length === 0 && <p className="empty-note">Nothing pending.</p>}
+          <form onSubmit={submitCharge} className="form-grid border-t border-border pt-6" noValidate>
+            <div className="field">
               <Label htmlFor="pc-label">Charge</Label>
               <Input id="pc-label" value={charge.label} onChange={(e) => setCharge({ ...charge, label: e.target.value })} placeholder="e.g. Zomato" />
             </div>
-            <div className="space-y-1">
+            <div className="field">
               <Label htmlFor="pc-amount">Amount</Label>
               <MoneyInput id="pc-amount" value={charge.amount} onChange={(e) => setCharge({ ...charge, amount: e.target.value })} />
             </div>
-            <Button type="submit" variant="outline" className="col-span-2" disabled={addPending.isPending}>
-              <Plus className="mr-2 h-4 w-4" /> Add pending charge
-            </Button>
+            <div className="form-actions">
+              <Button type="submit" disabled={addPending.isPending}>
+                <Plus className="mr-2 h-4 w-4" /> Add pending charge
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

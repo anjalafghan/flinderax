@@ -6,7 +6,7 @@ export function RecoveryCard({ summary }: { summary: DashboardSummary }) {
   const r = summary.recovery;
   if (!r && summary.spending.overspend_paise === 0) return null;
   return (
-    <section aria-label="Paying it back" className="space-y-2 rounded-xl border border-warn/40 bg-warn-tint p-4 text-sm">
+    <section aria-label="Paying it back" className="space-y-3 rounded-[1.75rem] border border-warn/40 bg-warn-tint p-6 text-sm leading-relaxed md:p-8">
       <h2 className="font-display text-[32px] leading-none tracking-tight">Paying it back</h2>
       {summary.spending.overspend_paise > 0 && (
         <p>

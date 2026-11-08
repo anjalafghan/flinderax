@@ -38,29 +38,29 @@ export function ManualTransaction() {
   };
 
   return (
-    <details className="group glass rounded-2xl p-3">
+    <details className="group border-t border-border pt-4">
       <summary className="cursor-pointer text-sm font-medium">Add a transaction by hand</summary>
-      <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-2" noValidate>
-        <div className="space-y-1">
+      <form onSubmit={submit} className="form-grid mt-6" noValidate>
+        <div className="field">
           <Label htmlFor="tx-date">Date</Label>
           <Input id="tx-date" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
         </div>
-        <div className="space-y-1">
+        <div className="field">
           <Label htmlFor="tx-direction">Money</Label>
           <Select id="tx-direction" value={f.direction} onChange={(e) => setF({ ...f, direction: e.target.value as TxnDirection })}>
             <option value="debit">Went out (spent)</option>
             <option value="credit">Came in</option>
           </Select>
         </div>
-        <div className="space-y-1">
+        <div className="field">
           <Label htmlFor="tx-amount">Amount</Label>
           <MoneyInput id="tx-amount" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
         </div>
-        <div className="space-y-1">
+        <div className="field">
           <Label htmlFor="tx-merchant">Merchant (optional)</Label>
           <Input id="tx-merchant" value={f.merchant} onChange={(e) => setF({ ...f, merchant: e.target.value })} placeholder="e.g. Corner chai shop" />
         </div>
-        <div className="space-y-1 sm:col-span-2">
+        <div className="field col-span-full">
           <Label htmlFor="tx-category">Category</Label>
           <Select id="tx-category" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>
             {CATEGORY_IDS.map((id) => (
@@ -70,10 +70,12 @@ export function ManualTransaction() {
             ))}
           </Select>
         </div>
-        {error && <p role="alert" className="text-sm text-destructive sm:col-span-2">{error}</p>}
-        <Button type="submit" className="sm:col-span-2" disabled={create.isPending}>
-          {create.isPending ? "Adding..." : "Add transaction"}
-        </Button>
+        {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+        <div className="form-actions">
+          <Button type="submit" disabled={create.isPending}>
+            {create.isPending ? "Adding..." : "Add transaction"}
+          </Button>
+        </div>
       </form>
     </details>
   );

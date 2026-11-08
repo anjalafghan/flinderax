@@ -2,21 +2,22 @@ import { useState, lazy, Suspense } from "react";
 import type { CardData } from "./DashboardPage";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
- import {
-   ArrowLeft,
-   Trash2,
-   TrendingUp,
-   TrendingDown,
-   Minus,
-   RefreshCcw,
-   Settings,
-   X,
- } from "lucide-react";
+import {
+  ArrowLeft,
+  Trash2,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  RefreshCcw,
+  Settings,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import api from "@/services/api";
 import { decodeCardHistoryList } from "@/proto/decoder";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard } from "@/components/feature/CreditCard";
 import { Header } from "@/components/layout/Header";
 import { useBreakdown } from "@/hooks/usePlanner";
@@ -35,6 +36,9 @@ const EditCardModal = lazy(() =>
     default: m.EditCardModal,
   })),
 );
+
+const formatINR = (amount: number) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
 
 export default function CardDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -86,42 +90,42 @@ export default function CardDetailsPage() {
     },
   });
 
-   const resetMutation = useMutation({
-     mutationFn: async () => {
-       await api.post("/api/card/reset", { card_id: id });
-     },
-     onSuccess: () => {
-       toast.success("Transaction history reset");
-       queryClient.invalidateQueries({ queryKey: ["card", id] });
-       queryClient.invalidateQueries({ queryKey: ["history", id] });
-       queryClient.invalidateQueries({ queryKey: ["cards"] });
-       setIsResetConfirmOpen(false);
-     },
-     onError: () => {
-       toast.error("Failed to reset transactions");
-       setIsResetConfirmOpen(false);
-     },
-   });
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      await api.post("/api/card/reset", { card_id: id });
+    },
+    onSuccess: () => {
+      toast.success("Transaction history reset");
+      queryClient.invalidateQueries({ queryKey: ["card", id] });
+      queryClient.invalidateQueries({ queryKey: ["history", id] });
+      queryClient.invalidateQueries({ queryKey: ["cards"] });
+      setIsResetConfirmOpen(false);
+    },
+    onError: () => {
+      toast.error("Failed to reset transactions");
+      setIsResetConfirmOpen(false);
+    },
+  });
 
-   const deleteTransactionMutation = useMutation({
-     mutationFn: async (transactionId: string) => {
-       await api.post("/api/card/delete_transaction", {
-         card_id: id,
-         transaction_id: transactionId,
-       });
-     },
-     onSuccess: () => {
-       toast.success("Transaction deleted");
-       queryClient.invalidateQueries({ queryKey: ["history", id] });
-       queryClient.invalidateQueries({ queryKey: ["card", id] });
-       queryClient.invalidateQueries({ queryKey: ["cards"] });
-     },
-     onError: () => {
-       toast.error("Failed to delete transaction");
-      },
-    });
+  const deleteTransactionMutation = useMutation({
+    mutationFn: async (transactionId: string) => {
+      await api.post("/api/card/delete_transaction", {
+        card_id: id,
+        transaction_id: transactionId,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Transaction deleted");
+      queryClient.invalidateQueries({ queryKey: ["history", id] });
+      queryClient.invalidateQueries({ queryKey: ["card", id] });
+      queryClient.invalidateQueries({ queryKey: ["cards"] });
+    },
+    onError: () => {
+      toast.error("Failed to delete transaction");
+    },
+  });
 
-   if (cardQuery.isLoading)
+  if (cardQuery.isLoading)
     return (
       <div className="p-8 text-center text-muted-foreground">
         Loading details...
@@ -138,7 +142,7 @@ export default function CardDetailsPage() {
     <div className="min-h-screen text-foreground transition-colors duration-300">
       <Header />
 
-      <div className="page max-w-4xl space-y-8">
+      <div className="page stack max-w-4xl">
         {/* Header Actions */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="ghost" className="pl-0" onClick={() => navigate(-1)}>
@@ -177,10 +181,10 @@ export default function CardDetailsPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 md:gap-8 md:grid-cols-[1.2fr,1fr]">
+        <div className="grid gap-6 md:gap-8 md:grid-cols-[1.2fr_1fr]">
           {/* Left Column: Card Visual & Actions */}
-          <div className="space-y-6">
-            <div className="flex justify-center rounded-xl p-0 md:p-6 transition-all">
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-center transition-all md:p-6">
               <CreditCard
                 id={card.card_id}
                 name={card.card_name}
@@ -195,7 +199,7 @@ export default function CardDetailsPage() {
             </div>
 
             <Button
-              className="w-full text-lg h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl shadow-lg"
+              className="w-full sm:w-auto"
               onClick={() =>
                 document.getElementById("snapshot-form")?.scrollIntoView({ behavior: "smooth", block: "center" })
               }
@@ -205,109 +209,99 @@ export default function CardDetailsPage() {
           </div>
 
           {/* Right Column: History */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold tracking-tight">
-              Transaction History
-            </h3>
-
-            {historyQuery.isLoading ? (
-              <div className="text-muted-foreground animate-pulse">
-                Loading history...
-              </div>
-            ) : historyQuery.data && historyQuery.data.length > 0 ? (
-              <div className="space-y-3">
-                {(() => {
-                  // Sort by timestamp descending (newest first)
-                  const sorted = [...historyQuery.data].sort(
-                    (a, b) =>
-                      new Date(b.timestamp).getTime() -
-                      new Date(a.timestamp).getTime(),
-                  );
-
-                   return sorted.map((tx, index: number) => {
-                     const previousTx = sorted[index + 1];
-                     const previousAmount = previousTx
-                       ? previousTx.total_due_input
-                       : 0;
-                     const delta = tx.total_due_input - previousAmount;
-
-                     return (
-                       <div
-                         key={tx.transaction_id}
-                         className="flex items-center justify-between glass rounded-3xl p-4 transition-all hover:bg-accent/5 group relative"
-                       >
-                         <button
-                           onClick={() => {
-                             if (window.confirm("Delete this transaction?")) {
-                               deleteTransactionMutation.mutate(tx.transaction_id);
-                             }
-                           }}
-                           className="absolute right-2 top-2 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
-                           aria-label="Delete transaction"
-                         >
-                           <X className="h-4 w-4" />
-                         </button>
-                         <div className="space-y-0.5">
-                           <p className="font-bold text-base">
-                             {new Intl.NumberFormat("en-IN", {
-                               style: "currency",
-                               currency: "INR",
-                             }).format(tx.total_due_input)}
-                           </p>
-                           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                             {new Date(tx.timestamp).toLocaleDateString(
-                               undefined,
-                               { month: "short", day: "numeric" },
-                             )}{" "}
-                             at{" "}
-                             {new Date(tx.timestamp).toLocaleTimeString([], {
-                               hour: "2-digit",
-                               minute: "2-digit",
-                             })}
-                           </p>
-                         </div>
-
-                        <div
-                          className={cn(
-                            "flex items-center text-sm font-bold px-3 py-1 rounded-full",
-                            delta > 0
-                              ? "text-rose-500 bg-rose-500/10"
-                              : delta < 0
-                                ? "text-emerald-500 bg-emerald-500/10"
-                                : "text-muted-foreground bg-muted/50",
-                          )}
-                        >
-                          {delta > 0 ? (
-                            <TrendingUp className="mr-1 h-3.5 w-3.5" />
-                          ) : delta < 0 ? (
-                            <TrendingDown className="mr-1 h-3.5 w-3.5" />
-                          ) : (
-                            <Minus className="mr-1 h-3.5 w-3.5" />
-                          )}
-                          <span className="tabular-nums">
-                            {delta > 0 ? "+" : ""}
-                            {new Intl.NumberFormat("en-IN", {
-                              style: "currency",
-                              currency: "INR",
-                            }).format(Math.abs(delta))}
-                          </span>
-                        </div>
-                      </div>
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-[24px]">Transaction History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {historyQuery.isLoading ? (
+                <p className="animate-pulse text-sm text-muted-foreground">Loading history...</p>
+              ) : historyQuery.data && historyQuery.data.length > 0 ? (
+                <ul className="ledger">
+                  {(() => {
+                    // Sort by timestamp descending (newest first)
+                    const sorted = [...historyQuery.data].sort(
+                      (a, b) =>
+                        new Date(b.timestamp).getTime() -
+                        new Date(a.timestamp).getTime(),
                     );
-                  });
-                })()}
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-dashed border-primary/25 bg-card/30 border-border p-12 text-center text-muted-foreground bg-muted/20">
-                No transactions yet.
-              </div>
-            )}
-          </div>
+
+                    return sorted.map((tx, index: number) => {
+                      const previousTx = sorted[index + 1];
+                      const previousAmount = previousTx
+                        ? previousTx.total_due_input
+                        : 0;
+                      const delta = tx.total_due_input - previousAmount;
+
+                      return (
+                        <li key={tx.transaction_id} className="ledger-row text-sm">
+                          <div className="min-w-0">
+                            <p className="font-display text-lg">{formatINR(tx.total_due_input)}</p>
+                            <p className="text-[13px] leading-snug text-muted-foreground">
+                              {new Date(tx.timestamp).toLocaleDateString(
+                                undefined,
+                                { month: "short", day: "numeric" },
+                              )}{" "}
+                              at{" "}
+                              {new Date(tx.timestamp).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-2">
+                            <div
+                              className={cn(
+                                "flex items-center rounded-full px-3 py-1 text-sm font-semibold",
+                                delta > 0
+                                  ? "tone-over"
+                                  : delta < 0
+                                    ? "tone-good"
+                                    : "tone-quiet",
+                              )}
+                            >
+                              {delta > 0 ? (
+                                <TrendingUp className="mr-1 h-3.5 w-3.5" />
+                              ) : delta < 0 ? (
+                                <TrendingDown className="mr-1 h-3.5 w-3.5" />
+                              ) : (
+                                <Minus className="mr-1 h-3.5 w-3.5" />
+                              )}
+                              <span className="tabular-nums">
+                                {delta > 0 ? "+" : ""}
+                                {formatINR(Math.abs(delta))}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9"
+                              aria-label="Delete transaction"
+                              onClick={() => {
+                                if (window.confirm("Delete this transaction?")) {
+                                  deleteTransactionMutation.mutate(tx.transaction_id);
+                                }
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    });
+                  })()}
+                </ul>
+              ) : (
+                <p className="empty-note">No transactions yet.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {breakdownQuery.data && (
           <>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:gap-8 md:grid-cols-2">
               <CardBreakdownPanel breakdown={breakdownQuery.data} />
               <CardSnapshotForm cardId={card.card_id} isFirst={breakdownQuery.data.last_updated === null} />
             </div>

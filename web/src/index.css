@@ -170,6 +170,17 @@
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
   }
+  /* Forms: roomy two-column grid, label-over-field, one ink action on the right. */
+  .form-grid { @apply grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2; }
+  .field { @apply flex min-w-0 flex-col gap-2; }
+  .form-actions { @apply col-span-full flex flex-wrap items-center justify-end gap-3 pt-1; }
+  /* Lists inside a card: hairline rows, never a box in a box. */
+  .ledger { @apply m-0 list-none p-0; }
+  .ledger-row { @apply flex items-center justify-between gap-4 border-t border-border py-4 first:border-t-0 first:pt-1; }
+  .empty-note { @apply rounded-[18px] border border-dashed border-border px-5 py-4 text-sm text-muted-foreground; }
+  /* Card stacks on a page. */
+  .stack { @apply flex flex-col gap-6 md:gap-8; }
+
   .tone-good { color: hsl(var(--good)); background: hsl(var(--good-tint)); }
   .tone-warn { color: hsl(var(--warn)); background: hsl(var(--warn-tint)); }
   .tone-over { color: hsl(var(--over)); background: hsl(var(--over-tint)); }

@@ -11,13 +11,13 @@ function Option({ title, a }: { title: string; a: Absorption }) {
     ["Spending allowance", a.from_spending_paise, a.spending_after_paise],
   ];
   return (
-    <div className="space-y-2 glass rounded-2xl p-3 text-sm">
+    <div className="space-y-3 glass rounded-2xl p-4 text-sm">
       <p className="font-semibold">{title}</p>
-      <ul className="space-y-1">
+      <ul className="space-y-2">
         {rows.map(([label, cut, after]) => (
-          <li key={label} className={cn("flex justify-between gap-2", cut === 0 && "text-muted-foreground")}>
-            <span>{label}</span>
-            <span className="tabular-nums">
+          <li key={label} className={cn("flex justify-between gap-3", cut === 0 && "text-muted-foreground")}>
+            <span className="min-w-0">{label}</span>
+            <span className="shrink-0 tabular-nums">
               {cut > 0 ? `−${formatINR(cut)} → ${formatINR(after)}` : "untouched"}
             </span>
           </li>
@@ -37,23 +37,23 @@ export function ImpactCard({ impact }: { impact: ItemImpact }) {
   const g = impact.goal;
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-3xl">{impact.name}</CardTitle>
+      <CardHeader className="space-y-2 pb-4">
+        <CardTitle className="text-[24px]">{impact.name}</CardTitle>
         {impact.monthly_paise > 0 && (
           <p className="text-sm text-muted-foreground">Costs {formatINR(impact.monthly_paise)} a month. Who gives way?</p>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {impact.savings_first && impact.spending_first && (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             <Option title="Savings take the cut" a={impact.savings_first} />
             <Option title="Spending takes the cut" a={impact.spending_first} />
           </div>
         )}
         {impact.savings_first_thresholds.length > 0 && (
-          <div className="text-sm">
-            <p className="mb-1 font-semibold">As the monthly amount grows</p>
-            <ul className="space-y-1 text-muted-foreground">
+          <div className="space-y-2 text-sm">
+            <p className="font-semibold">As the monthly amount grows</p>
+            <ul className="space-y-2 text-muted-foreground">
               {impact.savings_first_thresholds.slice(0, 3).map((t, i, all) => (
                 <li key={t.label}>
                   <span className="font-medium text-foreground tabular-nums">
@@ -79,14 +79,14 @@ export function ImpactCard({ impact }: { impact: ItemImpact }) {
         {g && (
           <div
             className={cn(
-              "glass rounded-2xl p-3 text-sm",
+              "glass space-y-1 rounded-2xl p-4 text-sm",
               g.gap_paise >= 0 ? "border-good/40 bg-good-tint" : "border-warn/40 bg-warn-tint",
             )}
           >
             <p className="font-semibold">
               Goal {formatINR(g.target_paise)} by {formatDay(g.target_date)} {g.target_date.slice(0, 4)}
             </p>
-            <p>
+            <p className="leading-snug">
               {g.gap_paise >= 0
                 ? `On track: ${formatINR(g.gap_paise)} ahead.`
                 : `Short by ${formatINR(-g.gap_paise)}.`}

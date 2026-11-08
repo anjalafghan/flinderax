@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CreditCard, Landmark, Plus, Receipt } from "lucide-react";
 
 import { Header } from "@/components/layout/Header";
-import { Card, CardContent } from "@/components/ui/card";
 import { InsightsPanel } from "@/components/feature/InsightsPanel";
 
 const LINKS = [
@@ -16,31 +15,33 @@ export default function MoneyPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl space-y-8">
+      <main className="page space-y-10">
         <div>
           <h1 className="page-title">Money</h1>
           <p className="page-sub">Your accounts, cards and spending in one place.</p>
         </div>
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <nav aria-label="Money sections" className="grid gap-3 sm:grid-cols-2">
           {LINKS.map((l) => (
-            <li key={l.to}>
-              <Link to={l.to} className="block rounded-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <Card>
-                  <CardContent className="flex items-center gap-4 p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <l.icon className="h-5 w-5" aria-hidden />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold">{l.title}</p>
-                      <p className="truncate text-sm text-muted-foreground">{l.hint}</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
+            <Link
+              key={l.to}
+              to={l.to}
+              className="group flex min-h-[76px] items-center gap-4 rounded-[18px] border border-border bg-card px-5 py-4 no-underline transition-colors hover:bg-chip focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-chip">
+                <l.icon className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="text-[15px] font-medium">{l.title}</span>
+                <span className="text-[13px] leading-snug text-muted-foreground">{l.hint}</span>
+              </span>
+              <ArrowRight
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                strokeWidth={1.5}
+                aria-hidden
+              />
+            </Link>
           ))}
-        </ul>
+        </nav>
         <InsightsPanel />
       </main>
     </div>

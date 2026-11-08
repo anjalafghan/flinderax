@@ -12,6 +12,7 @@ import { StatementImport } from "@/components/feature/StatementImport";
 import { SpendingOverview } from "@/components/feature/SpendingOverview";
 import { SpendingRules } from "@/components/feature/SpendingRules";
 import { TransactionList } from "@/components/feature/TransactionList";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useSpendSummary } from "@/hooks/usePlanner";
 
 type AddMode = "paste" | "upload" | "manual";
@@ -35,7 +36,7 @@ export default function SpendingPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl space-y-8">
+      <main className="page stack max-w-3xl">
         <div>
           <h1 className="page-title">Spending</h1>
           <p className="page-sub">Bank alerts are picked up automatically. Fix a category and the app learns it.</p>
@@ -50,53 +51,59 @@ export default function SpendingPage() {
 
         <TransactionList uncategorizedOnly={uncategorizedOnly} onUncategorizedOnlyChange={setUncategorizedOnly} />
 
-        <section aria-label="Add transactions" className="space-y-4 glass rounded-3xl p-4 md:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="font-display text-[32px] leading-none">Add transactions</h2>
-            <div role="tablist" aria-label="How to add" className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
-              {ADD_MODES.map((m) => (
-                <button
-                  key={m.id}
-                  role="tab"
-                  aria-selected={addMode === m.id}
-                  onClick={() => setAddMode(m.id)}
-                  className={cn(
-                    "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors",
-                    addMode === m.id ? "bg-card text-foreground" : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <m.icon className="h-4 w-4" aria-hidden />
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {addMode === "paste" && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Missed one? Copy the bank's message and paste it here.</p>
-              <PasteAlert />
-            </div>
-          )}
-          {addMode === "upload" && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Drop the CSV from your bank's website. Nothing is added twice, so overlapping files are fine.
-              </p>
-              <StatementImport />
-            </div>
-          )}
-          {addMode === "manual" && <ManualTransaction />}
+        <section aria-label="Add transactions">
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="font-display text-[32px] leading-none">Add transactions</h2>
+                <div role="tablist" aria-label="How to add" className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1 sm:w-auto">
+                  {ADD_MODES.map((m) => (
+                    <button
+                      key={m.id}
+                      role="tab"
+                      aria-selected={addMode === m.id}
+                      onClick={() => setAddMode(m.id)}
+                      className={cn(
+                        "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors",
+                        addMode === m.id ? "bg-card text-foreground" : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <m.icon className="h-4 w-4" aria-hidden />
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {addMode === "paste" && (
+                <>
+                  <p className="max-w-prose text-sm leading-snug text-muted-foreground">Missed one? Copy the bank's message and paste it here.</p>
+                  <PasteAlert />
+                </>
+              )}
+              {addMode === "upload" && (
+                <>
+                  <p className="max-w-prose text-sm leading-snug text-muted-foreground">
+                    Drop the CSV from your bank's website. Nothing is added twice, so overlapping files are fine.
+                  </p>
+                  <StatementImport />
+                </>
+              )}
+              {addMode === "manual" && <ManualTransaction />}
+            </CardContent>
+          </Card>
         </section>
 
-        <details className="group glass rounded-3xl">
-          <summary className="flex cursor-pointer list-none items-center justify-between p-4 md:p-5">
+        <details className="group glass rounded-[1.75rem]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 md:px-8">
             <span>
               <span className="block font-semibold">Automation &amp; rules</span>
-              <span className="block text-sm text-muted-foreground">Alert forwarding, Joy budget link, category rules</span>
+              <span className="block text-sm leading-snug text-muted-foreground">Alert forwarding, Joy budget link, category rules</span>
             </span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
           </summary>
-          <div className="space-y-8 border-t border-border/70 p-4 md:p-5">
+          <div className="stack border-t border-border p-6 md:p-8">
             <section aria-label="Import setup">
               <IngestSetup />
             </section>

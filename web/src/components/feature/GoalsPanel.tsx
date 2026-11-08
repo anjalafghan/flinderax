@@ -49,8 +49,8 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
   };
 
   return (
-    <form onSubmit={submit} className="grid grid-cols-2 gap-2 glass rounded-2xl p-3" noValidate>
-      <div className="col-span-2 space-y-1">
+    <form onSubmit={submit} className="form-grid border-t border-border pt-6" noValidate>
+      <div className="field col-span-full">
         <Label htmlFor={`goal-name-${initial?.id ?? "new"}`}>Name</Label>
         <Input
           id={`goal-name-${initial?.id ?? "new"}`}
@@ -59,7 +59,7 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
           placeholder="e.g. New laptop"
         />
       </div>
-      <div className="space-y-1">
+      <div className="field">
         <Label htmlFor={`goal-target-${initial?.id ?? "new"}`}>Target</Label>
         <MoneyInput
           id={`goal-target-${initial?.id ?? "new"}`}
@@ -67,7 +67,7 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
           onChange={(e) => setTarget(e.target.value)}
         />
       </div>
-      <div className="space-y-1">
+      <div className="field">
         <Label htmlFor={`goal-date-${initial?.id ?? "new"}`}>By (optional)</Label>
         <Input
           id={`goal-date-${initial?.id ?? "new"}`}
@@ -76,7 +76,7 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
           onChange={(e) => setDate(e.target.value)}
         />
       </div>
-      <div className="col-span-2 space-y-1 sm:col-span-1">
+      <div className="field">
         <Label htmlFor={`goal-priority-${initial?.id ?? "new"}`}>Priority</Label>
         <Select
           id={`goal-priority-${initial?.id ?? "new"}`}
@@ -90,13 +90,13 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
           ))}
         </Select>
       </div>
-      {error && <p role="alert" className="col-span-2 text-sm text-destructive">{error}</p>}
-      <div className="col-span-2 flex flex-wrap gap-2">
-        <Button type="submit" size="sm" disabled={save.isPending}>
-          {initial ? "Save goal" : "Add goal"}
-        </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+      {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+      <div className="form-actions">
+        <Button type="button" variant="ghost" onClick={onDone}>
           Cancel
+        </Button>
+        <Button type="submit" disabled={save.isPending}>
+          {initial ? "Save goal" : "Add goal"}
         </Button>
       </div>
     </form>
@@ -117,17 +117,19 @@ function ContributeForm({ goal, onDone }: { goal: Goal; onDone: () => void }) {
     contribute.mutate({ goal_id: goal.id, amount_paise: paise }, { onSuccess: onDone });
   };
   return (
-    <form onSubmit={submit} className="flex flex-wrap items-end gap-2" noValidate>
-      <div className="min-w-0 flex-1 space-y-1">
+    <form onSubmit={submit} className="flex flex-wrap items-end gap-3" noValidate>
+      <div className="field min-w-0 flex-1">
         <Label htmlFor={`contrib-${goal.id}`}>Amount put in</Label>
         <MoneyInput id={`contrib-${goal.id}`} value={amount} onChange={(e) => setAmount(e.target.value)} />
       </div>
-      <Button type="submit" size="sm" disabled={contribute.isPending}>
-        Save
-      </Button>
-      <Button type="button" size="sm" variant="ghost" onClick={onDone}>
-        Cancel
-      </Button>
+      <div className="flex gap-2">
+        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" size="sm" disabled={contribute.isPending}>
+          Save
+        </Button>
+      </div>
       {error && <p role="alert" className="w-full text-sm text-destructive">{error}</p>}
     </form>
   );
@@ -144,11 +146,11 @@ function GoalItem({ goal }: { goal: Goal }) {
   };
 
   return (
-    <li className="space-y-3 glass rounded-2xl p-4 text-sm">
-      <div className="flex items-start justify-between gap-2">
+    <li className="space-y-3 border-t border-border py-5 text-sm first:border-t-0 first:pt-1">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate font-semibold">{goal.name}</p>
-          <p className="text-xs text-muted-foreground tabular-nums">
+          <p className="truncate text-[15px] font-medium" title={goal.name}>{goal.name}</p>
+          <p className="text-[13px] text-muted-foreground tabular-nums">
             {formatINR(goal.saved_paise)} of {formatINR(goal.target_paise)}
             {goal.target_date && !done && ` · by ${formatDay(goal.target_date)}`}
             {goal.months_left != null && !done && ` · ${goal.months_left} months left`}
@@ -176,8 +178,8 @@ function GoalItem({ goal }: { goal: Goal }) {
       )}
 
       {goal.status === "behind" && goal.fixes.length > 0 && (
-        <div className="rounded-md bg-warn-tint p-3 text-warn">
-          <p className="mb-1 font-medium">To get back on track:</p>
+        <div className="rounded-md bg-warn-tint p-4 text-warn">
+          <p className="mb-2 font-medium">To get back on track:</p>
           <ul className="list-disc space-y-1 pl-5">
             {goal.fixes.map((f) => (
               <li key={f}>{f}</li>
@@ -219,25 +221,25 @@ export function GoalsPanel() {
 
   return (
     <Card id="goals" className="scroll-mt-24">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-3xl">Goals</CardTitle>
-        <p className="text-sm text-muted-foreground">Things you are saving for. Money put in here is set aside each month.</p>
+      <CardHeader className="space-y-2 pb-4">
+        <CardTitle className="text-[32px]">Goals</CardTitle>
+        <p className="text-sm text-muted-foreground max-w-prose">Things you are saving for. Money put in here is set aside each month.</p>
         {covered && (
           <p className="pt-1 text-sm font-medium">
             Emergency cover: <span className="tabular-nums">{covered}</span>
           </p>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {isLoading && <p className="text-sm text-muted-foreground">Loading goals...</p>}
         {isError && <p className="text-sm text-destructive">Could not load goals. Try again in a moment.</p>}
 
         {data?.emergency_suggested_paise != null && data.emergency_suggested_paise > 0 && (
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-chip p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-chip p-5 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="font-medium">Start an emergency fund of {formatINR(data.emergency_suggested_paise)} (6 months of needs)</p>
             <Button
               size="sm"
-              className="shrink-0"
+              className="shrink-0 self-start sm:self-auto"
               disabled={save.isPending}
               onClick={() =>
                 save.mutate({
@@ -255,9 +257,9 @@ export function GoalsPanel() {
           </div>
         )}
 
-        {data && data.goals.length === 0 && <p className="text-sm text-muted-foreground">No goals yet.</p>}
+        {data && data.goals.length === 0 && <p className="empty-note">No goals yet.</p>}
         {data && data.goals.length > 0 && (
-          <ul className="space-y-3">
+          <ul className="ledger">
             {data.goals.map((g) => (
               <GoalItem key={g.id} goal={g} />
             ))}
@@ -265,7 +267,7 @@ export function GoalsPanel() {
         )}
 
         {data && data.unallocated_paise > 0 && (
-          <p className="rounded-md bg-muted p-3 text-sm">
+          <p className="rounded-md bg-muted p-4 text-sm">
             {formatINR(data.unallocated_paise)} of this month's savings not assigned yet.
           </p>
         )}
@@ -273,9 +275,11 @@ export function GoalsPanel() {
         {adding ? (
           <GoalForm onDone={() => setAdding(false)} />
         ) : (
-          <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
-            Add a goal
-          </Button>
+          <div>
+            <Button variant="outline" onClick={() => setAdding(true)}>
+              Add a goal
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

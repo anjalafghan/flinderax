@@ -22,7 +22,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <div
         ref={ref}
-        className={cn("flex flex-col space-y-2 p-6 md:p-8", className)}
+        className={cn("card-header flex flex-col space-y-2 p-6 md:p-8", className)}
         {...props}
     />
 ))
@@ -59,7 +59,12 @@ const CardContent = React.forwardRef<
     HTMLDivElement,
     React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-6 pt-0 md:p-8 md:pt-0", className)} {...props} />
+    <div
+        ref={ref}
+        // Full padding on its own; flush to the header only when one sits directly above it.
+        className={cn("card-content p-6 md:p-8 [.card-header+&]:pt-0 [.card-header+form>&:first-child]:pt-0", className)}
+        {...props}
+    />
 ))
 CardContent.displayName = "CardContent"
 
@@ -69,7 +74,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <div
         ref={ref}
-        className={cn("flex items-center p-6 pt-0 md:p-8 md:pt-0", className)}
+        className={cn("flex items-center p-6 md:p-8 [.card-header+&]:pt-0 [.card-content+&]:pt-0", className)}
         {...props}
     />
 ))

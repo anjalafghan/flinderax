@@ -17,7 +17,7 @@ export function SpendingPanel() {
   const rows = spendingBreakdown(current.by_category).slice(0, 4);
 
   return (
-    <section aria-label="Spending this month" className="mx-auto mb-8 w-full max-w-5xl space-y-4 glass rounded-3xl p-4 md:p-6">
+    <section aria-label="Spending this month" className="mx-auto w-full max-w-5xl space-y-6 glass rounded-3xl p-4 md:p-6">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-display text-[32px] leading-none tracking-tight">Spending this month</h2>
@@ -29,7 +29,7 @@ export function SpendingPanel() {
       </div>
       {rows.length > 0 && <CategoryBars rows={rows} total={current.spent_paise} />}
       {data.uncategorized_count > 0 && (
-        <Link to="/spending" className="block text-xs text-warn hover:underline">
+        <Link to="/spending" className="block text-sm text-warn hover:underline">
           {plural(data.uncategorized_count, "transaction needs a category", "transactions need a category")}
         </Link>
       )}

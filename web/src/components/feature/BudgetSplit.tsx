@@ -5,8 +5,8 @@ import { cn } from "@/utils/cn";
 function Bar({ label, amount, income, sub, className }: { label: string; amount: number; income: number; sub?: string; className: string }) {
   const pct = income > 0 ? (amount / income) * 100 : 0;
   return (
-    <li className="space-y-1">
-      <div className="flex justify-between text-sm">
+    <li className="space-y-2">
+      <div className="flex justify-between gap-4 text-sm">
         <span className="font-medium">
           {label} <span className="text-muted-foreground">({pct.toFixed(1)}%)</span>
         </span>
@@ -25,12 +25,12 @@ export function BudgetSplit({ budget, spending }: { budget: DashboardSummary["bu
   if (budget.income_paise <= 0) return null;
   const used = spending.allowance_paise > 0 ? Math.min(100, ((spending.spent_paise) / spending.allowance_paise) * 100) : 0;
   return (
-    <section aria-label="Monthly split" className="space-y-3">
-      <div>
+    <section aria-label="Monthly split" className="space-y-4">
+      <div className="space-y-2">
         <h2 className="font-display text-[32px] leading-none tracking-tight">Your monthly split</h2>
-        <p className="text-xs text-muted-foreground">Out of {formatINR(budget.income_paise)} a month.</p>
+        <p className="text-sm text-muted-foreground">Out of {formatINR(budget.income_paise)} a month.</p>
       </div>
-      <ul className="space-y-3">
+      <ul className="space-y-5">
         <Bar label="Needs" amount={budget.needs_paise} income={budget.income_paise} className="bg-primary" sub="Your listed bills, paid from the reserve" />
         <Bar
           label="Spending"

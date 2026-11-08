@@ -80,11 +80,11 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
 
   const others = accounts.filter((a) => a.account_id !== account.account_id && !a.locked);
   return (
-    <details className="glass rounded-2xl p-3 text-sm">
+    <details className="border-t border-border pt-3 text-sm">
       <summary className="cursor-pointer font-medium">Details</summary>
-      <form onSubmit={submit} className="mt-3 grid gap-3 sm:grid-cols-2" noValidate>
+      <form onSubmit={submit} className="form-grid mt-5" noValidate>
         {!isDeposit && (
-          <div className="space-y-1 sm:col-span-2">
+          <div className="field col-span-full">
             <div className="flex items-center gap-1.5">
               <Label htmlFor={`role-${account.account_id}`}>What is it for?</Label>
               <InfoTip text="Spending account: salary lands here and the SIP debits from here, so what's left is your spending pot. Reserve: your savings, which pay card bills and needs." />
@@ -94,11 +94,11 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
             </Select>
           </div>
         )}
-        <div className="space-y-1">
+        <div className="field">
           <Label htmlFor={`inst-${account.account_id}`}>{isDeposit ? "Where is it held?" : "Bank / branch (optional)"}</Label>
           <Input id={`inst-${account.account_id}`} value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="e.g. SBI, Post Office" />
         </div>
-        <div className="space-y-1">
+        <div className="field">
           <Label htmlFor={`l4-${account.account_id}`}>Last 4 digits of account (optional)</Label>
           <Input
             id={`l4-${account.account_id}`}
@@ -111,15 +111,15 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
         </div>
         {isDeposit && (
           <>
-            <div className="space-y-1">
+            <div className="field">
               <Label htmlFor={`rate-${account.account_id}`}>Interest rate %</Label>
               <Input id={`rate-${account.account_id}`} inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="6.35" />
             </div>
-            <div className="space-y-1">
+            <div className="field">
               <Label htmlFor={`mat-${account.account_id}`}>Matures on</Label>
               <Input id={`mat-${account.account_id}`} type="date" value={maturity} onChange={(e) => setMaturity(e.target.value)} />
             </div>
-            <div className="space-y-1">
+            <div className="field">
               <div className="flex items-center gap-1.5">
                 <Label htmlFor={`ren-${account.account_id}`}>At maturity</Label>
                 <InfoTip text="Used in the projections. Interest compounds quarterly, the usual convention for Indian FDs and RDs." />
@@ -128,7 +128,7 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
                 {(Object.keys(RENEWAL_LABEL) as Renewal[]).map((r) => <option key={r} value={r}>{RENEWAL_LABEL[r]}</option>)}
               </Select>
             </div>
-            <div className="space-y-1 sm:col-span-2">
+            <div className="field col-span-full">
               <Label htmlFor={`pay-${account.account_id}`}>Payout goes to</Label>
               <Select id={`pay-${account.account_id}`} value={payout} onChange={(e) => setPayout(e.target.value)}>
                 <option value="">Reserve account</option>
@@ -137,8 +137,10 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
             </div>
           </>
         )}
-        {error && <p role="alert" className="text-sm text-destructive sm:col-span-2">{error}</p>}
-        <Button type="submit" size="sm" className="sm:col-span-2" disabled={save.isPending}>Save details</Button>
+        {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+        <div className="form-actions">
+          <Button type="submit" disabled={save.isPending}>Save details</Button>
+        </div>
       </form>
     </details>
   );
@@ -179,16 +181,16 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
   const stale = !account.locked && age > STALE_DAYS;
 
   return (
-    <li className="space-y-3 glass rounded-3xl p-4">
-      <div className="flex items-start justify-between gap-3">
+    <li className="ledger-row flex-col items-stretch gap-3">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate font-semibold">
+          <p className="truncate text-[15px] font-medium" title={account.name}>
             {account.name}
             {ROLE_SHORT[account.role] && (
               <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">{ROLE_SHORT[account.role]}</span>
             )}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[13px] leading-snug text-muted-foreground">
             {KIND_LABEL[account.kind]}
             {account.institution && ` · ${account.institution}`}
             {account.last_4_digits && ` · ••${account.last_4_digits}`}
@@ -196,11 +198,11 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
             {account.maturity_date && ` · matures ${formatDay(account.maturity_date)} ${account.maturity_date.slice(0, 4)}`}
           </p>
         </div>
-        <p className="text-lg font-bold tabular-nums">{formatINR(account.balance_paise)}</p>
+        <p className="shrink-0 font-display text-lg">{formatINR(account.balance_paise)}</p>
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-32 flex-1 space-y-1">
+        <div className="field min-w-32 flex-1">
           <Label htmlFor={`bal-${account.account_id}`} className="text-xs">
             Balance now
           </Label>
@@ -227,13 +229,14 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
         <Button
           size="icon"
           variant="ghost"
+          className="h-9 w-9"
           aria-label={`Remove ${account.name}`}
           onClick={() => window.confirm(`Remove "${account.name}"? Payments tied to it become "any account".`) && remove.mutate(undefined)}
         >
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
-      <p className={cn("text-xs", stale ? "font-medium text-warn" : "text-muted-foreground")}>
+      <p className={cn("text-[13px] leading-snug", stale ? "font-medium text-warn" : "text-muted-foreground")}>
         {age === 0 ? "Updated today" : `Updated ${age} day${age === 1 ? "" : "s"} ago`}
         {stale && ", update it for a reliable number"}
       </p>
@@ -300,16 +303,16 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-3xl">Add an account</CardTitle>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[32px]">Add an account</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2" noValidate>
-          <div className="space-y-1">
+        <form onSubmit={submit} className="form-grid" noValidate>
+          <div className="field">
             <Label htmlFor="acc-name">Name</Label>
             <Input id="acc-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. HDFC Savings" />
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="acc-kind">Type</Label>
             <Select id="acc-kind" value={kind} onChange={(e) => setKind(e.target.value as AccountKind)}>
               {(Object.keys(KIND_LABEL) as AccountKind[]).map((k) => (
@@ -319,11 +322,11 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
               ))}
             </Select>
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="acc-balance">Balance</Label>
             <MoneyInput id="acc-balance" value={balance} onChange={(e) => setBalance(e.target.value)} />
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="acc-last4">Last 4 digits of account (optional)</Label>
             <Input
               id="acc-last4"
@@ -335,39 +338,44 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
             />
           </div>
           {!isSavings ? (
-            <div className="space-y-1">
+            <div className="field">
               <Label htmlFor="acc-role">What is it for?</Label>
               <Select id="acc-role" value={role} onChange={(e) => setRole(e.target.value as AccountRole)}>
                 {(Object.keys(ROLE_LABEL) as AccountRole[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
               </Select>
             </div>
           ) : (
-            <label className="flex items-center gap-2 self-end pb-2 text-sm">
-              <input type="checkbox" checked={locked ?? true} onChange={(e) => setLocked(e.target.checked)} className="h-4 w-4" />
+            <label className="col-span-full flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={locked ?? true}
+                onChange={(e) => setLocked(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-foreground"
+              />
               Don't touch (locked, left out of Safe to Spend)
             </label>
           )}
           {isSavings && (
             <>
-              <div className="space-y-1">
+              <div className="field">
                 <Label htmlFor="acc-inst">Where is it held?</Label>
                 <Input id="acc-inst" value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="e.g. SBI, Post Office" />
               </div>
-              <div className="space-y-1">
+              <div className="field">
                 <Label htmlFor="acc-rate">Interest rate % (optional)</Label>
                 <Input id="acc-rate" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="7.1" />
               </div>
-              <div className="space-y-1">
+              <div className="field">
                 <Label htmlFor="acc-maturity">Maturity date (optional)</Label>
                 <Input id="acc-maturity" type="date" value={maturity} onChange={(e) => setMaturity(e.target.value)} />
               </div>
-              <div className="space-y-1">
+              <div className="field">
                 <Label htmlFor="acc-renewal">At maturity</Label>
                 <Select id="acc-renewal" value={renewal} onChange={(e) => setRenewal(e.target.value as Renewal)}>
                   {(Object.keys(RENEWAL_LABEL) as Renewal[]).map((r) => <option key={r} value={r}>{RENEWAL_LABEL[r]}</option>)}
                 </Select>
               </div>
-              <div className="space-y-1">
+              <div className="field">
                 <Label htmlFor="acc-payout">Payout goes to</Label>
                 <Select id="acc-payout" value={payout} onChange={(e) => setPayout(e.target.value)}>
                   <option value="">Reserve account</option>
@@ -377,15 +385,17 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
             </>
           )}
           {kind === "rd" && (
-            <p className="text-xs text-muted-foreground sm:col-span-2">
+            <p className="col-span-full max-w-prose text-sm leading-snug text-muted-foreground">
               The monthly instalment goes on the Plan page as a fixed payment that goes into this RD, so the projection
               grows it and it counts against your savings.
             </p>
           )}
-          {error && <p role="alert" className="text-sm text-destructive sm:col-span-2">{error}</p>}
-          <Button type="submit" className="sm:col-span-2" disabled={create.isPending}>
-            {create.isPending ? "Adding..." : "Add account"}
-          </Button>
+          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          <div className="form-actions">
+            <Button type="submit" disabled={create.isPending}>
+              {create.isPending ? "Adding..." : "Add account"}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
@@ -400,10 +410,10 @@ export default function AccountsPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl space-y-8">
+      <main className="page stack max-w-3xl">
         <div>
           <h1 className="page-title">Accounts</h1>
-          <p className="text-muted-foreground">
+          <p className="page-sub">
             Mark one account as your spending account and one as your reserve. Locked accounts (like an FD) are never
             counted as spendable.
           </p>
@@ -414,22 +424,34 @@ export default function AccountsPage() {
 
         {accounts && (
           <>
-            <section className="space-y-3">
-              <h2 className="font-display text-[32px] leading-none">Bank &amp; cash</h2>
-              {spendable.length === 0 ? (
-                <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No accounts yet.</p>
-              ) : (
-                <ul className="space-y-3">{spendable.map((a) => <AccountRow key={a.account_id} account={a} accounts={accounts} />)}</ul>
-              )}
-            </section>
-            <section className="space-y-3">
-              <h2 className="font-display text-[32px] leading-none">Deposits (FD / RD)</h2>
-              {savings.length === 0 ? (
-                <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No deposits yet.</p>
-              ) : (
-                <ul className="space-y-3">{savings.map((a) => <AccountRow key={a.account_id} account={a} accounts={accounts} />)}</ul>
-              )}
-            </section>
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-[32px]">Bank &amp; cash</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {spendable.length === 0 ? (
+                  <p className="empty-note">No accounts yet.</p>
+                ) : (
+                  <ul className="ledger">
+                    {spendable.map((a) => <AccountRow key={a.account_id} account={a} accounts={accounts} />)}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-[32px]">Deposits (FD / RD)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {savings.length === 0 ? (
+                  <p className="empty-note">No deposits yet.</p>
+                ) : (
+                  <ul className="ledger">
+                    {savings.map((a) => <AccountRow key={a.account_id} account={a} accounts={accounts} />)}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
 

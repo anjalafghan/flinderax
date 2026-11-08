@@ -19,13 +19,13 @@ function BillRow({ bill }: { bill: Bill }) {
   const covered = coveredLine(bill, formatINR);
   const [day, mon] = formatDay(bill.date).split(" ");
   return (
-    <li className="flex items-center gap-5 py-5 md:gap-6">
+    <li className="ledger-row gap-5 md:gap-6">
       <span className="flex w-14 shrink-0 flex-col items-start">
         <span className="font-serif-num text-4xl leading-[0.9]">{day}</span>
         <span className="eyebrow">{mon}</span>
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[17px]">{bill.label}</p>
+        <p className="truncate text-[15px] font-medium" title={bill.label}>{bill.label}</p>
         <p className="text-[13px] text-muted-foreground">
           {KIND_LABEL[bill.kind]}
           {covered && <span className="block text-primary">{covered}</span>}
@@ -56,8 +56,8 @@ function SuggestionCard({ s }: { s: BillSuggestion }) {
       end_month: null,
     });
   return (
-    <li className="space-y-3 rounded-3xl border border-dashed border-primary/25 bg-card/30 p-3 text-sm">
-      <p>
+    <li className="space-y-3 border-t border-border py-4 text-sm first:border-t-0 first:pt-1">
+      <p className="leading-snug">
         Looks like a subscription: <span className="font-semibold">{s.merchant}</span>{" "}
         <span className="tabular-nums">{formatINR(s.amount_paise)}</span> {every}
       </p>
@@ -84,9 +84,9 @@ function SuggestionCard({ s }: { s: BillSuggestion }) {
 function SinkingFundRow({ f }: { f: SinkingFund }) {
   const pct = progressPercent(f.saved_paise, f.amount_paise);
   return (
-    <li className="space-y-1.5 text-sm">
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="min-w-0 truncate font-medium">
+    <li className="space-y-2 border-t border-border py-4 text-sm first:border-t-0 first:pt-1">
+      <div className="flex items-baseline justify-between gap-4">
+        <p className="min-w-0 truncate font-medium" title={`${f.label} ${formatINR(f.amount_paise)} due ${formatDay(f.due)}`}>
           {f.label} {formatINR(f.amount_paise)} due {formatDay(f.due)}
         </p>
         <p className="shrink-0 text-xs text-muted-foreground tabular-nums">{pct}%</p>
@@ -115,38 +115,38 @@ export function BillsPanel() {
 
   return (
     <Card id="bills" className="scroll-mt-24">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-3xl">Bills</CardTitle>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[32px]">Bills</CardTitle>
         {data && (
           <p className="font-serif-num text-4xl">
             {formatINR(data.total_paise)} <span className="text-sm font-medium text-muted-foreground">due in the next 30 days</span>
           </p>
         )}
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-8">
         {isLoading && <p className="text-sm text-muted-foreground">Loading bills...</p>}
         {isError && <p className="text-sm text-destructive">Could not load bills. Try again in a moment.</p>}
-        {data && weeks.length === 0 && <p className="text-sm text-muted-foreground">Nothing due in the next 30 days.</p>}
+        {data && weeks.length === 0 && <p className="empty-note">Nothing due in the next 30 days.</p>}
         {weeks.map((w) => (
-          <section key={w.key} aria-label={w.label}>
-            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{w.label}</h3>
-            <ul className="divide-y">{w.bills.map((b) => <BillRow key={`${b.date}-${b.label}-${b.kind}`} bill={b} />)}</ul>
+          <section key={w.key} aria-label={w.label} className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{w.label}</h3>
+            <ul className="ledger">{w.bills.map((b) => <BillRow key={`${b.date}-${b.label}-${b.kind}`} bill={b} />)}</ul>
           </section>
         ))}
 
         {suggestions.length > 0 && (
           <section aria-label="Subscription suggestions" className="space-y-2">
             <h3 className="text-sm font-semibold">Possible subscriptions</h3>
-            <ul className="space-y-2">
+            <ul className="ledger">
               {suggestions.map((s) => <SuggestionCard key={s.merchant} s={s} />)}
             </ul>
           </section>
         )}
 
         {data && data.sinking_funds.length > 0 && (
-          <section aria-label="Saving up for" className="space-y-3">
+          <section aria-label="Saving up for" className="space-y-2">
             <h3 className="text-sm font-semibold">Saving up for</h3>
-            <ul className="space-y-3">
+            <ul className="ledger">
               {data.sinking_funds.map((f) => <SinkingFundRow key={`${f.label}-${f.due}`} f={f} />)}
             </ul>
           </section>

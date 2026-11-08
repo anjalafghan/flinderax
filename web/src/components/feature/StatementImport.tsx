@@ -66,7 +66,7 @@ export function StatementImport() {
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1.5">
+      <div className="field">
         <Label htmlFor="statement-account">Which account is this statement for?</Label>
         <Select id="statement-account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
           <option value="">Not sure / a credit card</option>
@@ -77,7 +77,7 @@ export function StatementImport() {
             </option>
           ))}
         </Select>
-        <p className="text-xs text-muted-foreground">Picking an account also sets its balance from the statement's newest line, unless you set a newer one.</p>
+        <p className="max-w-prose text-sm leading-snug text-muted-foreground">Picking an account also sets its balance from the statement's newest line, unless you set a newer one.</p>
       </div>
       <input
         ref={input}

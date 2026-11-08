@@ -12,26 +12,26 @@ export function SpendingRules() {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
+      <p className="max-w-prose text-sm text-muted-foreground">
         When you tick "Remember", the merchant's future transactions get that category automatically.
       </p>
       {isLoading && <div className="h-16 animate-pulse rounded-xl bg-muted/40" />}
       {isError && <p className="text-sm text-destructive">Couldn't load rules.</p>}
       {rules &&
         (rules.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No rules yet.</p>
+          <p className="empty-note">No rules yet.</p>
         ) : (
-          <ul className="divide-y glass rounded-3xl">
+          <ul className="ledger">
             {rules.map((r) => (
-              <li key={r.pattern} className="flex items-center justify-between gap-3 p-3 text-sm">
-                <p className="min-w-0 truncate">
+              <li key={r.pattern} className="ledger-row text-sm">
+                <p className="min-w-0 truncate" title={r.pattern}>
                   <span className="font-medium">{r.pattern}</span>
                   <span className="text-muted-foreground"> → {categoryLabel(r.category)}</span>
                 </p>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 shrink-0"
+                  className="h-9 w-9 shrink-0"
                   aria-label={`Remove rule for ${r.pattern}`}
                   disabled={remove.isPending}
                   onClick={() => window.confirm(`Stop auto-categorising ${r.pattern}?`) && remove.mutate(r.pattern)}

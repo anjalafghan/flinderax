@@ -110,9 +110,9 @@ function PlanSummary({ plan, profile }: { plan: LifePlan; profile: LifeProfile }
       </div>
 
       <div className="flex flex-col gap-3.5">
-        <p className="m-0 font-display text-[56px] font-light leading-[0.95] tracking-[-0.03em] sm:text-[80px]">
+        <p className="m-0 font-display text-[48px] font-light leading-[0.95] tracking-[-0.03em] sm:text-[80px]">
           {formatINR(m.total_step_up_sip_paise)}
-          <span className="ml-2 align-middle text-base font-medium tracking-normal text-muted-foreground">a month</span>
+          <span className="ml-2 whitespace-nowrap align-middle text-base font-medium tracking-normal text-muted-foreground">a month</span>
         </p>
         <p className="m-0 text-base text-muted-foreground">
           To reach every goal below, with SIPs stepping up each year. Your surplus is{" "}
@@ -149,20 +149,21 @@ function GoalRow({ goal }: { goal: LifeGoal }) {
         <Pill tone={st.tone}>{st.label}</Pill>
       </div>
 
-      <div className="grid gap-x-8 gap-y-5 sm:grid-cols-3">
-        <div className="flex flex-col gap-1">
+      {/* Phones: cost and saved side by side, the monthly figure across both; three columns from sm. */}
+      <div className="grid grid-cols-2 gap-x-5 gap-y-5 sm:grid-cols-3 sm:gap-x-6">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] text-muted-foreground">Cost then</span>
-          <span className="font-display text-2xl">{formatINR(goal.future_cost_paise)}</span>
+          <span className="font-display text-xl sm:text-2xl">{formatINR(goal.future_cost_paise)}</span>
           <span className="text-[13px] text-muted-foreground">{formatINR(goal.today_cost_paise)} today</span>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] text-muted-foreground">Saved</span>
-          <span className="font-display text-2xl">{formatINR(goal.saved_paise)}</span>
+          <span className="font-display text-xl sm:text-2xl">{formatINR(goal.saved_paise)}</span>
           <span className="text-[13px] text-muted-foreground">
             {goal.gap_paise > 0 ? `${formatINR(goal.gap_paise)} still to go` : "Fully funded"}
           </span>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="col-span-2 flex min-w-0 flex-col gap-1 border-t border-border pt-4 sm:col-span-1 sm:border-t-0 sm:pt-0">
           <span className="text-[13px] text-muted-foreground">A month</span>
           <span className="font-display text-2xl">{formatINR(goal.step_up_sip_paise)}</span>
           <span className="text-[13px] text-muted-foreground">
@@ -254,16 +255,16 @@ function CoverRow({ label, needed, have, gap }: { label: string; needed: number;
         <h3 className="m-0 text-[17px] font-medium">{label}</h3>
         {gap > 0 ? <Pill tone="warn">{formatINR(gap)} short</Pill> : <Pill tone="good">Covered</Pill>}
       </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="flex flex-col gap-1">
+      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] text-muted-foreground">Needed</span>
           <span className="font-display text-2xl">{formatINR(needed)}</span>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] text-muted-foreground">Have</span>
           <span className="font-display text-2xl">{formatINR(have)}</span>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] text-muted-foreground">Gap</span>
           <span className="font-display text-2xl">{formatINR(gap)}</span>
         </div>
@@ -296,7 +297,7 @@ function Insurance({ insurance }: { insurance: LifePlan["insurance"] }) {
         />
       </ul>
       {insurance.notes.length > 0 && (
-        <ul className="mt-2 m-0 list-none space-y-1.5 p-0 text-[13px] text-muted-foreground">
+        <ul className="m-0 mt-2 list-none space-y-1.5 p-0 text-[13px] text-muted-foreground">
           {insurance.notes.map((n) => (
             <li key={n}>{n}</li>
           ))}
@@ -423,21 +424,34 @@ function buildProfile(d: Draft): LifeProfile {
   };
 }
 
-function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: ReactNode }) {
+function Field({
+  id,
+  label,
+  hint,
+  className,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={cn("field", className)}>
       <Label htmlFor={id}>{label}</Label>
       {children}
-      {hint && <p className="m-0 text-[13px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="m-0 text-[13px] leading-snug text-muted-foreground">{hint}</p>}
     </div>
   );
 }
 
+/** A small subheading over a two-column field grid. */
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <fieldset className="m-0 grid min-w-0 gap-4 border-0 p-0 sm:grid-cols-2">
-      <legend className="eyebrow mb-1 p-0">{title}</legend>
-      {children}
+    <fieldset className="m-0 min-w-0 border-0 p-0">
+      <legend className="mb-4 p-0 text-sm font-medium text-foreground">{title}</legend>
+      <div className="form-grid">{children}</div>
     </fieldset>
   );
 }
@@ -467,15 +481,15 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
     });
   };
 
-  const moneyField = (k: keyof Draft, id: string, label: string, hint?: string) => (
-    <Field id={id} label={label} hint={hint}>
+  const moneyField = (k: keyof Draft, id: string, label: string, hint?: string, className?: string) => (
+    <Field id={id} label={label} hint={hint} className={className}>
       <MoneyInput id={id} value={draft[k]} onChange={set(k)} />
     </Field>
   );
 
   return (
     <details open={!saved} className="group rounded-[28px] border border-border bg-card">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-6 sm:px-8">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-6 md:px-8">
         <span className="flex flex-col gap-1.5">
           <span className="font-display text-[32px] leading-none">Your details</span>
           <span className="text-[13px] text-muted-foreground">
@@ -485,27 +499,22 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
         <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
       </summary>
 
-      <form onSubmit={submit} noValidate className="grid gap-8 px-6 pb-8 sm:px-8">
-        <Group title="You">
+      <form onSubmit={submit} noValidate className="grid gap-8 px-6 pb-8 md:px-8">
+        <Group title="You two">
           <Field id="my_age" label="Your age">
             <Input id="my_age" type="number" inputMode="numeric" min={18} max={80} value={draft.my_age} onChange={set("my_age")} />
           </Field>
-          {moneyField("my_take_home", "my_take_home", "Your take-home a month (₹)")}
-        </Group>
-
-        <Group title="Partner">
           <Field id="partner_age" label="Partner's age" hint="Optional.">
             <Input id="partner_age" type="number" inputMode="numeric" min={18} max={80} value={draft.partner_age} onChange={set("partner_age")} />
           </Field>
+          {moneyField("my_take_home", "my_take_home", "Your take-home a month (₹)")}
           {moneyField("partner_take_home", "partner_take_home", "Partner's take-home a month (₹)", "Leave blank if there is no partner income.")}
-        </Group>
-
-        <Group title="Spending">
           {moneyField(
             "monthly_expenses",
             "monthly_expenses",
             "Monthly expenses (₹)",
             "Blank uses your spending budget, or half of combined take-home.",
+            "col-span-full",
           )}
         </Group>
 
@@ -532,17 +541,19 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
           {moneyField("retirement_saved", "retirement_saved", "Already saved for retirement (₹)", "EPF, PPF, NPS and earmarked mutual funds.")}
         </Group>
 
-        <Group title="Savings and cover">
+        <Group title="Safety net">
           {moneyField("emergency_saved", "emergency_saved", "Emergency savings (₹)")}
           {moneyField("loans", "loans", "Outstanding loans (₹)")}
           {moneyField("term_cover", "term_cover", "Existing term life cover, both (₹)")}
           {moneyField("health_cover", "health_cover", "Existing family health cover (₹)")}
         </Group>
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div aria-live="polite" className="min-h-5 text-sm text-[hsl(var(--over))]">
-            {error && <span role="alert">{error}</span>}
-          </div>
+        {error && (
+          <p role="alert" className="m-0 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <div className="form-actions">
           <Button type="submit" disabled={save.isPending}>
             {save.isPending ? "Saving..." : "Save details"}
           </Button>
@@ -560,7 +571,7 @@ export default function LifePage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl space-y-12">
+      <main className="page max-w-3xl stack">
         <div>
           <h1 className="page-title">Life plan</h1>
           <p className="page-sub">Your wedding, your child, and the years after — in today's rupees and tomorrow's.</p>

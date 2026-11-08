@@ -25,10 +25,10 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "ba
 /** Net worth this month, how it moved since last month, and the trend over time. */
 export function NetWorthPanel({ months }: { months: HistoryMonth[] }) {
   return (
-    <section aria-label="Net worth" className="space-y-3 glass rounded-3xl p-4 md:p-6">
+    <section aria-label="Net worth" className="space-y-6 glass rounded-3xl p-4 md:p-6">
       <h2 className="font-display text-[32px] leading-none tracking-tight">Net worth</h2>
       {months.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
+        <p className="empty-note">
           Net worth history starts building as you update balances.
         </p>
       ) : (
@@ -76,7 +76,7 @@ function NetWorthBody({ months }: { months: HistoryMonth[] }) {
         ]}
       />
 
-      <dl className="grid grid-cols-3 gap-3 border-t pt-4 text-sm">
+      <dl className="grid grid-cols-3 gap-3 border-t border-border pt-6 text-sm">
         <Stat label="Liquid" value={current.liquid_paise} />
         <Stat label="Locked (FD/RD)" value={current.locked_paise} />
         <Stat label="Card debt" value={current.card_debt_paise} tone={current.card_debt_paise > 0 ? "bad" : undefined} />

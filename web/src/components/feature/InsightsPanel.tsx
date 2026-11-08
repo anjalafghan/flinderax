@@ -88,7 +88,7 @@ function HealthSection({ health }: { health: InsightsOut["health"] }) {
     <section aria-labelledby="insights-health" className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-baseline gap-3">
-          <h3 id="insights-health" className="m-0 font-display text-[28px] leading-none">
+          <h3 id="insights-health" className="m-0 font-display text-[24px] leading-tight">
             Health
           </h3>
         </div>
@@ -102,7 +102,7 @@ function HealthSection({ health }: { health: InsightsOut["health"] }) {
           {health.score}
           <span className="text-2xl text-muted-foreground">/100</span>
         </p>
-        <div className="flex flex-1 flex-wrap gap-6 pb-1">
+        <div className="flex flex-1 flex-wrap gap-x-6 gap-y-5">
           <Stat
             label="Savings rate"
             value={health.savings_rate_bps === null ? "—" : `${Math.round(health.savings_rate_bps / 100)}%`}
@@ -119,10 +119,10 @@ function HealthSection({ health }: { health: InsightsOut["health"] }) {
       </div>
 
       {health.actions.length > 0 && (
-        <ol className="m-0 list-none p-0">
+        <ol className="ledger">
           {health.actions.map((a) => (
-            <li key={a.text} className="flex items-start justify-between gap-4 border-t border-border py-4">
-              <span className="text-[15px] leading-snug">{a.text}</span>
+            <li key={a.text} className="ledger-row items-start">
+              <span className="min-w-0 flex-1 text-[15px] leading-snug">{a.text}</span>
               <Pill className={IMPACT_TONE[a.impact]}>{a.impact} impact</Pill>
             </li>
           ))}
@@ -134,20 +134,22 @@ function HealthSection({ health }: { health: InsightsOut["health"] }) {
 
 function RefundsSection({ refunds }: { refunds: InsightRefund[] }) {
   return (
-    <section aria-labelledby="insights-refunds" className="flex flex-col">
-      <h3 id="insights-refunds" className="m-0 flex items-center gap-2.5 font-display text-[28px] leading-none">
-        <Undo2 className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+    <section aria-labelledby="insights-refunds" className="flex flex-col gap-4">
+      <h3 id="insights-refunds" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
+        <Undo2 className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
         Failed UPI refunds owed
       </h3>
-      <p className="m-0 pb-2 pt-3 text-[13px] text-muted-foreground">
+      <p className="m-0 text-[13px] leading-snug text-muted-foreground">
         RBI requires failed UPI debits to be reversed within a day (to a person) or five days (to a merchant); after that
         the bank owes ₹100 a day.
       </p>
-      <ul className="m-0 list-none p-0">
+      <ul className="ledger">
         {refunds.map((r) => (
-          <li key={r.txn_id} className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-border py-4">
+          <li key={r.txn_id} className="ledger-row flex-wrap gap-x-5 gap-y-2">
             <span className="flex min-w-0 flex-auto flex-col gap-0.5">
-              <span className="truncate text-base font-medium">{r.merchant ?? "Unknown payee"}</span>
+              <span className="truncate text-base font-medium" title={r.merchant ?? "Unknown payee"}>
+                {r.merchant ?? "Unknown payee"}
+              </span>
               <span className="text-[13px] text-muted-foreground">
                 {formatINR(r.amount_paise)} · {RAIL_LABEL[r.rail]} · debited {formatDay(r.occurred_on)}
               </span>
@@ -168,18 +170,18 @@ function RefundsSection({ refunds }: { refunds: InsightRefund[] }) {
 
 function ChargesSection({ charges }: { charges: InsightsOut["charges"] }) {
   return (
-    <section aria-labelledby="insights-charges" className="flex flex-col">
-      <div className="flex items-baseline justify-between gap-4 pb-3">
-        <h3 id="insights-charges" className="m-0 flex items-center gap-2.5 font-display text-[28px] leading-none">
-          <Receipt className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+    <section aria-labelledby="insights-charges" className="flex flex-col gap-4">
+      <div className="flex items-baseline justify-between gap-4">
+        <h3 id="insights-charges" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
+          <Receipt className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
           Charges &amp; fees
         </h3>
         <span className="font-display text-2xl">{formatINR(charges.last_12m_paise)}</span>
       </div>
-      <p className="m-0 pb-1 text-[13px] text-muted-foreground">Bank charges and fees in the last 12 months.</p>
-      <ul className="m-0 list-none p-0">
+      <p className="m-0 text-[13px] leading-snug text-muted-foreground">Bank charges and fees in the last 12 months.</p>
+      <ul className="ledger">
         {charges.items.map((c) => (
-          <li key={c.label} className="flex items-center justify-between gap-4 border-t border-border py-3.5">
+          <li key={c.label} className="ledger-row">
             <span className="text-[15px]">
               {c.label}
               {c.count > 1 && <span className="ml-2 text-[13px] text-muted-foreground">×{c.count}</span>}
@@ -194,16 +196,18 @@ function ChargesSection({ charges }: { charges: InsightsOut["charges"] }) {
 
 function DuplicatesSection({ duplicates }: { duplicates: InsightsOut["duplicates"] }) {
   return (
-    <section aria-labelledby="insights-duplicates" className="flex flex-col">
-      <h3 id="insights-duplicates" className="m-0 flex items-center gap-2.5 font-display text-[28px] leading-none">
-        <Copy className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+    <section aria-labelledby="insights-duplicates" className="flex flex-col gap-4">
+      <h3 id="insights-duplicates" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
+        <Copy className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
         Possible duplicate charges
       </h3>
-      <ul className="mt-3 list-none p-0">
+      <ul className="ledger">
         {duplicates.map((d) => (
-          <li key={`${d.merchant}-${d.occurred_on}-${d.amount_paise}`} className="flex items-center justify-between gap-5 border-t border-border py-4">
+          <li key={`${d.merchant}-${d.occurred_on}-${d.amount_paise}`} className="ledger-row gap-5">
             <span className="flex min-w-0 flex-auto flex-col gap-0.5">
-              <span className="truncate text-base font-medium">{d.merchant}</span>
+              <span className="truncate text-base font-medium" title={d.merchant}>
+                {d.merchant}
+              </span>
               <span className="text-[13px] text-muted-foreground">
                 {plural(d.count, "charge")} on {formatDay(d.occurred_on)}
               </span>
@@ -218,15 +222,15 @@ function DuplicatesSection({ duplicates }: { duplicates: InsightsOut["duplicates
 
 function UnusualSection({ unusual }: { unusual: InsightsOut["unusual"] }) {
   return (
-    <section aria-labelledby="insights-unusual" className="flex flex-col">
-      <h3 id="insights-unusual" className="m-0 flex items-center gap-2.5 font-display text-[28px] leading-none">
-        <TrendingUp className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+    <section aria-labelledby="insights-unusual" className="flex flex-col gap-4">
+      <h3 id="insights-unusual" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
+        <TrendingUp className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
         Unusual months
       </h3>
-      <ul className="mt-3 list-none p-0">
+      <ul className="ledger">
         {unusual.map((u) => (
-          <li key={`${u.category}-${u.month}`} className="flex items-center justify-between gap-5 border-t border-border py-4">
-            <span className="text-[15px]">
+          <li key={`${u.category}-${u.month}`} className="ledger-row">
+            <span className="text-[15px] leading-snug">
               {`${u.category} in ${monthYear(u.month)}: ${rupees(u.amount_paise)} vs usual ${rupees(u.typical_paise)}`}
             </span>
           </li>
@@ -238,12 +242,12 @@ function UnusualSection({ unusual }: { unusual: InsightsOut["unusual"] }) {
 
 function PaydaySection({ p }: { p: NonNullable<InsightsOut["spend_to_payday"]> }) {
   return (
-    <section aria-labelledby="insights-payday" className="flex flex-col">
-      <h3 id="insights-payday" className="m-0 flex items-center gap-2.5 font-display text-[28px] leading-none">
-        <Wallet className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+    <section aria-labelledby="insights-payday" className="flex flex-col gap-4">
+      <h3 id="insights-payday" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
+        <Wallet className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
         Spending to payday
       </h3>
-      <p className="m-0 pt-3 text-[15px] leading-snug">
+      <p className="m-0 text-[15px] leading-snug">
         {`Between ${rupees(p.p10_paise)} and ${rupees(p.p90_paise)} likely to go before payday in ${plural(p.days, "day")} (most likely ${rupees(p.p50_paise)}).`}
       </p>
     </section>
@@ -281,7 +285,7 @@ export function InsightsPanel() {
       </header>
 
       {isEmpty(data) ? (
-        <p className="m-0 text-sm text-muted-foreground">
+        <p className="empty-note">
           Not enough transactions yet. Import a statement or forward bank alerts to see insights.
         </p>
       ) : (
