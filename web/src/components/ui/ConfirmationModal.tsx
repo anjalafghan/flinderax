@@ -29,8 +29,8 @@ export function ConfirmationModal({
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/50 backdrop-blur-md p-4 animate-in fade-in duration-200">
-            <Card className="w-full max-w-md animate-in zoom-in duration-200 shadow-2xl overflow-hidden border-none">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/30 p-4 animate-in fade-in duration-200">
+            <Card className="w-full max-w-md animate-in zoom-in duration-200 overflow-hidden">
                 <div className={cn(
                     "h-1.5 w-full",
                     variant === "destructive" ? "bg-destructive" : "bg-primary"
@@ -65,7 +65,7 @@ export function ConfirmationModal({
                         </Button>
                         <Button
                             variant={variant === "destructive" ? "destructive" : "default"}
-                            className="flex-1 h-11 rounded-xl font-semibold shadow-sm"
+                            className="flex-1 h-11 rounded-xl font-semibold"
                             onClick={onConfirm}
                             disabled={isPending}
                         >

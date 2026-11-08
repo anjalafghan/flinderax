@@ -8,8 +8,8 @@ import { formatINR } from "@/utils/money";
 import { cn } from "@/utils/cn";
 
 const STYLE = {
-  urgent: "[--dot:var(--destructive)]",
-  warn: "[--dot:var(--glow-a)]",
+  urgent: "[--dot:var(--over)]",
+  warn: "[--dot:var(--warn)]",
   info: "[--dot:var(--muted-foreground)]",
 } as const;
 
@@ -64,7 +64,7 @@ export function ActionList({ actions }: { actions: DashboardSummary["actions"] }
   return (
     <section aria-label="Do this" className="space-y-3">
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="font-display text-4xl leading-none md:text-[44px]">Do this</h2>
+        <h2 className="font-display text-[32px] leading-none">Do this</h2>
         <span className="eyebrow">{actions.length > 1 ? `${actions.length} things, now` : "one thing, now"}</span>
       </div>
       {actions.length === 0 ? (

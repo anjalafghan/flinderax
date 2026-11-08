@@ -25,8 +25,8 @@
   clip-path: polygon(2% 8%, 9% 2%, 22% 5%, 37% 0, 52% 4%, 66% 1%, 81% 5%, 94% 1%, 100% 12%, 97% 30%, 100% 52%, 96% 74%, 99% 92%, 88% 99%, 71% 95%, 55% 100%, 38% 96%, 21% 100%, 6% 95%, 0 82%, 3% 60%, 0 38%, 3% 20%);
 }
 /* clip-path cuts off an element's own drop-shadow, so torn shapes cast it from a wrapper */
-.m-shadow { filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .16)); }
-.m-patch-wrap { max-width: 100%; filter: drop-shadow(0 3px 4px rgba(40, 25, 10, .18)); }
+.m-shadow { filter: none; }
+.m-patch-wrap { max-width: 100%; }
 .m-receipt-wrap { position: relative; z-index: 1; width: min(250px, 92%); margin: -8px 0 0 auto; }
 .m-entry > .m-shadow:first-child { width: min(320px, 100%); }
 .m-other .m-receipt-wrap { margin: 0; }
@@ -48,11 +48,11 @@
 .m-sheet {
   --pen: #24303a; --pen-soft: #4b5560; --red: #a3271c;
   position: relative; margin: 26px 0 0; padding: 40px 20px 36px; color: var(--pen);
-  background-color: #f6f5f2;
+  background-color: hsl(var(--card));
   background-image: radial-gradient(circle, rgba(60, 64, 80, .3) 1px, transparent 1.4px);
   background-size: 20px 20px; background-position: 10px 10px;
   border-radius: 6px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .5) inset, 0 30px 40px -20px rgba(0, 0, 0, .4), 0 2px 6px rgba(0, 0, 0, .12);
+  box-shadow: 0 0 0 1px var(--rule);
 }
 .m-collage { columns: 1; column-gap: 96px; }
 .m-piece { break-inside: avoid; margin: 0 0 44px; }
@@ -60,7 +60,7 @@
 .m-entry { position: relative; display: grid; justify-items: start; }
 .m-print {
   position: relative; width: min(300px, 100%); margin: 0; padding: 30px 14px 16px; background: #fff;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, .12), 0 12px 20px -8px rgba(0, 0, 0, .35);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .06);
   rotate: calc(var(--t, 0) * 1.3deg);
 }
 .m-print-stamp { position: absolute; top: 4px; left: 0; right: 0; text-align: center; font: 600 1.375rem/1 var(--font-hand); color: var(--pen); letter-spacing: .04em; }
@@ -124,7 +124,7 @@
 .m-sticker {
   display: grid; justify-items: center; gap: 6px; width: min(320px, 100%); padding: 10px 22px 22px;
   background: #fff; color: #161616; border-radius: 18px; rotate: -3deg;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, .06), 0 10px 18px -8px rgba(0, 0, 0, .35);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .06);
 }
 .m-sticker-arc { width: 100%; height: auto; max-width: 260px; overflow: visible; }
 .m-sticker-arc text { font: 800 15px var(--font-ui); letter-spacing: .14em; fill: #161616; }
@@ -166,6 +166,6 @@
 .m-collage { columns: 2; }
 }
 :where(.dark) & {
-.m-sheet { box-shadow: 0 30px 50px -20px rgba(0, 0, 0, .7), 0 0 0 1px rgba(255, 255, 255, .04); }
+.m-sheet { box-shadow: 0 0 0 1px rgba(255, 255, 255, .04); }
 }
 }

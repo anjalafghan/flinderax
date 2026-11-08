@@ -133,7 +133,7 @@
 .slip:active { transform: translateX(var(--x)) rotate(0deg) scale(.995); }
 :where(.dark) & {
 /* the slips catch a little warm light */
-  .slip, .paper-slip { box-shadow: var(--shadow-slip), inset 0 1px 0 rgba(255, 214, 170, .07); }
+  .slip, .paper-slip { box-shadow: none; }
 }
 /* the folded corner: page colour where the corner was, the tint on the flap */
 .fold {
@@ -220,7 +220,6 @@
 .empty-jar-art .floor { stroke: var(--rule); }
 .empty-jar-art .lone-slip { fill: var(--tint-local); stroke-width: 1.6; opacity: .0; }
 :where(.dark) & {
-.empty-jar-art { filter: drop-shadow(0 0 28px var(--glow)); }
 .empty-jar-art .glass { fill: color-mix(in srgb, var(--slip) 70%, transparent); }
 }
 .empty-jar h2 { font-size: var(--step-3); }
@@ -288,7 +287,7 @@
   padding: 4px 4px 4px 16px; border-radius: 999px;
   background: var(--ink); color: var(--paper);
   font: 500 var(--step--1)/1.3 var(--font-ui);
-  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, .5);
+  box-shadow: none;
   animation: toast-in var(--t-small) var(--ease-out) both;
 }
 .toast-msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -302,7 +301,7 @@
 /* floating "Write a slip" once the header button scrolls away (JS adds it; mobile) */
 .fab {
   position: fixed; right: var(--gutter); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 30;
-  box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--stamp) 70%, black);
+  box-shadow: none;
   transform: translateY(140%); opacity: 0;
   transition: transform var(--t-medium) var(--ease-out), opacity var(--t-small) var(--ease-out);
 }
@@ -517,7 +516,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
   margin: auto auto 0; padding: 0;
   color: var(--ink); background: var(--paper);
   border: 0; border-radius: 16px 16px 0 0;
-  box-shadow: 0 -18px 40px -20px rgba(0, 0, 0, .45);
+  border-top: 1px solid var(--rule);
 }
 .plan-dlg::backdrop { background: color-mix(in srgb, var(--ink) 55%, transparent); }
 .plan-dlg[open] { animation: plan-rise var(--t-medium) var(--ease-out); }

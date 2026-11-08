@@ -10,6 +10,7 @@ export function ModeToggle() {
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
             className="h-11 w-11 rounded-full border border-border hover:bg-accent/50 transition-all duration-300"
         >
             <Moon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

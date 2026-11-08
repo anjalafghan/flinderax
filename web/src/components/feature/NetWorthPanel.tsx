@@ -15,7 +15,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "ba
   return (
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn("font-semibold tabular-nums", tone === "bad" && "text-rose-600 dark:text-rose-400")}>
+      <dd className={cn("font-semibold tabular-nums", tone === "bad" && "text-over")}>
         {formatINR(value)}
       </dd>
     </div>
@@ -26,7 +26,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "ba
 export function NetWorthPanel({ months }: { months: HistoryMonth[] }) {
   return (
     <section aria-label="Net worth" className="space-y-3 glass rounded-3xl p-4 md:p-6">
-      <h2 className="font-display text-3xl leading-none tracking-tight">Net worth</h2>
+      <h2 className="font-display text-[32px] leading-none tracking-tight">Net worth</h2>
       {months.length === 0 ? (
         <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
           Net worth history starts building as you update balances.
@@ -55,7 +55,7 @@ function NetWorthBody({ months }: { months: HistoryMonth[] }) {
           <p
             className={cn(
               "mt-1 text-sm font-semibold tabular-nums",
-              change >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400",
+              change >= 0 ? "text-good" : "text-over",
             )}
           >
             {change >= 0 ? "+" : "−"}
@@ -71,7 +71,7 @@ function NetWorthBody({ months }: { months: HistoryMonth[] }) {
           {
             label: "Net worth",
             values: months.map((m) => m.net_worth_paise),
-            stroke: "stroke-emerald-500",
+            stroke: "stroke-good",
           },
         ]}
       />

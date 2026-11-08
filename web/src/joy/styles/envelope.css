@@ -12,7 +12,6 @@
   --w: min(84vw, 340px); --h: calc(var(--w) * .64);
   position: relative; width: var(--w); height: var(--h); margin-top: calc(var(--h) * .5);
   perspective: 900px;
-  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .28));
 }
 .env-back, .env-pocket, .env-flap { position: absolute; left: 0; right: 0; }
 .env-back { inset: 0; border-radius: 10px; background: color-mix(in srgb, var(--stamp) 22%, var(--slip)); }
@@ -44,7 +43,7 @@
   width: 62px; height: 62px; border-radius: 50%; border: 0; cursor: pointer;
   display: grid; place-items: center;
   background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--stamp) 70%, #fff) 0, var(--stamp) 45%, color-mix(in srgb, var(--stamp) 75%, #000) 100%);
-  box-shadow: 0 3px 0 color-mix(in srgb, var(--stamp) 60%, #000), 0 8px 18px -6px rgba(0, 0, 0, .5);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--stamp) 60%, #000);
   animation: seal-breathe 2.6s ease-in-out infinite;
   transition: transform .35s ease, opacity .35s ease;
 }
@@ -58,7 +57,7 @@
 .env-letter {
   width: 100%; margin-top: 18px; padding: 24px 22px 20px; border-radius: var(--radius-slip, 14px);
   background: var(--slip); color: var(--ink);
-  box-shadow: var(--shadow-slip, 0 10px 30px -14px rgba(0, 0, 0, .4));
+  box-shadow: none;
   transform: rotate(-.6deg);
 }
 .js .env-letter { display: none; }

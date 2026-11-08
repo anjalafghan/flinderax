@@ -80,7 +80,6 @@ export const CardCarousel = memo(function CardCarousel({
 
                 // Opacity & Filter
                 const opacity = isActive ? 1 : Math.max(0.3, 1 - Math.abs(offset) * 0.3);
-                const blurValue = isActive ? 0 : Math.min(4, Math.abs(offset) * 2);
 
                 // Position & Rotation logic
                 // Reduced offsets for "overlap" feel
@@ -105,10 +104,7 @@ export const CardCarousel = memo(function CardCarousel({
                             opacity,
                             zIndex,
                             rotateY: `${rotateY}deg`,
-                            filter: `blur(${blurValue}px) brightness(${isActive ? 1 : 0.7})`,
-                            boxShadow: isActive
-                                ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
-                                : "0 10px 20px -5px rgba(0, 0, 0, 0.2)"
+                            filter: `brightness(${isActive ? 1 : 0.7})`
                         }}
                         transition={{
                             type: "spring",
@@ -160,7 +156,7 @@ export const CardCarousel = memo(function CardCarousel({
                                     transition={{ delay: 0.1, duration: 0.3 }}
                                     className="absolute -bottom-14 md:-bottom-20 left-0 right-0 flex justify-center z-50 pointer-events-none"
                                 >
-                                    <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6 shadow-xl pointer-events-auto">
+                                    <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6 pointer-events-auto">
                                         View Details <ArrowRight className="ml-2 h-4 w-4" />
                                     </Button>
                                 </motion.div>

@@ -95,7 +95,6 @@
    a drop-shadow filter on the whole jar, which redrew under every firefly and falling slip. */
 .jar::before { content: ""; position: absolute; left: 9.5%; right: 9.5%; top: 30%; bottom: 3.5%; border-radius: 12% / 9%; pointer-events: none; }
 :where(.dark) & {
-.jar::before { box-shadow: 0 0 26px 2px color-mix(in srgb, var(--glow) calc(var(--lit) * 70%), transparent); }
 .fireflies { display: inline; }
 .fireflies circle { animation: firefly var(--d) var(--ease-in-out) var(--o) infinite; }
 .label-text { fill: var(--ink); }
@@ -152,7 +151,7 @@
   background: var(--slip);
   color: var(--ink);
   border-radius: var(--radius-slip);
-  box-shadow: var(--shadow-slip), 0 30px 50px -36px color-mix(in srgb, var(--ink) 50%, transparent);
+  box-shadow: none;
   transform: rotate(-.8deg);
   transform-origin: 50% 0;
   /* a soft deckled bottom edge */
@@ -337,7 +336,7 @@
 .start-from:not(:has(:checked)) .chip span { color: var(--ink-soft); }
 .start-from:has(:checked) .chip span { background-size: 0 0; }
 .draw-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 18px; }
-.btn-draw { min-height: 56px; padding: 0 30px; font-size: var(--step-1); box-shadow: 0 10px 22px -14px var(--stamp); }
+.btn-draw { min-height: 56px; padding: 0 30px; font-size: var(--step-1); }
 .shake-opt {
   min-height: 44px; padding: 0 4px; border: 0; background: none; cursor: pointer;
   font: 600 1.3rem/1 var(--font-hand); color: var(--ink-soft);
@@ -356,7 +355,7 @@
   position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none;
   width: 34px; height: 14px; border-radius: 1.5px;
   background: linear-gradient(90deg, var(--tint) 0 55%, color-mix(in srgb, var(--tint) 45%, var(--slip)) 55%);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 20%, transparent), 0 6px 12px -6px color-mix(in srgb, var(--ink) 50%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 20%, transparent);
   will-change: transform;
 }
 .flyer::after { content: ""; position: absolute; left: 55%; top: 0; bottom: 0; width: 1px; background: color-mix(in srgb, var(--ink) 22%, transparent); }
@@ -601,7 +600,7 @@
   position: relative; margin-top: 18px; padding: 16px 16px 14px;
   background: var(--slip); color: var(--ink);
   border: 1px solid var(--rule); border-left: 4px solid var(--stamp); border-radius: var(--radius-slip, 6px);
-  box-shadow: 0 1px 0 var(--rule), 0 10px 22px -18px rgba(43, 36, 51, .45);
+  box-shadow: 0 1px 0 var(--rule);
 }
 .slip .dayplan { box-shadow: none; }
 .dp-when { margin: 0; font: 600 var(--step--1)/1.2 var(--font-ui); letter-spacing: .04em; text-transform: uppercase; color: var(--stamp); }

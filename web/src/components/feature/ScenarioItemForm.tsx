@@ -40,7 +40,7 @@ export function ScenarioItemForm({
   const isDeposit = draft.kind !== "one_off";
   const spendable = accounts.filter((a) => !a.locked);
   return (
-    <Card className={invalid ? "border-amber-500/50" : undefined}>
+    <Card className={invalid ? "border-warn/40" : undefined}>
       <CardContent className="grid gap-3 p-4 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor={id("name")}>Name</Label>
@@ -112,7 +112,7 @@ export function ScenarioItemForm({
           </>
         )}
         <div className="flex items-center justify-between sm:col-span-2">
-          <p className="text-xs text-amber-600 dark:text-amber-400">{invalid ? "Fill in a valid amount, date, tenure and rate." : ""}</p>
+          <p className="text-xs text-warn">{invalid ? "Fill in a valid amount, date, tenure and rate." : ""}</p>
           <Button variant="ghost" size="sm" onClick={onRemove}>
             <Trash2 className="mr-1 h-4 w-4" /> Remove
           </Button>

@@ -6,7 +6,7 @@ export function UpcomingList({ items, limit = 5 }: { items: DashboardSummary["up
   const shown = items.slice(0, limit);
   return (
     <section aria-label="Upcoming payments" className="space-y-3">
-      <h2 className="font-display text-3xl leading-none tracking-tight">Upcoming payments</h2>
+      <h2 className="font-display text-[32px] leading-none tracking-tight">Upcoming payments</h2>
       {shown.length === 0 ? (
         <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
           No payments before your next income.

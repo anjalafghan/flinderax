@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { defaultBucket } from "@/utils/buckets";
 import { formatDay } from "@/utils/dates";
 import { formatINR } from "@/utils/money";
-import { coveredLine, groupBillsByWeek, localIsoDate, nextBills, progressPercent } from "@/utils/planner";
+import { coveredLine, daysBetween, groupBillsByWeek, localIsoDate, nextBills, progressPercent } from "@/utils/planner";
 
 const KIND_LABEL: Record<Bill["kind"], string> = {
   monthly: "Monthly",
@@ -157,25 +157,50 @@ export function BillsPanel() {
 }
 
 /** Today page: the next three bills due within a week. Renders nothing when there are none. */
+/** "in 2 days" / "today" / "tomorrow". */
+function inDays(n: number): string {
+  return n <= 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`;
+}
+
+/** Home-screen ledger: the next week's bills, one hairline row each, then the total. */
 export function DueSoonCard() {
   const { data } = useBills(30);
-  const soon = data ? nextBills(data.bills, localIsoDate(), 7, 3) : [];
+  const today = localIsoDate();
+  const soon = data ? nextBills(data.bills, today, 7, 5) : [];
   if (soon.length === 0) return null;
+  const total = soon.reduce((a, b) => a + b.amount_paise, 0);
   return (
-    <Card aria-label="Due soon" className="w-full">
-      <CardHeader className="flex-row items-baseline justify-between space-y-0 pb-2">
-        <CardTitle className="text-4xl md:text-[44px]">Due soon</CardTitle>
-        <Link to="/plan#bills" className="inline-flex min-h-11 items-center text-sm text-primary hover:text-foreground">
+    <section aria-labelledby="due-title" className="flex w-full flex-col">
+      <div className="flex items-baseline justify-between gap-4 pb-3.5">
+        <h2 id="due-title" className="m-0 font-display text-[32px] leading-none">
+          Due soon
+        </h2>
+        <Link to="/plan#bills" className="inline-flex min-h-11 items-center text-sm font-medium text-foreground">
           All bills
         </Link>
-      </CardHeader>
-      <CardContent>
-        <ul className="divide-y divide-border">
-          {soon.map((b) => (
-            <BillRow key={`${b.date}-${b.label}-${b.kind}`} bill={b} />
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+      </div>
+      <ul className="m-0 list-none p-0">
+        {soon.map((b) => {
+          const covered = coveredLine(b, formatINR);
+          return (
+            <li key={`${b.date}-${b.label}-${b.kind}`} className="flex items-center gap-5 border-t border-border py-[18px]">
+              <span className="w-16 shrink-0 text-sm text-muted-foreground">{formatDay(b.date)}</span>
+              <span className="flex min-w-0 flex-auto flex-col gap-0.5">
+                <span className="truncate text-base font-medium">{b.label}</span>
+                <span className="text-[13px] text-muted-foreground">
+                  {KIND_LABEL[b.kind]} · {inDays(daysBetween(today, b.date))}
+                  {covered && <> · {covered}</>}
+                </span>
+              </span>
+              <span className="shrink-0 font-display text-2xl">{formatINR(b.amount_paise)}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex items-center justify-between gap-5 border-t border-foreground pt-[18px]">
+        <span className="text-sm text-muted-foreground">Total this week</span>
+        <span className="font-display text-2xl">{formatINR(total)}</span>
+      </div>
+    </section>
   );
 }

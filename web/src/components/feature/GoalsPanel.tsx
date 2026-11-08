@@ -168,7 +168,7 @@ function GoalItem({ goal }: { goal: Goal }) {
         aria-valuenow={pct}
         className="h-2 w-full overflow-hidden rounded-full bg-muted"
       >
-        <div className="h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-good transition-[width]" style={{ width: `${pct}%` }} />
       </div>
 
       {!done && goal.this_month_paise > 0 && (
@@ -176,7 +176,7 @@ function GoalItem({ goal }: { goal: Goal }) {
       )}
 
       {goal.status === "behind" && goal.fixes.length > 0 && (
-        <div className="rounded-md bg-amber-500/10 p-3 text-amber-800 dark:text-amber-200">
+        <div className="rounded-md bg-warn-tint p-3 text-warn">
           <p className="mb-1 font-medium">To get back on track:</p>
           <ul className="list-disc space-y-1 pl-5">
             {goal.fixes.map((f) => (
@@ -233,7 +233,7 @@ export function GoalsPanel() {
         {isError && <p className="text-sm text-destructive">Could not load goals. Try again in a moment.</p>}
 
         {data?.emergency_suggested_paise != null && data.emergency_suggested_paise > 0 && (
-          <div className="flex flex-col gap-3 rounded-lg border border-sky-500/30 bg-sky-500/10 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-chip p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="font-medium">Start an emergency fund of {formatINR(data.emergency_suggested_paise)} (6 months of needs)</p>
             <Button
               size="sm"

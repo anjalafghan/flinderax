@@ -24,7 +24,7 @@ function Option({ title, a }: { title: string; a: Absorption }) {
         ))}
       </ul>
       {a.from_fd_paise > 0 && (
-        <p className="font-medium text-rose-600 dark:text-rose-400">
+        <p className="font-medium text-over">
           {formatINR(a.from_fd_paise)} a month would have to come from an FD.
         </p>
       )}
@@ -80,7 +80,7 @@ export function ImpactCard({ impact }: { impact: ItemImpact }) {
           <div
             className={cn(
               "glass rounded-2xl p-3 text-sm",
-              g.gap_paise >= 0 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10",
+              g.gap_paise >= 0 ? "border-good/40 bg-good-tint" : "border-warn/40 bg-warn-tint",
             )}
           >
             <p className="font-semibold">

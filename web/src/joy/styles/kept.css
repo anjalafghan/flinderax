@@ -490,7 +490,7 @@
   width: min(100%, 300px); margin: 18px auto 4px;
   padding: 9px 9px 0;
   background: var(--slip);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 16%, transparent), 0 10px 20px -12px color-mix(in srgb, var(--ink) 55%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 16%, transparent);
   transform: rotate(var(--tilt));
   scroll-margin-top: 90px;
 }
@@ -617,7 +617,7 @@
 .k-worth { display: inline-block; margin-left: 10px; font-size: 1.3rem; line-height: 1; color: var(--ink-soft); transform: rotate(-4deg) translateY(2px); }
 :where(.dark) & {
 /* at night the polaroid's white border catches the lamp: a hairline keeps it a separate card */
-  .k-polaroid { box-shadow: 0 0 0 1px var(--rule), 0 12px 22px -12px rgba(0, 0, 0, .8); }
+  .k-polaroid { box-shadow: 0 0 0 1px var(--rule); }
 .k-polaroid::before { background: color-mix(in srgb, color-mix(in srgb, var(--tint) 62%, var(--ink) 38%) 70%, transparent); }
 }
 /* without JS: "Add a photo" reads as the label, then the picker and Upload on one line */

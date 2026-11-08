@@ -52,7 +52,7 @@ export default function SpendingPage() {
 
         <section aria-label="Add transactions" className="space-y-4 glass rounded-3xl p-4 md:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="font-display text-3xl leading-none">Add transactions</h2>
+            <h2 className="font-display text-[32px] leading-none">Add transactions</h2>
             <div role="tablist" aria-label="How to add" className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
               {ADD_MODES.map((m) => (
                 <button
@@ -62,7 +62,7 @@ export default function SpendingPage() {
                   onClick={() => setAddMode(m.id)}
                   className={cn(
                     "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors",
-                    addMode === m.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                    addMode === m.id ? "bg-card text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <m.icon className="h-4 w-4" aria-hidden />
@@ -104,7 +104,7 @@ export default function SpendingPage() {
               <JoyConnect />
             </section>
             <section aria-label="Rules" className="space-y-3">
-              <h2 className="font-display text-3xl leading-none">Rules</h2>
+              <h2 className="font-display text-[32px] leading-none">Rules</h2>
               <SpendingRules />
             </section>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { X } from "lucide-react";
@@ -79,27 +79,7 @@ export function EditCardModal({
   const { data: accounts } = useAccounts();
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    setName(currentName);
-    setBank(currentBank);
-    setPrimaryColor(rgbToHex(...currentPrimaryColor));
-    setSecondaryColor(rgbToHex(...currentSecondaryColor));
-    setLast4Digits(currentLast4Digits || "");
-    setStatementDay(currentStatementDay ? String(currentStatementDay) : "");
-    setDueDay(currentDueDay ? String(currentDueDay) : "");
-    setCreditLimit(currentCreditLimitPaise ? paiseToInput(currentCreditLimitPaise) : "");
-    setPayFrom(currentPayFrom ?? "");
-  }, [
-    currentName,
-    currentBank,
-    currentPrimaryColor,
-    currentSecondaryColor,
-    currentLast4Digits,
-    currentStatementDay,
-    currentDueDay,
-    currentCreditLimitPaise,
-    currentPayFrom,
-  ]);
+  // The form is seeded from props once; the page remounts it (a new `key`) each time it opens.
 
   const handleNameChange = useCallback((value: string) => setName(value), []);
   const handleBankChange = useCallback((value: string) => setBank(value), []);
@@ -165,7 +145,7 @@ export function EditCardModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 p-4">
       <Card className="w-full max-w-md animate-in fade-in zoom-in duration-200">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-3xl">Edit Card</CardTitle>

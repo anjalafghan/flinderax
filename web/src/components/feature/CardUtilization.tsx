@@ -4,9 +4,9 @@ import { cn } from "@/utils/cn";
 
 /** Under 30% reads as healthy, 30-70% as a warning, over 70% as a risk. */
 function barTone(bps: number): string {
-  if (bps < 3000) return "bg-emerald-500";
-  if (bps <= 7000) return "bg-amber-500";
-  return "bg-rose-500";
+  if (bps < 3000) return "bg-good";
+  if (bps <= 7000) return "bg-warn";
+  return "bg-over";
 }
 
 /** How much of each card's credit limit is in use right now. Hidden when there are no cards. */
@@ -14,7 +14,7 @@ export function CardUtilization({ cards }: { cards: HistoryCard[] }) {
   if (cards.length === 0) return null;
   return (
     <section aria-label="Card utilization" className="space-y-3 glass rounded-3xl p-4 md:p-6">
-      <h2 className="font-display text-3xl leading-none tracking-tight">Card usage</h2>
+      <h2 className="font-display text-[32px] leading-none tracking-tight">Card usage</h2>
       <ul className="space-y-4">
         {cards.map((c) => {
           const hasLimit = c.limit_paise != null && c.limit_paise > 0 && c.utilization_bps != null;

@@ -1,9 +1,6 @@
 @import "tailwindcss";
 @variant dark (&:where(.dark, .dark *));
 
-@font-face { font-family: "Instrument Serif"; src: url("./fonts/InstrumentSerif-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: "Instrument Serif"; src: url("./fonts/InstrumentSerif-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
-@font-face { font-family: "Inter"; src: url("./fonts/Inter.woff2") format("woff2"); font-weight: 400 600; font-style: normal; font-display: swap; }
 @font-face { font-family: "JetBrains Mono"; src: url("./fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 400 500; font-style: normal; font-display: swap; }
 
 @theme {
@@ -34,7 +31,17 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
-  --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --color-chip: hsl(var(--chip));
+  --color-soft: hsl(var(--soft));
+  --color-good: hsl(var(--good));
+  --color-good-tint: hsl(var(--good-tint));
+  --color-warn: hsl(var(--warn));
+  --color-warn-tint: hsl(var(--warn-tint));
+  --color-over: hsl(var(--over));
+  --color-over-tint: hsl(var(--over-tint));
+
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --radius-lg: var(--radius);
@@ -44,75 +51,86 @@
 
 @layer base {
   :root {
-    /* Ethereal light: warm paper in the morning, the same ember glow as the night. */
-    --background: 36 32% 95%;
-    --foreground: 222 28% 11%;
+    /* Warm minimalism, light: oat paper, warm ink, hairlines instead of shadows. */
+    --background: 37 42% 94%;
+    --foreground: 36 10% 10%;
 
-    --card: 40 40% 99%;
-    --card-foreground: 222 28% 11%;
+    --card: 37 57% 97%;
+    --card-foreground: 36 10% 10%;
 
-    --popover: 40 40% 99%;
-    --popover-foreground: 222 28% 11%;
+    --popover: 37 57% 97%;
+    --popover-foreground: 36 10% 10%;
 
-    --primary: 12 78% 48%;
-    --primary-foreground: 40 40% 98%;
+    /* Ink is the accent: buttons are ink on paper. */
+    --primary: 36 10% 10%;
+    --primary-foreground: 37 42% 94%;
 
-    --secondary: 36 22% 91%;
-    --secondary-foreground: 222 28% 18%;
+    --secondary: 38 33% 89%;
+    --secondary-foreground: 36 10% 10%;
 
-    --muted: 36 20% 91%;
-    --muted-foreground: 220 9% 40%;
+    --muted: 38 33% 89%;
+    --muted-foreground: 35 9% 36%;
 
-    --accent: 18 60% 90%;
-    --accent-foreground: 12 70% 32%;
+    --accent: 38 33% 89%;
+    --accent-foreground: 36 10% 10%;
 
-    --destructive: 352 70% 48%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 8 68% 38%;
+    --destructive-foreground: 37 42% 96%;
 
-    --border: 222 20% 14% / 0.13;
-    --input: 222 20% 14% / 0.2;
-    --ring: 12 78% 52%;
+    --border: 37 27% 85%;
+    --input: 37 20% 78%;
+    --ring: 36 10% 10%;
 
-    --radius: 1.25rem;
+    --radius: 1.125rem;
 
-    --glow-a: 12 85% 62%;
-    --glow-b: 214 70% 62%;
-    --hair: 222 28% 11%;
+    --soft: 33 10% 22%;
+    --chip: 38 33% 89%;
+    --good: 151 41% 29%;
+    --good-tint: 134 28% 91%;
+    --warn: 33 92% 28%;
+    --warn-tint: 38 66% 90%;
+    --over: 8 68% 38%;
+    --over-tint: 11 61% 91%;
   }
 
   .dark {
-    /* Ethereal night: ink-blue black, ember and deep-blue light bleeding in. */
-    --background: 220 40% 5.5%;
-    --foreground: 40 22% 90%;
+    /* Warm minimalism, night: espresso paper, cream ink. */
+    --background: 43 19% 7%;
+    --foreground: 39 33% 92%;
 
-    --card: 218 36% 7.5%;
-    --card-foreground: 40 22% 90%;
+    --card: 38 15% 10%;
+    --card-foreground: 39 33% 92%;
 
-    --popover: 218 36% 8%;
-    --popover-foreground: 40 22% 90%;
+    --popover: 38 15% 11%;
+    --popover-foreground: 39 33% 92%;
 
-    --primary: 24 62% 86%;
-    --primary-foreground: 220 40% 8%;
+    --primary: 39 33% 92%;
+    --primary-foreground: 43 19% 7%;
 
-    --secondary: 220 20% 14%;
-    --secondary-foreground: 40 22% 90%;
+    --secondary: 38 15% 14%;
+    --secondary-foreground: 39 33% 92%;
 
-    --muted: 220 20% 12%;
-    --muted-foreground: 218 11% 66%;
+    --muted: 38 15% 14%;
+    --muted-foreground: 35 10% 63%;
 
-    --accent: 220 20% 15%;
-    --accent-foreground: 24 62% 88%;
+    --accent: 38 15% 14%;
+    --accent-foreground: 39 33% 92%;
 
-    --destructive: 6 78% 62%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 9 79% 72%;
+    --destructive-foreground: 43 19% 7%;
 
-    --border: 40 22% 90% / 0.12;
-    --input: 40 22% 90% / 0.2;
-    --ring: 24 62% 80%;
+    --border: 37 15% 17%;
+    --input: 37 12% 26%;
+    --ring: 39 33% 92%;
 
-    --glow-a: 8 76% 53%;
-    --glow-b: 214 64% 32%;
-    --hair: 40 22% 90%;
+    --soft: 37 16% 78%;
+    --chip: 38 15% 14%;
+    --good: 144 37% 65%;
+    --good-tint: 144 37% 65% / 0.14;
+    --warn: 36 76% 63%;
+    --warn-tint: 36 76% 63% / 0.12;
+    --over: 9 79% 72%;
+    --over-tint: 9 79% 72% / 0.14;
   }
 }
 
@@ -125,70 +143,41 @@
 
   body {
     @apply text-foreground transition-colors duration-300;
-    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
     overscroll-behavior-y: none;
-    background: transparent;
+    background: hsl(var(--background));
   }
 
-  /* Atmosphere: blurred ember and blue light, fixed behind everything, plus film grain. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    pointer-events: none;
-    background:
-      radial-gradient(closest-side at 82% 0%, hsl(var(--glow-a) / 0.34), transparent) 100% 0 / 60rem 46rem no-repeat,
-      radial-gradient(closest-side at 0% 46%, hsl(var(--glow-b) / 0.34), transparent) 0 40% / 52rem 52rem no-repeat,
-      radial-gradient(closest-side, hsl(var(--glow-b) / 0.18), transparent) 80% 100% / 62rem 36rem no-repeat,
-      hsl(var(--background));
-  }
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0.08;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  }
+  a:hover { opacity: 0.8; }
 }
 
 @layer components {
-  .page { @apply mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-14; }
-  .font-display { font-family: var(--font-display); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
+  .page { @apply mx-auto w-full max-w-[1040px] px-4 py-8 md:px-6 md:py-12; }
+  /* Newsreader, upright: section heads and numbers. The italic is kept for the wordmark. */
+  .font-display { font-family: var(--font-display); font-style: normal; font-weight: 400; letter-spacing: -0.02em; }
+  .wordmark { font-family: var(--font-display); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
   .font-serif-num { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.02em; font-variant-numeric: normal; }
-  .page-title { font-synthesis-weight: none; font-family: var(--font-display); font-style: italic; font-weight: 400; @apply text-5xl leading-none tracking-tight md:text-6xl; }
+  .page-title { font-family: var(--font-display); font-style: normal; font-weight: 400; @apply text-4xl leading-none tracking-tight md:text-5xl; }
   .page-sub { @apply mt-3 text-sm text-muted-foreground md:text-base; }
-  /* Mono micro-label: the quiet metadata voice. */
-  .eyebrow, .section-label { font-family: var(--font-mono); @apply text-[11px] font-normal uppercase tracking-[0.16em] text-muted-foreground; }
+  /* The quiet metadata voice: small, muted, sentence case. */
+  .eyebrow, .section-label { @apply text-[13px] font-normal text-muted-foreground; }
   .num { font-variant-numeric: tabular-nums; }
 
-  /* The one panel look: hairline edge, dark translucent fill, large radius. */
+  /* The one panel look: warm card, hairline edge, large radius, no shadow, no blur. */
   .glass {
-    background: hsl(var(--card) / 0.55);
+    background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
-    backdrop-filter: blur(14px) saturate(1.2);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
   }
-  :root:not(.dark) .glass { background: hsl(var(--card) / 0.7); box-shadow: 0 24px 60px -36px hsl(var(--glow-a) / 0.35); }
-  .glow-text { text-shadow: 0 0 60px hsl(var(--foreground) / 0.18); }
-  .glow-dot { background: hsl(var(--glow-a)); box-shadow: 0 0 18px hsl(var(--glow-a)); }
-  /* Soft streaks of light across a hero. */
-  .streaks::before, .streaks::after { content: ""; position: absolute; border-radius: 999px; pointer-events: none; background: linear-gradient(90deg, transparent, hsl(var(--glow-a)), transparent); }
-  .streaks::before { top: 3.5rem; right: -7rem; width: 56rem; height: 10px; filter: blur(8px); transform: rotate(-14deg); opacity: 0.85; }
-  .streaks::after { top: 9rem; right: -3rem; width: 44rem; height: 4px; filter: blur(4px); transform: rotate(-11deg); opacity: 0.65; }
-}
-
-@media (hover: none) {
-  .glass { backdrop-filter: none; -webkit-backdrop-filter: none; background: hsl(var(--card) / 0.86); }
+  .tone-good { color: hsl(var(--good)); background: hsl(var(--good-tint)); }
+  .tone-warn { color: hsl(var(--warn)); background: hsl(var(--warn-tint)); }
+  .tone-over { color: hsl(var(--over)); background: hsl(var(--over-tint)); }
+  .tone-quiet { color: hsl(var(--muted-foreground)); background: hsl(var(--chip)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-/* Instrument Serif ships one weight: never fake a bold. */
-.font-display, .font-serif-num, .page-title, h1, h2, h3 { font-synthesis-weight: none; }
+

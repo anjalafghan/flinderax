@@ -46,33 +46,40 @@ const renderHero = (s: DashboardSummary) =>
   );
 
 describe("SafeToSpendHero", () => {
-  it("shows the big number, the weekly figure and the until date", () => {
+  it("shows the big number in whole rupees, the weekly figure and the until date", () => {
     renderHero(base);
-    expect(screen.getByText("₹13,016.99")).toBeInTheDocument();
-    expect(screen.getByText("₹3,254.24")).toBeInTheDocument();
-    expect(screen.getByText(/until 30 Oct \(25 days\)/)).toBeInTheDocument();
-    expect(screen.getByText(/November money \(arrives 30 Oct\) is not counted/)).toBeInTheDocument();
+    expect(screen.getByText("₹13,017")).toBeInTheDocument();
+    expect(screen.getByText(/₹3,254 a week/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Safe to spend until 30 Oct" })).toBeInTheDocument();
+    expect(screen.getByText(/for the next 25 days\. On track\./)).toBeInTheDocument();
+    expect(screen.getByText(/November money arrives 30 Oct and isn’t counted here/)).toBeInTheDocument();
   });
 
-  it("shows how much has been spent against the allowance", () => {
-    renderHero({ ...base, spending: { ...base.spending, spent_paise: 1_000_000 } });
-    expect(screen.getByText(/₹10,000 spent on your cards since tracking began, out of a ₹18,875 monthly allowance/)).toBeInTheDocument();
+  it("shows the pay period as one bar per day", () => {
+    renderHero(base);
+    expect(screen.getByRole("img", { name: /of 30 in this pay period/ })).toBeInTheDocument();
+  });
+
+  it("shows how much has been spent against the allowance when no income is due", () => {
+    renderHero({ ...base, next_income: null, spending: { ...base.spending, spent_paise: 1_000_000 } });
+    expect(screen.getByText(/₹10,000 spent so far of a ₹18,875 allowance/)).toBeInTheDocument();
   });
 
   it("says so when spending isn't tracked yet", () => {
-    renderHero({ ...base, spending: { ...base.spending, tracked: false } });
-    expect(screen.getByText(/Spending isn't tracked yet/)).toBeInTheDocument();
+    renderHero({ ...base, next_income: null, spending: { ...base.spending, tracked: false } });
+    expect(screen.getByText(/Spending isn’t tracked yet/)).toBeInTheDocument();
   });
 
   it("links to the working page", () => {
     renderHero(base);
-    expect(screen.getByText("See the working").closest("a")?.getAttribute("href")).toBe("/working");
+    expect(screen.getByText(/See the working/).closest("a")?.getAttribute("href")).toBe("/working");
   });
 
-  it("reflects the status colour band", () => {
+  it("names the status in words", () => {
     const { container } = renderHero({ ...base, status: "red", safe_to_spend_paise: 0 });
     expect(container.querySelector("[data-status='red']")).not.toBeNull();
-    expect(screen.getByText("Don't spend")).toBeInTheDocument();
+    expect(screen.getByText("Over plan")).toBeInTheDocument();
+    expect(screen.getByText(/Pause non-essentials until 30 Oct\./)).toBeInTheDocument();
   });
 
   it("names the account that is short, in rupees", () => {
@@ -82,11 +89,21 @@ describe("SafeToSpendHero", () => {
 
   it("reports an overspend", () => {
     renderHero({ ...base, spending: { ...base.spending, overspend_paise: 124_400 } });
-    expect(screen.getByText(/over this month's spending allowance/)).toBeInTheDocument();
+    expect(screen.getByText(/over this month’s spending allowance/)).toBeInTheDocument();
   });
 
-  it("warns about stale data", () => {
+  it("marks a week-old number as approximate and offers an update", () => {
     renderHero({ ...base, stale: [{ what: "Kotak balance", days_old: 9 }] });
-    expect(screen.getByText(/Kotak balance is 9 days old/)).toBeInTheDocument();
+    expect(screen.getByText("~₹13,017")).toBeInTheDocument();
+    expect(screen.getByText("Probably fine")).toBeInTheDocument();
+    expect(screen.getByText(/Kotak balance from .* · 9 days old/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Update" })).toHaveAttribute("href", "/money");
+  });
+
+  it("calls a three-week-old number a guess", () => {
+    renderHero({ ...base, status: "yellow", stale: [{ what: "HDFC balance", days_old: 23 }] });
+    expect(screen.getByText(/This is a guess, based on HDFC balance from/)).toBeInTheDocument();
+    expect(screen.getByText("Probably tight")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Update balance" })).toHaveAttribute("href", "/money");
   });
 });

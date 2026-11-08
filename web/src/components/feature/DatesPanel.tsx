@@ -17,7 +17,7 @@ export function DatesPanel() {
   return (
     <section aria-label="Dates this month" className="space-y-4 glass rounded-3xl p-4 md:p-6">
       <div>
-        <h2 className="font-display text-3xl leading-none tracking-tight">Dates</h2>
+        <h2 className="font-display text-[32px] leading-none tracking-tight">Dates</h2>
         <DatesNudge budget_paise={m.budget_paise} spent_paise={m.spent_paise} />
         <p className="font-serif-num text-4xl">
           {formatINR(m.spent_paise)}
@@ -36,7 +36,7 @@ export function DatesPanel() {
             <div
               className={cn(
                 "h-full rounded-full transition-[width] duration-300",
-                tone === "over" ? "bg-rose-500" : tone === "warn" ? "bg-amber-500" : "bg-primary",
+                tone === "over" ? "bg-over" : tone === "warn" ? "bg-warn" : "bg-primary",
               )}
               style={{ width: `${width}%` }}
             />

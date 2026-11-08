@@ -27,16 +27,16 @@ export function BudgetSplit({ budget, spending }: { budget: DashboardSummary["bu
   return (
     <section aria-label="Monthly split" className="space-y-3">
       <div>
-        <h2 className="font-display text-3xl leading-none tracking-tight">Your monthly split</h2>
+        <h2 className="font-display text-[32px] leading-none tracking-tight">Your monthly split</h2>
         <p className="text-xs text-muted-foreground">Out of {formatINR(budget.income_paise)} a month.</p>
       </div>
       <ul className="space-y-3">
-        <Bar label="Needs" amount={budget.needs_paise} income={budget.income_paise} className="bg-sky-500" sub="Your listed bills, paid from the reserve" />
+        <Bar label="Needs" amount={budget.needs_paise} income={budget.income_paise} className="bg-primary" sub="Your listed bills, paid from the reserve" />
         <Bar
           label="Spending"
           amount={budget.spending_paise}
           income={budget.income_paise}
-          className="bg-violet-500"
+          className="bg-muted-foreground"
           sub={
             spending.tracked
               ? `${formatINR(spending.spent_paise)} spent so far this period (${used.toFixed(0)}% of it)`
@@ -47,7 +47,7 @@ export function BudgetSplit({ budget, spending }: { budget: DashboardSummary["bu
           label="Savings & investing"
           amount={budget.savings_paise}
           income={budget.income_paise}
-          className="bg-emerald-500"
+          className="bg-good"
           sub={`SIP ${formatINR(budget.sip_paise)} + ${formatINR(budget.rest_savings_paise)} to the reserve`}
         />
       </ul>

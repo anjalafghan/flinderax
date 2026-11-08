@@ -17,14 +17,14 @@
 .reg-else-form label, .reg-photo-l { display: grid; gap: 2px; font-size: var(--step--1); color: var(--ink-soft); }
 .reg-else-form input[type="text"] { font: inherit; padding: 8px 10px; min-height: 44px; border: 1px solid var(--rule); border-radius: var(--radius-slip); background: var(--slip); color: var(--ink); max-width: 100%; }
 .reg-photo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.reg-thumb { width: 96px; height: 120px; object-fit: cover; border: 6px solid var(--slip); box-shadow: 0 2px 6px rgba(0, 0, 0, .2); rotate: -2deg; }
+.reg-thumb { width: 96px; height: 120px; object-fit: cover; border: 6px solid var(--slip); rotate: -2deg; }
 .reg-ceiling, .reg-more { margin: 0; font-size: var(--step--1); color: var(--ink-soft); }
 /* month strip */
 .m-nights .m-scribble a { color: inherit; }
 .reg-strip { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
 .reg-strip-n { display: grid; place-items: center; min-width: 52px; min-height: 52px; padding: 4px 8px; border: 2px solid var(--red, #a3271c); border-radius: 6px; color: var(--red, #a3271c); font: 600 .9rem/1 var(--font-ui); rotate: -2deg; }
 .reg-strip-n:nth-child(even) { rotate: 2deg; }
-.reg-strip-n.has-photo { padding: 0; border: 4px solid #fffaf2; box-shadow: 0 2px 5px rgba(0, 0, 0, .25); }
+.reg-strip-n.has-photo { padding: 0; border: 4px solid #fffaf2; }
 .reg-strip-n img { display: block; width: 64px; height: 80px; object-fit: cover; }
 /* a regular's own spread */
 .rs-head { display: grid; gap: 6px; padding: 18px 0 8px; }
@@ -38,7 +38,7 @@
 .rs-stamp { display: grid; place-items: center; width: 110px; aspect-ratio: 1; border: 3px solid var(--stamp); border-radius: 50%; color: var(--stamp); text-align: center; line-height: 1.1; rotate: -4deg; }
 .rs-stamp-d { font: 600 1.15rem/1 var(--font-display); }
 .rs-stamp-y { font: 400 .8rem/1 var(--font-ui); }
-.rs-print { margin: 0; padding: 8px 8px 6px; background: var(--slip); box-shadow: 0 3px 8px rgba(0, 0, 0, .25); }
+.rs-print { margin: 0; padding: 8px 8px 6px; background: var(--slip); }
 .rs-print img { display: block; width: 100%; max-width: 160px; aspect-ratio: 4 / 5; object-fit: cover; }
 .rs-print figcaption { margin-top: 4px; font: 600 1.15rem/1 var(--font-hand); color: var(--ink); }
 .rs-meta { margin: 0; font-size: var(--step--1); color: var(--ink-soft); }

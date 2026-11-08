@@ -71,7 +71,7 @@ export function SpendingOverview({
         <button
           type="button"
           onClick={onReviewUncategorized}
-          className="flex w-full items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-left text-sm font-medium text-amber-900 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-950/60"
+          className="flex w-full items-center justify-between gap-3 rounded-lg border border-warn/40 bg-warn-tint p-3 text-left text-sm font-medium text-warn transition-colors hover:bg-warn-tint"
         >
           <span>{plural(uncategorized, "transaction needs a category", "transactions need a category")}</span>
           <span aria-hidden="true">Review</span>
