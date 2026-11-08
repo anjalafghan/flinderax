@@ -651,6 +651,18 @@ export interface TaxRegime {
   new_tax_paise: number;
   better: "old" | "new";
   note: string;
+  /** Old-regime deductions (excl. standard deduction) above which old wins; null = new wins always. */
+  break_even_deductions_paise: number | null;
+  /** Break-even minus claimed deductions, never below zero; null when there is no break-even. */
+  deductions_needed_paise: number | null;
+}
+
+export interface TaxLtcg {
+  exemption_paise: number;
+  used_paise: number;
+  left_paise: number;
+  days_left_in_fy: number;
+  note: string;
 }
 
 export interface TaxReminder {
@@ -671,6 +683,7 @@ export interface TaxReview {
   gross_salary_paise: number;
   regime: TaxRegime;
   reminders: TaxReminder[];
+  ltcg: TaxLtcg;
 }
 
 export interface NewTaxEntry {

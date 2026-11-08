@@ -17,6 +17,7 @@ import { AutoPostings } from "@/components/feature/AutoPostings";
 import { SpendingPanel } from "@/components/feature/SpendingPanel";
 import { DatesPanel } from "@/components/feature/DatesPanel";
 import { DueSoonCard } from "@/components/feature/BillsPanel";
+import { InsightsNudge } from "@/components/feature/InsightsPanel";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 
 const QUICK_ACTIONS: { to: string; label: string; hint: string; icon: LucideIcon }[] = [
@@ -214,6 +215,7 @@ export default function DashboardPage() {
       <main className={`page flex-1 ${hasPendingDeferred ? "pb-32" : ""}`}>
         <div className="mb-6 w-full">
           <PlannerSummary />
+          <InsightsNudge />
         </div>
 
         <nav aria-label="Quick actions" className="mb-12 grid w-full grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">

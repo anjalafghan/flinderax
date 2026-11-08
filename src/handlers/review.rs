@@ -238,6 +238,8 @@ pub struct TaxOut {
     pub gross_salary_paise: i64,
     pub regime: tax::Regime,
     pub reminders: Vec<tax::Reminder>,
+    /// No realised-gains input yet, so the full exemption shows as left.
+    pub ltcg: tax::LtcgHarvest,
 }
 
 fn fy_start(raw: Option<&str>, today: Date) -> Result<i32, AppError> {
@@ -343,6 +345,7 @@ pub async fn tax(State(state): State<AppState>, Extension((user_id, _)): User, Q
         // A whole-year estimate, so the payments still to come count too.
         regime: tax::compare(gross, full_year, start),
         reminders: tax::reminders(start, today),
+        ltcg: tax::ltcg_harvest(0, start, today),
     }))
 }
 

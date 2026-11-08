@@ -191,20 +191,59 @@ pub struct Regime {
     /// `old` | `new` (ties go to `new`)
     pub better: &'static str,
     pub note: String,
+    /// Total old-regime deductions (80C, 80CCD1B, 80D, 24B, HRA; not the standard deduction) at
+    /// which the old regime first becomes cheaper. `None` = the new regime wins at any level.
+    pub break_even_deductions_paise: Option<i64>,
+    /// `break_even - claimed`, never below zero. `None` when there is no break-even.
+    pub deductions_needed_paise: Option<i64>,
+}
+
+/// Old-regime tax with cess, when `deductions` (paise, on top of the standard deduction) are claimed.
+fn old_tax_with_deductions(fy: &FyRules, gross: i64, deductions: i64) -> i64 {
+    with_cess(tax_before_cess(&fy.old, gross - fy.old.standard_deduction * 100 - deductions))
+}
+
+/// The smallest total old-regime deduction (paise, excluding the standard deduction) at which the
+/// old regime's tax is strictly below the new regime's, for a `gross` salary in paise. Ties go to
+/// the new regime, as in [`compare`]. `None` when the new regime wins even with every rupee of
+/// salary deducted (for example when the new regime's rebate makes its tax zero).
+pub fn break_even_deductions(gross: i64, fy_start: i32) -> Option<i64> {
+    let (fy, _) = rules_for(fy_start);
+    let new_tax = with_cess(tax_before_cess(&fy.new, gross - fy.new.standard_deduction * 100));
+    // Old-regime tax never rises as deductions rise, so "old wins" is monotone in `d`.
+    let old_wins = |d: i64| old_tax_with_deductions(fy, gross, d) < new_tax;
+    if old_wins(0) {
+        return Some(0);
+    }
+    let mut hi = gross.max(0);
+    if !old_wins(hi) {
+        return None;
+    }
+    let mut lo = 0;
+    while hi - lo > 1 {
+        let mid = lo + (hi - lo) / 2;
+        if old_wins(mid) {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    Some(hi)
 }
 
 /// Compares the two regimes for a year's `gross_paise` salary.
 pub fn compare(gross: i64, claims: Claims, fy_start: i32) -> Regime {
     let (fy, own) = rules_for(fy_start);
     let cap = |section: &str, v: i64| limit_for(section).map_or(v, |l| v.min(l));
-    let old_deductions = fy.old.standard_deduction * 100
-        + cap("80C", claims.s80c)
+    let claimed = cap("80C", claims.s80c)
         + cap("80CCD1B", claims.s80ccd1b)
         + cap("80D", claims.s80d)
         + cap("24B", claims.s24b)
         + claims.hra;
+    let old_deductions = fy.old.standard_deduction * 100 + claimed;
     let new_tax = with_cess(tax_before_cess(&fy.new, gross - fy.new.standard_deduction * 100));
     let old_tax = with_cess(tax_before_cess(&fy.old, gross - old_deductions));
+    let break_even = break_even_deductions(gross, fy_start);
 
     let mut note = format!(
         "Estimate for salary income only, using the {} slabs (new regime: 75,000 standard deduction, no tax up to 12L taxable; \
@@ -218,7 +257,72 @@ pub fn compare(gross: i64, claims: Claims, fy_start: i32) -> Regime {
     if gross <= 0 {
         note.push_str(" Add your salary under income to get a real comparison.");
     }
-    Regime { old_tax_paise: old_tax, new_tax_paise: new_tax, better: if old_tax < new_tax { "old" } else { "new" }, note }
+    Regime {
+        old_tax_paise: old_tax,
+        new_tax_paise: new_tax,
+        better: if old_tax < new_tax { "old" } else { "new" },
+        note,
+        break_even_deductions_paise: break_even,
+        deductions_needed_paise: break_even.map(|b| (b - claimed).max(0)),
+    }
+}
+
+// ---------- long-term equity gains ----------
+
+/// Yearly exemption for long-term gains on listed equity, in paise (1.25 lakh).
+pub const LTCG_EXEMPTION_PAISE: i64 = 1_25_000_00;
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct LtcgHarvest {
+    pub exemption_paise: i64,
+    /// Realised gains so far, capped at the exemption.
+    pub used_paise: i64,
+    pub left_paise: i64,
+    /// Days from `today` to 31 March, counting today. Zero once the FY is over.
+    pub days_left_in_fy: i64,
+    pub note: String,
+}
+
+/// Whole rupees with Indian grouping: `1_25_000_00` -> `1,25,000`.
+fn inr_text(paise: i64) -> String {
+    let s = (paise / 100).to_string();
+    if s.len() <= 3 {
+        return s;
+    }
+    let (mut rest, last3) = s.split_at(s.len() - 3);
+    let mut groups = Vec::new();
+    while rest.len() > 2 {
+        let (head, tail) = rest.split_at(rest.len() - 2);
+        groups.push(tail);
+        rest = head;
+    }
+    groups.push(rest);
+    groups.reverse();
+    format!("{},{}", groups.join(","), last3)
+}
+
+/// How much of the long-term equity gains exemption is left for `fy_start`, given the gains already
+/// realised (paise). Pure: the caller supplies `today`.
+pub fn ltcg_harvest(realised_ltcg_paise: i64, fy_start: i32, today: Date) -> LtcgHarvest {
+    let exemption = LTCG_EXEMPTION_PAISE;
+    let realised = realised_ltcg_paise.max(0);
+    let used = realised.min(exemption);
+    let left = exemption - used;
+    let (_, end) = fy_bounds(fy_start);
+    let days_left = if today > end { 0 } else { (end - today).whole_days() + 1 };
+    let end_text = format!("31 Mar {}", end.year());
+    let note = if days_left == 0 {
+        format!("This FY ended on {end_text}, so its exemption has lapsed.")
+    } else if left == 0 {
+        let over = if realised > exemption { " Gains above it are taxable." } else { "" };
+        format!("You've used this year's ₹{} exemption.{over}", inr_text(exemption))
+    } else {
+        format!(
+            "Book up to ₹{} of long-term equity gains before {end_text} tax-free, and reinvest.",
+            inr_text(left)
+        )
+    };
+    LtcgHarvest { exemption_paise: exemption, used_paise: used, left_paise: left, days_left_in_fy: days_left, note }
 }
 
 // ---------- tagged fixed payments ----------
@@ -420,5 +524,86 @@ mod tests {
         assert_eq!((filing.date, filing.text.as_str()), (date!(2027 - 07 - 31), "File your return by 31 Jul 2027"));
         assert!(r.iter().any(|x| x.text.starts_with("Submit investment proofs")));
         assert!(r.iter().find(|x| x.date == date!(2026 - 06 - 15)).unwrap().days_left < 0);
+    }
+
+    #[test]
+    fn break_even_for_18_lakh_is_exact() {
+        // New: 17.25L taxable -> 1,45,000 tax, 1,50,800 with cess.
+        // Old: taxable = 18L - 50k - d. Above 10L the tax is 1,12,500 + 30% of the excess, so the
+        // old tax before cess must fall to 1,45,000 (1,50,800 with cess), i.e. taxable must reach
+        // 11,08,333.33. Deductions therefore have to pass 18L - 50k - 11,08,333.33 = 6,41,666.67.
+        let be = break_even_deductions(inr(18_00_000), 2026);
+        assert_eq!(be, Some(64_166_667));
+        let d = be.unwrap();
+        let hra_only = |hra| Claims { hra, ..Claims::default() };
+        assert_eq!(compare(inr(18_00_000), hra_only(d), 2026).better, "old");
+        assert_eq!(compare(inr(18_00_000), hra_only(d - 1), 2026).better, "new");
+    }
+
+    #[test]
+    fn break_even_none_when_new_regime_is_free() {
+        // 10L gross: 9.25L taxable in the new regime, under the 12L rebate, so its tax is 0.
+        assert_eq!(break_even_deductions(inr(10_00_000), 2026), None);
+        let r = compare(inr(10_00_000), Claims::default(), 2026);
+        assert_eq!((r.break_even_deductions_paise, r.deductions_needed_paise), (None, None));
+    }
+
+    #[test]
+    fn deductions_needed_is_the_gap_to_break_even() {
+        // The claims total 5.25L (80C 1.5L, NPS 50k, 80D 25k, home loan 2L, HRA 1L), against 6,41,666.67.
+        let claims = Claims { s80c: inr(1_50_000), s80ccd1b: inr(50_000), s80d: inr(25_000), s24b: inr(2_00_000), hra: inr(1_00_000) };
+        let r = compare(inr(18_00_000), claims, 2026);
+        assert_eq!(r.break_even_deductions_paise, Some(64_166_667));
+        assert_eq!(r.deductions_needed_paise, Some(64_166_667 - inr(5_25_000)));
+        assert_eq!(r.deductions_needed_paise, Some(1_16_66_667));
+        // Once past the break-even, nothing is needed and the old regime wins.
+        let past = compare(inr(18_00_000), Claims { hra: inr(7_00_000), ..Claims::default() }, 2026);
+        assert_eq!((past.better, past.deductions_needed_paise), ("old", Some(0)));
+    }
+
+    #[test]
+    fn old_regime_tax_never_rises_with_deductions() {
+        let mut prev = i64::MAX;
+        let (fy, _) = rules_for(2026);
+        for d in (0..=inr(20_00_000)).step_by(inr(25_000) as usize) {
+            let t = old_tax_with_deductions(fy, inr(18_00_000), d);
+            assert!(t <= prev, "tax rose at deductions {d}");
+            prev = t;
+        }
+    }
+
+    #[test]
+    fn ltcg_harvest_maths() {
+        let today = date!(2026 - 11 - 08);
+        let none = ltcg_harvest(0, 2026, today);
+        assert_eq!(none.exemption_paise, 1_25_000_00);
+        assert_eq!((none.used_paise, none.left_paise), (0, 1_25_000_00));
+        // 8 Nov to 31 Mar is 143 days; counting today gives 144.
+        assert_eq!(none.days_left_in_fy, 144);
+        assert!(none.note.starts_with("Book up to ₹1,25,000 of long-term equity gains before 31 Mar 2027"), "{}", none.note);
+
+        let part = ltcg_harvest(1_00_000_00, 2026, today);
+        assert_eq!((part.used_paise, part.left_paise), (1_00_000_00, 25_000_00));
+        assert!(part.note.contains("Book up to ₹25,000"), "{}", part.note);
+
+        let over = ltcg_harvest(3_00_000_00, 2026, today);
+        assert_eq!((over.used_paise, over.left_paise), (1_25_000_00, 0));
+        assert!(over.note.contains("used this year's ₹1,25,000 exemption. Gains above it are taxable."), "{}", over.note);
+
+        assert_eq!(ltcg_harvest(-5_00, 2026, today).used_paise, 0);
+        assert_eq!(ltcg_harvest(0, 2026, date!(2027 - 03 - 31)).days_left_in_fy, 1);
+        let ended = ltcg_harvest(0, 2026, date!(2027 - 04 - 01));
+        assert_eq!(ended.days_left_in_fy, 0);
+        assert!(ended.note.contains("ended on 31 Mar 2027"), "{}", ended.note);
+    }
+
+    #[test]
+    fn inr_text_uses_indian_grouping() {
+        assert_eq!(inr_text(0), "0");
+        assert_eq!(inr_text(999_00), "999");
+        assert_eq!(inr_text(1_000_00), "1,000");
+        assert_eq!(inr_text(25_000_00), "25,000");
+        assert_eq!(inr_text(1_25_000_00), "1,25,000");
+        assert_eq!(inr_text(inr(1_00_00_000)), "1,00,00,000");
     }
 }
