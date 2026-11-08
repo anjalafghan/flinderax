@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use time::{macros::format_description, Date};
 
 use crate::{
-    handlers::common::{bad_request, not_found, AppError},
+    handlers::{
+        autopost,
+        common::{bad_request, not_found, today_local, AppError},
+    },
     models::AppState,
 };
 
@@ -21,6 +24,15 @@ pub struct AccountRow {
     pub locked: bool,
     pub interest_bps: Option<i64>,
     pub maturity_date: Option<String>,
+    /// spending | reserve | other
+    pub role: String,
+    /// Where an FD / RD is held.
+    pub institution: Option<String>,
+    /// payout | renew_principal | renew_all
+    pub renewal: String,
+    pub payout_account_id: Option<String>,
+    /// Matches bank alerts ("A/c XX1234") to this account.
+    pub last_4_digits: Option<String>,
     pub updated_at: String,
 }
 
@@ -45,6 +57,11 @@ pub struct CreateAccountPayload {
     pub locked: Option<bool>,
     pub interest_bps: Option<i64>,
     pub maturity_date: Option<String>,
+    pub role: Option<String>,
+    pub institution: Option<String>,
+    pub renewal: Option<String>,
+    pub payout_account_id: Option<String>,
+    pub last_4_digits: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -55,6 +72,11 @@ pub struct UpdateAccountPayload {
     pub locked: bool,
     pub interest_bps: Option<i64>,
     pub maturity_date: Option<String>,
+    pub role: Option<String>,
+    pub institution: Option<String>,
+    pub renewal: Option<String>,
+    pub payout_account_id: Option<String>,
+    pub last_4_digits: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -66,6 +88,25 @@ pub struct UpdateBalancePayload {
 #[derive(Deserialize)]
 pub struct DeleteAccountPayload {
     pub account_id: String,
+}
+
+fn validate_extras(role: &Option<String>, renewal: &Option<String>) -> Result<(), AppError> {
+    if role.as_deref().is_some_and(|r| !matches!(r, "spending" | "reserve" | "other")) {
+        return Err(bad_request("role must be spending, reserve or other"));
+    }
+    if renewal.as_deref().is_some_and(|r| !matches!(r, "payout" | "renew_principal" | "renew_all")) {
+        return Err(bad_request("renewal must be payout, renew_principal or renew_all"));
+    }
+    Ok(())
+}
+
+/// `Some("1234")` for 3-4 digits, `None` for blank; anything else is a 400.
+fn clean_last4(v: Option<String>) -> Result<Option<String>, AppError> {
+    match v.as_deref().map(str::trim) {
+        None | Some("") => Ok(None),
+        Some(d) if (3..=4).contains(&d.len()) && d.chars().all(|c| c.is_ascii_digit()) => Ok(Some(d.to_string())),
+        Some(_) => Err(bad_request("last_4_digits must be 3 or 4 digits")),
+    }
 }
 
 fn validate(name: &str, kind: &str, maturity: &Option<String>) -> Result<(), AppError> {
@@ -88,11 +129,17 @@ pub async fn create(
     Json(p): Json<CreateAccountPayload>,
 ) -> Result<Json<AccountIdResponse>, AppError> {
     validate(&p.name, &p.kind, &p.maturity_date)?;
+    validate_extras(&p.role, &p.renewal)?;
+    ensure_account_owned(&state.db, &p.payout_account_id, &user_id).await?;
     let account_id = nanoid!();
     let locked = p.locked.unwrap_or(matches!(p.kind.as_str(), "fd" | "rd"));
+    let role = p.role.unwrap_or_else(|| "other".into());
+    let renewal = p.renewal.unwrap_or_else(|| "payout".into());
+    let today = today_local().to_string();
+    let last4 = clean_last4(p.last_4_digits)?;
     sqlx::query!(
-        "INSERT INTO accounts (account_id, user_id, name, kind, balance_paise, locked, interest_bps, maturity_date)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO accounts (account_id, user_id, name, kind, balance_paise, locked, interest_bps, maturity_date, role, institution, renewal, payout_account_id, balance_set_on, last_4_digits)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         account_id,
         user_id,
         p.name,
@@ -100,7 +147,13 @@ pub async fn create(
         p.balance_paise,
         locked,
         p.interest_bps,
-        p.maturity_date
+        p.maturity_date,
+        role,
+        p.institution,
+        renewal,
+        p.payout_account_id,
+        today,
+        last4
     )
     .execute(&state.db)
     .await?;
@@ -113,14 +166,25 @@ pub async fn update(
     Json(p): Json<UpdateAccountPayload>,
 ) -> Result<Json<StatusResponse>, AppError> {
     validate(&p.name, &p.kind, &p.maturity_date)?;
+    validate_extras(&p.role, &p.renewal)?;
+    ensure_account_owned(&state.db, &p.payout_account_id, &user_id).await?;
+    let role = p.role.unwrap_or_else(|| "other".into());
+    let renewal = p.renewal.unwrap_or_else(|| "payout".into());
+    let last4 = clean_last4(p.last_4_digits)?;
     let res = sqlx::query!(
-        "UPDATE accounts SET name = ?, kind = ?, locked = ?, interest_bps = ?, maturity_date = ?
+        "UPDATE accounts SET name = ?, kind = ?, locked = ?, interest_bps = ?, maturity_date = ?,
+                role = ?, institution = ?, renewal = ?, payout_account_id = ?, last_4_digits = ?
          WHERE account_id = ? AND user_id = ?",
         p.name,
         p.kind,
         p.locked,
         p.interest_bps,
         p.maturity_date,
+        role,
+        p.institution,
+        renewal,
+        p.payout_account_id,
+        last4,
         p.account_id,
         user_id
     )
@@ -137,9 +201,13 @@ pub async fn update_balance(
     Extension((user_id, _)): User,
     Json(p): Json<UpdateBalancePayload>,
 ) -> Result<Json<StatusResponse>, AppError> {
+    // Typing a balance makes it the new baseline for auto-posting.
+    let today = today_local().to_string();
     let res = sqlx::query!(
-        "UPDATE accounts SET balance_paise = ?, updated_at = CURRENT_TIMESTAMP WHERE account_id = ? AND user_id = ?",
+        "UPDATE accounts SET balance_paise = ?, balance_set_on = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE account_id = ? AND user_id = ?",
         p.balance_paise,
+        today,
         p.account_id,
         user_id
     )
@@ -155,11 +223,12 @@ pub async fn list(
     State(state): State<AppState>,
     Extension((user_id, _)): User,
 ) -> Result<Json<Vec<AccountRow>>, AppError> {
+    autopost::apply(&state.db, &user_id, today_local()).await?;
     let rows = sqlx::query_as!(
         AccountRow,
         r#"SELECT account_id AS "account_id!", name, kind, balance_paise,
-                  locked AS "locked: bool", interest_bps, maturity_date,
-                  updated_at AS "updated_at: String"
+                  locked AS "locked: bool", interest_bps, maturity_date, role, institution, renewal,
+                  payout_account_id, last_4_digits, updated_at AS "updated_at: String"
            FROM accounts WHERE user_id = ? ORDER BY rowid"#,
         user_id
     )

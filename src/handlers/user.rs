@@ -1,19 +1,7 @@
 use crate::models::{AppState, GetUserResponse, GetUsers};
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    Json,
-};
+use crate::handlers::common::AppError;
+use axum::{extract::State, http::StatusCode, Json};
 use tracing::error;
-
-pub struct AppError(StatusCode, String);
-
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        (self.0, self.1).into_response()
-    }
-}
 
 pub async fn delete(
     State(state): State<AppState>,
@@ -33,7 +21,7 @@ pub async fn get_user(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<GetUserResponse>>, AppError> {
     let db_users: Vec<GetUsers> = sqlx::query_as::<_, GetUsers>(
-        "SELECT user_id, user_name,  user_role FROM users",
+        "SELECT user_id, user_name, '' AS user_password, user_role FROM users",
     )
     .fetch_all(&state.db)
     .await

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT s.card_id AS \"card_id!\", s.outstanding_paise, s.created_at AS \"created_at: String\"\n           FROM card_snapshots s JOIN cards c ON c.card_id = s.card_id\n           WHERE c.user_id = ? ORDER BY s.created_at, s.rowid",
+  "describe": {
+    "columns": [
+      {
+        "name": "card_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "outstanding_paise",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at: String",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0fa5231af6faff008c255713df345f180125b769f3387c9e6b1d07f25c2ff7de"
+}

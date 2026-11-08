@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO ingest_keys (user_id, key_hash) VALUES (?, ?)\n         ON CONFLICT(user_id) DO UPDATE SET key_hash = excluded.key_hash, created_at = CURRENT_TIMESTAMP, last_used_at = NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "151d61381bf0f47f784cb1498a2b097c4b4211d0ba7b1be787f9f1c117cf8f84"
+}

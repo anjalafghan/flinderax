@@ -1,0 +1,92 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT account_id AS \"account_id!\", name, kind, balance_paise,\n                  locked AS \"locked: bool\", interest_bps, maturity_date, role, institution, renewal,\n                  payout_account_id, last_4_digits, updated_at AS \"updated_at: String\"\n           FROM accounts WHERE user_id = ? ORDER BY rowid",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "kind",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "balance_paise",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "locked: bool",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "interest_bps",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "maturity_date",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "role",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "institution",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "renewal",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "payout_account_id",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_4_digits",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at: String",
+        "ordinal": 12,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "2a1d0aea46d13d3755fc2b05678789e6804adc52f1279872f2d96c61d686dad6"
+}

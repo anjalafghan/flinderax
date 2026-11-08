@@ -12,7 +12,7 @@ use rusty_paseto::{
     prelude::{PasetoParser, PasetoSymmetricKey},
 };
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
@@ -52,6 +52,23 @@ async fn api_not_found() -> AppError {
     AppError(StatusCode::NOT_FOUND, "Not found".to_string())
 }
 
+/// The web app is served by this same server, so cross-origin access is off unless
+/// `CORS_ORIGINS` (comma-separated) lists origins that may call the API.
+fn cors_layer() -> CorsLayer {
+    let origins: Vec<_> = std::env::var("CORS_ORIGINS")
+        .unwrap_or_default()
+        .split(',')
+        .filter_map(|o| o.trim().parse().ok())
+        .collect();
+    if origins.is_empty() {
+        return CorsLayer::new();
+    }
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::list(origins))
+        .allow_methods(Any)
+        .allow_headers(Any)
+}
+
 pub fn build_router(state: AppState) -> Router {
     let dir = static_dir();
     let index = format!("{dir}/index.html");
@@ -74,14 +91,33 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/account", protected(&state, routes::account::routes(state.clone())))
         .nest("/api/plan", protected(&state, routes::plan::routes(state.clone())))
         .nest("/api/dashboard", protected(&state, routes::dashboard::routes(state.clone())))
+        .nest("/api/moves", protected(&state, routes::moves::routes(state.clone())))
+        .nest("/api/ingest", protected(&state, routes::ingest::routes(state.clone())))
+        .nest("/api/joy", protected(&state, routes::joy::routes(state.clone())))
+        .nest("/api/couple", protected(&state, routes::couple::routes(state.clone())))
+        .nest("/api/dates", protected(&state, routes::dates::routes(state.clone())))
+        .nest("/api/public/dates", routes::dates::public_routes(state.clone()).layer(trace_layer()))
+        .nest("/api/bills", protected(&state, routes::bills::routes(state.clone())))
+        .nest("/api/goals", protected(&state, routes::goals::routes(state.clone())))
+        .nest(
+            "/api/export",
+            protected(&state, Router::new().route("/", axum::routing::get(crate::handlers::export::export)).with_state(state.clone())),
+        )
+        .nest("/api/review", protected(&state, routes::review::routes(state.clone())))
+        .nest("/api/hook", routes::ingest::hook_routes(state.clone()).layer(trace_layer()))
         // Unknown API paths must 404 instead of falling through to the SPA's index.html.
         .route("/api/{*rest}", any(api_not_found))
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
-        )
+        // Joy's old addresses (envelope links already sent on WhatsApp, bookmarks) now live under /joy.
+        .route("/e/{token}", axum::routing::get(old_joy_envelope))
+        .route("/wishlist", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/slips") }))
+        .route("/history", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/kept") }))
+        .route("/regulars", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/regulars") }))
+        .route("/year", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/year") }))
+        .route("/year/{*rest}", axum::routing::get(old_joy_year))
+        .route("/who", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/settings") }))
+        .route("/login", axum::routing::get(|| async { axum::response::Redirect::permanent("/auth") }))
+        .layer(cors_layer())
+        .layer(middleware::from_fn(crate::headers::security_headers))
         .layer(CompressionLayer::new())
         .fallback_service(ServeDir::new(&dir).fallback(ServeFile::new(index)))
 }
@@ -168,4 +204,22 @@ fn parse_token(
             Err(AppError(StatusCode::UNAUTHORIZED, err.to_string()))
         }
     }
+}
+
+/// `/e/{token}` (Joy's envelope links) → `/joy/e/{token}`. Tokens are URL-safe; anything else 404s.
+async fn old_joy_envelope(axum::extract::Path(token): axum::extract::Path<String>) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    if token.is_empty() || !token.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        return axum::http::StatusCode::NOT_FOUND.into_response();
+    }
+    axum::response::Redirect::permanent(&format!("/joy/e/{token}")).into_response()
+}
+
+/// `/year/2026` and `/year/2026/10` (Joy) → the same under `/joy`.
+async fn old_joy_year(axum::extract::Path(rest): axum::extract::Path<String>) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    if !rest.chars().all(|c| c.is_ascii_digit() || c == '/') {
+        return axum::http::StatusCode::NOT_FOUND.into_response();
+    }
+    axum::response::Redirect::permanent(&format!("/joy/year/{rest}")).into_response()
 }

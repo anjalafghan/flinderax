@@ -37,6 +37,9 @@ pub struct SnapshotPayload {
     pub outstanding_paise: i64,
     pub unbilled_spent_paise: Option<i64>,
     pub unbilled_credit_paise: Option<i64>,
+    /// For a card's first snapshot: true = money owed before tracking began (not new spending),
+    /// false = new spending this month. Defaults to true for a first snapshot, false afterwards.
+    pub starting_balance: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -60,15 +63,25 @@ pub async fn snapshot(
 
     let snapshot_id = nanoid!();
     let mut tx = state.db.begin().await?;
+    let existing = sqlx::query!(
+        r#"SELECT COUNT(*) AS "n!: i64" FROM card_snapshots WHERE card_id = ?"#,
+        p.card_id
+    )
+    .fetch_one(&mut *tx)
+    .await?
+    .n;
+    // Only a card's first snapshot can be a starting balance.
+    let is_starting = existing == 0 && p.starting_balance.unwrap_or(true);
     sqlx::query!(
-        "INSERT INTO card_snapshots (snapshot_id, card_id, total_due_paise, outstanding_paise, unbilled_spent_paise, unbilled_credit_paise)
-         VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO card_snapshots (snapshot_id, card_id, total_due_paise, outstanding_paise, unbilled_spent_paise, unbilled_credit_paise, is_starting)
+         VALUES (?, ?, ?, ?, ?, ?, ?)",
         snapshot_id,
         p.card_id,
         p.total_due_paise,
         p.outstanding_paise,
         p.unbilled_spent_paise,
-        p.unbilled_credit_paise
+        p.unbilled_credit_paise,
+        is_starting
     )
     .execute(&mut *tx)
     .await?;
@@ -112,6 +125,10 @@ pub struct CardBreakdown {
     pub last_updated: Option<String>,
     #[serde(skip)]
     pub last_updated_date: Option<Date>,
+    /// Account that pays this card's bill (e.g. Kotak).
+    pub pay_from_account_id: Option<String>,
+    /// Bank-reported unbilled spent - unbilled credit, when the snapshot has it.
+    pub unbilled_net_paise: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -139,7 +156,8 @@ pub async fn load_breakdowns(
     today: Date,
 ) -> Result<Vec<CardBreakdown>, AppError> {
     let cards = sqlx::query!(
-        r#"SELECT c.card_id AS "card_id!", c.card_name, c.statement_day, c.due_day,
+        r#"SELECT c.card_id AS "card_id!", c.card_name, c.statement_day, c.due_day, c.pay_from_account_id,
+                  s.unbilled_spent_paise AS "unbilled_spent?: i64", s.unbilled_credit_paise AS "unbilled_credit?: i64",
                   s.total_due_paise AS "total_due_paise?: i64", s.outstanding_paise AS "outstanding_paise?: i64",
                   s.created_at AS "snapshot_at?: String"
            FROM cards c
@@ -199,6 +217,7 @@ pub async fn load_breakdowns(
             let amounts = card_amounts(CardNumbers {
                 total_due: c.total_due_paise.unwrap_or(0),
                 outstanding: c.outstanding_paise.unwrap_or(0),
+                unbilled_net: c.unbilled_spent.map(|spent| spent - c.unbilled_credit.unwrap_or(0)),
                 emi_monthly,
                 emi_remaining,
                 pending_charges: pending_sums.get(&c.card_id).copied().unwrap_or(0),
@@ -224,6 +243,8 @@ pub async fn load_breakdowns(
                 next_statement_date: next_statement,
                 next_due_date: next_due,
                 loan_not_due_paise: amounts.loan_not_due_paise,
+                pay_from_account_id: c.pay_from_account_id,
+                unbilled_net_paise: c.unbilled_spent.map(|spent| spent - c.unbilled_credit.unwrap_or(0)),
                 last_updated_date: c.snapshot_at.as_deref().and_then(parse_db_date),
                 last_updated: c.snapshot_at.map(|t| format!("{}Z", t.replace(' ', "T"))),
             }
@@ -464,4 +485,119 @@ pub async fn pending_clear(
     }
     invalidate_cards_cache(&state, &user_id).await;
     Ok(Json(StatusOk { status: true }))
+}
+
+// ---------- spending inferred from snapshots ----------
+
+struct Snap {
+    date: Date,
+    total_due: i64,
+    /// Everything billed or unbilled on the card, loan principal excluded: the bank's
+    /// `total due + unbilled spent - unbilled credit`, or `outstanding - EMI balance` when the
+    /// snapshot has no unbilled numbers.
+    exposure: i64,
+    is_starting: bool,
+}
+
+/// Spent on each card since the baseline of the current pay period, and the date of that baseline:
+///
+/// 1. the latest snapshot on or before the last payday; else
+/// 2. the card's starting-balance snapshot (money owed before tracking began); else
+/// 3. an implicit zero balance on the day the card was added.
+///
+/// `exposure now - exposure then + the bill paid in between` (assumed paid in full by its due
+/// date). Cards with no snapshot at all are left out, so their spend is "not tracked".
+pub async fn spent_this_period(
+    db: &sqlx::SqlitePool,
+    user_id: &str,
+    period_start: Date,
+    today: Date,
+) -> Result<HashMap<String, (i64, Date)>, AppError> {
+    let rows = sqlx::query!(
+        r#"SELECT s.card_id, s.total_due_paise, s.outstanding_paise, s.unbilled_spent_paise AS "us?: i64",
+                  s.unbilled_credit_paise AS "uc?: i64", s.created_at AS "created_at: String",
+                  s.is_starting AS "is_starting: bool", c.statement_day, c.due_day,
+                  c.created_at AS "card_created: String"
+           FROM card_snapshots s JOIN cards c ON c.card_id = s.card_id
+           WHERE c.user_id = ? ORDER BY s.card_id, s.created_at, s.rowid"#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    // Remaining EMI principal per card, so `outstanding` can stand in for the bank's unbilled numbers.
+    let now_idx = month_index(today);
+    let mut emi_rem: HashMap<String, i64> = HashMap::new();
+    for e in sqlx::query!(
+        r#"SELECT e.card_id, e.monthly_paise, e.remaining_principal_paise, e.months_left,
+                  COALESCE(e.as_of_month, strftime('%Y-%m', e.created_at)) AS "as_of_month!: String"
+           FROM card_emis e JOIN cards c ON c.card_id = e.card_id WHERE c.user_id = ?"#,
+        user_id
+    )
+    .fetch_all(db)
+    .await?
+    {
+        let (_, remaining, _) = emi_effective(
+            e.monthly_paise,
+            e.remaining_principal_paise,
+            e.months_left,
+            parse_year_month(&e.as_of_month).unwrap_or(now_idx),
+            now_idx,
+        );
+        *emi_rem.entry(e.card_id).or_default() += remaining;
+    }
+
+    struct PerCard {
+        snaps: Vec<Snap>,
+        cycle: Option<(u8, u8)>,
+        card_created: Option<Date>,
+    }
+    let mut by_card: HashMap<String, PerCard> = HashMap::new();
+    for r in rows {
+        let Some(date) = parse_db_date(&r.created_at) else { continue };
+        let loan = emi_rem.get(&r.card_id).copied().unwrap_or(0);
+        let entry = by_card.entry(r.card_id).or_insert_with(|| PerCard {
+            snaps: Vec::new(),
+            cycle: r.statement_day.zip(r.due_day).map(|(a, b)| (a as u8, b as u8)),
+            card_created: r.card_created.as_deref().and_then(parse_db_date),
+        });
+        entry.snaps.push(Snap {
+            date,
+            total_due: r.total_due_paise,
+            exposure: match r.us {
+                Some(us) => r.total_due_paise + us - r.uc.unwrap_or(0),
+                None => (r.outstanding_paise - loan).max(0),
+            },
+            is_starting: r.is_starting,
+        });
+    }
+
+    let mut out = HashMap::new();
+    for (card_id, c) in by_card {
+        let Some(latest) = c.snaps.last() else { continue };
+        let last_idx = c.snaps.len() - 1;
+        let base_idx = c
+            .snaps
+            .iter()
+            .rposition(|s| s.date <= period_start)
+            .or_else(|| c.snaps.iter().position(|s| s.is_starting));
+        let (base_date, base_total_due, base_exposure) = match base_idx {
+            Some(i) => (c.snaps[i].date, c.snaps[i].total_due, c.snaps[i].exposure),
+            // the card was added at zero: everything on it since is new spending
+            None => (c.card_created.unwrap_or(c.snaps[0].date), 0, 0),
+        };
+        if base_idx == Some(last_idx) {
+            out.insert(card_id, (0, base_date));
+            continue;
+        }
+        let paid = match c.cycle {
+            Some((sd, dd)) if base_total_due > 0 => {
+                let due = due_date_for(last_statement_date(base_date, sd), dd);
+                if due > base_date && due <= today { base_total_due } else { 0 }
+            }
+            _ => 0,
+        };
+        out.insert(card_id, ((latest.exposure - base_exposure + paid).max(0), base_date));
+    }
+    Ok(out)
 }

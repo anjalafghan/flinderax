@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT spending_paise, spending_bps, allocation_day, savings_floor_paise, recovery_months, week_start,\n                  auto_post AS \"auto_post: bool\"\n           FROM user_settings WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "spending_paise",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "spending_bps",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "allocation_day",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "savings_floor_paise",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "recovery_months",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "week_start",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "auto_post: bool",
+        "ordinal": 6,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f3f8921c82791ed86a5e9f6e67a79095136ec2d2581ecd23c748e9b77c6af6da"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE commitments SET label = ?, amount_paise = ?, day_of_month = ?, account_id = ?, category = ?,\n                bucket = ?, frequency = ?, due_month = ?, to_account_id = ?, active = ?, start_month = ?, end_month = ?\n         WHERE commitment_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 14
+    },
+    "nullable": []
+  },
+  "hash": "2516df530b1e65dd363a9e9d38f90219e746432ea2c1b52a29e415f60c4d5976"
+}

@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", payer, amount_paise, on_day, note FROM joy_settlements WHERE couple_id = ? ORDER BY on_day DESC, id DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "payer",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "on_day",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "note",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3c4209db8900dbea6cf06e6c4dc3a341bd1e92a3ee01ab329cdce2593d1142b7"
+}

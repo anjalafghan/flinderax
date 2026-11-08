@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE transactions SET category = 'dates' WHERE txn_id = ? AND user_id = ? AND category_locked = 0",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "0c9634707cef7fc815d4ac90dc5e6e832cb370702bbd14816ff520195b982be1"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE couple_invites SET used_at = CURRENT_TIMESTAMP WHERE code_hash = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "3c7a3eeb4ece4c51cd55b34a8ce70c1d41b2ac68e4d72e53efe0fe886263c20a"
+}

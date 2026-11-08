@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT p.occurs_on, p.label, a.name AS account_name, p.amount_paise\n           FROM auto_postings p JOIN accounts a ON a.account_id = p.account_id\n           WHERE p.user_id = ? ORDER BY p.occurs_on DESC, p.created_at DESC LIMIT 10",
+  "describe": {
+    "columns": [
+      {
+        "name": "occurs_on",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "label",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "account_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 3,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d583e0fa560196aed69ff880fb5060dbb6e39ab8cec4d7eee2a50ad5642517e3"
+}

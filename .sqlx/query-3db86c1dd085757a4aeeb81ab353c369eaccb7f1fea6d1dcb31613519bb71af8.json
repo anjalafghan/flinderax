@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT merchant FROM dismissed_recurring WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "merchant",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3db86c1dd085757a4aeeb81ab353c369eaccb7f1fea6d1dcb31613519bb71af8"
+}

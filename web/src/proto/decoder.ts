@@ -3,7 +3,7 @@ import protobuf from 'protobufjs';
 // Define the protobuf schema inline
 const historyProto = `
 syntax = "proto3";
-package flinderax_backend;
+package joy_backend;
 
 message CardTransactionHistory {
   string transaction_id = 1;
@@ -40,8 +40,8 @@ async function initProto() {
     if (CardHistoryListType && CardListType) return { CardHistoryListType, CardListType };
 
     const root = protobuf.parse(historyProto).root;
-    CardHistoryListType = root.lookupType('flinderax_backend.CardHistoryList');
-    CardListType = root.lookupType('flinderax_backend.CardList');
+    CardHistoryListType = root.lookupType('joy_backend.CardHistoryList');
+    CardListType = root.lookupType('joy_backend.CardList');
     return { CardHistoryListType, CardListType };
 }
 

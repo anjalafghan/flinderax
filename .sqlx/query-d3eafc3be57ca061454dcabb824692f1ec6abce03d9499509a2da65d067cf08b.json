@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT created_at AS \"created_at?: String\", last_used_at AS \"last_used_at: String\" FROM ingest_keys WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "created_at?: String",
+        "ordinal": 0,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "last_used_at: String",
+        "ordinal": 1,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "d3eafc3be57ca061454dcabb824692f1ec6abce03d9499509a2da65d067cf08b"
+}

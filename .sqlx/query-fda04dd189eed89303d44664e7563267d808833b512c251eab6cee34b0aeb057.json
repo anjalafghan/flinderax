@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT account_id AS \"account_id!\", occurred_on, direction, amount_paise FROM transactions\n           WHERE user_id = ? AND account_id IS NOT NULL AND occurred_on >= ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "occurred_on",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "direction",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 3,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "fda04dd189eed89303d44664e7563267d808833b512c251eab6cee34b0aeb057"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO joy_activities (couple_id, title, notes, est_cost, setting, area, venue, lat, lng, duration, tags, energy,\n                added_by, generated, closed_days, season_from, season_to, hours, best_time, minutes, booking, book_ahead_days,\n                cover, bring, station, station_walk_min)\n         SELECT ?, title, notes, est_cost, setting, area, venue, lat, lng, duration, tags, energy,\n                added_by, generated, closed_days, season_from, season_to, hours, best_time, minutes, booking, book_ahead_days,\n                cover, bring, station, station_walk_min\n         FROM joy_seed_activities ORDER BY id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "5d4f6d45dbcbf89c9297dc61682e13e0fa34cc2f43c461f70212fa107020ae84"
+}

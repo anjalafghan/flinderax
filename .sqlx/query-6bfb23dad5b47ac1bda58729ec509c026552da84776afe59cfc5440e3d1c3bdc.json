@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO joy_settings (couple_id, key, value) VALUES (?, 'PERSON_A', ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "6bfb23dad5b47ac1bda58729ec509c026552da84776afe59cfc5440e3d1c3bdc"
+}

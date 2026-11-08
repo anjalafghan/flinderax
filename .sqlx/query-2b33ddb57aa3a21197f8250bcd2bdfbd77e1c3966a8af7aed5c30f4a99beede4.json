@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM tax_entries WHERE entry_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "2b33ddb57aa3a21197f8250bcd2bdfbd77e1c3966a8af7aed5c30f4a99beede4"
+}

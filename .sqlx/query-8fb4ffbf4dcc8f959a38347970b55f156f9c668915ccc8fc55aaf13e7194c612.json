@@ -1,0 +1,92 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id,\n                  category, bucket, frequency, due_month, to_account_id, active AS \"active: bool\", start_month, end_month\n           FROM commitments WHERE user_id = ? ORDER BY day_of_month, rowid",
+  "describe": {
+    "columns": [
+      {
+        "name": "commitment_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "label",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "day_of_month",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "account_id",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "category",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "bucket",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "frequency",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "due_month",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "to_account_id",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "active: bool",
+        "ordinal": 10,
+        "type_info": "Integer"
+      },
+      {
+        "name": "start_month",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_month",
+        "ordinal": 12,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "8fb4ffbf4dcc8f959a38347970b55f156f9c668915ccc8fc55aaf13e7194c612"
+}

@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT account_id AS \"account_id!\", last_4_digits FROM accounts WHERE user_id = ? AND last_4_digits IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_4_digits",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "f4ed716fbe80e3c5c65c0ccf46eb1d569dcf109abc4cb97a801db419b274e459"
+}

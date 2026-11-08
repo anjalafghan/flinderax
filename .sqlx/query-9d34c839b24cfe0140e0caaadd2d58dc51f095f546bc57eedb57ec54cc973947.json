@@ -1,0 +1,68 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, frequency, due_month,\n                  start_month, end_month, tax_section\n           FROM commitments WHERE user_id = ? AND active = 1 ORDER BY rowid",
+  "describe": {
+    "columns": [
+      {
+        "name": "commitment_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "label",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "day_of_month",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "frequency",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "due_month",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "start_month",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_month",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "tax_section",
+        "ordinal": 8,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "9d34c839b24cfe0140e0caaadd2d58dc51f095f546bc57eedb57ec54cc973947"
+}

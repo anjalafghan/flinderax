@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT couple_id AS \"couple_id!\" FROM couple_invites\n           WHERE code_hash = ? AND used_at IS NULL AND expires_at > datetime('now')",
+  "describe": {
+    "columns": [
+      {
+        "name": "couple_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2d366f681ed9a5db843c63154d9523514ec45f1f76cdc00f23eb09d5ea369df6"
+}

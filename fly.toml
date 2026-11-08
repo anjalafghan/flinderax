@@ -1,32 +1,37 @@
-# fly.toml app configuration file generated for flinderax on 2026-01-28T19:12:23+05:30
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
+# fly.toml for joy: the one production app. The merged server (finance hub + Dates) runs on the
+# Fly app that used to be Joy, `joy-jar`, so https://joy-jar.fly.dev keeps working and the envelope
+# links already sent on WhatsApp still open. It reuses Joy's volume `joy_data`. The database is a NEW
+# file, /data/joy-app.db; Joy's old /data/joy.db stays untouched next to it as the archive.
+# Secrets (PASETO_KEY, ...) are set with `fly secrets`, never here. Deploy: fly deploy --depot=false
 
-app = 'flinderax-backend'
-primary_region = 'bom'
+app = 'joy-jar'
+primary_region = 'sin'
 
 [build]
 
 [env]
   PORT = '3000'
-  DATABASE_URL = 'sqlite:/data/flinderax.db'
-  PASETO_KEY = 'mK8QnZ3A1Xz5dJ0F9kqH2B4yW7E6S0LxU8cRVaTMe2o='
+  DATABASE_URL = 'sqlite:///data/joy-app.db?mode=rwc'
+  JOY_PHOTOS_DIR = '/data/joy-photos'
+  PUBLIC_URL = 'https://joy-jar.fly.dev'
+  # Local time for dates, months and calendar invites.
+  TZ = 'Asia/Kolkata'
+  # What "today" is for the money side (330 = IST).
+  FLINDERAX_UTC_OFFSET_MINUTES = '330'
 
 [http_service]
   internal_port = 3000
   force_https = true
-  auto_stop_machines = 'stop'
+  # 'suspend' keeps memory, so waking takes a few hundred ms instead of a cold start.
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ['app']
 
 [[vm]]
   memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 512
 
 [[mounts]]
-  source = "flinderax_data"
-  destination = "/data"
+  source = 'joy_data'
+  destination = '/data'

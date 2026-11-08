@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT label FROM commitments WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "label",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "bcca533fcd8dacade377583c157ee403de6c0a6771e2f9cafd79979263e1d052"
+}

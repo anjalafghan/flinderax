@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE ingest_keys SET last_used_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "891fbb23ebf048f7cc0047d376ab9b7eb192377e89c62ca980a11e56356fc55c"
+}

@@ -36,5 +36,4 @@ flinderax.db
 flinderax.db-shm
 flinderax.db-wal
 *.db
-Dockerfile
 

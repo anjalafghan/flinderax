@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT account_id AS \"account_id!\", name, kind, balance_paise, locked AS \"locked: bool\", maturity_date\n           FROM accounts WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "kind",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "balance_paise",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "locked: bool",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "maturity_date",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "6d10ddb64fb5a86eb8366f5f45dbd768aac4d7d4374fb0129e394634696d6fa1"
+}

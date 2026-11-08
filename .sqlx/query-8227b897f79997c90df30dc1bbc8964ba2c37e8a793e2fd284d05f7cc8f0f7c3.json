@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT direction, category, SUM(amount_paise) AS \"total!: i64\", COUNT(*) AS \"n!: i64\"\n           FROM transactions WHERE user_id = ? AND occurred_on >= ? AND occurred_on < ?\n           GROUP BY direction, category",
+  "describe": {
+    "columns": [
+      {
+        "name": "direction",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "category",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "total!: i64",
+        "ordinal": 2,
+        "type_info": "Null"
+      },
+      {
+        "name": "n!: i64",
+        "ordinal": 3,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "8227b897f79997c90df30dc1bbc8964ba2c37e8a793e2fd284d05f7cc8f0f7c3"
+}

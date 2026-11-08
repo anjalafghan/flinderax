@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO joy_settings (couple_id, key, value) VALUES (?, ?, ?) ON CONFLICT(couple_id, key) DO UPDATE SET value = excluded.value",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "3b802f8134603e92db8f448d39dfb11ea52d854bc43ff346af32292ce6c46b17"
+}

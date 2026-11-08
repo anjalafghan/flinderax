@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT label, amount_paise, day_of_month, account_id, bucket, frequency, due_month, to_account_id,\n                  active AS \"active: bool\", start_month, end_month\n           FROM commitments WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "label",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "day_of_month",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "account_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "bucket",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "frequency",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "due_month",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "to_account_id",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "active: bool",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "start_month",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_month",
+        "ordinal": 10,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "23c749ee5d71dafe398a78961c24db595b81b1b4770a4e99c228a44fd288e58a"
+}

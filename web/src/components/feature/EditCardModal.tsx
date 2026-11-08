@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard } from "@/components/feature/CreditCard";
 import { MoneyInput } from "@/components/ui/money-input";
+import { Select } from "@/components/ui/select";
+import { useAccounts } from "@/hooks/usePlanner";
 import { paiseToInput, toPaise } from "@/utils/money";
 
 const parseDay = (v: string): number | null => {
@@ -29,6 +31,7 @@ interface EditCardModalProps {
   currentStatementDay?: number | null;
   currentDueDay?: number | null;
   currentCreditLimitPaise?: number | null;
+  currentPayFrom?: string | null;
 }
 
 function rgbToHex(r: number, g: number, b: number): string {
@@ -58,6 +61,7 @@ export function EditCardModal({
   currentStatementDay,
   currentDueDay,
   currentCreditLimitPaise,
+  currentPayFrom,
 }: EditCardModalProps) {
   const [name, setName] = useState(currentName);
   const [bank, setBank] = useState(currentBank);
@@ -71,6 +75,8 @@ export function EditCardModal({
   const [statementDay, setStatementDay] = useState(currentStatementDay ? String(currentStatementDay) : "");
   const [dueDay, setDueDay] = useState(currentDueDay ? String(currentDueDay) : "");
   const [creditLimit, setCreditLimit] = useState(currentCreditLimitPaise ? paiseToInput(currentCreditLimitPaise) : "");
+  const [payFrom, setPayFrom] = useState(currentPayFrom ?? "");
+  const { data: accounts } = useAccounts();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -82,6 +88,7 @@ export function EditCardModal({
     setStatementDay(currentStatementDay ? String(currentStatementDay) : "");
     setDueDay(currentDueDay ? String(currentDueDay) : "");
     setCreditLimit(currentCreditLimitPaise ? paiseToInput(currentCreditLimitPaise) : "");
+    setPayFrom(currentPayFrom ?? "");
   }, [
     currentName,
     currentBank,
@@ -91,6 +98,7 @@ export function EditCardModal({
     currentStatementDay,
     currentDueDay,
     currentCreditLimitPaise,
+    currentPayFrom,
   ]);
 
   const handleNameChange = useCallback((value: string) => setName(value), []);
@@ -137,6 +145,7 @@ export function EditCardModal({
         statement_day: parseDay(statementDay),
         due_day: parseDay(dueDay),
         credit_limit_paise: creditLimit.trim() ? toPaise(creditLimit) : null,
+        pay_from_account_id: payFrom || null,
       });
     },
     onSuccess: () => {
@@ -212,6 +221,16 @@ export function EditCardModal({
               <Label htmlFor="edit-limit">Limit</Label>
               <MoneyInput id="edit-limit" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-pay-from">Bill is paid from</Label>
+            <Select id="edit-pay-from" value={payFrom} onChange={(e) => setPayFrom(e.target.value)}>
+              <option value="">Reserve account</option>
+              {accounts?.filter((a) => !a.locked).map((a) => (
+                <option key={a.account_id} value={a.account_id}>{a.name}</option>
+              ))}
+            </Select>
           </div>
 
           <div className="rounded-xl border border-border p-6">

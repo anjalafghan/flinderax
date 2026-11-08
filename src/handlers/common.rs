@@ -1,3 +1,4 @@
+use crate::ratelimit;
 use crate::models::{AppState, CreateUserPayload, CreateUserResponse, LoginPayload, LoginResponse};
 
 use argon2::{
@@ -6,7 +7,7 @@ use argon2::{
 };
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -20,6 +21,11 @@ pub struct AppError(pub StatusCode, pub String);
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
+        // Internal details (SQL errors etc.) stay in the logs, never in the response body.
+        if self.0.is_server_error() {
+            error!("{}: {}", self.0, self.1);
+            return (self.0, "Internal server error".to_string()).into_response();
+        }
         (self.0, self.1).into_response()
     }
 }
@@ -74,11 +80,25 @@ pub fn validate_year_month(v: &Option<String>, what: &str) -> Result<(), AppErro
     }
 }
 
+const LOGIN_ATTEMPTS_PER_MINUTE: u32 = 10;
+const REGISTRATIONS_PER_MINUTE: u32 = 5;
+
+fn too_many() -> AppError {
+    AppError(StatusCode::TOO_MANY_REQUESTS, "Too many attempts, try again in a minute".into())
+}
+
 pub async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(login_payload): Json<LoginPayload>,
 ) -> Result<Json<LoginResponse>, AppError> {
-    dotenvy::dotenv().ok();
+    let name_key = format!("login-user:{}", login_payload.user_name.to_lowercase());
+    let ip_key = format!("login-ip:{}", ratelimit::client_key(&headers));
+    if !ratelimit::allow(&name_key, LOGIN_ATTEMPTS_PER_MINUTE)
+        || !ratelimit::allow(&ip_key, LOGIN_ATTEMPTS_PER_MINUTE * 3)
+    {
+        return Err(too_many());
+    }
 
     let user = sqlx::query!(
         "SELECT user_id, user_name, user_password, user_role FROM users WHERE user_name = ? ",
@@ -93,7 +113,7 @@ pub async fn login(
         None => {
             return Err(AppError(
                 StatusCode::UNAUTHORIZED,
-                "INVALID USERNAME or password".into(),
+                "Invalid username or password".into(),
             ))
         }
     };
@@ -160,17 +180,42 @@ fn get_paseto_token(
     Ok(token)
 }
 
+pub fn validate_credentials(user_name: &str, user_password: &str) -> Result<(), AppError> {
+    let name_len = user_name.chars().count();
+    if !(3..=32).contains(&name_len)
+        || !user_name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+    {
+        return Err(bad_request(
+            "Username must be 3-32 characters: letters, digits, '_', '-' or '.'",
+        ));
+    }
+    if !(8..=128).contains(&user_password.chars().count()) {
+        return Err(bad_request("Password must be 8-128 characters"));
+    }
+    Ok(())
+}
+
 pub async fn register(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(create_user): Json<CreateUserPayload>,
 ) -> Result<Json<CreateUserResponse>, AppError> {
+    if !ratelimit::allow(
+        &format!("register-ip:{}", ratelimit::client_key(&headers)),
+        REGISTRATIONS_PER_MINUTE,
+    ) {
+        return Err(too_many());
+    }
     let user_id = nanoid!();
 
+    // The client-supplied role is ignored: admins are promoted in the database, never self-assigned.
     let CreateUserPayload {
         user_name,
         user_password,
-        user_role,
+        ..
     } = create_user;
+    let user_role = "user";
+    validate_credentials(&user_name, &user_password)?;
 
     let password_hash = get_password_hash(user_password)?;
 
@@ -183,9 +228,14 @@ pub async fn register(
     )
     .execute(&state.db)
     .await
-    .map_err(|e| {
-        error!("Failed to insert user {}", e);
-        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    .map_err(|e| match e {
+        sqlx::Error::Database(ref d) if d.is_unique_violation() => {
+            AppError(StatusCode::CONFLICT, "Username is already taken".into())
+        }
+        e => {
+            error!("Failed to insert user {}", e);
+            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
     })?;
 
     Ok(Json(CreateUserResponse { status: true }))

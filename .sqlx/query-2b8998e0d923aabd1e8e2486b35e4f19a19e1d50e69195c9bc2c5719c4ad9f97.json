@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO goal_contributions (goal_id, amount_paise, on_day, note) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "2b8998e0d923aabd1e8e2486b35e4f19a19e1d50e69195c9bc2c5719c4ad9f97"
+}

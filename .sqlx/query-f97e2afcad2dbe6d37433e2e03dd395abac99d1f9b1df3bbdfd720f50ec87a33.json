@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM merchant_rules WHERE user_id = ? AND pattern = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "f97e2afcad2dbe6d37433e2e03dd395abac99d1f9b1df3bbdfd720f50ec87a33"
+}

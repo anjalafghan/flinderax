@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE joy_links SET last_error = ? WHERE user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "6e979ea8d3879f37c427f4d360bed5455a7cdbe9c6e3945246a186f2a201ae8a"
+}

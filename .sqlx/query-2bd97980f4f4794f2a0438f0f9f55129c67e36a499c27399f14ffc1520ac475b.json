@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT txn_id AS \"txn_id!\", merchant AS \"merchant!\" FROM transactions\n               WHERE user_id = ? AND category = 'uncategorized' AND merchant IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "name": "txn_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "merchant!",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "2bd97980f4f4794f2a0438f0f9f55129c67e36a499c27399f14ffc1520ac475b"
+}

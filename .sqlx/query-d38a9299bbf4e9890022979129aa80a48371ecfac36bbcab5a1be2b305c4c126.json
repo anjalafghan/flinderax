@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT (user_0 IS NOT NULL AND user_1 IS NOT NULL) AS \"two!: bool\" FROM couples WHERE couple_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "two!: bool",
+        "ordinal": 0,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d38a9299bbf4e9890022979129aa80a48371ecfac36bbcab5a1be2b305c4c126"
+}

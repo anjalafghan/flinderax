@@ -1,0 +1,18 @@
+/* Small additions to Joy's regular.css: 44 px targets, the upload progress, and nothing wider than 375 px. */
+.joy {
+  .rs-add, .reg-photo-l { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 1.5px dashed var(--rule); border-radius: 999px; cursor: pointer; color: var(--ink-soft); }
+  .rs-add:focus-within, .reg-photo-l:focus-within { outline: 2px solid var(--stamp); outline-offset: 2px; }
+  .rs-add input, .reg-photo-l input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+  .rs-add, .reg-photo-l { position: relative; }
+  .reg-else summary { min-height: 44px; }
+  .rs-actions .btn, .reg-done .btn, .reg-actions .btn, .reg-else-form .btn { min-height: 44px; }
+  .rs-grid, .rl-list, .rl-form, .reg { max-width: 100%; }
+  .rs-print img { max-width: 100%; }
+  .rs-night { min-width: 0; }
+  .np-prog { display: grid; gap: 4px; min-width: 140px; font-size: var(--step--1); color: var(--ink-soft); }
+  .np-prog progress { width: 100%; height: 8px; accent-color: var(--stamp); }
+  .np-err { margin: 0; font-size: var(--step--1); color: var(--stamp); }
+  .rl-form input[type="text"], .rl-form input[type="url"], .rl-form input[type="date"] { width: 100%; box-sizing: border-box; }
+  .rl-item { min-height: 44px; }
+  .rs-back-row { display: flex; }
+}

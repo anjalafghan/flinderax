@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT CASE WHEN user_1 IS NULL THEN 1 WHEN user_0 IS NULL THEN 0 END AS \"slot?: i64\" FROM couples WHERE couple_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "slot?: i64",
+        "ordinal": 0,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9e828f45faf7169d732ec822b349dfd28bab218be6be170ba7fa7b2998b23b72"
+}

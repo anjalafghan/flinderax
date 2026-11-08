@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
- import { ArrowRight, Clock, X } from "lucide-react";
+ import { ArrowRight, Clock, Wallet, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import api from "@/services/api";
@@ -9,6 +10,14 @@ import { Header } from "@/components/layout/Header";
 import { CardCarousel } from "@/components/feature/CardCarousel";
 import { Button } from "@/components/ui/button";
 import { PlannerSummary } from "@/components/feature/PlannerSummary";
+import { NetWorthPanel } from "@/components/feature/NetWorthPanel";
+import { CardUtilization } from "@/components/feature/CardUtilization";
+import { MaturityList } from "@/components/feature/MaturityList";
+import { AutoPostings } from "@/components/feature/AutoPostings";
+import { SpendingPanel } from "@/components/feature/SpendingPanel";
+import { DatesPanel } from "@/components/feature/DatesPanel";
+import { DueSoonCard } from "@/components/feature/BillsPanel";
+import { useDashboardHistory } from "@/hooks/usePlanner";
 
 export interface CardData {
   card_id: string;
@@ -23,6 +32,7 @@ export interface CardData {
   statement_day?: number | null;
   due_day?: number | null;
   credit_limit_paise?: number | null;
+  pay_from_account_id?: string | null;
 }
 
 interface DeferredItem {
@@ -88,6 +98,9 @@ export default function DashboardPage() {
     },
   });
 
+  // Tracker data is optional: if this fails, the section is simply hidden.
+  const { data: history } = useDashboardHistory(12);
+
   const { data: deferredStatus } = useQuery({
     queryKey: ["deferred-status"],
     queryFn: async () => {
@@ -116,7 +129,7 @@ export default function DashboardPage() {
          queryClient.invalidateQueries({ queryKey: ["cards"] });
        }
      },
-     onError: (error: any) => {
+     onError: (error: unknown) => {
        toast.error("Failed to settle payments");
        console.error(error);
      },
@@ -135,7 +148,7 @@ export default function DashboardPage() {
          queryClient.invalidateQueries({ queryKey: ["deferred-status"] });
        }
      },
-     onError: (error: any) => {
+     onError: (error: unknown) => {
        toast.error("Failed to cancel payments");
        console.error(error);
      },
@@ -170,17 +183,20 @@ export default function DashboardPage() {
       0,
     ) || 0;
 
-  useEffect(() => {
-    if (!cards || cards.length === 0) return;
-
-    const savedCardId = sessionStorage.getItem("dashboard_active_card");
-    if (savedCardId) {
-      const index = cards.findIndex((c) => c.card_id === savedCardId);
-      if (index !== -1) {
-        setActiveIndex(index);
+  // When the cards arrive (or change), reopen the card the user had active. Done during render, not in an effect.
+  const [seenCards, setSeenCards] = useState<typeof cards>(undefined);
+  if (cards !== seenCards) {
+    setSeenCards(cards);
+    if (cards && cards.length > 0) {
+      const savedCardId = sessionStorage.getItem("dashboard_active_card");
+      if (savedCardId) {
+        const index = cards.findIndex((c) => c.card_id === savedCardId);
+        if (index !== -1) {
+          setActiveIndex(index);
+        }
       }
     }
-  }, [cards]);
+  }
 
    const hasPendingDeferred = deferredStatus && deferredStatus.total_amount !== 0;
 
@@ -191,6 +207,23 @@ export default function DashboardPage() {
       <main className={`flex-1 container mx-auto px-4 py-4 md:py-8 flex flex-col ${hasPendingDeferred ? "pb-32" : ""}`}>
         <div className="mx-auto mb-8 w-full max-w-5xl">
           <PlannerSummary />
+        </div>
+
+        <div className="mx-auto mb-8 grid w-full max-w-5xl items-start gap-4 md:grid-cols-2">
+          <DueSoonCard />
+          <Link
+            to="/plan#afford"
+            className="flex items-center gap-4 rounded-lg border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <Wallet className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">Can I afford it?</span>
+              <span className="block text-sm text-muted-foreground">Check a purchase before you buy</span>
+            </span>
+            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          </Link>
         </div>
 
         <div className="mb-4 md:mb-10 text-center space-y-2 md:space-y-4 shrink-0">
@@ -236,10 +269,26 @@ export default function DashboardPage() {
             />
           ))}
         </div>
+
+        <div className="mx-auto mb-8 grid w-full max-w-5xl items-start gap-6 md:grid-cols-2 [&>section]:mb-0 [&>section]:max-w-none">
+          <SpendingPanel />
+          <DatesPanel />
+        </div>
+
+        {history && (
+          <div className="mx-auto mb-8 w-full max-w-5xl space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <NetWorthPanel months={history.months} />
+              <CardUtilization cards={history.cards} />
+            </div>
+            <MaturityList items={history.maturities} />
+            <AutoPostings items={history.auto_postings} enabled={history.auto_post} />
+          </div>
+        )}
       </main>
 
        {hasPendingDeferred && (
-         <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-8 pb-4 px-4 border-t border-border/50">
+         <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 bg-gradient-to-t md:bottom-0 from-background via-background/95 to-transparent pt-8 pb-4 px-4 border-t border-border/50">
            <div className="container mx-auto max-w-md relative">
              <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30 p-4">
                <button

@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT card_id AS \"card_id!\", last_4_digits FROM cards WHERE user_id = ? AND last_4_digits IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "name": "card_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_4_digits",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "7fe673bddd5f8547cec0e6b506d1b96676abdb8518b920fa897a3edf41dcdd74"
+}

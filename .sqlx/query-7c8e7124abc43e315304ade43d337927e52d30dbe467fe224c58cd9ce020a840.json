@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO tax_entries (entry_id, user_id, fy, section, label, amount_paise) VALUES (?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "7c8e7124abc43e315304ade43d337927e52d30dbe467fe224c58cd9ce020a840"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO moves (move_id, user_id, kind, move_key, amount_paise, mode, from_account_id, to_account_id)\n         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "d5fb9999646b8edb362ed4a34b21a611fe9a26e620ed034078b51a7186e61c61"
+}

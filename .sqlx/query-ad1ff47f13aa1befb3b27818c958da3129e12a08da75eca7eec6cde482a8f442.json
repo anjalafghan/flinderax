@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM couple_invites WHERE couple_id = ? AND used_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "ad1ff47f13aa1befb3b27818c958da3129e12a08da75eca7eec6cde482a8f442"
+}

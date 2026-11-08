@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT u.user_name FROM couples c JOIN users u ON u.user_id = CASE WHEN ? = 0 THEN c.user_1 ELSE c.user_0 END\n           WHERE c.couple_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_name",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "dccb22e8dabd547d67490ee3511ce56d98d0d15e977543d329a37d3f11621587"
+}

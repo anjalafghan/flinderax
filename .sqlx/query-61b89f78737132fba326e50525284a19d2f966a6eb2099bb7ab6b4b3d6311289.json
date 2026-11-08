@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT account_id AS \"account_id!\", kind, interest_bps, maturity_date, renewal, payout_account_id\n           FROM accounts WHERE user_id = ? AND kind IN ('fd', 'rd')",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "kind",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "interest_bps",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "maturity_date",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "renewal",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "payout_account_id",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "61b89f78737132fba326e50525284a19d2f966a6eb2099bb7ab6b4b3d6311289"
+}
