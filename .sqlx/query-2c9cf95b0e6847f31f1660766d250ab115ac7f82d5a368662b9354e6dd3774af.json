@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT \n                transaction_id as \"transaction_id!\",\n                total_due_input as \"total_due_input!: f32\",\n                timestamp as \"timestamp!: String\"\n            FROM card_events\n            WHERE card_id = ? AND transaction_id != ?\n            ORDER BY timestamp DESC\n            LIMIT 1\n            ",
+  "query": "\n        SELECT transaction_id as \"transaction_id!\",\n        total_due_input as \"total_due_input!: f32\",\n        timestamp as \"timestamp!: String\"\n        FROM card_events\n        WHERE card_id = ?\n        ORDER BY timestamp DESC, rowid DESC",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 1
     },
     "nullable": [
       true,
@@ -28,5 +28,5 @@
       true
     ]
   },
-  "hash": "51c27c7df6f00833c9cf8abb075790536293df98933f138ab2cfe13bbf50f87e"
+  "hash": "2c9cf95b0e6847f31f1660766d250ab115ac7f82d5a368662b9354e6dd3774af"
 }

@@ -108,11 +108,14 @@ pub fn parse_date(raw: &str) -> Option<Date> {
     Date::from_calendar_date(y, month, d.parse().ok()?).ok()
 }
 
-/// "1,23,456.78", "Rs. 450", "450.00 Dr" -> paise. Empty / zero -> None.
+/// "1,23,456.78", "Rs. 450", "-450.00", "Rs. -450", "(450.00)", "450.00 Dr" -> signed paise.
+/// A minus sign or an opening bracket before the number makes it negative. Empty / zero -> None.
 fn parse_amount(raw: &str) -> Option<i64> {
-    // Skip a currency prefix such as "Rs." so its dot isn't read as a decimal point.
-    let raw = &raw[raw.find(|c: char| c.is_ascii_digit()).unwrap_or(raw.len())..];
-    let cleaned: String = raw.chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();
+    // Everything before the first digit is a sign or a currency prefix such as "Rs.", whose dot
+    // must not be read as a decimal point.
+    let start = raw.find(|c: char| c.is_ascii_digit()).unwrap_or(raw.len());
+    let negative = raw[..start].contains('-') || raw[..start].contains('(');
+    let cleaned: String = raw[start..].chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();
     if cleaned.is_empty() {
         return None;
     }
@@ -121,7 +124,18 @@ fn parse_amount(raw: &str) -> Option<i64> {
     let frac = format!("{:0<2}", frac.chars().take(2).collect::<String>());
     let paise: i64 = frac.parse().ok()?;
     let total = rupees.checked_mul(100)?.checked_add(paise)?;
-    (total > 0).then_some(total)
+    let total = if negative { -total } else { total };
+    (total != 0).then_some(total)
+}
+
+/// A signed figure in a debit or credit column: a minus sign reverses the side it sits in (a
+/// negative withdrawal is money coming back). Returns the side and the positive amount.
+fn sided(side: Direction, signed: i64) -> (Direction, i64) {
+    if signed >= 0 {
+        return (side, signed);
+    }
+    let flipped = if matches!(side, Direction::Debit) { Direction::Credit } else { Direction::Debit };
+    (flipped, -signed)
 }
 
 #[derive(Default)]
@@ -140,20 +154,25 @@ struct Columns {
 fn find_columns(header: &[String]) -> Option<Columns> {
     let names: Vec<String> = header.iter().map(|h| h.trim().to_lowercase()).collect();
     let find = |pred: &dyn Fn(&str) -> bool| names.iter().position(|n| pred(n));
+    // "Debit/Credit", "Debit / Credit" and "Dr/Cr" name one amount column, not two. It holds signed
+    // or Dr/Cr-suffixed amounts, so it is read like a single amount column.
+    let combined_name = |n: &str| matches!(n.chars().filter(|c| !c.is_whitespace()).collect::<String>().as_str(), "debit/credit" | "dr/cr" | "cr/dr");
     // "value date" is a fallback for banks that print both.
     let date = find(&|n| n == "date" || n == "txn date" || n == "transaction date" || n == "tran date" || n == "posting date")
         .or_else(|| find(&|n| n.contains("date") && !n.contains("value")))
         .or_else(|| find(&|n| n.contains("date")))?;
-    let debit = find(&|n| n.contains("debit") || n.contains("withdrawal") || n == "dr" || n.contains("paid out"));
-    let credit = find(&|n| n.contains("credit") || n.contains("deposit") || n == "cr" || n.contains("paid in"));
+    let debit = find(&|n| !combined_name(n) && (n.contains("debit") || n.contains("withdrawal") || n == "dr" || n.contains("paid out")));
+    let credit = find(&|n| !combined_name(n) && (n.contains("credit") || n.contains("deposit") || n == "cr" || n.contains("paid in")));
     let amount = if debit.is_none() && credit.is_none() {
-        find(&|n| n == "amount" || n.starts_with("amount") || n.contains("amt"))
+        find(&|n| n == "amount" || n.starts_with("amount") || n.contains("amt")).or_else(|| find(&combined_name))
     } else {
         None
     };
     if debit.is_none() && credit.is_none() && amount.is_none() {
         return None;
     }
+    // A separate Dr/Cr indicator next to an amount column; never the amount column itself.
+    let flag = find(&|n| n == "dr/cr" || n == "cr/dr" || n == "type" || n.contains("transaction type")).filter(|i| Some(*i) != amount);
     Some(Columns {
         date,
         narration: find(&|n| n.contains("narration") || n.contains("description") || n.contains("particular") || n.contains("remark") || n.contains("details") || n.contains("merchant")),
@@ -161,7 +180,7 @@ fn find_columns(header: &[String]) -> Option<Columns> {
         debit,
         credit,
         amount,
-        flag: find(&|n| n == "dr/cr" || n == "cr/dr" || n == "type" || n.contains("transaction type") || n == "debit/credit"),
+        flag,
         balance: find(&|n| n.contains("balance")),
     })
 }
@@ -187,19 +206,20 @@ pub fn parse(text: &str) -> Option<Parsed> {
         let debit = cols.debit.and_then(|i| r.get(i)).and_then(|s| parse_amount(s));
         let credit = cols.credit.and_then(|i| r.get(i)).and_then(|s| parse_amount(s));
         let (direction, amount_paise) = match (debit, credit, cols.amount) {
-            (Some(d), None, _) => (Direction::Debit, d),
-            (None, Some(c), _) => (Direction::Credit, c),
+            (Some(d), None, _) => sided(Direction::Debit, d),
+            (None, Some(c), _) => sided(Direction::Credit, c),
             (None, None, Some(ai)) => {
                 let raw = r.get(ai).map(|s| s.trim()).unwrap_or("");
-                let Some(a) = parse_amount(raw) else {
+                let Some(signed) = parse_amount(raw) else {
                     out.skipped += 1;
                     continue;
                 };
+                let a = signed.abs();
                 let flag = cell(r, cols.flag).to_lowercase();
                 let lower = raw.to_lowercase();
                 let credit = flag.starts_with("cr") || flag.contains("credit") || lower.ends_with("cr") || lower.ends_with("cr.");
-                let debit = flag.starts_with("dr") || flag.contains("debit") || lower.ends_with("dr") || lower.ends_with("dr.") || raw.starts_with('-') || raw.starts_with('(');
-                // Signed columns: a leading minus is money out. With no flag at all, positive is money in.
+                let debit = flag.starts_with("dr") || flag.contains("debit") || lower.ends_with("dr") || lower.ends_with("dr.") || signed < 0;
+                // Signed columns: a minus sign is money out. With no flag at all, positive is money in.
                 if credit || (!debit && cols.flag.is_none()) {
                     (Direction::Credit, a)
                 } else {
@@ -291,6 +311,37 @@ mod tests {
         let p = parse(csv).unwrap();
         assert_eq!((p.rows[0].direction, p.rows[0].amount_paise), (Direction::Debit, 12_000));
         assert_eq!((p.rows[1].direction, p.rows[1].amount_paise), (Direction::Credit, 4_500));
+    }
+
+    #[test]
+    fn debit_credit_header_is_one_amount_column() {
+        let csv = "Date,Narration,Debit/Credit,Balance\n01/11/2026,Coffee,-120.00,1000.00\n02/11/2026,Refund,45.00,1045.00\n03/11/2026,Fee,\"-30.00\",1015.00\n";
+        let p = parse(csv).unwrap();
+        assert_eq!(p.skipped, 0);
+        assert_eq!(p.rows.len(), 3);
+        assert_eq!((p.rows[0].direction, p.rows[0].amount_paise), (Direction::Debit, 12_000));
+        assert_eq!((p.rows[1].direction, p.rows[1].amount_paise), (Direction::Credit, 4_500));
+        assert_eq!((p.rows[2].direction, p.rows[2].amount_paise), (Direction::Debit, 3_000));
+
+        // Spaced header, with Dr/Cr suffixes instead of signs.
+        let csv = "Transaction Date,Description,Debit / Credit\n03-Nov-2026,AMAZON PAY,\"2,000.00 Dr\"\n04-Nov-2026,PAYMENT RECEIVED,\"5,000.00 Cr\"\n";
+        let p = parse(csv).unwrap();
+        assert_eq!(p.rows.len(), 2);
+        assert_eq!((p.rows[0].direction, p.rows[0].amount_paise), (Direction::Debit, 200_000));
+        assert_eq!((p.rows[1].direction, p.rows[1].amount_paise), (Direction::Credit, 500_000));
+    }
+
+    #[test]
+    fn negative_amounts_keep_their_sign() {
+        assert_eq!(parse_amount("-450.00"), Some(-45_000));
+        assert_eq!(parse_amount("Rs. -1,000"), Some(-100_000));
+        assert_eq!(parse_amount("(450.00)"), Some(-45_000));
+        assert_eq!(parse_amount("-0.00"), None);
+        // A negative withdrawal is money back in; the negative balance is kept as it is.
+        let csv = "Date,Narration,Withdrawal,Deposit,Balance\n01/11/2026,Reversal,\"-500.00\",,\"-250.00\"\n";
+        let p = parse(csv).unwrap();
+        assert_eq!(p.skipped, 0);
+        assert_eq!((p.rows[0].direction, p.rows[0].amount_paise, p.rows[0].balance_paise), (Direction::Credit, 50_000, Some(-25_000)));
     }
 
     #[test]

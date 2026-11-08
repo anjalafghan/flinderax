@@ -16,7 +16,7 @@ use crate::{
     models::AppState,
     planner::{
         card_amounts, emi_effective, month_index, parse_year_month,
-        cycle::{due_date_for, last_statement_date, next_statement_date},
+        cycle::{day_in_month_offset, due_date_for, last_statement_date, next_statement_date},
         CardNumbers,
     },
 };
@@ -574,30 +574,133 @@ pub async fn spent_this_period(
 
     let mut out = HashMap::new();
     for (card_id, c) in by_card {
-        let Some(latest) = c.snaps.last() else { continue };
-        let last_idx = c.snaps.len() - 1;
-        let base_idx = c
-            .snaps
-            .iter()
-            .rposition(|s| s.date <= period_start)
-            .or_else(|| c.snaps.iter().position(|s| s.is_starting));
-        let (base_date, base_total_due, base_exposure) = match base_idx {
-            Some(i) => (c.snaps[i].date, c.snaps[i].total_due, c.snaps[i].exposure),
-            // the card was added at zero: everything on it since is new spending
-            None => (c.card_created.unwrap_or(c.snaps[0].date), 0, 0),
-        };
-        if base_idx == Some(last_idx) {
-            out.insert(card_id, (0, base_date));
-            continue;
+        if let Some(spent) = spent_for_card(&c.snaps, c.cycle, c.card_created, period_start, today) {
+            out.insert(card_id, spent);
         }
-        let paid = match c.cycle {
-            Some((sd, dd)) if base_total_due > 0 => {
-                let due = due_date_for(last_statement_date(base_date, sd), dd);
-                if due > base_date && due <= today { base_total_due } else { 0 }
-            }
-            _ => 0,
-        };
-        out.insert(card_id, ((latest.exposure - base_exposure + paid).max(0), base_date));
     }
     Ok(out)
+}
+
+/// `(spent, baseline date)` for one card, or `None` when it has no snapshots. Snapshots must be
+/// in time order.
+fn spent_for_card(
+    snaps: &[Snap],
+    cycle: Option<(u8, u8)>,
+    card_created: Option<Date>,
+    period_start: Date,
+    today: Date,
+) -> Option<(i64, Date)> {
+    let latest = snaps.last()?;
+    let last_idx = snaps.len() - 1;
+    let base_idx = snaps
+        .iter()
+        .rposition(|s| s.date <= period_start)
+        .or_else(|| snaps.iter().position(|s| s.is_starting));
+    let (base_date, base_total_due, base_exposure) = match base_idx {
+        Some(i) => (snaps[i].date, snaps[i].total_due, snaps[i].exposure),
+        // the card was added at zero: everything on it since is new spending
+        None => (card_created.unwrap_or(snaps[0].date), 0, 0),
+    };
+    if base_idx == Some(last_idx) {
+        return Some((0, base_date));
+    }
+    let paid = bills_paid_since(snaps, base_idx, base_date, base_total_due, cycle, today);
+    Some(((latest.exposure - base_exposure + paid).max(0), base_date))
+}
+
+/// Bills paid in full between the baseline and `today`, added back so repayments don't read as
+/// negative spend.
+///
+/// With a billing cycle, every statement after the baseline whose due date falls in
+/// `(baseline, today]` counts as paid: the baseline's own bill for the first one, then the
+/// largest balance shown during that statement's window for each later one.
+///
+/// Without a cycle there is no due date to go on, so a repayment is any drop in `total_due`
+/// between consecutive snapshots since the baseline.
+fn bills_paid_since(
+    snaps: &[Snap],
+    base_idx: Option<usize>,
+    base_date: Date,
+    base_total_due: i64,
+    cycle: Option<(u8, u8)>,
+    today: Date,
+) -> i64 {
+    match cycle {
+        Some((sd, dd)) => {
+            let first_stmt = last_statement_date(base_date, sd);
+            let mut paid = 0;
+            for k in 0.. {
+                let stmt = day_in_month_offset(first_stmt, k, sd);
+                let due = due_date_for(stmt, dd);
+                if due > today {
+                    break;
+                }
+                if due > base_date {
+                    paid += if k == 0 {
+                        base_total_due
+                    } else {
+                        let next = day_in_month_offset(first_stmt, k + 1, sd);
+                        snaps
+                            .iter()
+                            .filter(|s| s.date >= stmt && s.date < next)
+                            .map(|s| s.total_due)
+                            .max()
+                            .unwrap_or(0)
+                    };
+                }
+            }
+            paid
+        }
+        None => snaps[base_idx.unwrap_or(0)..]
+            .windows(2)
+            .map(|w| (w[0].total_due - w[1].total_due).max(0))
+            .sum(),
+    }
+}
+
+#[cfg(test)]
+mod spend_tests {
+    use super::*;
+    use time::macros::date;
+
+    fn snap(d: Date, total_due: i64, exposure: i64) -> Snap {
+        Snap { date: d, total_due, exposure, is_starting: false }
+    }
+
+    #[test]
+    fn repayments_across_several_cycles_are_all_added_back() {
+        // Statement 10th, due 25th. Dec bill of 1000 paid Dec 25; Jan bill of 800 paid Jan 25;
+        // 200 charged in February and paid Feb 25. Total charges since Dec 20: 1000 (800 + 200).
+        let snaps = [
+            snap(date!(2025 - 12 - 20), 1000, 1000),
+            snap(date!(2026 - 01 - 12), 800, 800),
+            snap(date!(2026 - 02 - 01), 0, 0),
+            snap(date!(2026 - 02 - 20), 200, 200),
+            snap(date!(2026 - 03 - 01), 0, 0),
+        ];
+        let got = spent_for_card(&snaps, Some((10, 25)), None, date!(2025 - 12 - 20), date!(2026 - 03 - 01));
+        assert_eq!(got, Some((1000, date!(2025 - 12 - 20))));
+    }
+
+    #[test]
+    fn card_without_cycle_days_does_not_read_zero_after_a_payoff() {
+        // Owed 1000 at the start of the period, paid off, then 300 charged.
+        let snaps = [
+            snap(date!(2026 - 01 - 01), 1000, 1000),
+            snap(date!(2026 - 01 - 15), 0, 0),
+            snap(date!(2026 - 02 - 20), 300, 300),
+        ];
+        let got = spent_for_card(&snaps, None, None, date!(2026 - 01 - 01), date!(2026 - 02 - 20));
+        assert_eq!(got, Some((300, date!(2026 - 01 - 01))));
+    }
+
+    #[test]
+    fn card_without_cycle_days_with_no_payment_counts_the_increase() {
+        let snaps = [
+            snap(date!(2026 - 01 - 01), 100, 100),
+            snap(date!(2026 - 01 - 20), 350, 350),
+        ];
+        let got = spent_for_card(&snaps, None, None, date!(2026 - 01 - 01), date!(2026 - 01 - 20));
+        assert_eq!(got, Some((250, date!(2026 - 01 - 01))));
+    }
 }

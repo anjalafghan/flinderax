@@ -90,9 +90,7 @@ pub async fn record(
     if !matches!(p.mode.as_str(), "moved" | "already_covered" | "skipped") {
         return Err(bad_request("mode must be moved, already_covered or skipped"));
     }
-    if p.amount_paise <= 0 {
-        return Err(bad_request("amount_paise must be positive"));
-    }
+    crate::validate::positive_amount(p.amount_paise).map_err(bad_request)?;
     if p.kind == "card_bill" {
         let card_id = p.key.split(':').next().unwrap_or_default();
         ensure_card_owned(&state.db, card_id, &user_id).await?;

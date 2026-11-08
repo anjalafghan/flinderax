@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use time::{macros::format_description, Date};
 
 use crate::{
+    validate,
     handlers::{
         account::ensure_account_owned,
         autopost,
@@ -135,9 +136,7 @@ fn validate(p: &GoalPayload) -> Result<(), AppError> {
     if p.name.trim().is_empty() {
         return Err(bad_request("Give the goal a name"));
     }
-    if p.target_paise <= 0 {
-        return Err(bad_request("The target must be more than zero"));
-    }
+    validate::positive_amount(p.target_paise).map_err(|e| bad_request(format!("The target: {e}")))?;
     if p.kind.as_deref().is_some_and(|k| !matches!(k, "emergency" | "custom")) {
         return Err(bad_request("kind must be emergency or custom"));
     }
@@ -250,6 +249,7 @@ pub async fn contribute(
     if p.amount_paise == 0 {
         return Err(bad_request("The amount can't be zero"));
     }
+    validate::bounded_amount(p.amount_paise).map_err(|e| bad_request(format!("The amount: {e}")))?;
     let owned = sqlx::query_scalar!("SELECT goal_id FROM goals WHERE goal_id = ? AND user_id = ?", p.goal_id, user_id)
         .fetch_optional(&state.db)
         .await?;
@@ -268,4 +268,33 @@ pub async fn contribute(
     .execute(&state.db)
     .await?;
     Ok(Json(Done { status: true }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn payload(target: i64) -> GoalPayload {
+        GoalPayload {
+            goal_id: None,
+            name: "Trip".into(),
+            kind: None,
+            target_paise: target,
+            target_date: Some("2027-04-01".into()),
+            priority: None,
+            account_id: None,
+        }
+    }
+
+    #[test]
+    fn a_normal_target_passes() {
+        assert!(validate(&payload(6_000_000)).is_ok());
+    }
+
+    #[test]
+    fn an_absurd_target_is_rejected() {
+        assert!(validate(&payload(i64::MAX)).is_err());
+        assert!(validate(&payload(0)).is_err());
+        assert!(validate(&payload(-5)).is_err());
+    }
 }

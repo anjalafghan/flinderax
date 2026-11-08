@@ -119,6 +119,8 @@ pub fn build_router(state: AppState) -> Router {
         .layer(cors_layer())
         .layer(middleware::from_fn(crate::headers::security_headers))
         .layer(CompressionLayer::new())
+        // Safety net: a panic in one request answers 500 instead of taking the server down.
+        .layer(tower_http::catch_panic::CatchPanicLayer::new())
         .fallback_service(ServeDir::new(&dir).fallback(ServeFile::new(index)))
 }
 

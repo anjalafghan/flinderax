@@ -159,6 +159,14 @@ fn refuse(msg: impl Into<String>) -> Response {
     (StatusCode::UNPROCESSABLE_ENTITY, Json(serde_json::json!({ "error": msg.into() }))).into_response()
 }
 
+/// A rupee amount as typed: "₹1,200", "1 200" or "1200" become whole rupees within the shared cap.
+/// The currency symbol is stripped the same way `history.rs` does it. Blank is the caller's call.
+fn typed_rupees(v: &str, currency: &str) -> Result<i64, String> {
+    let raw: String = v.trim().trim_start_matches(currency).chars().filter(|c| !matches!(c, ',' | ' ')).collect();
+    let n = raw.parse::<i64>().map_err(|_| "That amount didn't look right.".to_string())?;
+    crate::validate::rupees(n)
+}
+
 /// Where to go after answering: the caller's own `back` if it is a path on this site.
 fn back_to(back: &str, otherwise: &str) -> Json<Go> {
     go(if back.starts_with('/') && !back.starts_with("//") { back } else { otherwise })
@@ -186,18 +194,25 @@ pub async fn went(
     Extension((user_id, _)): User,
     Path(id): Path<i64>,
     Json(f): Json<WentBody>,
-) -> Result<Json<Go>, AppError> {
+) -> Result<Response, AppError> {
     let j = joy(&s, &user_id).await?;
     let r = db::regular(&s.db, &j.couple, id).await?.ok_or_else(|| not_found("No such regular"))?;
-    let typed = f.amount.trim().replace(',', "");
-    let amount = if typed.is_empty() { Some(r.usual_cost) } else { typed.parse::<i64>().ok().filter(|a| *a >= 0) };
-    if let Some(amount) = amount {
-        let place = f.place.trim().chars().take(80).collect::<String>();
-        // Typing the regular's own name as "somewhere else" is just the regular.
-        let place = if place.eq_ignore_ascii_case(&r.title) || place.eq_ignore_ascii_case(&r.place) { String::new() } else { place };
-        db::record_visit(&s.db, &j.couple, id, &f.day, "went", &place, amount).await?;
-    }
-    Ok(back_to(&f.back, "/joy"))
+    // A bad amount is refused (422), never answered with a 200 that saved nothing.
+    let amount = if f.amount.trim().is_empty() {
+        r.usual_cost
+    } else {
+        match typed_rupees(&f.amount, &j.ctx.currency) {
+            Ok(a) => a,
+            Err(e) => return Ok(refuse(e)),
+        }
+    };
+    let place = f.place.trim().chars().take(80).collect::<String>();
+    // Typing the regular's own name as "somewhere else" is just the regular.
+    let place = if place.eq_ignore_ascii_case(&r.title) || place.eq_ignore_ascii_case(&r.place) { String::new() } else { place };
+    // `record_visit` is false (and saves nothing) for a day in the future or over a month back;
+    // that is the intended guard, so it still answers ok.
+    db::record_visit(&s.db, &j.couple, id, &f.day, "went", &place, amount).await?;
+    Ok(back_to(&f.back, "/joy").into_response())
 }
 
 #[derive(Debug, Deserialize)]
@@ -278,7 +293,7 @@ pub async fn upload_photo(
     let Some(bytes) = bytes.filter(|b| !b.is_empty()) else {
         return Ok(refuse("That file doesn't look like a photo."));
     };
-    let jpeg = match tokio::task::spawn_blocking(move || photos::process(&bytes)).await.map_err(internal)? {
+    let jpeg = match photos::process_limited(bytes.to_vec()).await.map_err(internal)? {
         Ok(jpeg) => jpeg,
         Err(e) => return Ok(refuse(e.0)),
     };
@@ -500,7 +515,14 @@ pub async fn create(State(s): State<AppState>, Extension((user_id, _)): User, Js
     // The link is shown as an href, so only a web address is kept.
     let maps = f.maps_url.trim();
     let maps = if maps.starts_with("https://") || maps.starts_with("http://") { maps } else { "" };
-    let cost = f.cost.trim().replace(',', "").parse::<i64>().ok().filter(|c| *c >= 0).unwrap_or(0);
+    let cost = if f.cost.trim().is_empty() {
+        0
+    } else {
+        match typed_rupees(&f.cost, &j.ctx.currency) {
+            Ok(c) => c,
+            Err(e) => return Ok(refuse(e)),
+        }
+    };
     let place: String = f.place.trim().chars().take(120).collect();
     let id = db::add_regular(&s.db, &j.couple, &title, &place, maps, &weekdays, cost, &f.since).await?;
     Ok(go(spread_path(id)).into_response())

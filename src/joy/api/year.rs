@@ -461,21 +461,47 @@ fn share_safe(ctx: &Ctx, text: &str) -> String {
 
 /// Replace whole-word, case-insensitive occurrences of `word`.
 fn replace_word(text: &str, word: &str, with: &str) -> String {
-    if word.is_empty() {
+    let wl: Vec<char> = word.chars().flat_map(char::to_lowercase).collect();
+    if wl.is_empty() {
         return text.to_string();
     }
-    let lower = text.to_lowercase();
-    let w = word.to_lowercase();
-    let mut out = String::new();
-    let mut i = 0;
-    while let Some(pos) = lower[i..].find(&w).map(|p| p + i) {
-        let before_ok = lower[..pos].chars().last().is_none_or(|c| !c.is_alphanumeric());
-        let after_ok = lower[pos + w.len()..].chars().next().is_none_or(|c| !c.is_alphanumeric());
-        out.push_str(&text[i..pos]);
-        out.push_str(if before_ok && after_ok { with } else { &text[pos..pos + w.len()] });
-        i = pos + w.len();
+    // Every lowercased char, tagged with the byte span of the original char it came from. Matching
+    // runs over this list and `text` is only ever sliced at these spans, so lowercasing changing
+    // byte lengths (e.g. "İ" -> "i̇") cannot misalign the output.
+    let folded: Vec<(char, usize, usize)> = text
+        .char_indices()
+        .flat_map(|(s, c)| {
+            let end = s + c.len_utf8();
+            c.to_lowercase().map(move |lc| (lc, s, end))
+        })
+        .collect();
+    let mut out = String::with_capacity(text.len());
+    // Byte offset in `text` up to which the original text has been copied to `out`.
+    let mut copied = 0;
+    let mut k = 0;
+    while k + wl.len() <= folded.len() {
+        let end_idx = k + wl.len();
+        // A match must start and end on whole original chars, not inside one char's lowercase form.
+        let starts_cleanly = k == 0 || folded[k - 1].2 == folded[k].1;
+        let ends_cleanly = end_idx == folded.len() || folded[end_idx - 1].2 == folded[end_idx].1;
+        let same = folded[k..end_idx].iter().zip(&wl).all(|(f, c)| f.0 == *c);
+        if !(starts_cleanly && ends_cleanly && same) {
+            k += 1;
+            continue;
+        }
+        let before_ok = k == 0 || !folded[k - 1].0.is_alphanumeric();
+        let after_ok = end_idx == folded.len() || !folded[end_idx].0.is_alphanumeric();
+        if before_ok && after_ok {
+            let span_start = folded[k].1;
+            let span_end = folded[end_idx - 1].2;
+            out.push_str(&text[copied..span_start]);
+            out.push_str(with);
+            copied = span_end;
+        }
+        // Like the original scan, continue after the match whether or not it was replaced.
+        k = end_idx;
     }
-    out.push_str(&text[i..]);
+    out.push_str(&text[copied..]);
     out
 }
 
@@ -645,5 +671,46 @@ mod tests {
         assert_eq!(replace_word("watch Neha react", "Neha", "us"), "watch us react");
         assert_eq!(replace_word("Nehal's place", "Neha", "us"), "Nehal's place");
         assert_eq!(replace_word("neha & NEHA", "Neha", "us"), "us & us");
+    }
+
+    #[test]
+    fn whole_word_replacement_keeps_ascii_behaviour() {
+        assert_eq!(replace_word("Priyanka and priya", "priya", "us"), "Priyanka and us");
+        assert_eq!(replace_word("priya, PRIYA!", "Priya", "us"), "us, us!");
+        assert_eq!(replace_word("aaaa", "aa", "x"), "aaaa", "overlapping runs inside a word are not whole words");
+        assert_eq!(replace_word("aa aa", "aa", "x"), "x x");
+    }
+
+    #[test]
+    fn replacement_after_char_whose_lowercase_is_longer() {
+        // "İ" is 2 bytes but lowercases to 3 bytes ("i" + combining dot), which used to shift the
+        // offsets and garble or panic on the slice.
+        assert_eq!(replace_word("Cafe İzmir with Priya", "priya", "us"), "Cafe İzmir with us");
+        assert_eq!(replace_word("İ priya İ", "priya", "us"), "İ us İ");
+    }
+
+    #[test]
+    fn multi_byte_chars_around_and_inside_matches() {
+        assert_eq!(replace_word("héllo priya ünïcode", "priya", "us"), "héllo us ünïcode");
+        assert_eq!(replace_word("ÑANDÚ and ñandú!", "ñandú", "us"), "us and us!");
+        assert_eq!(replace_word("日本 priya 語", "priya", "us"), "日本 us 語");
+        // A non-ASCII letter directly after the name means it is not the whole word.
+        assert_eq!(replace_word("priyaï priya", "priya", "us"), "priyaï us");
+        // A match must not end inside the lowercase form of one char.
+        assert_eq!(replace_word("İ i", "i", "us"), "İ us");
+    }
+
+    #[test]
+    fn word_not_present_leaves_text_unchanged() {
+        assert_eq!(replace_word("no names here, İzmir", "priya", "us"), "no names here, İzmir");
+        assert_eq!(replace_word("", "priya", "us"), "");
+        assert_eq!(replace_word("priy", "priya", "us"), "priy", "a word longer than the text");
+    }
+
+    #[test]
+    fn empty_word_is_a_no_op() {
+        assert_eq!(replace_word("abc", "", "us"), "abc");
+        assert_eq!(replace_word("Cafe İzmir", "", "us"), "Cafe İzmir");
+        assert_eq!(replace_word("", "", "us"), "");
     }
 }

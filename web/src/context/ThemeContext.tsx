@@ -51,6 +51,7 @@ export function ThemeProvider({
     )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- the hook is the module's public API; mode-toggle imports it
 export const useTheme = () => {
     const context = useContext(ThemeProviderContext)
 
