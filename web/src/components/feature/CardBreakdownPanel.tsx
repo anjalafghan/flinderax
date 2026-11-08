@@ -22,7 +22,7 @@ export function CardBreakdownPanel({ breakdown: b }: { breakdown: CardBreakdown 
   return (
     <Card>
       <CardHeader className="pb-1">
-        <CardTitle className="text-lg">What you owe</CardTitle>
+        <CardTitle className="text-3xl">What you owe</CardTitle>
         <p className="text-xs text-muted-foreground">
           {b.last_updated ? `Updated ${daysAgo(b.last_updated) === 0 ? "today" : `${daysAgo(b.last_updated)} days ago`}` : "No bank snapshot yet"}
         </p>

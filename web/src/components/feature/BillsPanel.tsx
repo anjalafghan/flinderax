@@ -17,16 +17,21 @@ const KIND_LABEL: Record<Bill["kind"], string> = {
 
 function BillRow({ bill }: { bill: Bill }) {
   const covered = coveredLine(bill, formatINR);
+  const [day, mon] = formatDay(bill.date).split(" ");
   return (
-    <li className="flex items-center justify-between gap-3 py-2.5 text-sm">
-      <div className="min-w-0">
-        <p className="truncate font-medium">{bill.label}</p>
-        <p className="text-xs text-muted-foreground">
-          {formatDay(bill.date)} · {KIND_LABEL[bill.kind]}
-          {covered && <span className="block text-emerald-700 dark:text-emerald-300">{covered}</span>}
+    <li className="flex items-center gap-5 py-5 md:gap-6">
+      <span className="flex w-14 shrink-0 flex-col items-start">
+        <span className="font-serif-num text-4xl leading-[0.9]">{day}</span>
+        <span className="eyebrow">{mon}</span>
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[17px]">{bill.label}</p>
+        <p className="text-[13px] text-muted-foreground">
+          {KIND_LABEL[bill.kind]}
+          {covered && <span className="block text-primary">{covered}</span>}
         </p>
       </div>
-      <p className="shrink-0 font-semibold tabular-nums">{formatINR(bill.amount_paise)}</p>
+      <p className="font-serif-num shrink-0 text-3xl">{formatINR(bill.amount_paise)}</p>
     </li>
   );
 }
@@ -51,7 +56,7 @@ function SuggestionCard({ s }: { s: BillSuggestion }) {
       end_month: null,
     });
   return (
-    <li className="space-y-3 rounded-lg border border-dashed p-3 text-sm">
+    <li className="space-y-3 rounded-3xl border border-dashed border-primary/25 bg-card/30 p-3 text-sm">
       <p>
         Looks like a subscription: <span className="font-semibold">{s.merchant}</span>{" "}
         <span className="tabular-nums">{formatINR(s.amount_paise)}</span> {every}
@@ -111,9 +116,9 @@ export function BillsPanel() {
   return (
     <Card id="bills" className="scroll-mt-24">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Bills</CardTitle>
+        <CardTitle className="text-3xl">Bills</CardTitle>
         {data && (
-          <p className="text-2xl font-bold tabular-nums">
+          <p className="font-serif-num text-4xl">
             {formatINR(data.total_paise)} <span className="text-sm font-medium text-muted-foreground">due in the next 30 days</span>
           </p>
         )}
@@ -158,14 +163,14 @@ export function DueSoonCard() {
   if (soon.length === 0) return null;
   return (
     <Card aria-label="Due soon" className="w-full">
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg">Due soon</CardTitle>
-        <Link to="/plan#bills" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+      <CardHeader className="flex-row items-baseline justify-between space-y-0 pb-2">
+        <CardTitle className="text-4xl md:text-[44px]">Due soon</CardTitle>
+        <Link to="/plan#bills" className="inline-flex min-h-11 items-center text-sm text-primary hover:text-foreground">
           All bills
         </Link>
       </CardHeader>
       <CardContent>
-        <ul className="divide-y">
+        <ul className="divide-y divide-border">
           {soon.map((b) => (
             <BillRow key={`${b.date}-${b.label}-${b.kind}`} bill={b} />
           ))}

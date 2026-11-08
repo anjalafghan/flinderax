@@ -168,7 +168,7 @@ export function EditCardModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <Card className="w-full max-w-md animate-in fade-in zoom-in duration-200">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-bold">Edit Card</CardTitle>
+          <CardTitle className="text-3xl">Edit Card</CardTitle>
           <Button
             variant="ghost"
             size="icon"
@@ -233,7 +233,7 @@ export function EditCardModal({
             </Select>
           </div>
 
-          <div className="rounded-xl border border-border p-6">
+          <div className="glass rounded-3xl p-6">
             <Label className="mb-2 text-sm font-medium">Preview</Label>
             <CreditCard
               id="preview"

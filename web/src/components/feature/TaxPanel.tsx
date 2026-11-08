@@ -33,7 +33,7 @@ function RegimeBox({ name, tax, better }: { name: string; tax: number; better: b
   return (
     <div
       className={cn(
-        "min-w-0 flex-1 rounded-lg border p-3",
+        "min-w-0 flex-1 glass rounded-2xl p-3",
         better && "border-emerald-500/50 bg-emerald-500/10",
       )}
     >
@@ -154,7 +154,7 @@ function AddDeductionForm() {
   };
 
   return (
-    <form onSubmit={submit} className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/40 p-3" noValidate>
+    <form onSubmit={submit} className="grid grid-cols-2 gap-2 glass rounded-2xl p-3" noValidate>
       <div className="col-span-2 space-y-1 sm:col-span-1">
         <Label htmlFor="tax-section">Section</Label>
         <Select id="tax-section" value={section} onChange={(e) => setSection(e.target.value as TaxSectionId)}>
@@ -227,9 +227,9 @@ export function TaxPanel() {
   const reminder = tax ? nextReminder(tax.reminders) : null;
 
   return (
-    <section aria-label="Tax" className="space-y-4 rounded-xl border p-4 md:p-6">
+    <section aria-label="Tax" className="space-y-4 glass rounded-3xl p-4 md:p-6">
       <div>
-        <h2 className="text-lg font-bold">Tax (India)</h2>
+        <h2 className="font-display text-3xl leading-none">Tax (India)</h2>
         <p className="text-sm text-muted-foreground">
           {tax ? `${fyLabel(tax.fy)} · April to March` : "Deductions and the regime comparison for this year."}
         </p>

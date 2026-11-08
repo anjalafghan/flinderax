@@ -38,7 +38,7 @@ export function ManualTransaction() {
   };
 
   return (
-    <details className="group rounded-lg border p-3">
+    <details className="group glass rounded-2xl p-3">
       <summary className="cursor-pointer text-sm font-medium">Add a transaction by hand</summary>
       <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-2" noValidate>
         <div className="space-y-1">

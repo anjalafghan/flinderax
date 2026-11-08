@@ -49,7 +49,7 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
   };
 
   return (
-    <form onSubmit={submit} className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/40 p-3" noValidate>
+    <form onSubmit={submit} className="grid grid-cols-2 gap-2 glass rounded-2xl p-3" noValidate>
       <div className="col-span-2 space-y-1">
         <Label htmlFor={`goal-name-${initial?.id ?? "new"}`}>Name</Label>
         <Input
@@ -144,7 +144,7 @@ function GoalItem({ goal }: { goal: Goal }) {
   };
 
   return (
-    <li className="space-y-3 rounded-lg border p-4 text-sm">
+    <li className="space-y-3 glass rounded-2xl p-4 text-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate font-semibold">{goal.name}</p>
@@ -220,7 +220,7 @@ export function GoalsPanel() {
   return (
     <Card id="goals" className="scroll-mt-24">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Goals</CardTitle>
+        <CardTitle className="text-3xl">Goals</CardTitle>
         <p className="text-sm text-muted-foreground">Things you are saving for. Money put in here is set aside each month.</p>
         {covered && (
           <p className="pt-1 text-sm font-medium">

@@ -13,8 +13,8 @@ export function RecentMoves() {
   if (!data || data.length === 0) return null;
   return (
     <section aria-label="Recent moves" className="space-y-3">
-      <h2 className="text-lg font-bold tracking-tight">What you've recorded</h2>
-      <ul className="divide-y rounded-xl border">
+      <h2 className="font-display text-3xl leading-none tracking-tight">What you've recorded</h2>
+      <ul className="divide-y glass rounded-3xl">
         {data.slice(0, 8).map((m) => (
           <li key={m.move_id} className="flex items-center justify-between gap-3 p-3 text-sm">
             <div className="min-w-0">

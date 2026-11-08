@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
- import { ArrowRight, Clock, Wallet, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Clock, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -18,6 +18,13 @@ import { SpendingPanel } from "@/components/feature/SpendingPanel";
 import { DatesPanel } from "@/components/feature/DatesPanel";
 import { DueSoonCard } from "@/components/feature/BillsPanel";
 import { useDashboardHistory } from "@/hooks/usePlanner";
+
+const QUICK_ACTIONS = [
+  { to: "/spending", label: "Log spending", hint: "Paste, upload or add" },
+  { to: "/plan#afford", label: "Can I afford it?", hint: "Check before you buy" },
+  { to: "/spending", label: "Categorize", hint: "Review new alerts" },
+  { to: "/joy", label: "Plan a date", hint: "Pick one for the week" },
+] as const;
 
 export interface CardData {
   card_id: string;
@@ -201,74 +208,63 @@ export default function DashboardPage() {
    const hasPendingDeferred = deferredStatus && deferredStatus.total_amount !== 0;
 
   return (
-    <div className="min-h-[100dvh] w-full bg-background text-foreground transition-colors duration-300 flex flex-col overflow-x-clip">
+    <div className="min-h-[100dvh] w-full text-foreground transition-colors duration-300 flex flex-col overflow-x-clip">
       <Header />
 
-      <main className={`flex-1 container mx-auto px-4 py-4 md:py-8 flex flex-col ${hasPendingDeferred ? "pb-32" : ""}`}>
-        <div className="mx-auto mb-8 w-full max-w-5xl">
+      <main className={`page flex-1 ${hasPendingDeferred ? "pb-32" : ""}`}>
+        <div className="mx-auto mb-10 w-full max-w-5xl">
           <PlannerSummary />
         </div>
 
-        <div className="mx-auto mb-8 grid w-full max-w-5xl items-start gap-4 md:grid-cols-2">
-          <DueSoonCard />
-          <Link
-            to="/plan#afford"
-            className="flex items-center gap-4 rounded-lg border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-              <Wallet className="h-5 w-5" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-semibold">Can I afford it?</span>
-              <span className="block text-sm text-muted-foreground">Check a purchase before you buy</span>
-            </span>
-            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-          </Link>
-        </div>
-
-        <div className="mb-4 md:mb-10 text-center space-y-2 md:space-y-4 shrink-0">
-          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight px-2">
-            Your Credit Cards
-          </h2>
-          <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto px-4">
-            Find the perfect card for your needs. Manage your{" "}
-            {new Intl.NumberFormat("en-IN", {
-              style: "currency",
-              currency: "INR",
-            }).format(totalDue)}{" "}
-            total balance effortlessly.
-          </p>
-        </div>
-
-        <div className="relative mx-auto max-w-5xl h-[300px] md:h-[400px] flex items-center justify-center perspective-[1200px] overflow-visible shrink-0">
-          {!showCarousel ? (
-            <div className="text-muted-foreground">
-              Loading visualization...
-            </div>
-          ) : isLoading ? (
-            <div className="text-muted-foreground animate-pulse">
-              Loading cards...
-            </div>
-          ) : (
-            <CardCarousel
-              cards={cards || []}
-              activeIndex={activeIndex}
-              setActiveIndex={setActiveIndex}
-              isMobile={isMobile}
-            />
-          )}
-        </div>
-
-        <div className="flex justify-center gap-2 mt-4 md:mt-8 mb-4 md:mb-16 shrink-0">
-          {cards?.map((_: CardData, idx: number) => (
-            <button
-              key={idx}
-              onClick={() => setActiveIndex(idx)}
-              className={`h-2 rounded-full transition-all ${idx === activeIndex ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30"}`}
-              aria-label={`Go to card ${idx + 1}`}
-            />
+        <nav aria-label="Quick actions" className="mx-auto mb-10 grid w-full max-w-5xl grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+          {QUICK_ACTIONS.map((a, i) => (
+            <Link
+              key={a.label}
+              to={a.to}
+              className="group flex min-h-[9.5rem] flex-col justify-between gap-7 rounded-[1.25rem] border border-border bg-foreground/[0.04] p-5 transition-colors hover:bg-foreground/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-6"
+            >
+              <span className="eyebrow">{String(i + 1).padStart(2, "0")}</span>
+              <span className="flex flex-col gap-1.5">
+                <span className="font-display text-[26px] leading-[1.05] md:text-[30px]">{a.label}</span>
+                <span className="text-sm text-muted-foreground">{a.hint}</span>
+              </span>
+            </Link>
           ))}
+        </nav>
+
+        <div className="mx-auto mb-8 w-full max-w-5xl">
+          <DueSoonCard />
         </div>
+
+        <section aria-label="Your cards" className="mx-auto mb-8 w-full max-w-5xl">
+          <div className="mb-2 flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-4xl leading-none md:text-[44px]">Cards</h2>
+            <p className="eyebrow">
+              {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(totalDue)} due in total
+            </p>
+          </div>
+          <div className="relative flex h-[280px] items-center justify-center overflow-visible perspective-[1200px] md:h-[360px]">
+            {!showCarousel || isLoading ? (
+              <div className="animate-pulse text-sm text-muted-foreground">Loading cards...</div>
+            ) : cards && cards.length > 0 ? (
+              <CardCarousel cards={cards} activeIndex={activeIndex} setActiveIndex={setActiveIndex} isMobile={isMobile} />
+            ) : (
+              <Link to="/cards/new" className="rounded-3xl border border-dashed border-primary/25 bg-card/30 border-border px-6 py-10 text-center text-sm text-muted-foreground hover:bg-accent">
+                No cards yet. Add your first card
+              </Link>
+            )}
+          </div>
+          <div className="mt-2 flex justify-center gap-2">
+            {cards?.map((_: CardData, idx: number) => (
+              <button
+                key={idx}
+                onClick={() => setActiveIndex(idx)}
+                className={`h-2 rounded-full transition-all ${idx === activeIndex ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30"}`}
+                aria-label={`Go to card ${idx + 1}`}
+              />
+            ))}
+          </div>
+        </section>
 
         <div className="mx-auto mb-8 grid w-full max-w-5xl items-start gap-6 md:grid-cols-2 [&>section]:mb-0 [&>section]:max-w-none">
           <SpendingPanel />
@@ -276,15 +272,28 @@ export default function DashboardPage() {
         </div>
 
         {history && (
-          <div className="mx-auto mb-8 w-full max-w-5xl space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <NetWorthPanel months={history.months} />
-              <CardUtilization cards={history.cards} />
+          <details className="group mx-auto mb-8 w-full max-w-5xl glass rounded-3xl">
+            <summary className="flex cursor-pointer list-none items-center justify-between p-4 md:p-5">
+              <span>
+                <span className="block font-display text-3xl leading-none">Trends &amp; insights</span>
+                <span className="block text-sm text-muted-foreground">Net worth, card utilization, maturities, auto-postings</span>
+              </span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+            </summary>
+            <div className="space-y-6 border-t border-border/70 p-4 md:p-5">
+              <div className="grid gap-6 md:grid-cols-2">
+                <NetWorthPanel months={history.months} />
+                <CardUtilization cards={history.cards} />
+              </div>
+              <MaturityList items={history.maturities} />
+              <AutoPostings items={history.auto_postings} enabled={history.auto_post} />
             </div>
-            <MaturityList items={history.maturities} />
-            <AutoPostings items={history.auto_postings} enabled={history.auto_post} />
-          </div>
+          </details>
         )}
+        <footer className="mx-auto mt-6 flex w-full max-w-5xl flex-wrap justify-between gap-3 eyebrow">
+          <span>joy, a quiet ledger</span>
+          <span>spend softly</span>
+        </footer>
       </main>
 
        {hasPendingDeferred && (
@@ -336,8 +345,8 @@ export default function DashboardPage() {
 
       {showSettleConfirm && pendingToSettle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-card rounded-xl border border-border p-6 max-w-md w-full animate-in fade-in zoom-in duration-200">
-            <h2 className="text-xl font-bold mb-2">Settle All Payments</h2>
+          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in fade-in zoom-in duration-200">
+            <h2 className="font-display text-3xl leading-none mb-2">Settle All Payments</h2>
             <p className="text-muted-foreground mb-4">
               You are about to settle{" "}
               <span className="font-bold text-foreground">

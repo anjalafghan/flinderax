@@ -157,7 +157,7 @@ export function TransactionList({
   return (
     <section id="transactions" aria-label="Transactions" className="scroll-mt-20 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold">Transactions</h2>
+        <h2 className="font-display text-3xl leading-none">Transactions</h2>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
             <ChevronLeft className="h-4 w-4" />
@@ -192,13 +192,13 @@ export function TransactionList({
 
       {txns && (
         shown.length === 0 ? (
-          <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+          <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
             {uncategorizedOnly
               ? "Nothing to categorize here."
               : `No transactions in ${monthTitle(month)}. Alerts from your bank show up here automatically.`}
           </p>
         ) : (
-          <ul className="divide-y rounded-xl border">
+          <ul className="divide-y glass rounded-3xl">
             {shown.map((t) => (
               <TransactionRow
                 key={t.txn_id}

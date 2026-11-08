@@ -17,11 +17,11 @@ export function SpendingPanel() {
   const rows = spendingBreakdown(current.by_category).slice(0, 4);
 
   return (
-    <section aria-label="Spending this month" className="mx-auto mb-8 w-full max-w-5xl space-y-4 rounded-xl border p-4 md:p-6">
+    <section aria-label="Spending this month" className="mx-auto mb-8 w-full max-w-5xl space-y-4 glass rounded-3xl p-4 md:p-6">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-lg font-bold tracking-tight">Spending this month</h2>
-          <p className="text-2xl font-extrabold tabular-nums">{formatINR(current.spent_paise)}</p>
+          <h2 className="font-display text-3xl leading-none tracking-tight">Spending this month</h2>
+          <p className="font-serif-num text-4xl">{formatINR(current.spent_paise)}</p>
         </div>
         <Link to="/spending" className="shrink-0 text-sm font-medium text-primary hover:underline">
           View all

@@ -6,8 +6,8 @@ import { cn } from "@/utils/cn";
 export function HowItsCalculated({ lines }: { lines: DashboardSummary["breakdown"] }) {
   return (
     <section aria-label="How this is calculated" className="space-y-3">
-      <h2 className="text-lg font-bold tracking-tight">How this is calculated</h2>
-      <ul className="divide-y rounded-xl border">
+      <h2 className="font-display text-3xl leading-none tracking-tight">How this is calculated</h2>
+      <ul className="divide-y glass rounded-3xl">
         {lines.map((l) => (
           <li
             key={l.label}

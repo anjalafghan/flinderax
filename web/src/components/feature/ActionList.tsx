@@ -1,4 +1,4 @@
-import { CheckCircle2, ArrowRightLeft, Info } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 import type { DashboardSummary, LedgerAction, MoveMode } from "@/services/types";
 import { movesApi } from "@/services/api";
@@ -8,9 +8,9 @@ import { formatINR } from "@/utils/money";
 import { cn } from "@/utils/cn";
 
 const STYLE = {
-  urgent: "border-rose-500/40 bg-rose-500/10",
-  warn: "border-amber-500/40 bg-amber-500/10",
-  info: "border-border bg-muted/30",
+  urgent: "[--dot:var(--destructive)]",
+  warn: "[--dot:var(--glow-a)]",
+  info: "[--dot:var(--muted-foreground)]",
 } as const;
 
 /** The click that tells the app what you did in your bank. */
@@ -63,10 +63,13 @@ function LedgerButtons({ ledger }: { ledger: LedgerAction }) {
 export function ActionList({ actions }: { actions: DashboardSummary["actions"] }) {
   return (
     <section aria-label="Do this" className="space-y-3">
-      <h2 className="text-lg font-bold tracking-tight">Do this</h2>
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="font-display text-4xl leading-none md:text-[44px]">Do this</h2>
+        <span className="eyebrow">{actions.length > 1 ? `${actions.length} things, now` : "one thing, now"}</span>
+      </div>
       {actions.length === 0 ? (
-        <p className="flex items-center gap-2 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Nothing to move. You're sorted.
+        <p className="flex items-center gap-2 rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
+          <CheckCircle2 className="h-4 w-4 text-primary" /> Nothing to move. You're sorted.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -74,15 +77,11 @@ export function ActionList({ actions }: { actions: DashboardSummary["actions"] }
             <li
               key={a.text}
               data-severity={a.severity}
-              className={cn("rounded-xl border p-3 text-sm", STYLE[a.severity])}
+              className={cn("glass rounded-[1.25rem] px-5 py-4 text-[15px] md:px-7", STYLE[a.severity])}
             >
-              <div className="flex items-start gap-3">
-                {a.severity === "info" ? (
-                  <Info className="mt-0.5 h-4 w-4 shrink-0" />
-                ) : (
-                  <ArrowRightLeft className="mt-0.5 h-4 w-4 shrink-0" />
-                )}
-                <span>{a.text}</span>
+              <div className="flex items-start gap-4">
+                <span aria-hidden className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: "hsl(var(--dot))", boxShadow: "0 0 16px hsl(var(--dot))" }} />
+                <span className="text-base">{a.text}</span>
               </div>
               {a.ledger && <LedgerButtons ledger={a.ledger} />}
             </li>

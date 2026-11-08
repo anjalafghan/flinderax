@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @variant dark (&:where(.dark, .dark *));
 
+@font-face { font-family: "Instrument Serif"; src: url("./fonts/InstrumentSerif-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Instrument Serif"; src: url("./fonts/InstrumentSerif-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("./fonts/Inter.woff2") format("woff2"); font-weight: 400 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("./fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 400 500; font-style: normal; font-display: swap; }
+
 @theme {
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -29,6 +34,9 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
+  --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -36,71 +44,75 @@
 
 @layer base {
   :root {
-    /* Premium Light Theme (Default) */
-    --background: 0 0% 100%;
-    /* White */
-    --foreground: 222.2 84% 4.9%;
-    /* Near Black */
+    /* Ethereal light: warm paper in the morning, the same ember glow as the night. */
+    --background: 36 32% 95%;
+    --foreground: 222 28% 11%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 40 40% 99%;
+    --card-foreground: 222 28% 11%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 40 40% 99%;
+    --popover-foreground: 222 28% 11%;
 
-    --primary: 222.2 47.4% 11.2%;
-    /* Dark Blue/Black */
-    --primary-foreground: 210 40% 98%;
+    --primary: 12 78% 48%;
+    --primary-foreground: 40 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 36 22% 91%;
+    --secondary-foreground: 222 28% 18%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 36 20% 91%;
+    --muted-foreground: 220 9% 40%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 18 60% 90%;
+    --accent-foreground: 12 70% 32%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 352 70% 48%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 222 20% 14% / 0.13;
+    --input: 222 20% 14% / 0.2;
+    --ring: 12 78% 52%;
 
-    --radius: 0.75rem;
+    --radius: 1.25rem;
+
+    --glow-a: 12 85% 62%;
+    --glow-b: 214 70% 62%;
+    --hair: 222 28% 11%;
   }
 
   .dark {
-    /* Premium Dark Theme (Aurora Style) */
-    --background: 222.2 84% 4.9%;
-    /* Deep Navy */
-    --foreground: 210 40% 98%;
+    /* Ethereal night: ink-blue black, ember and deep-blue light bleeding in. */
+    --background: 220 40% 5.5%;
+    --foreground: 40 22% 90%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 218 36% 7.5%;
+    --card-foreground: 40 22% 90%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 218 36% 8%;
+    --popover-foreground: 40 22% 90%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 24 62% 86%;
+    --primary-foreground: 220 40% 8%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 20% 14%;
+    --secondary-foreground: 40 22% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 20% 12%;
+    --muted-foreground: 218 11% 66%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 220 20% 15%;
+    --accent-foreground: 24 62% 88%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 6 78% 62%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 40 22% 90% / 0.12;
+    --input: 40 22% 90% / 0.2;
+    --ring: 24 62% 80%;
+
+    --glow-a: 8 76% 53%;
+    --glow-b: 214 64% 32%;
+    --hair: 40 22% 90%;
   }
 }
 
@@ -109,9 +121,74 @@
     @apply border-border;
   }
 
+  html { background: hsl(var(--background)); }
+
   body {
-    @apply bg-background text-foreground transition-colors duration-300;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    @apply text-foreground transition-colors duration-300;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: none;
+    background: transparent;
+  }
+
+  /* Atmosphere: blurred ember and blue light, fixed behind everything, plus film grain. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(closest-side at 82% 0%, hsl(var(--glow-a) / 0.34), transparent) 100% 0 / 60rem 46rem no-repeat,
+      radial-gradient(closest-side at 0% 46%, hsl(var(--glow-b) / 0.34), transparent) 0 40% / 52rem 52rem no-repeat,
+      radial-gradient(closest-side, hsl(var(--glow-b) / 0.18), transparent) 80% 100% / 62rem 36rem no-repeat,
+      hsl(var(--background));
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.08;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   }
 }
+
+@layer components {
+  .page { @apply mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-14; }
+  .font-display { font-family: var(--font-display); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
+  .font-serif-num { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.02em; font-variant-numeric: normal; }
+  .page-title { font-synthesis-weight: none; font-family: var(--font-display); font-style: italic; font-weight: 400; @apply text-5xl leading-none tracking-tight md:text-6xl; }
+  .page-sub { @apply mt-3 text-sm text-muted-foreground md:text-base; }
+  /* Mono micro-label: the quiet metadata voice. */
+  .eyebrow, .section-label { font-family: var(--font-mono); @apply text-[11px] font-normal uppercase tracking-[0.16em] text-muted-foreground; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* The one panel look: hairline edge, dark translucent fill, large radius. */
+  .glass {
+    background: hsl(var(--card) / 0.55);
+    border: 1px solid hsl(var(--border));
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  }
+  :root:not(.dark) .glass { background: hsl(var(--card) / 0.7); box-shadow: 0 24px 60px -36px hsl(var(--glow-a) / 0.35); }
+  .glow-text { text-shadow: 0 0 60px hsl(var(--foreground) / 0.18); }
+  .glow-dot { background: hsl(var(--glow-a)); box-shadow: 0 0 18px hsl(var(--glow-a)); }
+  /* Soft streaks of light across a hero. */
+  .streaks::before, .streaks::after { content: ""; position: absolute; border-radius: 999px; pointer-events: none; background: linear-gradient(90deg, transparent, hsl(var(--glow-a)), transparent); }
+  .streaks::before { top: 3.5rem; right: -7rem; width: 56rem; height: 10px; filter: blur(8px); transform: rotate(-14deg); opacity: 0.85; }
+  .streaks::after { top: 9rem; right: -3rem; width: 44rem; height: 4px; filter: blur(4px); transform: rotate(-11deg); opacity: 0.65; }
+}
+
+@media (hover: none) {
+  .glass { backdrop-filter: none; -webkit-backdrop-filter: none; background: hsl(var(--card) / 0.86); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Instrument Serif ships one weight: never fake a bold. */
+.font-display, .font-serif-num, .page-title, h1, h2, h3 { font-synthesis-weight: none; }

@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Wallet } from "lucide-react";
+;
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -98,47 +98,36 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
+    <div className="relative flex min-h-screen items-center justify-center p-4 text-foreground">
       <div className="absolute top-4 right-4">
         <ModeToggle />
       </div>
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center space-y-4">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-gray-900 to-black dark:from-gray-100 dark:to-white text-white dark:text-gray-900 shadow-xl rotate-3">
-            <Wallet className="h-8 w-8" />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white opacity-80 uppercase tracking-[0.2em]">
-              joy
-            </h1>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white leading-none">
-              Money and dates.
-            </h2>
-            <p className="text-muted-foreground font-medium text-lg leading-snug max-w-sm mx-auto pt-2">
-              Your money and your dates, in one place.
-            </p>
-          </div>
+        <div className="mb-10 space-y-3 text-center">
+          <p className="eyebrow">a quiet ledger</p>
+          <h1 className="font-display text-[88px] leading-none">joy</h1>
+          <h2 className="font-display text-3xl leading-tight text-foreground/80">Your money and your dates, in one place.</h2>
         </div>
 
-        <div className="bg-card p-2 rounded-2xl shadow-lg border border-border dark:shadow-2xl">
+        <div className="glass rounded-[2rem] p-2">
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-2 p-1 bg-muted/30 dark:bg-muted/50 rounded-xl">
+            <TabsList className="grid w-full grid-cols-2 mb-2 p-1 bg-transparent rounded-full h-12">
               <TabsTrigger
                 value="login"
-                className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className="rounded-full data-[state=active]:bg-foreground/10 data-[state=active]:text-foreground"
               >
                 Login
               </TabsTrigger>
               <TabsTrigger
                 value="register"
-                className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className="rounded-full data-[state=active]:bg-foreground/10 data-[state=active]:text-foreground"
               >
                 Register
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="login" className="mt-0">
-              <Card className="border-0 shadow-none">
+              <Card className="border-0 bg-transparent shadow-none backdrop-blur-none">
                 <CardHeader>
                   <CardTitle>Welcome Back</CardTitle>
                   <CardDescription>
@@ -152,7 +141,7 @@ export default function AuthPage() {
                       <Input
                         id="username"
                         placeholder="e.g. johndoe"
-                        className="bg-muted/50 border-border focus-visible:ring-ring h-11"
+                        className="h-12"
                         value={loginUser}
                         onChange={(e) => setLoginUser(e.target.value)}
                       />
@@ -163,7 +152,7 @@ export default function AuthPage() {
                         id="password"
                         type="password"
                         placeholder="••••••••"
-                        className="bg-muted/50 border-border focus-visible:ring-ring h-11"
+                        className="h-12"
                         value={loginPass}
                         onChange={(e) => setLoginPass(e.target.value)}
                       />
@@ -172,7 +161,7 @@ export default function AuthPage() {
                   <CardFooter>
                     <Button
                       type="submit"
-                      className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-base rounded-xl"
+                      className="h-12 w-full text-base"
                       disabled={loginMutation.isPending}
                     >
                       {loginMutation.isPending ? "Logging in..." : "Login"}
@@ -183,7 +172,7 @@ export default function AuthPage() {
             </TabsContent>
 
             <TabsContent value="register" className="mt-0">
-              <Card className="border-0 shadow-none">
+              <Card className="border-0 bg-transparent shadow-none backdrop-blur-none">
                 <CardHeader>
                   <CardTitle>Create Account</CardTitle>
                   <CardDescription>
@@ -197,7 +186,7 @@ export default function AuthPage() {
                       <Input
                         id="reg-username"
                         placeholder="Choose a username"
-                        className="bg-muted/50 border-border focus-visible:ring-ring h-11"
+                        className="h-12"
                         value={regUser}
                         onChange={(e) => setRegUser(e.target.value)}
                       />
@@ -208,7 +197,7 @@ export default function AuthPage() {
                         id="reg-password"
                         type="password"
                         placeholder="Create a password"
-                        className="bg-muted/50 border-border focus-visible:ring-ring h-11"
+                        className="h-12"
                         value={regPass}
                         onChange={(e) => setRegPass(e.target.value)}
                       />
@@ -217,7 +206,7 @@ export default function AuthPage() {
                   <CardFooter>
                     <Button
                       type="submit"
-                      className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-base rounded-xl"
+                      className="h-12 w-full text-base"
                       disabled={registerMutation.isPending}
                     >
                       {registerMutation.isPending ? "Creating..." : "Register"}

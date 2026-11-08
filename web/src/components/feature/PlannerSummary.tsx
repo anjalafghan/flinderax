@@ -12,7 +12,7 @@ export function PlannerSummary() {
   }
   if (isError || !data) {
     return (
-      <div className="rounded-3xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+      <div className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-6 text-center text-sm text-muted-foreground">
         Couldn't load your plan.{" "}
         <Button variant="link" className="h-auto p-0" onClick={() => refetch()}>
           Try again

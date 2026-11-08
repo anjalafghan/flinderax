@@ -78,7 +78,7 @@ export default function CreateCardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6 md:p-10 dark:bg-gray-900/50">
+    <div className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-2xl space-y-8">
         <div>
           <Button
@@ -88,8 +88,8 @@ export default function CreateCardPage() {
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Add New Card</h1>
-          <p className="text-muted-foreground">
+          <h1 className="page-title">Add New Card</h1>
+          <p className="page-sub">
             Enter card details and customize its look.
           </p>
         </div>
@@ -125,7 +125,7 @@ export default function CreateCardPage() {
               />
             </div>
 
-            <div className="space-y-3 rounded-xl border p-4">
+            <div className="space-y-3 glass rounded-3xl p-4">
               <div className="flex items-center gap-1.5">
                 <p className="text-sm font-medium">Billing cycle (optional)</p>
                 <InfoTip text="Used to work out when each bill is due. Find the statement date and due date on your card's bank page." />

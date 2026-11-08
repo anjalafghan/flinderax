@@ -13,8 +13,8 @@ export function MaturityList({ items }: { items: HistoryMaturity[] }) {
   if (items.length === 0) return null;
   return (
     <section aria-label="Upcoming maturities" className="space-y-3">
-      <h2 className="text-lg font-bold tracking-tight">Upcoming maturities</h2>
-      <ul className="divide-y rounded-xl border">
+      <h2 className="font-display text-3xl leading-none tracking-tight">Upcoming maturities</h2>
+      <ul className="divide-y glass rounded-3xl">
         {items.map((m) => (
           <li key={m.account_id} className="flex items-center justify-between gap-3 p-3 text-sm">
             <div className="min-w-0">
