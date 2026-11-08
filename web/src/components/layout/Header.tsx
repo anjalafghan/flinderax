@@ -16,7 +16,7 @@ interface Tab {
 const TABS: Tab[] = [
   { to: "/", label: "Today", icon: Sun, prefixes: ["/", "/cards"] },
   { to: "/money", label: "Money", icon: Wallet, prefixes: ["/money", "/accounts", "/spending"] },
-  { to: "/plan", label: "Plan", icon: ListChecks, prefixes: ["/plan", "/what-if", "/working"] },
+  { to: "/plan", label: "Plan", icon: ListChecks, prefixes: ["/plan", "/what-if", "/working", "/life"] },
   { to: "/joy", label: "Dates", icon: Heart, prefixes: ["/joy"] },
   { to: "/review", label: "Review", icon: ClipboardCheck, prefixes: ["/review"] },
 ];

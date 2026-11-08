@@ -64,13 +64,13 @@ describe("tax helpers", () => {
 
   it("headlines the cheaper regime", () => {
     expect(
-      regimeHeadline({ old_tax_paise: 100000, new_tax_paise: 50000, better: "new", note: "" }),
+      regimeHeadline({ old_tax_paise: 100000, new_tax_paise: 50000, better: "new", note: "", break_even_deductions_paise: null, deductions_needed_paise: null }),
     ).toBe("New regime saves you ₹500");
     expect(
-      regimeHeadline({ old_tax_paise: 40000, new_tax_paise: 90000, better: "old", note: "" }),
+      regimeHeadline({ old_tax_paise: 40000, new_tax_paise: 90000, better: "old", note: "", break_even_deductions_paise: null, deductions_needed_paise: null }),
     ).toBe("Old regime saves you ₹500");
     expect(
-      regimeHeadline({ old_tax_paise: 7000, new_tax_paise: 7000, better: "old", note: "" }),
+      regimeHeadline({ old_tax_paise: 7000, new_tax_paise: 7000, better: "old", note: "", break_even_deductions_paise: null, deductions_needed_paise: null }),
     ).toBe("Both regimes come to the same tax");
   });
 

@@ -3,6 +3,7 @@ import { ArrowRight, CreditCard, Landmark, Plus, Receipt } from "lucide-react";
 
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/card";
+import { InsightsPanel } from "@/components/feature/InsightsPanel";
 
 const LINKS = [
   { to: "/accounts", title: "Accounts", hint: "Bank, FD and RD balances", icon: Landmark },
@@ -40,6 +41,7 @@ export default function MoneyPage() {
             </li>
           ))}
         </ul>
+        <InsightsPanel />
       </main>
     </div>
   );

@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
-import type { TaxCommitment, TaxEntry, TaxRegime, TaxSectionId, TaxSectionRow } from "@/services/types";
+import type {
+  TaxCommitment,
+  TaxEntry,
+  TaxLtcg,
+  TaxRegime,
+  TaxSectionId,
+  TaxSectionRow,
+} from "@/services/types";
 import {
   useAddTaxEntry,
   useDeleteTaxEntry,
@@ -47,6 +54,20 @@ function RegimeBox({ name, tax, better }: { name: string; tax: number; better: b
   );
 }
 
+/** Break-even figures are a planning threshold, so whole rupees (rounded up, so "pass" stays true). */
+const wholeUp = (paise: number) => formatINR(Math.ceil(paise / 100) * 100);
+
+function breakEvenCopy(regime: TaxRegime): string {
+  const { break_even_deductions_paise: breakEven, deductions_needed_paise: needed } = regime;
+  if (breakEven == null || needed == null) {
+    return "New regime wins at any deduction level for this salary.";
+  }
+  if (needed > 0) {
+    return `Old regime only wins if your deductions pass ${wholeUp(breakEven)} — you're ${wholeUp(needed)} short.`;
+  }
+  return `Your deductions are above ${wholeUp(breakEven)}, so the old regime wins.`;
+}
+
 function RegimeCard({ regime }: { regime: TaxRegime }) {
   return (
     <Card>
@@ -56,7 +77,28 @@ function RegimeCard({ regime }: { regime: TaxRegime }) {
           <RegimeBox name="Old regime" tax={regime.old_tax_paise} better={regime.better === "old"} />
           <RegimeBox name="New regime" tax={regime.new_tax_paise} better={regime.better === "new"} />
         </div>
+        <p className="text-sm">{breakEvenCopy(regime)}</p>
         <p className="text-xs text-muted-foreground">{regime.note}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------- long-term equity gains ----------
+
+function LtcgCard({ ltcg }: { ltcg: TaxLtcg }) {
+  const usedPct = ltcg.exemption_paise > 0 ? Math.min(100, (ltcg.used_paise / ltcg.exemption_paise) * 100) : 0;
+  return (
+    <Card>
+      <CardContent className="space-y-2 p-4 text-sm">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="font-semibold">Tax-free equity gains</p>
+          <p className="shrink-0 font-semibold tabular-nums">{formatINR(ltcg.left_paise)} left</p>
+        </div>
+        <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+          <div className="h-full bg-primary" style={{ width: `${usedPct}%` }} />
+        </div>
+        <p className="text-xs text-muted-foreground">{ltcg.note}</p>
       </CardContent>
     </Card>
   );
@@ -245,6 +287,8 @@ export function TaxPanel() {
       {tax && (
         <>
           <RegimeCard regime={tax.regime} />
+
+          <LtcgCard ltcg={tax.ltcg} />
 
           {reminder && (
             <Card>

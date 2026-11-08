@@ -19,6 +19,7 @@ const MoneyPage = lazy(() => import('./pages/MoneyPage'))
 const DatesApp = lazy(() => import('./joy/DatesApp'))
 const EnvelopePage = lazy(() => import('./joy/pages/EnvelopePage'))
 const ReviewPage = lazy(() => import('./pages/ReviewPage'))
+const LifePage = lazy(() => import('./pages/LifePage'))
 
 // Simple loading fallback
 const PageLoader = () => (
@@ -129,6 +130,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ReviewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/life"
+            element={
+              <ProtectedRoute>
+                <LifePage />
               </ProtectedRoute>
             }
           />

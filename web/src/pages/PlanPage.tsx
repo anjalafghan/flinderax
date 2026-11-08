@@ -475,6 +475,16 @@ export default function PlanPage() {
             What if...
           </Link>
         </div>
+        <Link
+          to="/life"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] border border-border bg-card px-6 py-5 text-foreground no-underline sm:px-8"
+        >
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="font-display text-[26px] leading-none">Life plan</span>
+            <span className="text-[13px] text-muted-foreground">Your wedding, your child, and retirement, and what each needs a month.</span>
+          </span>
+          <span className="text-sm font-medium">Open →</span>
+        </Link>
         <AffordPanel />
         <BillsPanel />
         <GoalsPanel />
