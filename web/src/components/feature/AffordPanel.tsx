@@ -15,19 +15,19 @@ import { buildAffordPay } from "@/utils/planner";
 const ANSWER: Record<AffordAnswer, { label: string; box: string }> = {
   yes: {
     label: "Yes",
-    box: "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+    box: "border-good/40 bg-good-tint text-good",
   },
   yes_from_savings: {
     label: "Yes, from savings",
-    box: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+    box: "border-warn/40 bg-warn-tint text-warn",
   },
   wait: {
     label: "Wait",
-    box: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+    box: "border-warn/40 bg-warn-tint text-warn",
   },
   no: {
     label: "Not now",
-    box: "border-rose-500/30 bg-rose-500/10 text-rose-800 dark:text-rose-200",
+    box: "border-over/40 bg-over-tint text-over",
   },
 };
 

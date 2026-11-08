@@ -157,7 +157,7 @@ export function JoyConnect() {
       <summary className="cursor-pointer list-none">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-3xl leading-none tracking-tight">Joy date budget</h2>
+            <h2 className="font-display text-[32px] leading-none tracking-tight">Joy date budget</h2>
             <p className="text-sm text-muted-foreground">
               {isError
                 ? "Couldn't check Joy."

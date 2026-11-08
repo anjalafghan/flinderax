@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AuthContext } from './AuthContext';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -15,14 +16,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     // The token is read synchronously above, so there is nothing to wait for.
     const isLoading = false;
+    const queryClient = useQueryClient();
 
     const logout = useCallback(() => {
         // Saved offline copies belong to this login: drop them with it.
         navigator.serviceWorker?.controller?.postMessage({ type: "logout" });
         localStorage.removeItem('token');
         localStorage.removeItem('expires_at');
+        // Cached responses belong to this login too; the next user must not see them.
+        queryClient.clear();
         setToken(null);
-    }, []);
+    }, [queryClient]);
 
     useEffect(() => {
         const expiresAt = localStorage.getItem('expires_at');

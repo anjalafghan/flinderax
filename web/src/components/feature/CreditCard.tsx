@@ -35,10 +35,9 @@ export const CreditCard = memo(function CreditCard({
     }
 
     return (
-        <motion.div
-            whileHover={{ scale: 1.02, y: -5, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.3)" }}
+        <motion.div whileHover={{ scale: 1.02, y: -5 }}
             whileTap={{ scale: 0.98 }}
-            className="relative aspect-[1.586/1] w-full max-w-[340px] cursor-pointer overflow-hidden rounded-2xl shadow-xl transition-all"
+            className="relative aspect-[1.586/1] w-full max-w-[340px] cursor-pointer overflow-hidden rounded-2xl transition-all"
             style={backgroundStyle}
             onClick={onClick}
         >
@@ -52,13 +51,12 @@ export const CreditCard = memo(function CreditCard({
             <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 opacity-50" />
 
             {/* Radial highlighting for depth */}
-            <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-white/20 blur-3xl" />
 
-            <div className="relative flex h-full flex-col justify-between p-4 md:p-6 text-white shadow-sm z-10">
+            <div className="relative flex h-full flex-col justify-between p-4 md:p-6 text-white z-10">
                 <div className="flex items-start justify-between">
                     {/* Chip - Realistic style */}
                     <div className="flex gap-3 md:gap-4 items-center">
-                        <div className="relative h-7 w-10 md:h-9 md:w-12 overflow-hidden rounded-md bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600 shadow-inner border border-yellow-700/30">
+                        <div className="relative h-7 w-10 md:h-9 md:w-12 overflow-hidden rounded-md bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600 border border-warn/40">
                             <div className="absolute inset-0 opacity-50" style={{ backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 2px, #000 2px, #000 4px)" }}></div>
                             <div className="absolute top-1/2 w-full h-[1px] bg-black/40"></div>
                         </div>
@@ -77,23 +75,23 @@ export const CreditCard = memo(function CreditCard({
                             <p className="text-[8px] md:text-[10px] uppercase tracking-wider font-semibold opacity-70">
                                 {balance < 0 ? "Credit Balance" : "Total Due"}
                             </p>
-                            <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white drop-shadow-md">
+                            <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white">
                                 {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(balance)}
                             </h3>
                         </div>
                         {lastDelta !== 0 && (
                             <div className={cn(
                                 "flex items-center gap-1 text-xs md:text-sm font-bold",
-                                lastDelta < 0 ? "text-emerald-300" : "text-rose-300"
+                                lastDelta < 0 ? "tone-good rounded-full px-2 py-0.5 w-fit" : "tone-over rounded-full px-2 py-0.5 w-fit"
                             )}>
                                 {lastDelta < 0 ? <ArrowDown className="h-3 w-3 md:h-4 md:w-4" /> : <ArrowUp className="h-3 w-3 md:h-4 md:w-4" />}
-                                <span className="drop-shadow-sm">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Math.abs(lastDelta))}</span>
+                                <span className="">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Math.abs(lastDelta))}</span>
                             </div>
                         )}
                     </div>
 
                     <div className="flex justify-between items-center font-mono text-[10px] md:text-sm opacity-90">
-                        <span className="tracking-[0.15em] md:tracking-[0.2em] shadow-black drop-shadow-sm">
+                        <span className="tracking-[0.15em] md:tracking-[0.2em]">
                             {last4Digits ? `•••• •••• •••• ${last4Digits}` : '•••• •••• •••• ••••'}
                         </span>
                         <span className="font-sans uppercase text-[8px] md:text-[10px] font-bold tracking-widest">{name}</span>

@@ -13,7 +13,7 @@ interface Tab {
   prefixes: string[];
 }
 
-export const TABS: Tab[] = [
+const TABS: Tab[] = [
   { to: "/", label: "Today", icon: Sun, prefixes: ["/", "/cards"] },
   { to: "/money", label: "Money", icon: Wallet, prefixes: ["/money", "/accounts", "/spending"] },
   { to: "/plan", label: "Plan", icon: ListChecks, prefixes: ["/plan", "/what-if", "/working"] },
@@ -22,18 +22,13 @@ export const TABS: Tab[] = [
 ];
 
 /** The tab whose prefixes match the path. "/" only matches exactly, so it doesn't light up everything. */
-export function activeTab(pathname: string): Tab | undefined {
+function activeTab(pathname: string): Tab | undefined {
   return TABS.find((t) =>
     t.prefixes.some((p) => (p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(`${p}/`) || pathname.startsWith(`${p}#`))),
   );
 }
 
-/** "nov 2026": the quiet dateline beside the wordmark. */
-function dateline() {
-  return new Date().toLocaleDateString("en-GB", { month: "short", year: "numeric" }).toLowerCase();
-}
-
-/** Top bar: wordmark and dateline, the five tabs from md up, and account actions. */
+/** Top bar: italic wordmark, the five tabs as quiet pills from md up, and account actions. */
 export function Header() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -46,22 +41,21 @@ export function Header() {
   };
 
   return (
-    <header className="relative z-50 mx-auto w-full max-w-[1200px] px-4 pt-6 md:px-6 md:pt-8">
-      <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-b border-border pb-5">
-        <Link to="/" className="flex items-baseline gap-3.5" aria-label="joy, today">
-          <span className="font-display text-[40px] leading-none">joy</span>
-          <span className="eyebrow hidden sm:inline">{dateline()}</span>
+    <header className="relative z-50 mx-auto w-full max-w-[1040px] px-4 pt-7 md:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Link to="/" className="wordmark text-[34px] leading-none no-underline" aria-label="joy, today">
+          joy
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-1.5 md:flex">
+        <nav aria-label="Main" className="hidden flex-wrap gap-1 md:flex">
           {TABS.map((t) => (
             <Link
               key={t.to}
               to={t.to}
               aria-current={current?.to === t.to ? "page" : undefined}
               className={cn(
-                "inline-flex min-h-11 items-center rounded-full border border-transparent px-4 text-sm transition-colors hover:text-foreground",
-                current?.to === t.to ? "border-border bg-foreground/[0.09] text-foreground" : "text-muted-foreground",
+                "inline-flex min-h-11 items-center rounded-full px-4 text-sm no-underline transition-colors",
+                current?.to === t.to ? "bg-[hsl(var(--chip))] font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
               {t.label}
@@ -69,14 +63,14 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <Button variant="outline" onClick={() => navigate("/cards/new")} className="h-11 rounded-full px-3 sm:px-[18px]" aria-label="Add card">
-            <Plus className="h-4 w-4 sm:mr-2" />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Button variant="outline" onClick={() => navigate("/cards/new")} className="h-11 gap-2 rounded-full border-border px-3 sm:px-4" aria-label="Add card">
+            <Plus className="h-4 w-4" strokeWidth={1.6} />
             <span className="hidden sm:inline">Add card</span>
           </Button>
           <ModeToggle />
-          <Button variant="outline" size="icon" onClick={handleLogout} title="Sign out" aria-label="Sign out" className="h-11 w-11 rounded-full">
-            <LogOut className="h-[18px] w-[18px]" />
+          <Button variant="outline" size="icon" onClick={handleLogout} title="Sign out" aria-label="Sign out" className="h-11 w-11 rounded-full border-border">
+            <LogOut className="h-[18px] w-[18px]" strokeWidth={1.5} />
           </Button>
         </div>
       </div>
@@ -93,7 +87,7 @@ export function TabBar() {
       aria-label="Main"
       className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 md:hidden"
     >
-      <ul className="glass mx-auto grid max-w-md grid-cols-5 rounded-full bg-card/90 px-1 backdrop-blur-xl">
+      <ul className="mx-auto grid max-w-md grid-cols-5 rounded-full border border-border bg-card px-1">
         {TABS.map((t) => {
           const active = current?.to === t.to;
           return (
@@ -103,10 +97,10 @@ export function TabBar() {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-[44px] flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors",
-                  active ? "text-primary [&_svg]:drop-shadow-[0_0_8px_hsl(var(--primary)/0.7)]" : "text-muted-foreground hover:text-foreground",
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <t.icon className={cn("h-5 w-5", active && "stroke-[2.5]")} aria-hidden />
+                <t.icon className="h-5 w-5" strokeWidth={active ? 2 : 1.5} aria-hidden />
                 <span>{t.label}</span>
               </Link>
             </li>

@@ -224,7 +224,7 @@ export default function CardDetailsPage() {
                       new Date(a.timestamp).getTime(),
                   );
 
-                   return sorted.map((tx: any, index: number) => {
+                   return sorted.map((tx, index: number) => {
                      const previousTx = sorted[index + 1];
                      const previousAmount = previousTx
                        ? previousTx.total_due_input
@@ -339,6 +339,7 @@ export default function CardDetailsPage() {
           />
 
           <EditCardModal
+            key={`${card.card_id}-${isEditCardOpen}`}
             isOpen={isEditCardOpen}
             onClose={() => setIsEditCardOpen(false)}
             cardId={card.card_id}

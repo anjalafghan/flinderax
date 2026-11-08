@@ -133,6 +133,17 @@ describe("plan quick picks", () => {
     expect(toLocalInput(quickPick("tonight", new Date(2026, 10, 2, 19, 10)))).toBe("2026-11-02T20:30");
     expect(toLocalInput(quickPick("tonight", new Date(2026, 10, 2, 19, 40)))).toBe("2026-11-02T21:00");
   });
+  test("tonight never rolls into the next day", () => {
+    const at = (h: number, m: number) => toLocalInput(quickPick("tonight", new Date(2026, 10, 2, h, m)));
+    // one hour on lands at 23:30 or earlier, still today
+    expect(at(22, 30)).toBe("2026-11-02T23:30");
+    // 23:31 + an hour would cross midnight: clamp to the last slot today
+    expect(at(22, 31)).toBe("2026-11-02T23:30");
+    expect(at(23, 10)).toBe("2026-11-02T23:30");
+    // already past the last slot: 23:59 of the same night
+    expect(at(23, 50)).toBe("2026-11-02T23:59");
+    expect(at(23, 0)).toBe("2026-11-02T23:30");
+  });
   test("tomorrow evening and Saturday", () => {
     const mon = new Date(2026, 10, 2, 10, 0);
     expect(toLocalInput(quickPick("tomorrow", mon))).toBe("2026-11-03T19:00");

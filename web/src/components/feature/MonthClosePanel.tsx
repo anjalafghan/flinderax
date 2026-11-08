@@ -35,9 +35,9 @@ function SpentTile({ review }: { review: MonthReview }) {
         aria-valuenow={Math.round(pct)}
         className="h-2 w-full overflow-hidden rounded-full bg-muted"
       >
-        <div className={cn("h-full rounded-full", over ? "bg-rose-500" : "bg-primary")} style={{ width: `${pct}%` }} />
+        <div className={cn("h-full rounded-full", over ? "bg-over" : "bg-primary")} style={{ width: `${pct}%` }} />
       </div>
-      <p className={cn("text-xs", over ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground")}>
+      <p className={cn("text-xs", over ? "text-over" : "text-muted-foreground")}>
         {over ? `${formatINR(review.over_by_paise)} over` : `of ${formatINR(review.allowance_paise)} allowance`}
       </p>
     </Tile>
@@ -63,8 +63,8 @@ function NetWorthTile({ review }: { review: MonthReview }) {
     change === null || change === 0
       ? ""
       : change > 0
-        ? "text-emerald-600 dark:text-emerald-400"
-        : "text-rose-600 dark:text-rose-400";
+        ? "text-good"
+        : "text-over";
   return (
     <Tile title="Net worth change">
       <p className={cn("text-xl font-bold tabular-nums", tone)}>
@@ -137,7 +137,7 @@ export function MonthClosePanel() {
     <section aria-label="Month close" className="space-y-4 glass rounded-3xl p-4 md:p-6">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="font-display text-3xl leading-none">Month close</h2>
+          <h2 className="font-display text-[32px] leading-none">Month close</h2>
           <p className="text-sm text-muted-foreground">How the month went, in plain words.</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">

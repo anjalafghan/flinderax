@@ -675,15 +675,17 @@ pub async fn set_cost(State(s): State<AppState>, Extension((user_id, _)): User, 
     let j = joy(&s, &user_id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
     let row = open_row(db, couple, id, Some(j.who)).await?;
-    let amount = |v: &str| -> Result<Option<i64>, ()> {
+    let amount = |v: &str| -> Result<Option<i64>, String> {
         let raw: String = v.trim().trim_start_matches(ctx.currency.as_str()).chars().filter(|c| !matches!(c, ',' | ' ')).collect();
         if raw.is_empty() {
             return Ok(None);
         }
-        raw.parse::<i64>().ok().filter(|v| *v >= 0).map(Some).ok_or(())
+        let n = raw.parse::<i64>().map_err(|_| "That amount didn't look right.".to_string())?;
+        crate::validate::rupees(n).map(Some)
     };
-    let (Ok(actual), Ok(cab_0), Ok(cab_1)) = (amount(&f.actual), amount(&f.cab_0), amount(&f.cab_1)) else {
-        return Err(unprocessable("That amount didn't look right."));
+    let (actual, cab_0, cab_1) = match (amount(&f.actual), amount(&f.cab_0), amount(&f.cab_1)) {
+        (Ok(a), Ok(b), Ok(c)) => (a, b, c),
+        (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => return Err(unprocessable(&e)),
     };
     db::set_actual(db, couple, id, actual, f.update_estimate == "1").await?;
     // Each real fare is saved next to what the model would have said for that trip (uncalibrated),
@@ -740,7 +742,7 @@ pub async fn upload_photo(
     let Some(bytes) = bytes.filter(|b| !b.is_empty()) else {
         return Err(unprocessable("That file doesn't look like a photo."));
     };
-    let jpeg = match tokio::task::spawn_blocking(move || photos::process(&bytes)).await.map_err(internal)? {
+    let jpeg = match photos::process_limited(bytes.to_vec()).await.map_err(internal)? {
         Ok(j) => j,
         Err(e) => return Err(unprocessable(e.0)),
     };
@@ -779,8 +781,18 @@ pub async fn photo(State(s): State<AppState>, Path(id): Path<i64>, Query(q): Que
 
 // ── monthly budget ────────────────────────────────────────────────────────
 
-fn money_in(v: &str) -> Option<i64> {
-    v.trim().replace(',', "").parse::<i64>().ok().filter(|a| *a > 0)
+/// A typed whole-rupee amount: blank or zero is "none"; anything else must be a number within the
+/// shared Dates cap (`rupees`), so a huge or negative value is a 422 instead of a silent no-op.
+fn money_in(v: &str) -> Result<Option<i64>, String> {
+    let t = v.trim().replace(',', "");
+    if t.is_empty() {
+        return Ok(None);
+    }
+    let n = t.parse::<i64>().map_err(|_| "That amount didn't look right.".to_string())?;
+    if n == 0 {
+        return Ok(None);
+    }
+    crate::validate::rupees(n).map(Some)
 }
 
 #[derive(Deserialize)]
@@ -796,7 +808,7 @@ pub struct BudgetBody {
 /// `POST /budget`
 pub async fn set_budget(State(s): State<AppState>, Extension((user_id, _)): User, Json(f): Json<BudgetBody>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    let value = money_in(&f.amount).map(|a| a.to_string());
+    let value = money_in(&f.amount).map_err(|e| unprocessable(&e))?.map(|a| a.to_string());
     db::set_setting(&s.db, &j.couple, "monthly_budget", value.as_deref()).await?;
     Ok(go(if f.back.starts_with('/') && !f.back.starts_with("//") { f.back } else { "/joy/kept".into() }))
 }
@@ -847,7 +859,7 @@ async fn guard_history(j: &super::Joy, db: &SqlitePool, history_id: &str) -> Res
 pub async fn add_spend(State(s): State<AppState>, Extension((user_id, _)): User, Json(f): Json<SpendBody>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     guard_history(&j, &s.db, &f.history_id).await?;
-    if let Some(amount) = money_in(&f.amount) {
+    if let Some(amount) = money_in(&f.amount).map_err(|e| unprocessable(&e))? {
         db::add_other_spending(&s.db, &j.couple, amount, &f.note, &f.on).await?;
     }
     Ok(go("/joy/kept"))
@@ -886,7 +898,7 @@ pub async fn set_goal(State(s): State<AppState>, Extension((user_id, _)): User, 
 pub async fn add_saving(State(s): State<AppState>, Extension((user_id, _)): User, Json(f): Json<SpendBody>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     guard_history(&j, &s.db, &f.history_id).await?;
-    if let Some(amount) = money_in(&f.amount) {
+    if let Some(amount) = money_in(&f.amount).map_err(|e| unprocessable(&e))? {
         db::add_saving(&s.db, &j.couple, amount, "add", &f.note).await?;
     }
     Ok(go(SAVINGS_TO))
@@ -1032,8 +1044,11 @@ mod tests {
 
     #[test]
     fn amounts_accept_commas_and_refuse_zero() {
-        assert_eq!(money_in(" 6,000 "), Some(6000));
-        assert_eq!(money_in("0"), None);
-        assert_eq!(money_in("abc"), None);
+        assert_eq!(money_in(" 6,000 "), Ok(Some(6000)));
+        assert_eq!(money_in("0"), Ok(None));
+        assert_eq!(money_in(""), Ok(None));
+        assert!(money_in("-5").is_err());
+        assert!(money_in("1000000000000000").is_err());
+        assert!(money_in("abc").is_err());
     }
 }

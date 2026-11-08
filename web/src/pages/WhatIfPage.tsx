@@ -74,7 +74,10 @@ export default function WhatIfPage() {
 
   const items = useMemo(() => drafts.map(toScenarioItem), [drafts]);
   const valid = useMemo(() => items.filter((i) => i !== null), [items]);
-  const request = useDebounced({ months, spend_pct: spendPct, items: valid }, 250);
+  // Memoized so the debounce sees the same object until an input really changes; a fresh object every
+  // render would restart the timer on each render and keep the page re-rendering.
+  const input = useMemo(() => ({ months, spend_pct: spendPct, items: valid }), [months, spendPct, valid]);
+  const request = useDebounced(input, 250);
 
   const { data, isError, isFetching } = useQuery({
     queryKey: ["projection", request],

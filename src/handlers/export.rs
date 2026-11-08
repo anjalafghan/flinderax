@@ -66,8 +66,12 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         let dated = format!(
             "SELECT * FROM joy_history WHERE couple_id = ? AND NOT (surprise = 1 AND revealed = 0 AND COALESCE(drawn_by, -1) <> {who})"
         );
+        // A slip carrying a surprise still sealed for you stays out of your copy as well.
+        let slips = format!(
+            "SELECT * FROM joy_activities WHERE couple_id = ? AND id NOT IN (SELECT activity_id FROM joy_history WHERE surprise = 1 AND revealed = 0 AND COALESCE(drawn_by, -1) <> {who})"
+        );
         let dates: &[(&str, &str)] = &[
-            ("slips", "SELECT * FROM joy_activities WHERE couple_id = ?"),
+            ("slips", &slips),
             ("dates", &dated),
             ("other_spending", "SELECT * FROM joy_other_spending WHERE couple_id = ?"),
             ("savings", "SELECT * FROM joy_savings WHERE couple_id = ?"),

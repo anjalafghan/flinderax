@@ -62,7 +62,7 @@ function TransactionRow({
           <p
             className={cn(
               "text-sm font-semibold tabular-nums",
-              credit ? "text-emerald-600 dark:text-emerald-400" : "text-foreground",
+              credit ? "text-good" : "text-foreground",
             )}
           >
             {signedAmount(txn)}
@@ -157,7 +157,7 @@ export function TransactionList({
   return (
     <section id="transactions" aria-label="Transactions" className="scroll-mt-20 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-3xl leading-none">Transactions</h2>
+        <h2 className="font-display text-[32px] leading-none">Transactions</h2>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
             <ChevronLeft className="h-4 w-4" />

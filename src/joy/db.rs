@@ -351,9 +351,47 @@ pub async fn set_archived(db: &SqlitePool, couple: &str, id: i64, archived: bool
     Ok(())
 }
 
-pub async fn delete(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<()> {
-    sqlx::query("DELETE FROM joy_activities WHERE id = ? AND couple_id = ?").bind(id).bind(couple).execute(db).await?;
-    Ok(())
+/// Remove a slip. A slip that has any history (a date, a kept or skipped pick, or a plan-B link)
+/// is archived instead, so its dates, memories, tasks and jar spend survive. Returns `true` when
+/// the row was really deleted and `false` when it was archived.
+pub async fn delete(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
+    let mut tx = db.begin().await?;
+    let has_history: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM joy_history WHERE activity_id = ?1 OR plan_b = ?1)",
+    )
+    .bind(id)
+    .fetch_one(&mut *tx)
+    .await?;
+    let deleted = if has_history {
+        sqlx::query("UPDATE joy_activities SET archived = 1 WHERE id = ? AND couple_id = ?")
+            .bind(id)
+            .bind(couple)
+            .execute(&mut *tx)
+            .await?;
+        false
+    } else {
+        sqlx::query("DELETE FROM joy_activities WHERE id = ? AND couple_id = ?")
+            .bind(id)
+            .bind(couple)
+            .execute(&mut *tx)
+            .await?;
+        true
+    };
+    tx.commit().await?;
+    Ok(deleted)
+}
+
+/// Slips that carry a surprise still sealed for `who`: the partner (anyone but the planner, who is
+/// the `drawn_by` of the surprise) sees neither the slip nor its date until it is revealed.
+pub async fn sealed_from(db: &SqlitePool, couple: &str, who: usize) -> sqlx::Result<Vec<i64>> {
+    sqlx::query_scalar(
+        "SELECT DISTINCT activity_id FROM joy_history
+         WHERE couple_id = ? AND surprise = 1 AND revealed = 0 AND COALESCE(drawn_by, -1) <> ?",
+    )
+    .bind(couple)
+    .bind(who as i64)
+    .fetch_all(db)
+    .await
 }
 
 pub async fn record(db: &SqlitePool, couple: &str, id: i64, did_it: bool) -> sqlx::Result<()> {
@@ -1580,6 +1618,52 @@ mod tests {
             ..Default::default()
         };
         save(db, couple, None, &input, None).await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn deleting_a_slip_with_history_archives_it_and_keeps_the_history() {
+        let db = test_db().await;
+        let id = add_slip(&db, "A", "Sunset walk").await;
+        let hid = accept(&db, "A", id, Some(0), false).await.unwrap();
+        sqlx::query("INSERT INTO joy_memories (history_id, who, line) VALUES (?, 0, 'loved it')")
+            .bind(hid)
+            .execute(&db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO joy_tasks (history_id, who, task) VALUES (?, 1, 'book cab')")
+            .bind(hid)
+            .execute(&db)
+            .await
+            .unwrap();
+
+        assert!(!delete(&db, "A", id).await.unwrap(), "a slip with history is archived, not deleted");
+
+        assert!(list(&db, "A", false).await.unwrap().iter().all(|a| a.id != id), "gone from the slip list");
+        assert!(list(&db, "A", true).await.unwrap().iter().any(|a| a.id == id), "kept as archived");
+        let history: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM joy_history WHERE activity_id = ?").bind(id).fetch_one(&db).await.unwrap();
+        let memories: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM joy_memories WHERE history_id = ?").bind(hid).fetch_one(&db).await.unwrap();
+        let tasks: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM joy_tasks WHERE history_id = ?").bind(hid).fetch_one(&db).await.unwrap();
+        assert_eq!((history, memories, tasks), (1, 1, 1));
+    }
+
+    #[tokio::test]
+    async fn deleting_a_slip_without_history_really_deletes_it() {
+        let db = test_db().await;
+        let id = add_slip(&db, "A", "Idle idea").await;
+        assert!(delete(&db, "A", id).await.unwrap());
+        assert!(get(&db, "A", id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn a_sealed_surprise_is_hidden_from_the_partner_only() {
+        let db = test_db().await;
+        let id = add_slip(&db, "A", "Secret rooftop").await;
+        // Slot 0 planned it as a surprise: slot 1 must not see it until it's revealed.
+        accept(&db, "A", id, Some(0), true).await.unwrap();
+        assert_eq!(sealed_from(&db, "A", 1).await.unwrap(), vec![id]);
+        assert!(sealed_from(&db, "A", 0).await.unwrap().is_empty(), "the planner still sees it");
+        sqlx::query("UPDATE joy_history SET revealed = 1 WHERE activity_id = ?").bind(id).execute(&db).await.unwrap();
+        assert!(sealed_from(&db, "A", 1).await.unwrap().is_empty(), "revealed surprises are visible");
     }
 
     #[tokio::test]

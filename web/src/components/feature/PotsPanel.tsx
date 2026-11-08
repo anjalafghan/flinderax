@@ -9,8 +9,8 @@ function Row({ label, value, strong, tone }: { label: string; value: number; str
       <dd
         className={cn(
           "tabular-nums",
-          tone === "bad" && "text-rose-600 dark:text-rose-400",
-          tone === "good" && "text-emerald-600 dark:text-emerald-400",
+          tone === "bad" && "text-over",
+          tone === "good" && "text-good",
         )}
       >
         {formatINR(value)}
@@ -25,7 +25,7 @@ export function PotsPanel({ pots }: { pots: Pots }) {
   const neg = (n: number) => (n === 0 ? 0 : -n);
   return (
     <section aria-label="Where your money sits" className="space-y-3">
-      <h2 className="font-display text-3xl leading-none tracking-tight">Where your money sits</h2>
+      <h2 className="font-display text-[32px] leading-none tracking-tight">Where your money sits</h2>
       <div className="grid gap-3 md:grid-cols-3">
         <div className="space-y-2 glass rounded-3xl p-4">
           <p className="font-semibold">{spending.account_name ?? "Spending"}</p>

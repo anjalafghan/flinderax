@@ -89,9 +89,6 @@
   flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--stamp);
   box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--stamp-ink) 25%, transparent);
 }
-:where(.dark) & {
-.y-count { text-shadow: 0 0 60px rgba(255, 190, 120, .28); }
-}
 /* the jar: glass outline in ink by day; by night it glows and the fireflies come out */
 .y-jar {
   --jar-line: color-mix(in srgb, var(--ink) 45%, transparent);
@@ -127,11 +124,11 @@
 :where(.dark) & {
 .y-spread::before {
     content: ""; position: absolute; left: 50%; top: -160px; width: 1300px; height: 1100px; margin-left: -650px; pointer-events: none;
-    background: radial-gradient(ellipse at center, rgba(255, 196, 130, .14), rgba(255, 196, 130, 0) 62%);
+    background: none;
   }
 }
 .y-postmark { display: none; }
-.y-album { position: relative; display: grid; gap: 34px; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, .35)); }
+.y-album { position: relative; display: grid; gap: 34px; }
 .y-page {
   --ink-pen: #2b1d12; --ink-pen-soft: #4a3424; --ink-red: #a3271c; --heart: #b3261e; --circle: #9b2c1f;
   --paper-grid: #fbf9f4; --cream: #fbf8f2;
@@ -198,7 +195,7 @@
 .y-tally path { fill: none; stroke: var(--ink-pen); stroke-width: 3; stroke-linecap: round; }
 /* the streak: a torn yellow note, taped on */
 /* the shadow sits on the wrapper: clip-path would cut off the note's own */
-.y-note { position: relative; rotate: -3deg; margin-right: 6px; filter: drop-shadow(0 8px 7px rgba(60, 35, 10, .3)); }
+.y-note { position: relative; rotate: -3deg; margin-right: 6px;  }
 .y-note .y-tape { top: -14px; rotate: 4deg; }
 .y-note-card {
   margin: 0; padding: 26px 28px 30px; background: #fbecab;
@@ -233,7 +230,7 @@
 .y-tags { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .y-tags li {
   display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
-  background: #f2c3c0; border: 4px solid #fffaf2; box-shadow: 0 4px 7px rgba(60, 35, 10, .35);
+  background: #f2c3c0; border: 4px solid #fffaf2;
   font: 700 1.625rem/1 var(--font-hand); rotate: -4deg; overflow-wrap: anywhere;
 }
 .y-tags li:nth-child(3n+2) { background: #bcd5ec; rotate: 2deg; }
@@ -247,7 +244,7 @@
 .y-ticket-wrap { position: relative; rotate: 1.2deg; margin-top: 6px; }
 .y-ticket-wrap .y-tape { left: auto; right: 34px; translate: none; rotate: 7deg; }
 .y-ticket {
-  display: flex; background: #f6eddc; border-radius: 4px; box-shadow: 0 12px 20px rgba(60, 35, 10, .35);
+  display: flex; background: #f6eddc; border-radius: 4px;
   font-family: "Courier New", ui-monospace, monospace; color: var(--ink-pen);
 }
 .y-ticket-stub { flex: none; width: 58px; display: flex; align-items: center; justify-content: center; padding: 18px 0; border-right: 2px dashed #b9a183; }
@@ -280,14 +277,14 @@
 .y-sway .y-tape { left: 26px; translate: none; width: 88px; rotate: -10deg; background: rgba(229, 140, 140, .85) repeating-linear-gradient(45deg, rgba(255, 255, 255, .55) 0 5px, transparent 5px 10px); }
 .y-print {
   display: flex; flex-direction: column; gap: 12px; width: 220px; max-width: 100%; margin: 0; padding: 14px 14px 18px;
-  background: var(--cream); box-shadow: 0 16px 26px rgba(60, 35, 10, .42);
+  background: var(--cream);
 }
 .y-print-photo { display: block; height: 196px; overflow: hidden; background: #f0a35e; }
 .y-print-photo img, .y-print-photo svg { display: block; width: 100%; height: 100%; object-fit: cover; }
 .y-print figcaption { display: flex; flex-direction: column; padding: 0 2px; }
 .y-cap-big { font: 700 1.875rem/1 var(--font-hand); }
 .y-cap-small { font: 400 1.5rem/1.1 var(--font-hand); color: var(--ink-pen-soft); }
-.y-print-heart { position: absolute; right: -14px; bottom: 30px; width: 40px; height: 37px; rotate: 14deg; fill: var(--heart); stroke: #fffaf2; stroke-width: 2; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .3)); }
+.y-print-heart { position: absolute; right: -14px; bottom: 30px; width: 40px; height: 37px; rotate: 14deg; fill: var(--heart); stroke: #fffaf2; stroke-width: 2;  }
 .y-best-text { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
 .y-best-text .y-hand-h-s { font-size: clamp(2.1rem, 9vw, 2.875rem); }
 .y-stars-big { display: flex; gap: 4px; margin: 0; }
@@ -312,7 +309,7 @@
 .y-polaroid { min-width: 0; display: grid; gap: 8px; align-content: start; }
 .y-polaroid figure {
   position: relative; margin: 0; padding: 10px 10px 14px; background: var(--cream);
-  box-shadow: 0 12px 20px -6px rgba(60, 35, 10, .42);
+  box-shadow: none;
   transform: rotate(calc((var(--r, 2) - 2) * 1.4deg));
 }
 .y-polaroid .y-tape { width: 72px; rotate: calc((2 - var(--r, 2)) * 3deg - 2deg); }
@@ -334,7 +331,6 @@
 .y-postcard {
   padding: 10px; border-radius: 6px; rotate: .4deg;
   background: repeating-linear-gradient(135deg, #b8322a 0 16px, #f5eee2 16px 26px, #2f5f8f 26px 42px, #f5eee2 42px 52px);
-  box-shadow: 0 30px 50px rgba(0, 0, 0, .3);
 }
 .y-postcard > * { background: #f5eee2; color: #2b1d12; }
 .y-postcard { display: grid; grid-template-columns: minmax(0, 1fr); }
@@ -353,10 +349,10 @@
 .y-make {
   min-height: 52px; padding: 0 30px; border: 0; border-radius: 999px; cursor: pointer;
   background: #ff7a5c; color: #1a1418; font: 600 1.0625rem var(--font-ui);
-  box-shadow: 0 6px 0 #a8432f, 0 12px 20px rgba(60, 25, 10, .3);
+  box-shadow: 0 6px 0 #a8432f;
   transition: translate 120ms ease-out, box-shadow 120ms ease-out;
 }
-.y-make:active { translate: 0 4px; box-shadow: 0 2px 0 #a8432f, 0 6px 10px rgba(60, 25, 10, .3); }
+.y-make:active { translate: 0 4px; box-shadow: 0 2px 0 #a8432f; }
 .y-make:focus-visible { outline: 3px solid #2f5f8f; outline-offset: 3px; }
 .y-status { margin: 0; font: 400 1.5rem/1.2 var(--font-hand); color: #4a3828; }
 .y-status:empty { display: none; }
@@ -366,7 +362,7 @@
   margin: auto auto 0; padding: 0;
   color: var(--ink); background: var(--paper);
   border: 0; border-radius: 16px 16px 0 0;
-  box-shadow: 0 -18px 40px -20px rgba(0, 0, 0, .45);
+  border-top: 1px solid var(--rule);
 }
 .y-sheet::backdrop { background: color-mix(in srgb, var(--ink) 55%, transparent); }
 .y-sheet[open] { animation: y-rise var(--t-medium) var(--ease-out); }
@@ -403,10 +399,10 @@
 /* ── desktop: one open album, the rings across the spine ─── */
 @media (min-width: 1000px) {
 .y-head { padding-top: 64px; }
-.y-album { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; rotate: -.5deg; filter: drop-shadow(0 40px 50px rgba(0, 0, 0, .45)); }
+.y-album { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; rotate: -.5deg; }
 .y-page::before { content: none; }
-.y-page-l { padding: 52px 56px 60px 48px; border-radius: 8px 2px 2px 8px; box-shadow: inset -28px 0 34px -20px rgba(50, 45, 40, .38), inset 0 0 60px rgba(90, 80, 60, .1); }
-.y-page-r { padding: 52px 52px 60px 56px; border-radius: 2px 8px 8px 2px; box-shadow: inset 28px 0 34px -20px rgba(50, 45, 40, .38), inset 0 0 60px rgba(90, 80, 60, .1); }
+.y-page-l { padding: 52px 56px 60px 48px; border-radius: 8px 2px 2px 8px; box-shadow: none; }
+.y-page-r { padding: 52px 52px 60px 56px; border-radius: 2px 8px 8px 2px; box-shadow: none; }
 .y-rings {
     display: flex; flex-direction: column; justify-content: space-between; align-items: center;
     position: absolute; top: 18px; bottom: 18px; left: 50%; width: 44px; margin-left: -22px; z-index: 3; pointer-events: none;

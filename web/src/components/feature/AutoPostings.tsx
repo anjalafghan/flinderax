@@ -9,7 +9,7 @@ export function AutoPostings({ items, enabled }: { items: HistoryAutoPosting[]; 
   return (
     <section aria-label="Auto-updated balances" className="space-y-3">
       <div className="space-y-1">
-        <h2 className="font-display text-3xl leading-none tracking-tight">Auto-updated balances</h2>
+        <h2 className="font-display text-[32px] leading-none tracking-tight">Auto-updated balances</h2>
         <p className="text-sm text-muted-foreground">
           Salary and fixed payments are added to your balances on their dates. Turn this off in Plan settings.
         </p>
@@ -26,7 +26,7 @@ export function AutoPostings({ items, enabled }: { items: HistoryAutoPosting[]; 
             <span
               className={cn(
                 "shrink-0 font-semibold tabular-nums",
-                p.amount_paise >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground",
+                p.amount_paise >= 0 ? "text-good" : "text-foreground",
               )}
             >
               {p.amount_paise >= 0 ? "+" : "−"}

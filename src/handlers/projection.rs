@@ -6,6 +6,7 @@ use serde::Deserialize;
 use time::{macros::format_description, Date};
 
 use crate::{
+    validate,
     handlers::{
         common::{bad_request, today_local, AppError},
         dashboard::load_input,
@@ -44,8 +45,27 @@ pub async fn project_handler(
     if p.items.len() > 10 {
         return Err(bad_request("at most 10 scenario items"));
     }
+    for it in &p.items {
+        check_item(it).map_err(bad_request)?;
+    }
     let input = load_projection_input(&state.db, &user_id, today_local(), months, spend_pct).await?;
     Ok(Json(project(&input, &p.items)))
+}
+
+/// Bounds on one what-if item: money in paise, tenure in months, rate in basis points (up to 60%).
+/// The planner also clamps these, but a bad value is better reported than silently changed.
+fn check_item(it: &ScenarioItem) -> Result<(), String> {
+    validate::positive_amount(it.amount_paise).map_err(|e| format!("\"{}\": {e}", it.name))?;
+    if let Some(t) = it.tenure_months {
+        validate::months(t).map_err(|e| format!("\"{}\" tenure: {e}", it.name))?;
+    }
+    if it.rate_bps.is_some_and(|r| !(0..=6_000).contains(&r)) {
+        return Err(format!("\"{}\": the rate must be between 0% and 60%", it.name));
+    }
+    if let Some(t) = it.target_paise {
+        validate::positive_amount(t).map_err(|e| format!("\"{}\" target: {e}", it.name))?;
+    }
+    Ok(())
 }
 
 /// Everything the projection needs: the plan, FDs/RDs and card EMIs.
@@ -118,13 +138,12 @@ pub async fn afford_handler(
     Json(p): Json<AffordPayload>,
 ) -> Result<Json<crate::planner::afford::Verdict>, AppError> {
     use crate::planner::{afford, compute, format_inr, projection::ItemKind};
-    if p.amount_paise <= 0 {
-        return Err(bad_request("The amount must be more than zero"));
-    }
+    validate::positive_amount(p.amount_paise).map_err(bad_request)?;
     if let afford::Pay::Emi { months, rate_bps, fee_paise } = p.pay {
-        if !(1..=60).contains(&months) || !(0..=6_000).contains(&rate_bps) || fee_paise < 0 {
-            return Err(bad_request("EMI needs 1-60 months, a rate up to 60% and a fee of zero or more"));
+        if !(1..=60).contains(&months) || !(0..=6_000).contains(&rate_bps) {
+            return Err(bad_request("EMI needs 1-60 months and a rate up to 60%"));
         }
+        validate::non_negative_amount(fee_paise).map_err(bad_request)?;
     }
     const HORIZON: i64 = 12;
     let today = today_local();
@@ -165,4 +184,56 @@ pub async fn afford_handler(
         short_if_spent_on,
         format_inr,
     )))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::planner::projection::ItemKind;
+    use time::macros::date;
+
+    fn item(tenure: Option<i64>) -> ScenarioItem {
+        ScenarioItem {
+            name: "Wedding RD".into(),
+            kind: ItemKind::Rd,
+            amount_paise: 1_000_000,
+            start: date!(2026 - 11 - 10),
+            tenure_months: tenure,
+            rate_bps: Some(700),
+            funded_from: None,
+            payout_to: None,
+            renewal: None,
+            target_paise: None,
+            target_date: None,
+        }
+    }
+
+    #[test]
+    fn a_normal_item_passes() {
+        assert!(check_item(&item(Some(12))).is_ok());
+        assert!(check_item(&item(None)).is_ok());
+    }
+
+    #[test]
+    fn a_huge_tenure_is_rejected_with_a_message() {
+        for t in [i64::MAX, i64::MIN, 1_201, -1] {
+            let err = check_item(&item(Some(t))).unwrap_err();
+            assert!(err.contains("tenure") && err.contains("Months must be between"), "{err}");
+        }
+    }
+
+    #[test]
+    fn bad_amounts_and_rates_are_rejected() {
+        let mut it = item(Some(12));
+        it.amount_paise = i64::MAX;
+        assert!(check_item(&it).is_err());
+        it.amount_paise = 0;
+        assert!(check_item(&it).is_err());
+        it.amount_paise = 1_000;
+        it.rate_bps = Some(6_001);
+        assert!(check_item(&it).is_err());
+        it.rate_bps = None;
+        it.target_paise = Some(i64::MAX);
+        assert!(check_item(&it).is_err());
+    }
 }

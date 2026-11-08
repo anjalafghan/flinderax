@@ -6,6 +6,7 @@ use serde::Serialize;
 use time::Date;
 
 use super::cycle::add_months;
+use crate::validate;
 
 #[derive(Debug, Clone)]
 pub struct GoalIn {
@@ -49,10 +50,11 @@ pub struct GoalPlan {
 
 /// Whole months from `today` to `by`, counting the current month (so a goal due this month has 1).
 pub fn months_until(today: Date, by: Date) -> i64 {
-    let m = (by.year() - today.year()) as i64 * 12 + (by.month() as i64 - today.month() as i64);
+    let m = i64::from(by.year() - today.year()) * 12 + (i64::from(by.month() as u8) - i64::from(today.month() as u8));
     (m + 1).max(1)
 }
 
+/// `today` moved `months` forward. Callers keep `months` within `validate::MAX_MONTHS`.
 fn add(today: Date, months: i64) -> Date {
     let (y, m) = add_months(today.year(), today.month(), months as i32);
     super::cycle::clamped(y, m, today.day())
@@ -60,16 +62,18 @@ fn add(today: Date, months: i64) -> Date {
 
 /// Shares `available` (this month's savings after the SIP) across `goals` by priority: dated
 /// goals get what they need in priority order, then undated ones share what's left in order.
+/// All arithmetic saturates, so an absurd target can't wrap into negative money.
 pub fn plan(goals: &[GoalIn], available: i64, today: Date, money: impl Fn(i64) -> String) -> Vec<GoalPlan> {
     let mut order: Vec<&GoalIn> = goals.iter().collect();
     order.sort_by_key(|g| (g.by.is_none(), g.priority, g.by));
     let mut left = available.max(0);
     let mut out = Vec::new();
     for g in order {
-        let remaining = (g.target - g.saved).max(0);
+        let remaining = g.target.saturating_sub(g.saved).max(0);
         let months_left = g.by.map_or(0, |by| months_until(today, by));
         // Undated goals need nothing up front: they share what's left after the dated ones.
-        let needs = if remaining == 0 || g.by.is_none() { 0 } else { (remaining + months_left - 1) / months_left };
+        // Ceiling division written so that it cannot overflow: ceil(r / m) = (r - 1) / m + 1.
+        let needs = if remaining == 0 || g.by.is_none() { 0 } else { (remaining - 1) / months_left + 1 };
         let give = needs.min(left);
         left -= give;
         let status = match (remaining, g.by) {
@@ -82,9 +86,14 @@ pub fn plan(goals: &[GoalIn], available: i64, today: Date, money: impl Fn(i64) -
         let mut fixes = Vec::new();
         if status == GoalStatus::Behind {
             if give > 0 {
-                let months = (remaining + give - 1) / give;
-                reached_by = Some(add(today, months - 1));
-                fixes.push(format!("Move the date to {}", short_month(add(today, months - 1))));
+                // Months from now at this pace; `remaining >= 1` here, so this is at least 1.
+                let months_away = (remaining - 1) / give;
+                // Beyond the planner's horizon there is no meaningful date to name.
+                if months_away <= validate::MAX_MONTHS {
+                    let when = add(today, months_away);
+                    reached_by = Some(when);
+                    fixes.push(format!("Move the date to {}", short_month(when)));
+                }
             }
             fixes.push(format!("Put in {} more a month", money(needs - give)));
             fixes.push("Take it from a goal further down the list".to_string());
@@ -104,7 +113,7 @@ pub fn plan(goals: &[GoalIn], available: i64, today: Date, money: impl Fn(i64) -
     }
     // Undated goals share what's still left, in priority order, a remaining-sized slice each.
     for p in out.iter_mut().filter(|p| p.status == GoalStatus::Open) {
-        let give = (p.target_paise - p.saved_paise).max(0).min(left);
+        let give = p.target_paise.saturating_sub(p.saved_paise).max(0).min(left);
         p.this_month_paise = give;
         left -= give;
     }
@@ -161,6 +170,35 @@ mod tests {
         assert_eq!(p[0].status, GoalStatus::Behind);
         assert_eq!(p[0].reached_by, Some(date!(2027 - 08 - 08)));
         assert_eq!(p[0].fixes, ["Move the date to Aug 2027", "Put in ₹4000 more a month", "Take it from a goal further down the list"]);
+    }
+
+    #[test]
+    fn behind_goal_with_tiny_give_does_not_panic() {
+        // 1 paisa a month towards a huge target: the date would be millennia away, so no date is named.
+        let goals = [GoalIn { id: "x".into(), name: "x".into(), target: i64::MAX, saved: 0, by: Some(date!(2027 - 04 - 01)), priority: 1 }];
+        let p = plan(&goals, 1, date!(2026 - 11 - 08), rupees);
+        assert_eq!(p[0].status, GoalStatus::Behind);
+        assert_eq!(p[0].reached_by, None);
+        assert_eq!(p[0].this_month_paise, 1);
+        assert!(!p[0].fixes.iter().any(|f| f.starts_with("Move the date")));
+    }
+
+    #[test]
+    fn i64_max_target_does_not_overflow_or_hand_out_phantom_money() {
+        let goals = [
+            GoalIn { id: "huge".into(), name: "huge".into(), target: i64::MAX, saved: 0, by: Some(date!(2027 - 01 - 01)), priority: 1 },
+            GoalIn { id: "phone".into(), name: "phone".into(), target: 3_000_000, saved: 0, by: Some(date!(2027 - 01 - 31)), priority: 2 },
+            GoalIn { id: "undated".into(), name: "undated".into(), target: i64::MAX, saved: -5, by: None, priority: 3 },
+        ];
+        let available = 2_500_000;
+        let p = plan(&goals, available, date!(2026 - 11 - 08), rupees);
+        let total: i64 = p.iter().map(|x| x.this_month_paise).sum();
+        assert!(p.iter().all(|x| x.this_month_paise >= 0 && x.needs_monthly_paise >= 0));
+        assert!(total <= available, "handed out {total} from {available}");
+        // The huge goal takes everything; the goals behind it get nothing extra.
+        assert_eq!(p[0].this_month_paise, available);
+        assert_eq!(p[1].this_month_paise, 0);
+        assert_eq!(p[2].this_month_paise, 0);
     }
 
     #[test]

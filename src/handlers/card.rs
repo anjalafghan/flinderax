@@ -14,8 +14,9 @@ use tracing::error;
      handlers::{
          color::{self, pack, unpack},
          account::ensure_account_owned,
-         common::{invalidate_cards_cache, validate_day, AppError},
+         common::{bad_request, invalidate_cards_cache, not_found, validate_day, AppError},
      },
+     validate::{non_negative_amount, positive_amount},
      models::{
          AppState, CardResponse, CreateCardPayload, DeleteCardPayload, DeleteTransactionPayload,
          DeleteTransactionResponse, GetCardForUser,
@@ -148,7 +149,7 @@ pub async fn update(
     ensure_account_owned(&state.db, &update_card_details.pay_from_account_id, &user_id).await?;
     let card_primary_color = pack(update_card_details.card_primary_color);
     let card_secondary_color = pack(update_card_details.card_secondary_color);
-    sqlx::query!(
+    let res = sqlx::query!(
         "UPDATE cards SET card_name = ?, card_bank = ?, card_primary_color = ?, card_secondary_color = ?, last_4_digits = ?,
                 statement_day = COALESCE(?, statement_day), due_day = COALESCE(?, due_day),
                 credit_limit_paise = COALESCE(?, credit_limit_paise),
@@ -171,6 +172,9 @@ pub async fn update(
     .map_err(|e| {
         AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
+    if res.rows_affected() == 0 {
+        return Err(not_found("Card not found or you don't have permission to modify it"));
+    }
 
     // Invalidate cache
     if let Some(mut redis) = state.redis.clone() {
@@ -390,11 +394,28 @@ pub(crate) async fn ensure_card_owned(
     Ok(())
 }
 
+/// Converts a legacy rupees `f32` amount to paise (saturating, so huge values fail the bounds
+/// check instead of wrapping), after rejecting NaN and infinity.
+fn rupees_to_paise(amount: f32) -> Result<i64, AppError> {
+    if !amount.is_finite() {
+        return Err(bad_request("Amount must be a number."));
+    }
+    Ok((amount as f64 * 100.0).round() as i64)
+}
+
+/// Runs one of `crate::validate`'s paise bounds against a rupees `f32` amount and maps a
+/// failure to 400.
+fn check_rupees(amount: f32, check: fn(i64) -> Result<i64, String>) -> Result<(), AppError> {
+    let paise = rupees_to_paise(amount)?;
+    check(paise).map(|_| ()).map_err(|e| bad_request(e))
+}
+
 pub async fn insert_transaction(
     State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(insert_transaction): Json<InsertTransactionPayload>,
 ) -> Result<Json<InsertTransactionResponse>, AppError> {
+    check_rupees(insert_transaction.amount_due, non_negative_amount)?;
     ensure_card_owned(&state.db, &insert_transaction.card_id, &user_id).await?;
     let mut tx = state.db.begin().await.map_err(|e| {
         error!("Error setting transaction check {} ", e);
@@ -431,7 +452,7 @@ pub async fn get_history(
         timestamp as "timestamp!: String"
         FROM card_events
         WHERE card_id = ?
-        ORDER BY timestamp DESC"#,
+        ORDER BY timestamp DESC, rowid DESC"#,
         payload.card_id
     )
     .fetch_all(&state.db)
@@ -573,7 +594,7 @@ pub async fn delete_transaction(
             timestamp as "timestamp!: String"
         FROM card_events
         WHERE card_id = ?
-        ORDER BY timestamp DESC
+        ORDER BY timestamp DESC, rowid DESC
         LIMIT 1
         "#,
         card_id
@@ -593,7 +614,7 @@ pub async fn delete_transaction(
                 timestamp as "timestamp!: String"
             FROM card_events
             WHERE card_id = ? AND transaction_id != ?
-            ORDER BY timestamp DESC
+            ORDER BY timestamp DESC, rowid DESC
             LIMIT 1
             "#,
             card_id,
@@ -651,6 +672,7 @@ pub async fn defer_update(
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(payload): Json<DeferUpdatePayload>,
 ) -> Result<Json<DeferUpdateResponse>, AppError> {
+    check_rupees(payload.amount, positive_amount)?;
     let card_id = &payload.card_id;
 
     let card_exists = sqlx::query!(

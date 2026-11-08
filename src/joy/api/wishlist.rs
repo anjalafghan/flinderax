@@ -49,7 +49,10 @@ pub struct WishlistView {
 pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> Result<Json<WishlistView>, AppError> {
     let j = joy(&s, &user_id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
-    let active = db::list(db, couple, false).await?;
+    // A slip with a surprise still sealed from us is not ours to see yet.
+    let sealed = db::sealed_from(db, couple, j.who).await?;
+    let mut active = db::list(db, couple, false).await?;
+    active.retain(|a| !sealed.contains(&a.id));
     let pairs = db::pairs(db, couple).await?;
     let vetoes = db::vetoes(db, couple).await?;
     let learned = learned(db, couple).await?;
@@ -78,7 +81,12 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
         })
         .filter(|g| !g.items.is_empty())
         .collect();
-    let archived = db::list(db, couple, true).await?.iter().map(|a| ActivityView::new(ctx, a, &learned)).collect();
+    let archived = db::list(db, couple, true)
+        .await?
+        .iter()
+        .filter(|a| !sealed.contains(&a.id))
+        .map(|a| ActivityView::new(ctx, a, &learned))
+        .collect();
     Ok(Json(WishlistView { me_name: me_name(&j), groups, archived, total: active.len() }))
 }
 
@@ -108,6 +116,15 @@ pub struct PlanForm {
     pub at: String,
 }
 
+/// 404 when `id` is a sealed surprise the other partner drew for this viewer, so it can't be opened,
+/// changed or even confirmed to exist (a 403 would give the surprise away).
+async fn unsealed(db: &SqlitePool, j: &Joy, id: i64) -> Result<(), AppError> {
+    if db::sealed_from(db, &j.couple, j.who).await?.contains(&id) {
+        return Err(not_found("No such slip"));
+    }
+    Ok(())
+}
+
 /// A slip of ours, or a 404.
 async fn mine(db: &SqlitePool, couple: &str, id: i64) -> Result<Activity, AppError> {
     db::get(db, couple, id).await?.ok_or_else(|| not_found("No such slip"))
@@ -122,6 +139,7 @@ pub async fn plan(
 ) -> Result<Json<SlipPlanned>, AppError> {
     let f = body.map(|j| j.0).unwrap_or(PlanForm { at: String::new() });
     let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
     let a = mine(db, couple, id).await?;
     let Some(local) = parse_local(&f.at) else {
@@ -320,7 +338,14 @@ impl SlipBody {
     /// Joy's form model. A cost that isn't a whole number is refused later, by [`save`].
     fn input(self) -> (ActivityInput, bool) {
         let cost = self.est_cost.trim();
-        let (est_cost, cost_ok) = if cost.is_empty() { (0, true) } else { cost.parse().map_or((0, false), |c| (c, true)) };
+        let (est_cost, cost_ok) = if cost.is_empty() {
+            (0, true)
+        } else {
+            match cost.parse::<i64>().map(crate::validate::rupees) {
+                Ok(Ok(c)) => (c, true),
+                _ => (0, false),
+            }
+        };
         (
             ActivityInput {
                 title: self.title,
@@ -399,6 +424,7 @@ pub async fn new(State(s): State<AppState>, Extension((user_id, _)): User) -> Re
 /// `GET /slips/{id}`: the form filled in with that slip.
 pub async fn edit(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<FormView>, AppError> {
     let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
     let a = mine(&s.db, &j.couple, id).await?;
     let mut input = input_from(&j.ctx, &a);
     input.pairs = db::partners(&s.db, &j.couple, id).await?.iter().map(|p| p.id).collect();
@@ -445,12 +471,15 @@ pub async fn update(
     Path(id): Path<i64>,
     Json(i): Json<SlipBody>,
 ) -> Result<Response, AppError> {
+    let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
     save(s, user_id, Some(id), i).await
 }
 
 /// `POST /slips/{id}/archive`
 pub async fn archive(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
     mine(&s.db, &j.couple, id).await?;
     db::set_archived(&s.db, &j.couple, id, true).await?;
     Ok(go(SLIPS))
@@ -459,6 +488,7 @@ pub async fn archive(State(s): State<AppState>, Extension((user_id, _)): User, P
 /// `POST /slips/{id}/restore`
 pub async fn restore(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
     mine(&s.db, &j.couple, id).await?;
     db::set_archived(&s.db, &j.couple, id, false).await?;
     Ok(go(SLIPS))
@@ -467,6 +497,7 @@ pub async fn restore(State(s): State<AppState>, Extension((user_id, _)): User, P
 /// `POST /slips/{id}/unveto`: bring a slip someone passed on back into the draw.
 pub async fn unveto(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
     mine(&s.db, &j.couple, id).await?;
     db::unveto(&s.db, &j.couple, id).await?;
     Ok(go(SLIPS))
@@ -475,11 +506,102 @@ pub async fn unveto(State(s): State<AppState>, Extension((user_id, _)): User, Pa
 /// `POST /slips/{id}/delete`
 pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
     mine(&s.db, &j.couple, id).await?;
+    // Archived rather than dropped when it has history (see `db::delete`); the answer is the same.
     db::delete(&s.db, &j.couple, id).await?;
     Ok(go(SLIPS))
 }
 
 fn me_name(j: &Joy) -> String {
     Me::new(&j.ctx, Some(j.who)).name
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::sqlite::SqlitePoolOptions;
+
+    /// A migrated database with one couple (`ua` first, `ub` second) and a slip of theirs.
+    async fn couple_db() -> (SqlitePool, i64) {
+        let db = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!().run(&db).await.unwrap();
+        for u in ["ua", "ub"] {
+            sqlx::query("INSERT INTO users (user_id, user_name, user_password, user_role) VALUES (?, ?, 'x', 'user')")
+                .bind(u)
+                .bind(u)
+                .execute(&db)
+                .await
+                .unwrap();
+        }
+        sqlx::query("INSERT INTO couples (couple_id, user_0, user_1) VALUES ('C', 'ua', 'ub')").execute(&db).await.unwrap();
+        let input = ActivityInput {
+            title: "Sunset walk".into(),
+            est_cost: 500,
+            setting: "local".into(),
+            duration: "short".into(),
+            energy: "med".into(),
+            ..Default::default()
+        };
+        let id = db::save(&db, "C", None, &input, None).await.unwrap();
+        (db, id)
+    }
+
+    fn ok<T>(r: Result<T, AppError>) -> T {
+        match r {
+            Ok(v) => v,
+            Err(e) => panic!("handler failed: {}", e.1),
+        }
+    }
+
+    fn state(db: SqlitePool) -> AppState {
+        let key = rusty_paseto::prelude::PasetoSymmetricKey::from(rusty_paseto::prelude::Key::from(&[7u8; 32]));
+        AppState { db, redis: None, paseto_key: std::sync::Arc::new(key) }
+    }
+
+    fn ids(groups: &[Group]) -> Vec<i64> {
+        groups.iter().flat_map(|g| g.items.iter().map(|a| a.id)).collect()
+    }
+
+    #[tokio::test]
+    async fn a_sealed_surprise_slip_is_hidden_from_the_partner_list() {
+        let (db, id) = couple_db().await;
+        // ua (slot 0) plans it as a surprise.
+        db::accept(&db, "C", id, Some(0), true).await.unwrap();
+
+        let planner = ok(page(State(state(db.clone())), Extension(("ua".into(), String::new()))).await).0;
+        assert_eq!(ids(&planner.groups), vec![id], "the creator still sees the slip");
+
+        let partner = ok(page(State(state(db.clone())), Extension(("ub".into(), String::new()))).await).0;
+        assert!(ids(&partner.groups).is_empty(), "the partner doesn't see the sealed slip");
+        assert_eq!(partner.total, 0);
+
+        // Opening or changing it by id is a plain 404 for the partner, so its existence doesn't leak.
+        let opened = edit(State(state(db.clone())), Extension(("ub".into(), String::new())), Path(id)).await;
+        assert_eq!(opened.err().map(|e| e.0), Some(axum::http::StatusCode::NOT_FOUND));
+        let deleted = delete(State(state(db.clone())), Extension(("ub".into(), String::new())), Path(id)).await;
+        assert_eq!(deleted.err().map(|e| e.0), Some(axum::http::StatusCode::NOT_FOUND));
+        assert!(edit(State(state(db.clone())), Extension(("ua".into(), String::new())), Path(id)).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn deleting_a_slip_with_history_moves_it_to_archived() {
+        let (db, id) = couple_db().await;
+        db::accept(&db, "C", id, Some(0), false).await.unwrap();
+
+        let res = ok(delete(State(state(db.clone())), Extension(("ua".into(), String::new())), Path(id)).await);
+        assert_eq!(res.0.to, SLIPS);
+        let view = ok(page(State(state(db.clone())), Extension(("ua".into(), String::new()))).await).0;
+        assert!(ids(&view.groups).is_empty(), "archived slips stay out of the slip list");
+        assert_eq!(view.archived.iter().map(|a| a.id).collect::<Vec<_>>(), vec![id]);
+    }
+
+    #[tokio::test]
+    async fn an_out_of_range_cost_is_refused() {
+        let body = |cost: &str| SlipBody { title: "x".into(), est_cost: cost.into(), setting: "local".into(), duration: "short".into(), ..Default::default() };
+        assert!(body("1200").input().1, "a whole rupee amount is fine");
+        assert!(!body("-5").input().1, "negative cost is refused");
+        assert!(!body("1000000000001").input().1, "above the rupee cap is refused");
+        assert!(!body("12.5").input().1, "not a whole number is refused");
+    }
 }

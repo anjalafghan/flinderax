@@ -206,7 +206,7 @@ export default function CreateCardPage() {
           {/* Preview */}
           <div className="flex flex-col gap-4">
             <Label>Preview</Label>
-            <div className="flex items-center justify-center rounded-xl bg-gray-100 p-8 dark:bg-gray-800">
+            <div className="flex items-center justify-center rounded-xl bg-chip p-8">
               <CreditCard
                 id="preview"
                 name={name || "CARD NAME"}

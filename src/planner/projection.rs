@@ -310,8 +310,17 @@ fn month_key(d: Date) -> String {
 
 /// `start` shifted forward by `months`, same day (clamped).
 fn plus_months(start: Date, months: i64) -> Date {
-    let (y, m) = add_months(start.year(), start.month(), months as i32);
+    let (y, m) = add_months(start.year(), start.month(), months.clamp(-MAX_TENURE, MAX_TENURE) as i32);
     clamped(y, m, start.day())
+}
+
+/// Longest tenure the simulation will honour: the shared input bound. A larger value would make
+/// one flow per month for centuries, so it is capped here as well as rejected at the API.
+const MAX_TENURE: i64 = crate::validate::MAX_MONTHS;
+
+/// An item's tenure in months: 12 when unset, at least 1, at most `MAX_TENURE`.
+fn tenure_of(it: &ScenarioItem) -> i64 {
+    it.tenure_months.unwrap_or(12).clamp(1, MAX_TENURE)
 }
 
 /// Runs the simulation with the plan's own commitments plus `items`.
@@ -377,7 +386,7 @@ fn simulate(inp: &ProjectionInput, items: &[ScenarioItem]) -> (Series, HashMap<S
             ItemKind::OneOff => flows.push(Flow { date: it.start, from, to: None, amount: it.amount_paise }),
             ItemKind::Fd | ItemKind::Rd => {
                 let id = format!("__scenario_{n}");
-                let tenure = it.tenure_months.unwrap_or(12).max(1);
+                let tenure = tenure_of(it);
                 sim.bal.insert(id.clone(), 0);
                 sim.deps.push(Dep {
                     id: id.clone(),
@@ -568,7 +577,7 @@ pub fn project(inp: &ProjectionInput, items: &[ScenarioItem]) -> Projection {
         .iter()
         .filter(|it| it.kind != ItemKind::OneOff)
         .map(|it| {
-            let end = plus_months(it.start, it.tenure_months.unwrap_or(12).max(1));
+            let end = plus_months(it.start, tenure_of(it));
             i64::from(month_index(end) - month_index(today)) + 1
         })
         .max()
@@ -586,8 +595,8 @@ pub fn project(inp: &ProjectionInput, items: &[ScenarioItem]) -> Projection {
     let impacts = items
         .iter()
         .map(|it| {
-            let tenure = it.tenure_months.unwrap_or(12).max(1);
-            let monthly = if it.kind == ItemKind::Rd { it.amount_paise } else { 0 };
+            let tenure = tenure_of(it);
+            let monthly =if it.kind == ItemKind::Rd { it.amount_paise } else { 0 };
             let (rest, sip, spend) = (budget.rest_savings_paise, budget.sip_paise, budget.spending_paise);
             let sf = (monthly > 0).then(|| absorb(rest, sip, spend, monthly, [Layer::Rest, Layer::Sip, Layer::Spending]));
             let sp = (monthly > 0).then(|| absorb(rest, sip, spend, monthly, [Layer::Spending, Layer::Rest, Layer::Sip]));
@@ -745,14 +754,14 @@ mod tests {
         assert_eq!(at(&p, "2026-10").reserve_paise, 6_914_400);
         // Nov: house, the card bill and 1 EMI instalment leave Kotak; the 10th top-up arrives
         let nov = at(&p, "2026-11");
-        assert_eq!(nov.reserve_paise, 6_914_400 - 400_000 - 2_306_700 + 2_662_400 + 8_738_500 * 0 + fd_payout(&p));
+        // The iPhone FD's own balance (locked, role Other) is not in Kotak; only its payout is.
+        assert_eq!(nov.reserve_paise, 6_914_400 - 400_000 - 2_306_700 + 2_662_400 + fd_payout(&p));
     }
 
     // The iPhone FD (₹87,385 at 7.1%, "payout") matures on 22 Nov into Kotak with a month's interest
     // already added at 31 Oct. Recompute that value the same way the engine does.
     fn fd_payout(_p: &Series) -> i64 {
-        let after_oct = (8_738_500_f64 * monthly_factor(710)).round() as i64;
-        after_oct
+        (8_738_500_f64 * monthly_factor(710)).round() as i64
     }
 
     #[test]
@@ -887,5 +896,30 @@ mod tests {
         let diff = at(&sc, "2026-12").total_paise - at(&out.baseline, "2026-12").total_paise;
         assert!((-500_000..-400_000).contains(&diff) || diff > -500_000, "diff {diff}");
         assert_eq!(out.impacts[1].monthly_paise, 0);
+    }
+
+    #[test]
+    fn huge_tenure_does_not_panic_or_build_a_flow_per_century() {
+        let item = |kind: ItemKind, tenure: i64, start: Date| ScenarioItem {
+            name: "Huge".into(),
+            kind,
+            amount_paise: 1_000_000,
+            start,
+            tenure_months: Some(tenure),
+            rate_bps: Some(700),
+            funded_from: None,
+            payout_to: None,
+            renewal: Some(Renewal::RenewAll),
+            target_paise: Some(i64::MAX),
+            target_date: Some(date!(9999 - 12 - 31)),
+        };
+        for tenure in [i64::MAX, i64::MIN, 10_000_000_000, 1_000_000] {
+            let out = project(&input(), &[item(ItemKind::Rd, tenure, date!(2026 - 11 - 10)), item(ItemKind::Fd, tenure, date!(2026 - 11 - 10))]);
+            assert!(out.scenario.is_some());
+            assert_eq!(out.baseline.points.len(), out.scenario.as_ref().unwrap().points.len());
+        }
+        // Starting right at the top of the representable calendar must not panic either.
+        let late = project(&input(), &[item(ItemKind::Rd, 1200, date!(9999 - 12 - 01))]);
+        assert!(late.scenario.is_some());
     }
 }

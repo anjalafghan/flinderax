@@ -52,7 +52,15 @@ const handleUnauthorized = () => {
   window.location.href = "/auth";
 };
 
-async function send(method: "GET" | "POST", url: string, body?: unknown): Promise<Response | null> {
+// Login and register answer 401 for a wrong password; that is a result for the form to show, not a session expiry.
+const isAuthEndpoint = (url: string) => url === "/api/common/login" || url === "/api/common/register";
+
+/**
+ * Sends a request. Always resolves with a Response or rejects with an Error, so callers never hang.
+ * A 401 on an authenticated request ends the session and redirects to /auth; the rejection still
+ * settles the promise. A 401 on the login/register endpoints just rejects with the server's message.
+ */
+async function send(method: "GET" | "POST", url: string, body?: unknown): Promise<Response> {
   const headers: HeadersInit = { "Content-Type": "application/json" };
   const token = localStorage.getItem("token");
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -63,12 +71,11 @@ async function send(method: "GET" | "POST", url: string, body?: unknown): Promis
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
-  if (response.status === 401) {
-    handleUnauthorized();
-    return null;
-  }
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
+    if (response.status === 401 && token && !isAuthEndpoint(url)) {
+      handleUnauthorized();
+    }
     throw new Error(errorBody || `Request failed with status ${response.status}`);
   }
   return response;
@@ -76,8 +83,6 @@ async function send(method: "GET" | "POST", url: string, body?: unknown): Promis
 
 async function json<T>(method: "GET" | "POST", url: string, body?: unknown): Promise<ApiResponse<T>> {
   const response = await send(method, url, body);
-  // Never resolve after a 401 so callers don't run on a page that is already redirecting.
-  if (!response) return new Promise(() => {});
   return {
     data: await response.json(),
     status: response.status,
@@ -87,7 +92,6 @@ async function json<T>(method: "GET" | "POST", url: string, body?: unknown): Pro
 
 async function binary(method: "GET" | "POST", url: string, body?: unknown): Promise<ArrayBuffer> {
   const response = await send(method, url, body);
-  if (!response) return new Promise(() => {});
   return response.arrayBuffer();
 }
 

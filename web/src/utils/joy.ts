@@ -1,6 +1,6 @@
 // Pure helpers for the Joy date budget. Money stays in integer paise; formatting goes through `formatINR`.
 
-import { daysAgo, formatDay } from "@/utils/dates";
+import { formatDay } from "@/utils/dates";
 
 /** Above this share of the budget the bar turns amber. */
 export const JOY_WARN_PERCENT = 80;
@@ -37,11 +37,34 @@ export function dayLabel(day: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(day) ? formatDay(day) : day;
 }
 
-/** When Joy last answered: "today", "yesterday", "6 Nov", or "an earlier sync" when unknown. */
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DAY_MS = 86_400_000;
+
+/** Parses an RFC 3339 or SQLite timestamp. A timestamp without a zone is UTC. Null when it can't be read. */
+function parseTimestamp(ts: string): Date | null {
+  const d = new Date(ts.includes("T") ? ts : ts.replace(" ", "T") + "Z");
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Whole calendar days between the local date of `ts` and the local date of `now` (0 = same day).
+ * Counts days, not elapsed hours, so 23:00 yesterday is one day ago at 09:00 today.
+ */
+export function calendarDaysAgo(ts: string, now: Date = new Date()): number | null {
+  const t = parseTimestamp(ts);
+  if (!t) return null;
+  const dayStart = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  // Round, so a daylight-saving shift inside the span can't leave a fraction.
+  return Math.max(0, Math.round((dayStart(now) - dayStart(t)) / DAY_MS));
+}
+
+/** When Joy last answered: "today", "yesterday", "6 Nov" (local date), or "an earlier sync" when unknown. */
 export function syncedLabel(ts: string | null, now: Date = new Date()): string {
   if (!ts) return "an earlier sync";
-  const days = daysAgo(ts, now);
+  const days = calendarDaysAgo(ts, now);
+  if (days === null) return "an earlier sync";
   if (days === 0) return "today";
   if (days === 1) return "yesterday";
-  return formatDay(ts.slice(0, 10));
+  const d = parseTimestamp(ts) as Date;
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }

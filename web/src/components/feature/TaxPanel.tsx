@@ -34,12 +34,12 @@ function RegimeBox({ name, tax, better }: { name: string; tax: number; better: b
     <div
       className={cn(
         "min-w-0 flex-1 glass rounded-2xl p-3",
-        better && "border-emerald-500/50 bg-emerald-500/10",
+        better && "border-good/40 bg-good-tint",
       )}
     >
       <p className="text-xs text-muted-foreground">
         {name}
-        {better && <span className="ml-1 font-semibold text-emerald-700 dark:text-emerald-300">· better</span>}
+        {better && <span className="ml-1 font-semibold text-good">· better</span>}
       </p>
       <p className="text-lg font-bold tabular-nums">{formatINR(tax)}</p>
       <p className="text-xs text-muted-foreground">tax</p>
@@ -229,7 +229,7 @@ export function TaxPanel() {
   return (
     <section aria-label="Tax" className="space-y-4 glass rounded-3xl p-4 md:p-6">
       <div>
-        <h2 className="font-display text-3xl leading-none">Tax (India)</h2>
+        <h2 className="font-display text-[32px] leading-none">Tax (India)</h2>
         <p className="text-sm text-muted-foreground">
           {tax ? `${fyLabel(tax.fy)} · April to March` : "Deductions and the regime comparison for this year."}
         </p>

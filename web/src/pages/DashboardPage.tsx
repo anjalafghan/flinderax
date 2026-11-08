@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, ChevronDown, Clock, X } from "lucide-react";
+import { ArrowRight, ChevronDown, CircleHelp, Clock, Heart, ListFilter, Plus, X, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -19,12 +19,12 @@ import { DatesPanel } from "@/components/feature/DatesPanel";
 import { DueSoonCard } from "@/components/feature/BillsPanel";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 
-const QUICK_ACTIONS = [
-  { to: "/spending", label: "Log spending", hint: "Paste, upload or add" },
-  { to: "/plan#afford", label: "Can I afford it?", hint: "Check before you buy" },
-  { to: "/spending", label: "Categorize", hint: "Review new alerts" },
-  { to: "/joy", label: "Plan a date", hint: "Pick one for the week" },
-] as const;
+const QUICK_ACTIONS: { to: string; label: string; hint: string; icon: LucideIcon }[] = [
+  { to: "/spending", label: "Log spending", hint: "Paste, upload or add", icon: Plus },
+  { to: "/plan#afford", label: "Can I afford it?", hint: "Check before you buy", icon: CircleHelp },
+  { to: "/spending", label: "Categorize", hint: "Review new alerts", icon: ListFilter },
+  { to: "/joy", label: "Plan a date", hint: "Pick one for the week", icon: Heart },
+];
 
 export interface CardData {
   card_id: string;
@@ -212,33 +212,33 @@ export default function DashboardPage() {
       <Header />
 
       <main className={`page flex-1 ${hasPendingDeferred ? "pb-32" : ""}`}>
-        <div className="mx-auto mb-10 w-full max-w-5xl">
+        <div className="mb-6 w-full">
           <PlannerSummary />
         </div>
 
-        <nav aria-label="Quick actions" className="mx-auto mb-10 grid w-full max-w-5xl grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          {QUICK_ACTIONS.map((a, i) => (
+        <nav aria-label="Quick actions" className="mb-12 grid w-full grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">
+          {QUICK_ACTIONS.map((a) => (
             <Link
               key={a.label}
               to={a.to}
-              className="group flex min-h-[9.5rem] flex-col justify-between gap-7 rounded-[1.25rem] border border-border bg-foreground/[0.04] p-5 transition-colors hover:bg-foreground/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-6"
+              className="flex min-h-[72px] items-center gap-3.5 rounded-[18px] border border-border px-5 no-underline transition-colors hover:bg-[hsl(var(--chip))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="eyebrow">{String(i + 1).padStart(2, "0")}</span>
-              <span className="flex flex-col gap-1.5">
-                <span className="font-display text-[26px] leading-[1.05] md:text-[30px]">{a.label}</span>
-                <span className="text-sm text-muted-foreground">{a.hint}</span>
+              <a.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} aria-hidden />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-[15px] font-medium">{a.label}</span>
+                <span className="text-[13px] text-muted-foreground">{a.hint}</span>
               </span>
             </Link>
           ))}
         </nav>
 
-        <div className="mx-auto mb-8 w-full max-w-5xl">
+        <div className="mb-12 w-full">
           <DueSoonCard />
         </div>
 
-        <section aria-label="Your cards" className="mx-auto mb-8 w-full max-w-5xl">
+        <section aria-label="Your cards" className="mb-12 w-full">
           <div className="mb-2 flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-4xl leading-none md:text-[44px]">Cards</h2>
+            <h2 className="font-display text-[32px] leading-none">Cards</h2>
             <p className="eyebrow">
               {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(totalDue)} due in total
             </p>
@@ -266,16 +266,16 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <div className="mx-auto mb-8 grid w-full max-w-5xl items-start gap-6 md:grid-cols-2 [&>section]:mb-0 [&>section]:max-w-none">
+        <div className="mb-12 grid w-full items-start gap-6 md:grid-cols-2 [&>section]:mb-0 [&>section]:max-w-none">
           <SpendingPanel />
           <DatesPanel />
         </div>
 
         {history && (
-          <details className="group mx-auto mb-8 w-full max-w-5xl glass rounded-3xl">
+          <details className="group mb-12 w-full glass rounded-3xl">
             <summary className="flex cursor-pointer list-none items-center justify-between p-4 md:p-5">
               <span>
-                <span className="block font-display text-3xl leading-none">Trends &amp; insights</span>
+                <span className="block font-display text-[26px] leading-none">Trends &amp; insights</span>
                 <span className="block text-sm text-muted-foreground">Net worth, card utilization, maturities, auto-postings</span>
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
@@ -290,23 +290,19 @@ export default function DashboardPage() {
             </div>
           </details>
         )}
-        <footer className="mx-auto mt-6 flex w-full max-w-5xl flex-wrap justify-between gap-3 eyebrow">
-          <span>joy, a quiet ledger</span>
-          <span>spend softly</span>
-        </footer>
       </main>
 
        {hasPendingDeferred && (
          <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 bg-gradient-to-t md:bottom-0 from-background via-background/95 to-transparent pt-8 pb-4 px-4 border-t border-border/50">
            <div className="container mx-auto max-w-md relative">
-             <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30 p-4">
+             <div className="rounded-xl border border-warn/40 bg-warn-tint p-4">
                <button
                  onClick={() => {
                    if (deferredStatus) {
                      cancelDeferredMutation.mutate(deferredStatus.batch_id);
                    }
                  }}
-                 className="absolute -top-2 -right-2 rounded-full p-1.5 bg-background border border-border shadow-sm hover:bg-accent hover:text-destructive transition-colors z-10"
+                 className="absolute -top-2 -right-2 rounded-full p-1.5 bg-background border border-border hover:bg-accent hover:text-destructive transition-colors z-10"
                  aria-label="Dismiss pending payments"
                  disabled={cancelDeferredMutation.isPending}
                >
@@ -314,14 +310,14 @@ export default function DashboardPage() {
                </button>
                <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-900/50">
-                    <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <div className="p-2 rounded-full bg-warn-tint">
+                    <Clock className="h-5 w-5 text-warn" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                    <p className="text-sm font-medium text-warn">
                       Pending Payments
                     </p>
-                    <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                    <p className="text-xl font-bold text-warn">
                       {new Intl.NumberFormat("en-IN", {
                         style: "currency",
                         currency: "INR",
@@ -331,7 +327,6 @@ export default function DashboardPage() {
                 </div>
                 <Button
                   onClick={handleSettle}
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
                   disabled={settleMutation.isPending}
                 >
                   {settleMutation.isPending ? "Settling..." : "Settle All"}
@@ -344,16 +339,16 @@ export default function DashboardPage() {
       )}
 
       {showSettleConfirm && pendingToSettle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 p-4">
           <div className="glass rounded-3xl p-6 max-w-md w-full animate-in fade-in zoom-in duration-200">
-            <h2 className="font-display text-3xl leading-none mb-2">Settle All Payments</h2>
+            <h2 className="font-display text-[32px] leading-none mb-2">Settle All Payments</h2>
             <p className="text-muted-foreground mb-4">
               You are about to settle{" "}
               <span className="font-bold text-foreground">
                 {deferredStatus?.items?.length || 0}
               </span>{" "}
               pending payments totaling{" "}
-              <span className="font-bold text-green-600">
+              <span className="font-bold text-good">
                 {new Intl.NumberFormat("en-IN", {
                   style: "currency",
                   currency: "INR",
@@ -372,7 +367,7 @@ export default function DashboardPage() {
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                className="flex-1"
                 onClick={confirmSettle}
               >
                 Confirm Settlement

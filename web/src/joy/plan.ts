@@ -20,11 +20,15 @@ function at(now: Date, days: number, h: number, m = 0): Date {
 export function quickPick(key: WhenKey, now: Date = new Date()): Date {
   switch (key) {
     case "tonight": {
-      // 7 pm, or the next half hour after an hour from now once it's evening already
+      // 7 pm, or the next half hour after an hour from now once it's evening already.
+      // Tonight stays on today: a later time that crosses midnight is clamped to the last slot today.
       if (now.getHours() < 18) return at(now, 0, 19);
       const d = new Date(now.getTime() + 60 * 60 * 1000);
       d.setMinutes(d.getMinutes() <= 30 ? 30 : 60, 0, 0);
-      return d;
+      if (d.toDateString() === now.toDateString()) return d;
+      // Past 23:30 there is no later slot left, so use 23:59 of the same day.
+      const lastSlot = at(now, 0, 23, 30);
+      return now.getTime() < lastSlot.getTime() ? lastSlot : at(now, 0, 23, 59);
     }
     case "tomorrow":
       return at(now, 1, 19);

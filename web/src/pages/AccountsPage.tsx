@@ -233,7 +233,7 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
-      <p className={cn("text-xs", stale ? "font-medium text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
+      <p className={cn("text-xs", stale ? "font-medium text-warn" : "text-muted-foreground")}>
         {age === 0 ? "Updated today" : `Updated ${age} day${age === 1 ? "" : "s"} ago`}
         {stale && ", update it for a reliable number"}
       </p>
@@ -415,7 +415,7 @@ export default function AccountsPage() {
         {accounts && (
           <>
             <section className="space-y-3">
-              <h2 className="font-display text-3xl leading-none">Bank &amp; cash</h2>
+              <h2 className="font-display text-[32px] leading-none">Bank &amp; cash</h2>
               {spendable.length === 0 ? (
                 <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No accounts yet.</p>
               ) : (
@@ -423,7 +423,7 @@ export default function AccountsPage() {
               )}
             </section>
             <section className="space-y-3">
-              <h2 className="font-display text-3xl leading-none">Deposits (FD / RD)</h2>
+              <h2 className="font-display text-[32px] leading-none">Deposits (FD / RD)</h2>
               {savings.length === 0 ? (
                 <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No deposits yet.</p>
               ) : (

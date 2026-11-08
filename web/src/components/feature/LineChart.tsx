@@ -4,7 +4,7 @@ import { cn } from "@/utils/cn";
 export interface ChartSeries {
   label: string;
   values: number[];
-  /** Tailwind stroke colour class, e.g. "stroke-emerald-500". */
+  /** Tailwind stroke colour class, e.g. "stroke-good". */
   stroke: string;
   dashed?: boolean;
 }
@@ -75,7 +75,7 @@ export function LineChart({
         ))}
         {markers.map((m) => (
           <g key={`${m.index}-${m.label}`}>
-            <circle cx={x(m.index)} cy={H - PAD.b} r={4} className="fill-rose-500" />
+            <circle cx={x(m.index)} cy={H - PAD.b} r={4} className="fill-over" />
             <title>{m.label}</title>
           </g>
         ))}
@@ -91,7 +91,7 @@ export function LineChart({
         ))}
         {markers.length > 0 && (
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block h-2 w-2 rounded-full bg-rose-500" /> A month you'd fall short
+            <span className="inline-block h-2 w-2 rounded-full bg-over" /> A month you'd fall short
           </span>
         )}
       </figcaption>

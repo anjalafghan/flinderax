@@ -20,6 +20,10 @@ import { ModeToggle } from "@/components/ui/mode-toggle";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 
+// The API rejects with an Error whose message is the server's text (see services/api.ts).
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -48,17 +52,15 @@ export default function AuthPage() {
       login(data.access_token, data.expires_at);
       navigate("/");
     },
-    onError: (error: any) => {
-      toast.error(
-        error.response?.data || "Login failed. Please check your credentials.",
-      );
+    onError: (error) => {
+      toast.error(errorMessage(error, "Login failed. Please check your credentials."));
     },
   });
 
   const registerMutation = useMutation({
     mutationFn: async () => {
       // Backend requires user_role
-      const res = await api.post<any>("/api/common/register", {
+      const res = await api.post<unknown>("/api/common/register", {
         user_name: regUser,
         user_password: regPass,
         user_role: "user",
@@ -72,10 +74,8 @@ export default function AuthPage() {
       setRegUser("");
       setRegPass("");
     },
-    onError: (error: any) => {
-      toast.error(
-        error.response?.data || "Registration failed. Please try again.",
-      );
+    onError: (error) => {
+      toast.error(errorMessage(error, "Registration failed. Please try again."));
     },
   });
 

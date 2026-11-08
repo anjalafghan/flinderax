@@ -23,6 +23,7 @@ use crate::{
     models::AppState,
     planner::cycle::add_months,
     ratelimit,
+    statement::StatementRow,
 };
 
 type User = Extension<(String, String)>;
@@ -633,6 +634,62 @@ mod tests {
         assert_eq!(hash_key(" fx_abc\n"), hash_key("fx_abc"));
         assert_eq!(hash_key("fx_abc").len(), 64);
     }
+
+    fn statement_row(amount_paise: i64) -> StatementRow {
+        use time::macros::date;
+        StatementRow {
+            date: date!(2026 - 11 - 01),
+            direction: Direction::Debit,
+            amount_paise,
+            narration: "UPI-SWIGGY-swiggy@icici-4305".into(),
+            reference: None,
+            balance_paise: None,
+        }
+    }
+
+    #[test]
+    fn statement_key_has_no_target_so_reimports_match_across_targets() {
+        // The key is built from the row alone: the same row from the same file gets the same key
+        // whichever card or account the file is imported to.
+        let row = statement_row(145_000);
+        assert_eq!(statement_key(&row), statement_key(&row.clone()));
+        assert_eq!(statement_key(&row), "stmt:2026-11-01:debit:145000:upi swiggy swiggy icici 4305");
+        // Different day, direction or amount is a different row.
+        assert_ne!(statement_key(&row), statement_key(&statement_row(145_001)));
+        let credit = StatementRow { direction: Direction::Credit, ..row.clone() };
+        assert_ne!(statement_key(&row), statement_key(&credit));
+    }
+
+    #[tokio::test]
+    async fn alert_on_one_card_does_not_match_a_statement_row_on_another_account() {
+        use sqlx::sqlite::SqlitePoolOptions;
+        let db = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!().run(&db).await.unwrap();
+        for q in [
+            "INSERT INTO users (user_id, user_name, user_password, user_role) VALUES ('u', 'u', 'x', 'user')",
+            "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color) VALUES ('cardA', 'u', 'A', 'HDFC', 0, 0)",
+            "INSERT INTO accounts (account_id, user_id, name, kind) VALUES ('acctB', 'u', 'B', 'bank')",
+            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, card_id, source, dedupe_key)
+             VALUES ('t1', 'u', '2026-11-01', 'debit', 145000, 'cardA', 'sms', 'fp:alert-on-card-a')",
+        ] {
+            sqlx::query(q).execute(&db).await.unwrap();
+        }
+        let mut conn = db.acquire().await.unwrap();
+        let on_card_a = alerts_on_target(&mut *conn, "u", "2026-11-01", "debit", 145_000, None, Some("cardA")).await.unwrap();
+        let on_account_b = alerts_on_target(&mut *conn, "u", "2026-11-01", "debit", 145_000, Some("acctB"), None).await.unwrap();
+        let untargeted = alerts_on_target(&mut *conn, "u", "2026-11-01", "debit", 145_000, None, None).await.unwrap();
+        assert_eq!((on_card_a, on_account_b, untargeted), (1, 0, 1));
+        // An alert that never got a card or account still matches a targeted import, so it isn't doubled.
+        sqlx::query(
+            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, source, dedupe_key)
+             VALUES ('t2', 'u', '2026-11-02', 'debit', 9900, 'sms', 'fp:unscoped')",
+        )
+        .execute(&mut *conn)
+        .await
+        .unwrap();
+        let unscoped = alerts_on_target(&mut *conn, "u", "2026-11-02", "debit", 9900, Some("acctB"), None).await.unwrap();
+        assert_eq!(unscoped, 1);
+    }
 }
 
 // ---------- statement import ----------
@@ -664,9 +721,47 @@ pub struct StatementResult {
     pub balance_updated: Option<BalanceUpdated>,
 }
 
+/// The identity of a statement row. It deliberately leaves out the card or account the file is
+/// imported to, so re-importing the same file against a different target is still a duplicate.
+fn statement_key(row: &StatementRow) -> String {
+    format!("stmt:{}:{}:{}:{}", row.date, row.direction.as_str(), row.amount_paise, normalize(&row.narration))
+}
+
+/// How many bank-alert transactions on this card or account, on this day, in this direction and
+/// amount, no statement row has claimed yet. Alerts for other cards or accounts are not counted:
+/// an alert on one card must not swallow a row on another account.
+async fn alerts_on_target(
+    conn: &mut sqlx::SqliteConnection,
+    user_id: &str,
+    on: &str,
+    direction: &str,
+    amount_paise: i64,
+    account_id: Option<&str>,
+    card_id: Option<&str>,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM transactions
+         WHERE user_id = ?1 AND occurred_on = ?2 AND direction = ?3 AND amount_paise = ?4
+           -- An import with no target matches any alert. A targeted import matches alerts on the
+           -- same card/account, plus alerts that never got one (else those rows would double).
+           AND ((?5 = '' AND ?6 = '')
+                OR ((account_id IS NULL OR account_id = ?5) AND (card_id IS NULL OR card_id = ?6)))
+           AND dedupe_key NOT LIKE 'stmt:%' AND source != 'manual'",
+    )
+    .bind(user_id)
+    .bind(on)
+    .bind(direction)
+    .bind(amount_paise)
+    .bind(account_id.unwrap_or(""))
+    .bind(card_id.unwrap_or(""))
+    .fetch_one(conn)
+    .await
+}
+
 /// `POST /api/ingest/statement`: stores every row of a CSV statement. Nothing is stored twice:
 /// re-importing a file, or an overlapping one, only adds what is new, and rows a bank alert already
-/// recorded (same day, direction and amount) are matched to it instead of doubled.
+/// recorded on the same card or account (same day, direction and amount) are matched to it instead
+/// of doubled.
 pub async fn statement(
     State(state): State<AppState>,
     Extension((user_id, _)): User,
@@ -703,7 +798,6 @@ pub async fn statement(
         card_id = Some(row.0);
         last4 = row.1;
     }
-    let target = account_id.clone().or_else(|| card_id.clone()).unwrap_or_default();
     let rules = load_rules(db, &user_id).await?;
 
     let mut res = StatementResult {
@@ -729,8 +823,7 @@ pub async fn statement(
         res.last_date = Some(res.last_date.take().map_or(on.clone(), |d| d.max(on.clone())));
 
         // Two identical rows on one day are two purchases; the n-th gets its own key.
-        let norm = alerts::normalize(&row.narration);
-        let base = format!("stmt:{target}:{on}:{dir}:{}:{norm}", row.amount_paise);
+        let base = statement_key(row);
         let n = seen.entry(base.clone()).and_modify(|n| *n += 1).or_insert(1);
         let dedupe_key = format!("{base}:{n}");
 
@@ -746,15 +839,8 @@ pub async fn statement(
 
         let budget_key = (on.clone(), dir, row.amount_paise);
         if !alert_budget.contains_key(&budget_key) {
-            let alerts_seen: i64 = sqlx::query_scalar(
-                "SELECT COUNT(*) FROM transactions WHERE user_id = ? AND occurred_on = ? AND direction = ? AND amount_paise = ? AND dedupe_key NOT LIKE 'stmt:%' AND source != 'manual'",
-            )
-            .bind(&user_id)
-            .bind(&on)
-            .bind(dir)
-            .bind(row.amount_paise)
-            .fetch_one(&mut *tx)
-            .await?;
+            let alerts_seen =
+                alerts_on_target(&mut tx, &user_id, &on, dir, row.amount_paise, account_id.as_deref(), card_id.as_deref()).await?;
             alert_budget.insert(budget_key.clone(), alerts_seen);
         }
         let left = alert_budget.get_mut(&budget_key).expect("inserted above");

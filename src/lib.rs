@@ -10,6 +10,7 @@ pub mod planner;
 pub mod ratelimit;
 pub mod routes;
 pub mod statement;
+pub mod validate;
 
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/joy_backend.rs"));

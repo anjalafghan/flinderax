@@ -36,23 +36,25 @@ const bill = (offset: number, label: string) => ({
 });
 
 describe("DueSoonCard", () => {
-  it("lists up to three bills due within a week, with a link to all bills", () => {
+  it("lists the bills due within a week as a ledger with a total, and a link to all bills", () => {
     withData({
       bills: [bill(1, "Gym"), bill(2, "Phone"), bill(3, "Internet"), bill(4, "Rent"), bill(20, "Far away")],
       total_paise: 0,
       sinking_funds: [],
     });
-    const card = screen.getByLabelText("Due soon");
+    const card = screen.getByRole("region", { name: "Due soon" });
     expect(card).toHaveTextContent("Gym");
     expect(card).toHaveTextContent("Phone");
     expect(card).toHaveTextContent("Internet");
-    expect(card).not.toHaveTextContent("Rent");
+    expect(card).toHaveTextContent("Rent");
+    expect(card).toHaveTextContent("Monthly · tomorrow");
+    expect(card).toHaveTextContent("Total this week₹1,996");
     expect(card).not.toHaveTextContent("Far away");
     expect(screen.getByRole("link", { name: "All bills" })).toHaveAttribute("href", "/plan#bills");
   });
 
   it("hides itself when nothing is due within a week", () => {
     withData({ bills: [bill(15, "Later")], total_paise: 0, sinking_funds: [] });
-    expect(screen.queryByLabelText("Due soon")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Due soon" })).toBeNull();
   });
 });

@@ -31,8 +31,8 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 /** Shows the key once, with a copy button. It is not shown again after this is dismissed. */
 function NewKeyReveal({ value, onDone }: { value: string; onDone: () => void }) {
   return (
-    <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
-      <p className="font-medium text-amber-900 dark:text-amber-200">
+    <div className="space-y-3 rounded-lg border border-warn/40 bg-warn-tint p-3 text-sm">
+      <p className="font-medium text-warn">
         Copy this key now. It is shown only once; you can't view it again later.
       </p>
       <div className="flex items-center gap-2">
@@ -71,7 +71,7 @@ export function IngestSetup() {
       <summary className="cursor-pointer list-none">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-3xl leading-none tracking-tight">Automatic import setup</h2>
+            <h2 className="font-display text-[32px] leading-none tracking-tight">Automatic import setup</h2>
             <p className="text-sm text-muted-foreground">
               {isError
                 ? "Couldn't check the import key."
