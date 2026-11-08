@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT g.goal_id AS \"goal_id!\", g.name, g.kind, g.target_paise, g.target_date, g.priority, g.account_id,\n                  COALESCE((SELECT SUM(amount_paise) FROM goal_contributions c WHERE c.goal_id = g.goal_id), 0) AS \"saved!: i64\"\n           FROM goals g WHERE g.user_id = ? AND g.archived = 0",
+  "describe": {
+    "columns": [
+      {
+        "name": "goal_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "kind",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "target_paise",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "target_date",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "account_id",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "saved!: i64",
+        "ordinal": 7,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "d064c4b67df623ae8fd3bb83083a018e7ebbfa0a94490642e31d812a27850f04"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO joy_settlements (couple_id, payer, amount_paise, on_day, note) VALUES (?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "aace13be67c24ac1925083a10b7ac0a8d15e6d2dc63767cec6ed38979808a5b7"
+}

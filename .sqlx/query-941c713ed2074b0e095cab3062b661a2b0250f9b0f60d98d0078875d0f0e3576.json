@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT account_id AS \"account_id!\", locked AS \"locked: bool\" FROM accounts WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "locked: bool",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "941c713ed2074b0e095cab3062b661a2b0250f9b0f60d98d0078875d0f0e3576"
+}

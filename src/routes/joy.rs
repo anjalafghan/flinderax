@@ -11,5 +11,6 @@ pub fn routes(state: AppState) -> Router {
         .route("/connect", post(joy::connect))
         .route("/partner", post(joy::set_partner))
         .route("/disconnect", post(joy::disconnect))
+        .route("/settle", get(joy::settle).post(joy::settle_record))
         .with_state(state)
 }

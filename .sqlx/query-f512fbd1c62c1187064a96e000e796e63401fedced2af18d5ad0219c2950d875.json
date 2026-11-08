@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(SUM(amount_paise), 0) AS \"total!: i64\" FROM transactions\n           WHERE user_id = ? AND direction = 'credit' AND occurred_on >= ? AND occurred_on <= ?\n             AND (lower(COALESCE(merchant, '') || ' ' || COALESCE(raw_text, '')) LIKE '%interest%'\n               OR lower(COALESCE(merchant, '') || ' ' || COALESCE(raw_text, '')) LIKE '%int.pd%'\n               OR lower(COALESCE(merchant, '') || ' ' || COALESCE(raw_text, '')) LIKE '%int pd%'\n               OR lower(COALESCE(merchant, '') || ' ' || COALESCE(raw_text, '')) LIKE '%int cr%')",
+  "describe": {
+    "columns": [
+      {
+        "name": "total!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f512fbd1c62c1187064a96e000e796e63401fedced2af18d5ad0219c2950d875"
+}

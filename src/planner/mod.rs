@@ -12,11 +12,17 @@
 //! Safe to spend covers the CURRENT PAY PERIOD only (today up to the next payday); the next salary
 //! is never used.
 
+pub mod afford;
 pub mod autopost;
+pub mod bills;
 pub mod cycle;
+pub mod goals;
 pub mod history;
 pub mod joy;
 pub mod projection;
+pub mod recurring;
+pub mod review;
+pub mod tax;
 
 use serde::Serialize;
 use time::{Date, Duration, Month};

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE commitments SET tax_section = ? WHERE commitment_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "e58479d7efbc8a02d65c231b4244725ac1d3a57cbda1043ccec2e2d01be97d2a"
+}

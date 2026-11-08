@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO couple_invites (code_hash, couple_id, expires_at) VALUES (?, ?, datetime('now', ?))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "3df5c604021eff2139182c5977e0adcc3e1152e28085909da822aaeed33a717e"
+}

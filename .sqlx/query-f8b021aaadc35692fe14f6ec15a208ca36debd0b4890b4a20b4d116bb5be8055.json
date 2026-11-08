@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(SUM(amount_paise), 0) AS \"t!: i64\" FROM income_sources WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "t!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f8b021aaadc35692fe14f6ec15a208ca36debd0b4890b4a20b4d116bb5be8055"
+}

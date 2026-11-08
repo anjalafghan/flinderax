@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Load Testing Script for Flinderax Backend
+ * Load Testing Script for joy Backend
  * 
  * This script tests the backend's capacity to handle concurrent requests
  * and measures RPS (requests per second) for different endpoints.
@@ -21,7 +21,7 @@ const { URL } = require('url');
 // Configuration
 const ENV = process.argv[2] || 'local';
 const BASE_URL = ENV === 'production'
-    ? 'https://flinderax.fly.dev'
+    ? 'https://joy-jar.fly.dev'
     : 'http://localhost:3000';
 
 // Test credentials (make sure this user exists in your database)
@@ -392,7 +392,7 @@ function printSummary(results) {
 
 async function main() {
     try {
-        console.log(`${colors.bright}Flinderax Backend Load Test${colors.reset}`);
+        console.log(`${colors.bright}joy Backend Load Test${colors.reset}`);
         console.log(`Testing against: ${colors.blue}${BASE_URL}${colors.reset}`);
 
         if (MULTI_USER_CONFIG.enabled) {

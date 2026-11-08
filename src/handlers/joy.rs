@@ -10,7 +10,10 @@ use serde::{Deserialize, Serialize};
 use time::{macros::format_description, Date};
 
 use crate::{
-    handlers::common::{bad_request, today_local, AppError},
+    handlers::{
+        common::{bad_request, today_local, AppError},
+        couple::couple_of,
+    },
     models::AppState,
     planner::joy::{match_dates, your_share, DateSpend, Debit},
 };
@@ -186,6 +189,19 @@ pub async fn set_partner(
     if p.partner_paise < 0 {
         return Err(bad_request("The partner's share can't be negative"));
     }
+    if let Some((couple, who)) = couple_of(&state.db, &user_id).await? {
+        let key = format!("COVERS_{}", 1 - who);
+        let rupees = (p.partner_paise / 100).to_string();
+        sqlx::query!(
+            "INSERT INTO joy_settings (couple_id, key, value) VALUES (?, ?, ?) ON CONFLICT(couple_id, key) DO UPDATE SET value = excluded.value",
+            couple,
+            key,
+            rupees
+        )
+        .execute(&state.db)
+        .await?;
+        return Ok(Json(Done { status: true }));
+    }
     sqlx::query!("UPDATE joy_links SET partner_paise = ? WHERE user_id = ?", p.partner_paise, user_id)
         .execute(&state.db)
         .await?;
@@ -237,6 +253,15 @@ pub struct Summary {
 /// month's date spending with your share.
 pub async fn summary(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Summary>, AppError> {
     let db = &state.db;
+    // Dates lives in this app now: read it directly, nothing to fetch and nothing stale.
+    if let Some((couple, who)) = couple_of(db, &user_id).await? {
+        let p = local_payload(db, &couple).await?;
+        let partner = partner_covers(db, &couple, who, &p).await?;
+        let mut out = Summary { connected: true, partner_paise: partner, ..Default::default() };
+        out.labelled = label_dates(db, &user_id, &p).await?;
+        fill_month(&mut out, &p, partner);
+        return Ok(Json(out));
+    }
     let Some(link) = sqlx::query!(
         r#"SELECT url, token, partner_paise, last_payload, synced_at AS "synced_at: String" FROM joy_links WHERE user_id = ?"#,
         user_id
@@ -272,37 +297,40 @@ pub async fn summary(State(state): State<AppState>, Extension((user_id, _)): Use
             link.last_payload.as_deref().and_then(|j| serde_json::from_str::<JoyPayload>(j).ok())
         }
     };
-    let Some(p) = payload else { return Ok(Json(out)) };
-
-    let today = today_local();
-    let this_month = format!("{:04}-{:02}", today.year(), today.month() as u8);
-    let current = p.months.iter().find(|m| m.month == this_month).or(p.months.last());
-    if let Some(m) = current {
-        let budget = m.budget.map(|b| (b + m.carry) * 100);
-        let spent = m.spent * 100;
-        out.month = Some(MonthOut {
-            month: m.month.clone(),
-            budget_paise: budget,
-            carry_paise: m.carry * 100,
-            spent_paise: spent,
-            your_share_paise: your_share(spent, budget, link.partner_paise),
-            your_budget_paise: budget.map(|b| (b - link.partner_paise).max(0)),
-        });
-        out.recent = p
-            .entries
-            .iter()
-            .filter(|e| e.day.starts_with(&m.month))
-            .take(RECENT)
-            .map(|e| RecentOut {
-                day: e.day.clone(),
-                title: e.title.clone(),
-                kind: e.kind.clone(),
-                amount_paise: e.amount * 100,
-                your_share_paise: your_share(e.amount * 100, budget, link.partner_paise),
-            })
-            .collect();
+    if let Some(p) = payload {
+        fill_month(&mut out, &p, link.partner_paise);
     }
     Ok(Json(out))
+}
+
+/// This month's figures and recent entries from a payload, with your share.
+fn fill_month(out: &mut Summary, p: &JoyPayload, partner_paise: i64) {
+    let today = today_local();
+    let this_month = format!("{:04}-{:02}", today.year(), today.month() as u8);
+    let Some(m) = p.months.iter().find(|m| m.month == this_month).or(p.months.last()) else { return };
+    let budget = m.budget.map(|b| (b + m.carry) * 100);
+    let spent = m.spent * 100;
+    out.month = Some(MonthOut {
+        month: m.month.clone(),
+        budget_paise: budget,
+        carry_paise: m.carry * 100,
+        spent_paise: spent,
+        your_share_paise: your_share(spent, budget, partner_paise),
+        your_budget_paise: budget.map(|b| (b - partner_paise).max(0)),
+    });
+    out.recent = p
+        .entries
+        .iter()
+        .filter(|e| e.day.starts_with(&m.month))
+        .take(RECENT)
+        .map(|e| RecentOut {
+            day: e.day.clone(),
+            title: e.title.clone(),
+            kind: e.kind.clone(),
+            amount_paise: e.amount * 100,
+            your_share_paise: your_share(e.amount * 100, budget, partner_paise),
+        })
+        .collect();
 }
 
 #[cfg(test)]
@@ -318,4 +346,184 @@ mod tests {
         assert!(clean_url("https://user@evil.example").is_err());
         assert!(clean_url("ftp://x").is_err());
     }
+}
+
+// ---------- Dates in this app (couples) ----------
+
+const LOCAL_MONTHS: i64 = 6;
+
+/// The same figures Joy's `/api/v1/spending` gave, read from the Dates tables (whole rupees).
+pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str) -> Result<JoyPayload, AppError> {
+    use crate::joy::db as jdb;
+    let mut months_list = Vec::new();
+    for back in (0..LOCAL_MONTHS).rev() {
+        months_list.push(jdb::month_offset(db, back).await?);
+    }
+    let standing = jdb::setting(db, couple, "monthly_budget").await?.and_then(|v| v.trim().parse::<i64>().ok()).filter(|b| *b > 0);
+    let mut months = Vec::new();
+    for m in &months_list {
+        let row = jdb::month_budget(db, couple, m).await?;
+        months.push(JoyMonth {
+            month: m.clone(),
+            budget: row.map(|(base, _)| base).or(standing),
+            carry: row.map_or(0, |(_, carry)| carry),
+            spent: jdb::spent_in_month(db, couple, m).await?,
+        });
+    }
+    let (oldest, newest) = (months_list[0].clone(), months_list[months_list.len() - 1].clone());
+    // Kept dates (an unrevealed surprise keeps its amount but not its name), other date spending,
+    // and nights out with a regular: the same rules as Joy's spending API.
+    let rows: Vec<(String, String, i64, String, String)> = sqlx::query_as(
+        "SELECT 'date:' || h.id, date(COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime'),
+                MAX(h.actual_cost - COALESCE(h.from_savings, 0), 0),
+                CASE WHEN h.surprise = 1 AND h.revealed = 0 THEN 'A surprise date' ELSE COALESCE(a.title, '') END, 'date'
+           FROM joy_history h LEFT JOIN joy_activities a ON a.id = h.activity_id
+          WHERE h.couple_id = ?1 AND h.outcome = 'did_it' AND h.actual_cost IS NOT NULL
+            AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()
+            AND strftime('%Y-%m', COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime') BETWEEN ?2 AND ?3
+         UNION ALL
+         SELECT 'other:' || id, spent_on, amount, CASE WHEN trim(note) = '' THEN 'Other date spending' ELSE note END, 'other'
+           FROM joy_other_spending WHERE couple_id = ?1 AND strftime('%Y-%m', spent_on) BETWEEN ?2 AND ?3
+         UNION ALL
+         SELECT 'night:' || v.id, v.day, v.amount, CASE WHEN trim(v.place) = '' THEN r.title ELSE v.place END, 'regular'
+           FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id
+          WHERE r.couple_id = ?1 AND v.status = 'went' AND v.amount > 0 AND strftime('%Y-%m', v.day) BETWEEN ?2 AND ?3
+         ORDER BY 2 DESC",
+    )
+    .bind(couple)
+    .bind(&oldest)
+    .bind(&newest)
+    .fetch_all(db)
+    .await?;
+    let entries = rows
+        .into_iter()
+        .filter(|r| r.2 > 0)
+        .map(|(id, day, amount, title, kind)| JoyEntry { id, day, amount, title, kind })
+        .collect();
+    Ok(JoyPayload { currency: "₹".into(), monthly_budget: standing, months, entries })
+}
+
+/// What the other person covers each month, in paise: their `COVERS_<slot>` setting, else half
+/// the budget when there are two of you, else nothing.
+pub async fn partner_covers(db: &sqlx::SqlitePool, couple: &str, who: usize, p: &JoyPayload) -> Result<i64, AppError> {
+    let key = format!("COVERS_{}", 1 - who);
+    if let Some(v) = crate::joy::db::setting(db, couple, &key).await?.and_then(|v| v.trim().parse::<i64>().ok()) {
+        return Ok(v.max(0) * 100);
+    }
+    let two = sqlx::query_scalar!(
+        r#"SELECT (user_0 IS NOT NULL AND user_1 IS NOT NULL) AS "two!: bool" FROM couples WHERE couple_id = ?"#,
+        couple
+    )
+    .fetch_one(db)
+    .await?;
+    Ok(if two { p.monthly_budget.unwrap_or(0) * 100 / 2 } else { 0 })
+}
+
+// ---------- settling up ----------
+
+#[derive(Serialize)]
+pub struct Settlement {
+    pub id: i64,
+    pub payer_is_you: bool,
+    pub amount_paise: i64,
+    pub on_day: String,
+    pub note: String,
+}
+
+#[derive(Serialize)]
+pub struct SettleOut {
+    /// Date payments from your bank (transactions labelled Dates).
+    pub you_paid_paise: i64,
+    pub partner_paid_paise: i64,
+    /// Your share of date spending, in basis points (7000 = 70%).
+    pub your_share_bps: i64,
+    /// Positive: your partner owes you this. Negative: you owe them.
+    pub balance_paise: i64,
+    pub settlements: Vec<Settlement>,
+}
+
+/// Date money between the two of you since the first settlement window (the last 6 months):
+/// what each paid (from each person's own transactions labelled Dates), each one's fair share,
+/// and repayments logged so far.
+pub async fn settle(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<SettleOut>, AppError> {
+    let db = &state.db;
+    let (couple, who) = crate::handlers::couple::require_couple(db, &user_id).await?;
+    let p = local_payload(db, &couple).await?;
+    let partner = partner_covers(db, &couple, who, &p).await?;
+    let budget = p.monthly_budget.unwrap_or(0) * 100;
+    let your_share_bps = if budget > 0 { ((budget - partner).clamp(0, budget) * 10_000) / budget } else { 5_000 };
+    let since = format!("{}-01", p.months.first().map(|m| m.month.as_str()).unwrap_or("1970-01"));
+    let users = sqlx::query!(r#"SELECT user_0, user_1 FROM couples WHERE couple_id = ?"#, couple).fetch_one(db).await?;
+    let paid_by = |uid: Option<String>| {
+        let since = since.clone();
+        async move {
+            match uid {
+                Some(u) => sqlx::query_scalar!(
+                    r#"SELECT COALESCE(SUM(amount_paise), 0) AS "s!: i64" FROM transactions
+                       WHERE user_id = ? AND category = 'dates' AND direction = 'debit' AND occurred_on >= ?"#,
+                    u,
+                    since
+                )
+                .fetch_one(db)
+                .await,
+                None => Ok(0),
+            }
+        }
+    };
+    let (mine, theirs) = if who == 0 { (users.user_0, users.user_1) } else { (users.user_1, users.user_0) };
+    let you_paid = paid_by(mine).await?;
+    let partner_paid = paid_by(theirs).await?;
+    let settlements: Vec<Settlement> = sqlx::query!(
+        r#"SELECT id AS "id!", payer, amount_paise, on_day, note FROM joy_settlements WHERE couple_id = ? ORDER BY on_day DESC, id DESC"#,
+        couple
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .map(|s| Settlement { id: s.id, payer_is_you: s.payer as usize == who, amount_paise: s.amount_paise, on_day: s.on_day, note: s.note })
+    .collect();
+    // You owe your share of what they paid; they owe their share of what you paid.
+    let they_owe = you_paid * (10_000 - your_share_bps) / 10_000;
+    let you_owe = partner_paid * your_share_bps / 10_000;
+    let repaid: i64 = settlements.iter().map(|s| if s.payer_is_you { s.amount_paise } else { -s.amount_paise }).sum();
+    Ok(Json(SettleOut {
+        you_paid_paise: you_paid,
+        partner_paid_paise: partner_paid,
+        your_share_bps,
+        balance_paise: they_owe - you_owe + repaid,
+        settlements,
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct SettlePayload {
+    /// true: you paid your partner back; false: they paid you.
+    pub you_paid: bool,
+    pub amount_paise: i64,
+    pub note: Option<String>,
+}
+
+pub async fn settle_record(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<SettlePayload>,
+) -> Result<Json<Done>, AppError> {
+    if p.amount_paise <= 0 {
+        return Err(bad_request("The amount must be more than zero"));
+    }
+    let (couple, who) = crate::handlers::couple::require_couple(&state.db, &user_id).await?;
+    let payer = if p.you_paid { who as i64 } else { 1 - who as i64 };
+    let today = today_local().to_string();
+    let note = p.note.unwrap_or_default();
+    sqlx::query!(
+        "INSERT INTO joy_settlements (couple_id, payer, amount_paise, on_day, note) VALUES (?, ?, ?, ?, ?)",
+        couple,
+        payer,
+        p.amount_paise,
+        today,
+        note
+    )
+    .execute(&state.db)
+    .await?;
+    Ok(Json(Done { status: true }))
 }

@@ -1,10 +1,10 @@
-# Flinderax Performance Analysis Report
+# joy Performance Analysis Report
 
-This document summarizes the performance benchmarks for the Flinderax backend, comparing local development environments with production deployments on Fly.io.
+This document summarizes the performance benchmarks for the joy backend, comparing local development environments with production deployments on Fly.io.
 
 ## Executive Summary
 
-The Flinderax backend, built with Rust and Axum, demonstrates exceptional efficiency. It handles thousands of requests per second on minimal hardware while maintaining low latency. The primary performance limiters in production are network transit (latency) and the shared CPU resource tier, rather than code efficiency.
+The joy backend, built with Rust and Axum, demonstrates exceptional efficiency. It handles thousands of requests per second on minimal hardware while maintaining low latency. The primary performance limiters in production are network transit (latency) and the shared CPU resource tier, rather than code efficiency.
 
 ---
 

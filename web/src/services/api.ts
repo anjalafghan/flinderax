@@ -27,6 +27,16 @@ import type {
   UpdateTxnCategory,
   JoyConnect,
   JoySummary,
+  BillsResponse,
+  BillSuggestion,
+  GoalInput,
+  GoalsResponse,
+  AffordRequest,
+  AffordResult,
+  MonthReview,
+  TaxReview,
+  TaxSectionId,
+  NewTaxEntry,
 } from "./types";
 
 // The Rust server serves both the API and this app, so every request is same-origin.
@@ -175,4 +185,43 @@ export const joyApi = {
   connect: (c: JoyConnect) => data(api.post<Ok>("/api/joy/connect", c)),
   setPartner: (partner_paise: number) => data(api.post<Ok>("/api/joy/partner", { partner_paise })),
   disconnect: () => data(api.post<Ok>("/api/joy/disconnect", {})),
+};
+
+// ---------- bills, goals, can I afford it ----------
+
+export const billsApi = {
+  list: (days = 30) => data(api.get<BillsResponse>(`/api/bills?days=${days}`)),
+  suggestions: () => data(api.get<BillSuggestion[]>("/api/bills/suggestions")),
+  dismiss: (merchant: string) => data(api.post<Ok>("/api/bills/suggestions/dismiss", { merchant })),
+};
+
+export const goalsApi = {
+  list: () => data(api.get<GoalsResponse>("/api/goals")),
+  create: (g: GoalInput) => data(api.post<{ goal_id: string; status: boolean }>("/api/goals/create", g)),
+  update: (g: GoalInput & { goal_id: string }) => data(api.post<Ok>("/api/goals/update", g)),
+  archive: (goal_id: string) => data(api.post<Ok>("/api/goals/archive", { goal_id })),
+  contribute: (goal_id: string, amount_paise: number, note?: string) =>
+    data(api.post<Ok>("/api/goals/contribute", { goal_id, amount_paise, note })),
+};
+
+export const affordApi = {
+  check: (r: AffordRequest) => data(api.post<AffordResult>("/api/plan/afford", r)),
+};
+
+// ---------- review: month close and tax ----------
+
+const query = (params: Record<string, string | undefined>) => {
+  const parts = Object.entries(params)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`);
+  return parts.length ? `?${parts.join("&")}` : "";
+};
+
+export const reviewApi = {
+  month: (month?: string) => data(api.get<MonthReview>(`/api/review/month${query({ month })}`)),
+  tax: (fy?: string) => data(api.get<TaxReview>(`/api/review/tax${query({ fy })}`)),
+  addTaxEntry: (e: NewTaxEntry) => data(api.post<{ entry_id: string }>("/api/review/tax/entry", e)),
+  deleteTaxEntry: (entry_id: string) => data(api.post<Ok>("/api/review/tax/entry/delete", { entry_id })),
+  setCommitmentTaxSection: (commitment_id: string, tax_section: TaxSectionId | null) =>
+    data(api.post<Ok>("/api/review/tax/commitment", { commitment_id, tax_section })),
 };

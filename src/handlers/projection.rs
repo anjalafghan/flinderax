@@ -13,7 +13,7 @@ use crate::{
     models::AppState,
     planner::{
         emi_effective, month_index,
-        projection::{project, DepositIn, EmiIn, Projection, Renewal, ScenarioItem, MAX_MONTHS},
+        projection::{project, DepositIn, EmiIn, Projection, ProjectionInput, Renewal, ScenarioItem, MAX_MONTHS},
         parse_year_month,
     },
 };
@@ -44,15 +44,26 @@ pub async fn project_handler(
     if p.items.len() > 10 {
         return Err(bad_request("at most 10 scenario items"));
     }
-    let today = today_local();
-    let plan = load_input(&state.db, &user_id, today).await?;
+    let input = load_projection_input(&state.db, &user_id, today_local(), months, spend_pct).await?;
+    Ok(Json(project(&input, &p.items)))
+}
+
+/// Everything the projection needs: the plan, FDs/RDs and card EMIs.
+pub async fn load_projection_input(
+    db: &sqlx::SqlitePool,
+    user_id: &str,
+    today: Date,
+    months: i64,
+    spend_pct: i64,
+) -> Result<ProjectionInput, AppError> {
+    let plan = load_input(db, user_id, today).await?;
 
     let deposits = sqlx::query!(
         r#"SELECT account_id AS "account_id!", kind, interest_bps, maturity_date, renewal, payout_account_id
            FROM accounts WHERE user_id = ? AND kind IN ('fd', 'rd')"#,
         user_id
     )
-    .fetch_all(&state.db)
+    .fetch_all(db)
     .await?
     .into_iter()
     .map(|a| DepositIn {
@@ -75,7 +86,7 @@ pub async fn project_handler(
            FROM card_emis e JOIN cards c ON c.card_id = e.card_id WHERE c.user_id = ?"#,
         user_id
     )
-    .fetch_all(&state.db)
+    .fetch_all(db)
     .await?
     .into_iter()
     .filter_map(|e| {
@@ -90,6 +101,68 @@ pub async fn project_handler(
     })
     .collect();
 
-    let input = crate::planner::projection::ProjectionInput { plan, deposits, emis, months, spend_pct };
-    Ok(Json(project(&input, &p.items)))
+    Ok(ProjectionInput { plan, deposits, emis, months, spend_pct })
+}
+
+#[derive(Deserialize)]
+pub struct AffordPayload {
+    pub amount_paise: i64,
+    pub pay: crate::planner::afford::Pay,
+}
+
+/// `POST /api/plan/afford`: can I buy this now or on EMI? Uses the same projection as What-if,
+/// 12 months ahead, to see whether a lump on a given date leaves any month short.
+pub async fn afford_handler(
+    State(state): State<AppState>,
+    Extension((user_id, _)): Extension<(String, String)>,
+    Json(p): Json<AffordPayload>,
+) -> Result<Json<crate::planner::afford::Verdict>, AppError> {
+    use crate::planner::{afford, compute, format_inr, projection::ItemKind};
+    if p.amount_paise <= 0 {
+        return Err(bad_request("The amount must be more than zero"));
+    }
+    if let afford::Pay::Emi { months, rate_bps, fee_paise } = p.pay {
+        if !(1..=60).contains(&months) || !(0..=6_000).contains(&rate_bps) || fee_paise < 0 {
+            return Err(bad_request("EMI needs 1-60 months, a rate up to 60% and a fee of zero or more"));
+        }
+    }
+    const HORIZON: i64 = 12;
+    let today = today_local();
+    let input = load_projection_input(&state.db, &user_id, today, HORIZON, 100).await?;
+    let summary = compute(&input.plan);
+    let short_if_spent_on = |date: Date| {
+        let item = ScenarioItem {
+            name: "Purchase".into(),
+            kind: ItemKind::OneOff,
+            amount_paise: p.amount_paise,
+            start: date,
+            tenure_months: None,
+            rate_bps: None,
+            funded_from: None,
+            payout_to: None,
+            renewal: None,
+            target_paise: None,
+            target_date: None,
+        };
+        let baseline_short: std::collections::HashSet<String> =
+            project(&input, &[]).baseline.stress.iter().map(|s| format!("{}:{}", s.month, s.kind)).collect();
+        project(&input, &[item])
+            .scenario
+            .into_iter()
+            .flat_map(|s| s.stress)
+            // Only shortfalls the purchase causes, not ones already in the plan.
+            .filter(|s| !baseline_short.contains(&format!("{}:{}", s.month, s.kind)))
+            .map(|s| s.amount_paise)
+            .max()
+    };
+    Ok(Json(afford::afford(
+        p.amount_paise,
+        p.pay,
+        today,
+        summary.safe_to_spend_paise,
+        summary.budget.rest_savings_paise,
+        HORIZON,
+        short_if_spent_on,
+        format_inr,
+    )))
 }

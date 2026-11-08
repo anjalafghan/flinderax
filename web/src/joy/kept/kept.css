@@ -1,0 +1,9 @@
+/* Only what the React port needs on top of Joy's kept.css. */
+.joy .k-slip:focus-visible { outline: 2px solid var(--stamp); outline-offset: 6px; }
+.joy .k-title:focus, .joy #k-empty-h:focus, .joy #k-budget:focus, .joy .k-savings-h:focus, .joy .k-budget-form ul:focus { outline: none; }
+.joy .k-title:focus-visible, .joy #k-budget:focus-visible, .joy #k-spend-list:focus-visible, .joy #k-saving-list:focus-visible { outline: 2px solid var(--stamp); outline-offset: 4px; }
+.joy .k-budget-edit ul[tabindex="-1"]:focus { outline: none; }
+/* 44px targets for the small actions Joy left to the browser */
+.joy .k-budget-edit li .k-btn { min-height: 44px; }
+.joy .k-book, .joy .k-head { max-width: 100%; overflow-wrap: anywhere; }
+.joy .k-photo-status[data-tone="err"] { flex-basis: 100%; }

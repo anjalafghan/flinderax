@@ -1,8 +1,21 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { accountApi, cardPlanApi, dashboardApi, getDashboardHistory, ingestApi, joyApi, movesApi, planApi } from "@/services/api";
-import type { JoyConnect } from "@/services/types";
+import {
+  accountApi,
+  affordApi,
+  billsApi,
+  cardPlanApi,
+  dashboardApi,
+  getDashboardHistory,
+  goalsApi,
+  ingestApi,
+  joyApi,
+  movesApi,
+  planApi,
+  reviewApi,
+} from "@/services/api";
+import type { AffordRequest, GoalInput, JoyConnect, NewCommitment, NewTaxEntry, TaxSectionId } from "@/services/types";
 
 export const keys = {
   txns: ["ingest-transactions"] as const,
@@ -18,6 +31,13 @@ export const keys = {
   history: ["dashboard-history"] as const,
   breakdown: (cardId: string) => ["card-breakdown", cardId] as const,
   joy: ["joy-summary"] as const,
+  bills: ["bills"] as const,
+  billSuggestions: ["bill-suggestions"] as const,
+  goals: ["goals"] as const,
+  reviewMonth: (month: string | undefined) => ["review-month", month ?? "last"] as const,
+  // A prefix: every tax query (any financial year) is refreshed by a tax write.
+  tax: ["review-tax"] as const,
+  taxYear: (fy: string | undefined) => ["review-tax", fy ?? "current"] as const,
 };
 
 export const useSummary = () => useQuery({ queryKey: keys.summary, queryFn: dashboardApi.summary });
@@ -54,6 +74,47 @@ export const useJoySetPartner = () =>
   });
 export const useJoyDisconnect = () =>
   usePlannerMutation(() => joyApi.disconnect(), JOY_INVALIDATE, { success: "Joy disconnected" });
+
+// Bills and goals. Adding a suggestion also adds a fixed payment, so the commitments are refreshed.
+export const useBills = (days = 30) =>
+  useQuery({ queryKey: [...keys.bills, days], queryFn: () => billsApi.list(days), retry: 1 });
+export const useBillSuggestions = () =>
+  useQuery({ queryKey: keys.billSuggestions, queryFn: billsApi.suggestions, retry: 1 });
+export const useAddSuggestion = () =>
+  usePlannerMutation(
+    (commitment: NewCommitment) => planApi.createCommitment(commitment),
+    [keys.bills, keys.billSuggestions, keys.commitments],
+    { success: "Added to your fixed payments" },
+  );
+export const useDismissSuggestion = () =>
+  usePlannerMutation((merchant: string) => billsApi.dismiss(merchant), [keys.billSuggestions], {
+    success: "Got it. We won't suggest it again.",
+  });
+
+export const useGoals = () => useQuery({ queryKey: keys.goals, queryFn: goalsApi.list, retry: 1 });
+const GOAL_INVALIDATE: QueryKey[] = [keys.goals];
+export const useSaveGoal = () =>
+  usePlannerMutation(
+    (g: GoalInput) => (g.goal_id ? goalsApi.update({ ...g, goal_id: g.goal_id }) : goalsApi.create(g)),
+    GOAL_INVALIDATE,
+    { success: "Goal saved" },
+  );
+export const useArchiveGoal = () =>
+  usePlannerMutation((goal_id: string) => goalsApi.archive(goal_id), GOAL_INVALIDATE, { success: "Goal archived" });
+export const useContribute = () =>
+  usePlannerMutation(
+    (v: { goal_id: string; amount_paise: number }) => goalsApi.contribute(v.goal_id, v.amount_paise),
+    GOAL_INVALIDATE,
+    { success: "Saved" },
+  );
+
+/** A read-only check, so it does not refresh anything. */
+export const useAfford = () =>
+  useMutation({
+    mutationFn: (r: AffordRequest) => affordApi.check(r),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Could not check that"),
+  });
+
 export const useSettings = () => useQuery({ queryKey: keys.settings, queryFn: planApi.settings });
 export const useBreakdown = (cardId: string | undefined) =>
   useQuery({
@@ -83,3 +144,34 @@ export function usePlannerMutation<TVars, TResult>(
     },
   });
 }
+
+// Review: month close (read-only) and tax (writes refresh every tax query).
+export const useReviewMonth = (month: string | undefined) =>
+  useQuery({ queryKey: keys.reviewMonth(month), queryFn: () => reviewApi.month(month), retry: false });
+
+export const useTaxReview = (fy?: string) =>
+  useQuery({ queryKey: keys.taxYear(fy), queryFn: () => reviewApi.tax(fy), retry: 1 });
+
+/** Tax writes only change tax data, so this refreshes the tax queries and nothing else. */
+function useTaxMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>, success?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.tax });
+      if (success) toast.success(success);
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Something went wrong"),
+  });
+}
+
+export const useAddTaxEntry = () =>
+  useTaxMutation((e: NewTaxEntry) => reviewApi.addTaxEntry(e), "Deduction added");
+export const useDeleteTaxEntry = () =>
+  useTaxMutation((entry_id: string) => reviewApi.deleteTaxEntry(entry_id), "Deduction removed");
+export const useSetCommitmentTaxSection = () =>
+  useTaxMutation(
+    (v: { commitment_id: string; tax_section: TaxSectionId | null }) =>
+      reviewApi.setCommitmentTaxSection(v.commitment_id, v.tax_section),
+    "Saved",
+  );

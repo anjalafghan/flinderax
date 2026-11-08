@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT user_0, user_1 FROM couples WHERE couple_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_0",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_1",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "d27249d1d4d137501181243d75d85a9f07fca1d99670c6f3aeb065edcc0a5c4d"
+}

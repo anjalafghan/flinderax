@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE couples SET user_1 = ? WHERE couple_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "b00ef1e0dd171a25b785183da125c95c4d567191a55b257901e7868aa7bb9e2c"
+}

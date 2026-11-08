@@ -109,13 +109,13 @@ export default function AuthPage() {
           </div>
           <div className="space-y-1">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white opacity-80 uppercase tracking-[0.2em]">
-              Flinderax
+              joy
             </h1>
             <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white leading-none">
-              Your real balance.
+              Money and dates.
             </h2>
             <p className="text-muted-foreground font-medium text-lg leading-snug max-w-sm mx-auto pt-2">
-              Separate what you’ve spent from what you can spend.
+              Your money and your dates, in one place.
             </p>
           </div>
         </div>

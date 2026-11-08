@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE goals SET name = ?, kind = ?, target_paise = ?, target_date = ?, priority = ?, account_id = ?\n         WHERE goal_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "c5e1edbf6a6d655ab638e7fbfbdd0f4ff8793869d885b08dd90dd9e4cc435e7a"
+}

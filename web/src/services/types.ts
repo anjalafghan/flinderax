@@ -492,3 +492,190 @@ export interface JoyConnect {
   token: string;
   partner_paise: number;
 }
+
+// ---------- bills (what is due, and what looks like a subscription) ----------
+
+export type BillKind = "monthly" | "yearly" | "card_bill";
+
+export interface Bill {
+  /** "YYYY-MM-DD" */
+  date: string;
+  label: string;
+  amount_paise: number;
+  kind: BillKind;
+  account_id: string | null;
+  /** For card bills: how much of this is already moved aside. */
+  covered_paise: number;
+}
+
+export interface SinkingFund {
+  label: string;
+  amount_paise: number;
+  /** "YYYY-MM-DD" */
+  due: string;
+  saved_paise: number;
+}
+
+export interface BillsResponse {
+  bills: Bill[];
+  total_paise: number;
+  sinking_funds: SinkingFund[];
+}
+
+export interface BillSuggestion {
+  merchant: string;
+  label: string;
+  every: "monthly" | "yearly";
+  amount_paise: number;
+  day: number;
+  month: number | null;
+  last_on: string;
+  times: number;
+  /** The previous amount, when this one went up. */
+  was_paise: number | null;
+}
+
+// ---------- goals ----------
+
+export type GoalStatus = "done" | "on_track" | "behind" | "open";
+export type GoalKind = "emergency" | "custom";
+
+export interface Goal {
+  id: string;
+  name: string;
+  target_paise: number;
+  saved_paise: number;
+  this_month_paise: number;
+  needs_monthly_paise: number;
+  months_left: number | null;
+  status: GoalStatus;
+  reached_by: string | null;
+  fixes: string[];
+  /** Not in every response yet; the edit form starts blank when missing. */
+  kind?: GoalKind;
+  target_date?: string | null;
+  priority?: number;
+  account_id?: string | null;
+}
+
+export interface GoalsResponse {
+  goals: Goal[];
+  available_paise: number;
+  unallocated_paise: number;
+  /** Months of needs covered by savings, in tenths (42 = 4.2 months). */
+  months_covered_tenths: number | null;
+  emergency_suggested_paise: number | null;
+}
+
+export interface GoalInput {
+  goal_id?: string;
+  name: string;
+  kind?: GoalKind;
+  target_paise: number;
+  target_date?: string | null;
+  priority?: number;
+  account_id?: string | null;
+}
+
+// ---------- can I afford it ----------
+
+export type AffordPay =
+  | { mode: "now" }
+  | { mode: "emi"; months: number; rate_bps: number; fee_paise: number };
+
+export interface AffordRequest {
+  amount_paise: number;
+  pay: AffordPay;
+}
+
+export type AffordAnswer = "yes" | "yes_from_savings" | "wait" | "no";
+
+export interface AffordResult {
+  answer: AffordAnswer;
+  headline: string;
+  reasons: string[];
+  safe_to_spend_after_paise: number;
+  monthly_paise: number;
+  total_cost_paise: number;
+  extra_cost_paise: number;
+  /** "YYYY-MM-DD" when the answer is "wait". */
+  wait_until: string | null;
+}
+
+// ---------- review: month close and tax ----------
+
+/** GET /api/review/month. Money is paise; `sentences` are the plain-language lines shown first. */
+export interface MonthReview {
+  month: string;
+  income_paise: number;
+  spent_paise: number;
+  allowance_paise: number;
+  over_by_paise: number;
+  top_categories: { category: string; amount_paise: number }[];
+  dates: { spent_paise: number; budget_paise: number | null; your_share_paise: number } | null;
+  savings_rate_bps: number | null;
+  net_worth_change_paise: number | null;
+  sentences: string[];
+}
+
+/** Section ids the server accepts for tax deductions. */
+export type TaxSectionId = "80C" | "80CCD1B" | "80D" | "HRA" | "24B" | "other";
+
+export interface TaxSectionRow {
+  section: TaxSectionId;
+  claimed_paise: number;
+  /** Still to come this year, shown as a lighter segment on top of `claimed_paise`. */
+  projected_paise: number;
+  limit_paise: number | null;
+  left_paise: number | null;
+  note: string;
+}
+
+export interface TaxEntry {
+  entry_id: string;
+  section: TaxSectionId;
+  label: string;
+  amount_paise: number;
+}
+
+export interface TaxCommitment {
+  commitment_id: string;
+  label: string;
+  tax_section: TaxSectionId | null;
+  paid_paise: number;
+  projected_paise: number;
+}
+
+export interface TaxRegime {
+  old_tax_paise: number;
+  new_tax_paise: number;
+  better: "old" | "new";
+  note: string;
+}
+
+export interface TaxReminder {
+  date: string;
+  text: string;
+  days_left: number;
+}
+
+/** GET /api/review/tax. `fy` is the financial year label such as "2026-27". */
+export interface TaxReview {
+  fy: string;
+  from: string;
+  to: string;
+  sections: TaxSectionRow[];
+  entries: TaxEntry[];
+  commitments: TaxCommitment[];
+  interest_income_paise: number;
+  gross_salary_paise: number;
+  regime: TaxRegime;
+  reminders: TaxReminder[];
+}
+
+export interface NewTaxEntry {
+  section: TaxSectionId;
+  label: string;
+  amount_paise: number;
+  fy?: string;
+}

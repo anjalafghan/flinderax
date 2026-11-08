@@ -2,6 +2,7 @@ import { useJoySummary } from "@/hooks/usePlanner";
 import { cn } from "@/utils/cn";
 import { formatINR } from "@/utils/money";
 import { barPercent, budgetTone, dayLabel, syncedLabel } from "@/utils/joy";
+import { DatesNudge } from "@/joy/DatesNudge";
 
 /** Dashboard card: this month's date budget from Joy, and the user's share of it. Hidden unless Joy is connected. */
 export function DatesPanel() {
@@ -17,6 +18,7 @@ export function DatesPanel() {
     <section aria-label="Dates this month" className="space-y-4 rounded-xl border p-4 md:p-6">
       <div>
         <h2 className="text-lg font-bold tracking-tight">Dates</h2>
+        <DatesNudge budget_paise={m.budget_paise} spent_paise={m.spent_paise} />
         <p className="text-2xl font-extrabold tabular-nums">
           {formatINR(m.spent_paise)}
           {m.budget_paise !== null && <span className="text-base font-semibold text-muted-foreground"> of {formatINR(m.budget_paise)}</span>}

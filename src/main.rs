@@ -5,14 +5,14 @@ use std::sync::Arc;
 
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use flinderax::{app, models};
+use joy::{app, models};
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                "flinderax=debug,tower_http=debug,axum::rejection=trace".into()
+                "joy=debug,tower_http=debug,axum::rejection=trace".into()
             }),
         )
         .with(tracing_subscriber::fmt::layer())
@@ -28,6 +28,34 @@ async fn main() -> Result<(), sqlx::Error> {
     let pool = SqlitePool::connect_with(options).await?;
     sqlx::migrate!().run(&pool).await?;
     info!("Database connected successfully");
+
+    // `joy import-joy <joy.db> <user name> [--as a|b] [--photos <dir>] [--dry-run]`
+    let args: Vec<String> = env::args().collect();
+    if args.get(1).map(String::as_str) == Some("import-joy") {
+        let (Some(joy_db), Some(user)) = (args.get(2), args.get(3)) else {
+            eprintln!("usage: joy import-joy <joy.db> <user name> [--as a|b] [--photos <dir>] [--dry-run]");
+            std::process::exit(2);
+        };
+        let photos = args.iter().position(|a| a == "--photos").and_then(|i| args.get(i + 1)).map(std::path::PathBuf::from);
+        let dry = args.iter().any(|a| a == "--dry-run");
+        let slot = match args.iter().position(|a| a == "--as").and_then(|i| args.get(i + 1)).map(String::as_str) {
+            None | Some("a") | Some("A") => 0,
+            Some("b") | Some("B") => 1,
+            Some(other) => {
+                eprintln!("--as must be a or b, not {other}");
+                std::process::exit(2);
+            }
+        };
+        let env: Vec<(String, String)> = env::vars().collect();
+        let root = joy::import_joy::photos_root();
+        let report = joy::import_joy::run(&pool, joy_db.as_ref(), user, slot, &env, photos.as_deref(), &root, dry).await?;
+        for (what, n) in &report.counts {
+            println!("{what:>16}: {n}");
+        }
+        println!("{:>16}: {}", "photos", report.photos);
+        println!("{}", if dry { "Dry run: nothing was written." } else { "Imported." });
+        return Ok(());
+    }
 
     info!("Running migrations");
     info!("Initializing Redis...");

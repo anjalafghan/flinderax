@@ -1,12 +1,17 @@
-# Flinderax
+# joy
 
-A manual-entry money planner. Its home screen answers one question: **how much can I spend until my next salary without missing anything?**
+Your money and your dates, in one place. joy is a personal finance hub plus a shared date jar for two, in one app, one server, one Fly machine.
 
-It shows one big *Safe to Spend* number (plus a per-week figure), a plain-English breakdown of each credit card, and a short "do this today" list (e.g. "Move ₹8,000 Kotak → HDFC before 10 Oct"). There is no bank integration: balances follow your salary and bills automatically, bank alert SMS/emails your phone forwards become categorised transactions, and you correct a number only when it drifts.
+- **Money.** A manual-entry planner whose home screen answers one question: **how much can I spend until my next salary without missing anything?** One big *Safe to Spend* number, a plain-English breakdown of each credit card, and a short "do this today" list (e.g. "Move ₹8,000 Kotak → HDFC before 10 Oct"). There is no bank integration: balances follow your salary and bills automatically, bank alerts your phone forwards become categorised transactions, and you correct a number only when it drifts.
+- **Dates.** Too many plans, one pick. A wishlist of things to do together; when you can't decide, tell it your budget, time, place and distance and it picks **one** thing.
+
+It was built by merging two apps, the old Flinderax (money) and Joy (the date jar, now the **Dates** tab, `src/joy/` and `web/src/joy/`). See [Moving from the old Joy and Flinderax apps](#moving-from-the-old-joy-and-flinderax-apps).
 
 ## One server
 
-The Rust (axum) server is the only server. It serves the JSON API under `/api/*` **and** the built web app (`web/dist`), with SPA fallback. Bun is used only as the package manager, bundler and test runner.
+The Rust (axum) server is the only server. It serves the JSON API under `/api/*` **and** the built web app (`web/dist`), with SPA fallback. Bun is only the package manager, bundler and test runner.
+
+## Run locally
 
 ```
 bun install            # installs web/ (workspace) and tooling
@@ -16,14 +21,37 @@ cargo run              # API + web app on http://localhost:3000
 
 Development: `bun run dev` rebuilds `web/dist` on every change while the Rust server runs; refresh the page to see edits.
 
-Configuration (env or `.env`): `DATABASE_URL`, `PASETO_KEY` (base64), optional `CORS_ORIGINS` (comma-separated; off by default since the server serves the app itself), optional `REDIS_URL`, `PORT` (3000), `STATIC_DIR` (`web/dist`), `FLINDERAX_UTC_OFFSET_MINUTES` (330 = IST; decides what "today" is).
+Configuration (env or `.env`):
+
+| Variable | Meaning |
+|----------|---------|
+| `DATABASE_URL` | SQLite, e.g. `sqlite://flinderax.db` locally (the local file name is unchanged), `sqlite:///data/joy-app.db?mode=rwc` on Fly |
+| `PASETO_KEY` | base64 signing key for login tokens |
+| `PORT` | default 3000 |
+| `STATIC_DIR` | built web app, default `web/dist` |
+| `PUBLIC_URL` | where envelope links point, e.g. `https://joy-jar.fly.dev` |
+| `JOY_PHOTOS_DIR` | where Dates photos are stored |
+| `TZ` | local time zone for dates (`Asia/Kolkata`) |
+| `FLINDERAX_UTC_OFFSET_MINUTES` | what "today" is for the money side (330 = IST). The name is kept from the old app |
+| `CORS_ORIGINS` | optional, comma-separated; off by default since the server serves the app itself |
+| `REDIS_URL` | optional cache |
 
 ```
 bun run test           # cargo unit tests + web tests (bun test)
 bun run typecheck      # tsc --noEmit for web/
 ```
 
-Changed an SQL query? Run `cargo sqlx prepare -- --bin flinderax` and commit `.sqlx/` (the Docker build compiles offline).
+Changed an SQL query? Run `cargo sqlx prepare -- --bin joy` and commit `.sqlx/` (the Docker build compiles offline).
+
+## The tabs
+
+| Tab | What it does |
+|-----|--------------|
+| **Today** | Safe to Spend, the do-this-today list, cards, bills due soon, the net-worth chart |
+| **Money** | Accounts, spending (bank-alert transactions, statements), goals |
+| **Plan** | Income, fixed payments, settings, **What-if** projections, **Working** (the step-by-step numbers), "can I afford it?" |
+| **Dates** | The jar, picking, meet in the middle, slips, Kept, regulars, the year (see below) |
+| **Review** | Month close, tax entries by financial year, export |
 
 ## Demo data
 
@@ -93,15 +121,50 @@ function forwardAlerts() {
 }
 ```
 
-## Joy (the shared date jar)
+## Tracking with almost no typing
 
-Link [Joy](https://joy-jar.fly.dev) on the Spending page (its address, its `JOY_API_TOKEN`, and how much your partner covers each month). Flinderax then pulls Joy's date spending (`GET <joy>/api/v1/spending`) whenever the dashboard loads: the **Dates** panel shows the month's date spending against Joy's budget and your share of it (proportional: with ₹6,000 of ₹20,000 from your partner, you pay 70%), and bank-alert debits within a day and 5% of a Joy entry are labelled **Dates** (`src/planner/joy.rs`), unless you picked their category by hand. Joy entries are never added as transactions, so nothing is counted twice. If Joy can't be reached, the last figures are shown marked stale. The link is one way: Joy never sees anything from here.
+**Balances move on their own.** Salary is added and fixed payments are taken off the linked account on their dates (`src/planner/autopost.rs`, applied lazily whenever balances are read, never twice). Typing a balance resets the starting point. Turn it off in Plan settings. Every balance change is kept in `balance_history`, which feeds the net-worth chart on the dashboard (`GET /api/dashboard/history`).
+
+**Bank alerts become transactions.** Generate a key on the Spending page, then have your phone forward bank SMS/emails to `POST /api/hook/ingest` with header `X-Ingest-Key: <key>` and body `{"text": "<message>", "source": "sms"}`. `src/alerts.rs` reads the amount, direction, last digits, merchant, date and "Avl Bal"; OTPs, reminders and offers are ignored; the same alert is stored once. Set each bank account's last 4 digits (Accounts page) so alerts update its balance and auto-posting skips what an alert already recorded. Re-categorise a transaction with "Remember" ticked and every future one from that merchant follows.
+
+**Statements.** Spending page > *Upload a statement* takes a bank CSV export (`POST /api/ingest/statement` with `{csv, account_id?, card_id?}`, `src/statement.rs`). It finds the header row, handles separate Debit/Credit columns or one signed / Dr-Cr amount column, and dd/mm/yy, dd-Mon-yyyy and ISO dates. Re-importing, or overlapping files, never double-count, and rows a bank alert already recorded (same day, direction, amount) are matched instead of added. Picking an account sets its balance from the newest line unless a newer balance exists.
+
+- **iPhone:** Shortcuts → Automation → Message, sender contains your bank's ID (HDFCBK, KOTAKB...) → Run Immediately → *Get Contents of URL* (POST, header `X-Ingest-Key`, JSON body `text` = Shortcut Input, `source` = `sms`).
+- **Android:** any SMS-to-webhook forwarder with the same URL, header and body.
+- **Gmail:** filter bank alerts into a label `bank-alerts`, then in Google Apps Script (run every 15 minutes with a time trigger):
+
+```js
+const URL = "https://your-app.fly.dev/api/hook/ingest", KEY = "fx_...";
+function forwardAlerts() {
+  for (const t of GmailApp.search("label:bank-alerts is:unread", 0, 50)) {
+    for (const m of t.getMessages().filter((m) => m.isUnread())) {
+      UrlFetchApp.fetch(URL, { method: "post", contentType: "application/json",
+        headers: { "X-Ingest-Key": KEY }, payload: JSON.stringify({ text: m.getPlainBody().slice(0, 2000), source: "email" }) });
+      m.markRead();
+    }
+  }
+}
+```
+
+## Dates
+
+Dates is a **date jar**: every idea is a slip, you draw one, you can put it back three times, and the one you keep is stamped *IT'S A DATE* and goes into the keepsake box (Kept). Two joy users form a **couple** (one starts it, the other joins with an invite), and everything in the `joy_*` tables belongs to that couple.
+
+- **Picking.** Hard filters: cost within budget, duration within the time you have, setting, distance (from either home, or whoever is farther), vibe and energy. At-home ideas always pass the distance filter. *At home, together* is for the same room; *Long distance* is for different cities. Weighting: ideas you've never done are about 3x as likely; something you just did starts at 1x and climbs back over about two months; anything rerolled in the last 3 days is halved. When nothing fits, it says which single filter to loosen. The logic is unit tested.
+- **Meet in the middle.** Each of you checks in on your own phone (energy, spend, time, how far, optionally a vibe). Once you both have, **Draw from the middle** picks only from slips that fit both of you: the lower budget, shorter time, lower energy and nearer distance, and a slip that matches either vibe. Answers stay private (neither of you sees the other's) and last for the local day; "Take mine back" removes yours at once.
+- **The day plan.** Set the schedule (date days, office, latest times, commutes) and the jar draws for a real date. Weeknights start at the office and only fit if you can get there, do it and still be home on time; weekends start from each home. Stamping a slip plans the day: the time, a timeline (when to leave, when you're each home), a **Plan B** (indoors, close by, one tap to swap), somewhere to eat after, and the jobs (book it, bring cash) dealt to whoever has had fewer. The weather forecast is checked over HTTPS.
+- **Envelopes.** A date can be sent as a sealed envelope, a link `PUBLIC_URL/e/<token>` (signed, expiring) you share on WhatsApp. It opens without logging in, so keep `PUBLIC_URL` pointing at the real address.
+- **Surprises.** A surprise date stays sealed: its planner sees everything, the partner sees only their own times, and a sealed surprise shows its amount in spending but not its name.
+- **Privacy.** Your answers in the middle are never shown to your partner; the shared state is the couple's, not other users'. A small service worker keeps a read-only copy of the jar, Kept and year pages (up to 7 days, plus up to 25 MB of photos) for offline viewing; copies are per person and wiped on logout. Personal pages are `no-store`, and every response carries `Referrer-Policy: no-referrer`, `nosniff`, `X-Frame-Options: DENY` and the other usual headers.
+- **Spending.** Date spending counts toward a monthly Dates budget with rollover; your share of it (proportional to what each of you covers) shows on the Today dashboard, and bank-alert debits within a day and 5% of a Dates entry are labelled **Dates** (`src/planner/joy.rs`) unless you picked the category by hand.
+
+Edit ideas **in the app**, not in the SQL files: migrations are checksummed.
 
 ## Adding and removing things
 
 Everything is data, nothing is hard-coded: accounts (`bank`, `cash`, `fd`, `rd`), fixed payments (SIPs, rent, an RD instalment with optional first/last month), income sources, card EMIs and pending charges all have create/update/delete endpoints and screens (Accounts, Plan, card page).
 
-## API (all POST + JSON unless noted; everything except `common/*` needs a PASETO bearer token)
+## API (all POST + JSON unless noted; everything except `common/*`, `hook/*` and `public/*` needs a PASETO bearer token)
 
 | Area | Endpoints |
 |------|-----------|
@@ -110,10 +173,32 @@ Everything is data, nothing is hard-coded: accounts (`bank`, `cash`, `fd`, `rd`)
 | Card cycles | `/api/card/snapshot`, `/api/card/breakdown`, `/api/card/emi/{create,update,delete}`, `/api/card/pending/{create,clear}` |
 | Accounts | `/api/account/{create,update,update_balance,delete}`, `GET /api/account/list` |
 | Plan | `/api/plan/commitment/{create,update,delete}`, `/api/plan/income/{create,update,delete}`, `/api/plan/settings/update`; `GET` `.../commitment/list`, `.../income/list`, `settings/get` |
-| Dashboard | `GET /api/dashboard/summary` |
+| Dashboard | `GET /api/dashboard/summary`, `GET /api/dashboard/history?months=12` |
 | Ledger | `/api/moves/{record,undo}`, `GET /api/moves/list` |
 | Projection | `POST /api/plan/project` (what-if items in, baseline + scenario out) |
-| History | `GET /api/dashboard/history?months=12` |
-| Spending | `/api/ingest/{parse,transactions/create,transactions/update,transactions/delete,rules/delete,key/rotate}`; `GET` `/api/ingest/{transactions?month=,summary?months=,rules,key/status}` |
-| Joy link | `POST /api/joy/{connect,partner,disconnect}`, `GET /api/joy/summary` |
+| Afford | `POST /api/plan/afford` ("can I afford this?") |
+| Bills | `GET /api/bills`, `GET /api/bills/suggestions`, `POST /api/bills/suggestions/dismiss` |
+| Goals | `GET /api/goals`, `POST /api/goals/{create,update,archive,contribute}` |
+| Review | `GET /api/review/month`, `GET /api/review/tax`, `POST /api/review/tax/{entry,entry/delete,commitment}` |
+| Export | `GET /api/export` (everything as JSON) |
+| Spending | `/api/ingest/{parse,statement,transactions/create,transactions/update,transactions/delete,rules/delete,key/rotate}`; `GET` `/api/ingest/{transactions?month=,summary?months=,rules,key/status}` |
+| Couple | `GET /api/couple`, `POST /api/couple/{create,invite,join,leave}` |
+| Dates | `/api/dates/*`: the jar, `pick`, `match`, `accept/{id}`, `middle`, `slips` (list, create, edit, archive, restore, delete, unveto, plan), plus Kept, regulars, the year and settings |
+| Public Dates | `GET /api/public/dates/e/{token}` (the envelope; signed link, no login) |
+| Dates spending | `/api/joy/{summary,settle}` and `POST /api/joy/{connect,partner,disconnect}` (the Dates share on the dashboard) |
 | Phone hook | `POST /api/hook/ingest` (header `X-Ingest-Key`, no bearer token) |
+
+## Deploy
+
+One Fly app, `joy-jar` (region `sin`), one machine, one volume `joy_data` mounted at `/data`. The database is `/data/joy-app.db` and photos go to `/data/joy-photos`; see the comment at the top of `fly.toml`. Secrets (`PASETO_KEY`, `DATES_URL_KEY`, ...) are set with `fly secrets set`, never in `fly.toml`.
+
+```
+fly deploy --depot=false      # from a clean checkout
+```
+
+The Dockerfile builds the web app with Bun, the server with cargo-chef (offline `.sqlx` data), and ships `joy` with `tzdata` and `ca-certificates`. It sleeps when nobody is using it (`suspend`).
+
+## Moving from the old Joy and Flinderax apps
+
+The old Joy database (`/data/joy.db`) stays untouched on the volume as the archive; joy starts a new database and imports into it. The steps, in order, with the import command and the checks, are in [docs/cutover.md](docs/cutover.md).
+

@@ -29,14 +29,19 @@ COPY . .
 ENV SQLX_OFFLINE=true
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
-    cargo build --release --bin flinderax
+    cargo build --release --bin joy
 
 # Final image
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
-RUN mkdir -p /data
-COPY --from=builder /app/target/release/flinderax /usr/local/bin
+# tzdata: TZ=Asia/Kolkata decides local dates. ca-certificates: HTTPS to the weather API (rustls).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tzdata ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /data
+COPY --from=builder /app/target/release/joy /usr/local/bin
 COPY --from=frontend /app/web/dist ./dist
 ENV STATIC_DIR=/app/dist
+ENV TZ=Asia/Kolkata
 EXPOSE 3000
-ENTRYPOINT ["/usr/local/bin/flinderax"]
+ENTRYPOINT ["/usr/local/bin/joy"]

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO dismissed_recurring (user_id, merchant) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "e992fd29e71d958e46430f0bc28d093190149e68fc6e36dd045fc9a0c5b96b1f"
+}

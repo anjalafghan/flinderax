@@ -1,0 +1,102 @@
+/* Joy's jar.css and motion.css rules for the classes that the other stylesheets reuse for
+   something else. styles/slips.css (the slip list: `.slip`, `.slip-title`, `.slip-meta`, `.gen-tag`,
+   `.chip`) and styles/login.css (the login jar: `.lid*`, `.peek`, `.tag-text`, `.slip rect/path`) are
+   imported after jar.css and, being merged into one scope, they beat it. The jar page therefore uses
+   `j-` prefixed names for those classes, and this is the same rules, renamed. Regenerate by renaming
+   the colliding selectors in styles/jar.css and styles/motion.css; nothing else here is new. */
+/* from ../styles/jar.css */
+.joy {
+  .j-lid { transform-box: view-box; transform-origin: 176px 54px; }
+  .j-lid-body { fill: var(--lid); }
+  .j-lid-ridges { stroke: var(--lid-ridge); stroke-width: 1.4; stroke-linecap: round; }
+  .j-lid { transition: transform var(--t-medium) var(--ease-spring); }
+  .jar.is-open .j-lid { transform: translate(14px, -20px) rotate(24deg); }
+  .j-tag-text { display: block; margin-top: 4px; font: 500 var(--step--1)/1.3 var(--font-ui); color: var(--ink-soft); max-width: 11ch; }
+  .is-empty .j-tag-text { max-width: 9ch; }
+  .j-slip {
+  --tint: var(--tint-local);
+  position: relative;
+  margin: 0 2px;
+  padding: 26px 20px 20px;
+  background: var(--slip);
+  color: var(--ink);
+  border-radius: var(--radius-slip);
+  box-shadow: var(--shadow-slip), 0 30px 50px -36px color-mix(in srgb, var(--ink) 50%, transparent);
+  transform: rotate(-.8deg);
+  transform-origin: 50% 0;
+  
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 3px), 92% 100%, 81% calc(100% - 2px), 69% 100%, 55% calc(100% - 3px), 41% 100%, 27% calc(100% - 2px), 14% 100%, 0 calc(100% - 2px));
+}
+  .j-slip::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 9px;
+  background: linear-gradient(to bottom, var(--tint), color-mix(in srgb, var(--tint) 70%, var(--slip)));
+  border-bottom: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent);
+}
+  .j-slip-meta {
+  margin: 0 0 10px;
+  font: 600 var(--step--1)/1.35 var(--font-ui); letter-spacing: .02em;
+  color: var(--ink-soft);
+}
+  .j-slip-meta strong { color: var(--ink); font-weight: 700; }
+  .j-slip-title {
+  font-size: clamp(var(--step-2), 8vw, var(--step-3));
+  font-weight: 560;
+  outline-offset: 6px;
+  overflow-wrap: anywhere;
+}
+  .j-slip-title:focus:not(:focus-visible) { outline: none; }
+  .j-peek { width: 20px; height: 20px; }
+  .j-peek.is-full .peek-fill { transform: scale(1); }
+  .j-slip.is-done { padding-top: 30px; }
+  .j-slip.is-done .j-slip-meta { padding-right: 0; }
+  .j-slip.is-done .never { display: none; }
+  .j-slip.is-done .j-slip-title { margin-top: calc(min(54%, 210px) * .5 + 30px); max-width: 100%; }
+  .j-slip.is-done .slip-actions .btn-quiet { padding: 0 10px; }
+  .j-chip { position: relative; display: inline-block; cursor: pointer; white-space: nowrap; }
+  .j-chip input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .j-chip span {
+  position: relative; display: inline-block; min-height: 44px; padding: 0 3px;
+  color: var(--ink-soft); font-style: italic;
+  transition: color var(--t-small) var(--ease-out);
+}
+  .j-chip span::after { 
+  content: ""; position: absolute; inset: 2px -9px -2px -10px; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M58 4.5C34 2.8 9 7 4.3 18.6 0.5 28 20 36.4 51 36c29-.4 46.6-7.3 45.2-18C95 7.7 72 3.4 45 4.4' fill='none' stroke='%232b2433' stroke-width='1.5' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path var(--t-medium) var(--ease-out);
+}
+  :where(.dark) & {
+    .j-chip span::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M58 4.5C34 2.8 9 7 4.3 18.6 0.5 28 20 36.4 51 36c29-.4 46.6-7.3 45.2-18C95 7.7 72 3.4 45 4.4' fill='none' stroke='%23f1e9df' stroke-width='1.5' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E"); }
+  }
+  .j-chip input:checked + span { color: var(--ink); font-style: normal; font-weight: 600; }
+  .j-chip input:checked + span::after { clip-path: inset(0 0 0 0); }
+  .j-chip input:focus-visible + span { outline: 2px solid var(--stamp); outline-offset: 0; border-radius: 6px; }
+  .where:not(:has(:checked)) .j-chip span { color: var(--ink); }
+  .j-chip span { background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--ink-soft) 80%, transparent) 0 5px, transparent 5px 9px) 3px calc(100% - 7px) / calc(100% - 6px) 1.5px no-repeat; }
+  .j-chip input:checked + span { background: none; }
+  .where:has(:checked) .j-chip span { background-size: 0 0; }
+  .start-from:not(:has(:checked)) .j-chip span { color: var(--ink-soft); }
+  .start-from:has(:checked) .j-chip span { background-size: 0 0; }
+  .j-slip.is-leaving, .note.is-leaving { opacity: 0; }
+  .j-slip.is-arriving, .j-slip.is-arriving * { pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .jar.is-open .j-lid { transform: none; }
+  }
+  .j-gen-tag {
+  display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+  margin: 8px 0 0; padding: 3px 10px 3px 8px;
+  font: 600 var(--step--1)/1.3 var(--font-ui); letter-spacing: .02em;
+  color: var(--ink-soft); background: var(--paper-2); border: 1px dashed var(--rule); border-radius: 999px;
+}
+  .j-gen-tag svg { width: 12px; height: 12px; fill: var(--stamp); flex: none; }
+  .j-peek.is-bonus .peek-ring { stroke: var(--stamp); stroke-linejoin: round; }
+  .j-peek.is-bonus .peek-fill { fill: var(--stamp); transform-origin: 10px 10px; }
+  .peek-dots .j-peek.is-bonus { margin-left: 3px; }
+  .j-slip .dayplan { box-shadow: none; }
+  .j-slip-meta .door { color: var(--ink-soft); font-weight: 500; }
+}
+/* from ../styles/motion.css */
+.joy {
+  .m-reveal .stack > .j-slip, .m-reveal .k-slip { animation: none; }
+  #pick > .j-slip[data-kind="card"], .stack > .j-slip, #jar { touch-action: pan-y; }
+}

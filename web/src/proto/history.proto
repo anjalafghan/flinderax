@@ -1,5 +1,5 @@
 syntax = "proto3";
-package flinderax_backend;
+package joy_backend;
 
 message CardTransactionHistory{
   string transaction_id = 1;

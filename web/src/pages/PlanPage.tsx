@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { LineChart, Trash2 } from "lucide-react";
 
 import { planApi } from "@/services/api";
 import type { Account, Bucket, Commitment, Income } from "@/services/types";
 import { keys, useAccounts, useCommitments, useIncomes, usePlannerMutation, useSettings, useSummary } from "@/hooks/usePlanner";
 import { Header } from "@/components/layout/Header";
+import { AffordPanel } from "@/components/feature/AffordPanel";
+import { BillsPanel } from "@/components/feature/BillsPanel";
+import { GoalsPanel } from "@/components/feature/GoalsPanel";
 import { AccountSelect } from "@/components/feature/AccountSelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -294,7 +298,10 @@ function SettingsSection() {
   const [error, setError] = useState<string | null>(null);
   const save = usePlannerMutation(planApi.updateSettings, [keys.settings], { success: "Saved" });
 
-  useEffect(() => {
+  // Fill the form from the settings each time they arrive. Done during render rather than in an effect.
+  const [seenData, setSeenData] = useState<typeof data>(undefined);
+  if (data !== seenData) {
+    setSeenData(data);
     if (data) {
       setSpending(
         data.spending_bps != null
@@ -308,7 +315,7 @@ function SettingsSection() {
       setMonths(String(data.recovery_months));
       setAutoPost(data.auto_post);
     }
-  }, [data]);
+  }
 
   const income = summary?.budget.income_paise ?? 0;
   const spendParsed = parseAmountOrPercent(spending);
@@ -443,14 +450,34 @@ function SettingsSection() {
 
 export default function PlanPage() {
   const { data: accounts = [] } = useAccounts();
+  const { hash } = useLocation();
+
+  // Links such as /plan#afford or /plan#bills scroll to that section once the page is up.
+  useEffect(() => {
+    if (!hash) return;
+    document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [hash]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
-      <main className="container mx-auto max-w-3xl space-y-8 px-4 py-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Plan</h1>
-          <p className="text-muted-foreground">What comes in, what goes out every month, and how much to keep aside.</p>
+      <main className="container mx-auto max-w-3xl space-y-8 px-4 py-6 md:py-8">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Plan</h1>
+            <p className="text-muted-foreground">What's coming, what you're saving for, and what you can afford.</p>
+          </div>
+          <Link
+            to="/what-if"
+            className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors hover:bg-accent"
+          >
+            <LineChart className="h-4 w-4" aria-hidden />
+            What if...
+          </Link>
         </div>
+        <AffordPanel />
+        <BillsPanel />
+        <GoalsPanel />
         <IncomeSection accounts={accounts} />
         <CommitmentsSection accounts={accounts} />
         <SettingsSection />

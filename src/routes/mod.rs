@@ -1,9 +1,14 @@
 pub mod account;
+pub mod bills;
 pub mod card;
 pub mod common;
+pub mod couple;
 pub mod dashboard;
+pub mod dates;
+pub mod goals;
 pub mod ingest;
 pub mod joy;
 pub mod moves;
 pub mod plan;
+pub mod review;
 pub mod user;

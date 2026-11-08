@@ -1,0 +1,61 @@
+/* Ported from Joy static/regular.css; scoped to .joy so it can't reach the rest of Flinderax. */
+
+
+.joy {
+/* Regulars: the question on the jar page, the stamps on a regular's spread, and the month strip. */
+
+.reg { display: grid; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border: 1px dashed var(--rule); border-radius: var(--radius-slip); background: color-mix(in srgb, var(--slip) 70%, transparent); color: var(--ink); }
+.reg-h { margin: 0; font: 500 var(--step-1)/1.1 var(--font-display); font-variation-settings: "SOFT" 100, "WONK" 1; }
+.reg-line { margin: 0; font-size: var(--step--1); color: var(--ink-soft); }
+.reg-line strong { color: var(--ink); }
+.reg-tick { color: var(--stamp); font-weight: 700; }
+.reg-night, .reg-done { display: grid; gap: 8px; }
+.reg-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.reg-actions form, .reg-done form { margin: 0; }
+.reg-else summary { cursor: pointer; font-size: var(--step--1); color: var(--ink-soft); min-height: 32px; display: flex; align-items: center; }
+.reg-else-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 6px; }
+.reg-else-form label, .reg-photo-l { display: grid; gap: 2px; font-size: var(--step--1); color: var(--ink-soft); }
+.reg-else-form input[type="text"] { font: inherit; padding: 8px 10px; min-height: 44px; border: 1px solid var(--rule); border-radius: var(--radius-slip); background: var(--slip); color: var(--ink); max-width: 100%; }
+.reg-photo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.reg-thumb { width: 96px; height: 120px; object-fit: cover; border: 6px solid var(--slip); box-shadow: 0 2px 6px rgba(0, 0, 0, .2); rotate: -2deg; }
+.reg-ceiling, .reg-more { margin: 0; font-size: var(--step--1); color: var(--ink-soft); }
+/* month strip */
+.m-nights .m-scribble a { color: inherit; }
+.reg-strip { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.reg-strip-n { display: grid; place-items: center; min-width: 52px; min-height: 52px; padding: 4px 8px; border: 2px solid var(--red, #a3271c); border-radius: 6px; color: var(--red, #a3271c); font: 600 .9rem/1 var(--font-ui); rotate: -2deg; }
+.reg-strip-n:nth-child(even) { rotate: 2deg; }
+.reg-strip-n.has-photo { padding: 0; border: 4px solid #fffaf2; box-shadow: 0 2px 5px rgba(0, 0, 0, .25); }
+.reg-strip-n img { display: block; width: 64px; height: 80px; object-fit: cover; }
+/* a regular's own spread */
+.rs-head { display: grid; gap: 6px; padding: 18px 0 8px; }
+.rs-title { margin: 0; font: 500 var(--step-3)/1.05 var(--font-display); font-variation-settings: "SOFT" 100, "WONK" 1; }
+.rs-sub, .rs-sum { margin: 0; color: var(--ink-soft); }
+.rs-sum { font: 400 1.5rem/1.2 var(--font-hand); color: var(--ink); rotate: -1deg; }
+.rs-error { margin: 0; color: var(--stamp); }
+.rs-empty { color: var(--ink-soft); font: italic 400 var(--step-0)/1.4 var(--font-display); }
+.rs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 22px 16px; margin: 20px 0 0; padding: 0; list-style: none; }
+.rs-night { display: grid; gap: 6px; justify-items: start; rotate: calc(var(--t, 0) * 1deg); }
+.rs-stamp { display: grid; place-items: center; width: 110px; aspect-ratio: 1; border: 3px solid var(--stamp); border-radius: 50%; color: var(--stamp); text-align: center; line-height: 1.1; rotate: -4deg; }
+.rs-stamp-d { font: 600 1.15rem/1 var(--font-display); }
+.rs-stamp-y { font: 400 .8rem/1 var(--font-ui); }
+.rs-print { margin: 0; padding: 8px 8px 6px; background: var(--slip); box-shadow: 0 3px 8px rgba(0, 0, 0, .25); }
+.rs-print img { display: block; width: 100%; max-width: 160px; aspect-ratio: 4 / 5; object-fit: cover; }
+.rs-print figcaption { margin-top: 4px; font: 600 1.15rem/1 var(--font-hand); color: var(--ink); }
+.rs-meta { margin: 0; font-size: var(--step--1); color: var(--ink-soft); }
+.rs-add { font-size: var(--step--1); color: var(--ink-soft); }
+.rs-actions form { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+/* the list of regulars and the add form */
+.rl-list { display: grid; gap: 10px; margin: 16px 0; padding: 0; list-style: none; }
+.rl-item { display: grid; gap: 2px; padding: 12px 14px; border: 1px dashed var(--rule); border-radius: var(--radius-slip); background: color-mix(in srgb, var(--slip) 70%, transparent); color: var(--ink); text-decoration: none; }
+.rl-item span { font-size: var(--step--1); color: var(--ink-soft); }
+.rl-form { display: grid; gap: 12px; max-width: 460px; margin: 28px 0 60px; }
+.rl-form label { display: grid; gap: 4px; font-size: var(--step--1); color: var(--ink-soft); }
+.rl-form input[type="text"], .rl-form input[type="url"], .rl-form input[type="date"] { font: inherit; padding: 8px 10px; min-height: 44px; border: 1px solid var(--rule); border-radius: var(--radius-slip); background: var(--slip); color: var(--ink); max-width: 100%; }
+.rl-days { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+.rl-days legend { padding: 0; margin-bottom: 4px; font-size: var(--step--1); color: var(--ink-soft); }
+.rl-day { position: relative; }
+.rl-day input { position: absolute; opacity: 0; }
+.rl-day span { display: inline-grid; place-items: center; min-width: 48px; min-height: 44px; border: 1.5px solid var(--rule); border-radius: 999px; color: var(--ink); }
+.rl-day input:checked + span { background: var(--stamp); border-color: var(--stamp); color: var(--stamp-ink); }
+.rl-day input:focus-visible + span { outline: 2px solid var(--stamp); outline-offset: 3px; }
+}

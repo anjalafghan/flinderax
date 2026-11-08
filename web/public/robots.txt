@@ -1,4 +1,4 @@
-# Flinderax Robots.txt
+# joy Robots.txt
 # https://www.robotstxt.org/
 
 # Allow all crawlers

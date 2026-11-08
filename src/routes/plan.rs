@@ -13,6 +13,7 @@ pub fn routes(state: AppState) -> Router {
         .route("/income/delete", post(plan::income_delete))
         .route("/income/list", get(plan::income_list))
         .route("/project", post(projection::project_handler))
+        .route("/afford", post(projection::afford_handler))
         .route("/settings/get", get(plan::settings_get))
         .route("/settings/update", post(plan::settings_update))
         .with_state(state)

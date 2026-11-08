@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT couple_id AS \"couple_id!\", COALESCE(user_0 = ?, 0) AS \"first!: bool\" FROM couples WHERE user_0 = ? OR user_1 = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "couple_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "first!: bool",
+        "ordinal": 1,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      true,
+      null
+    ]
+  },
+  "hash": "bcb528eb243fd6e9534354f072f9560f71e833e557aca6087c8f7a95af7e17e1"
+}

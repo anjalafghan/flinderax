@@ -115,7 +115,7 @@ export function CardSnapshotForm({ cardId, isFirst }: { cardId: string; isFirst:
                 <input type="radio" name="first-kind" className="mt-1" checked={starting} onChange={() => setStarting(true)} />
                 <span>
                   <span className="font-medium">My starting balance.</span> It was already owed before I began using
-                  Flinderax, so don't count it as spending this month.
+                  joy, so don't count it as spending this month.
                 </span>
               </label>
               <label className="flex items-start gap-2">
