@@ -15,6 +15,7 @@
 pub mod autopost;
 pub mod cycle;
 pub mod history;
+pub mod joy;
 pub mod projection;
 
 use serde::Serialize;

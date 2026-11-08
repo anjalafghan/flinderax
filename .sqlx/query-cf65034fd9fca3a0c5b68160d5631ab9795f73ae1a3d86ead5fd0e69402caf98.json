@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT synced_at AS \"s?: String\" FROM joy_links WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "s?: String",
+        "ordinal": 0,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "cf65034fd9fca3a0c5b68160d5631ab9795f73ae1a3d86ead5fd0e69402caf98"
+}

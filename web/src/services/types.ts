@@ -441,3 +441,42 @@ export interface IngestRule {
   pattern: string;
   category: string;
 }
+
+// ---------- Joy (shared date-jar app) ----------
+
+export interface JoyMonth {
+  /** "YYYY-MM". */
+  month: string;
+  budget_paise: number | null;
+  carry_paise: number;
+  spent_paise: number;
+  your_share_paise: number;
+  your_budget_paise: number | null;
+}
+
+export interface JoyRecent {
+  /** "YYYY-MM-DD". */
+  day: string;
+  title: string;
+  kind: "date" | "other" | "regular";
+  amount_paise: number;
+  your_share_paise: number;
+}
+
+export interface JoySummary {
+  connected: boolean;
+  url: string | null;
+  partner_paise: number;
+  stale: boolean;
+  synced_at: string | null;
+  error: string | null;
+  month: JoyMonth | null;
+  recent: JoyRecent[];
+  labelled: number;
+}
+
+export interface JoyConnect {
+  url: string;
+  token: string;
+  partner_paise: number;
+}

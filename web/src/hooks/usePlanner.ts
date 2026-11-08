@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { accountApi, cardPlanApi, dashboardApi, getDashboardHistory, ingestApi, movesApi, planApi } from "@/services/api";
+import { accountApi, cardPlanApi, dashboardApi, getDashboardHistory, ingestApi, joyApi, movesApi, planApi } from "@/services/api";
+import type { JoyConnect } from "@/services/types";
 
 export const keys = {
   txns: ["ingest-transactions"] as const,
@@ -16,6 +17,7 @@ export const keys = {
   moves: ["moves"] as const,
   history: ["dashboard-history"] as const,
   breakdown: (cardId: string) => ["card-breakdown", cardId] as const,
+  joy: ["joy-summary"] as const,
 };
 
 export const useSummary = () => useQuery({ queryKey: keys.summary, queryFn: dashboardApi.summary });
@@ -41,6 +43,17 @@ export const useIngestKey = () => useQuery({ queryKey: keys.ingestKey, queryFn: 
 export const useIngestRules = () => useQuery({ queryKey: keys.ingestRules, queryFn: ingestApi.rules });
 /** Everything a spending write can change. The dashboard summary and history are added by usePlannerMutation. */
 export const INGEST_INVALIDATE: QueryKey[] = [keys.txns, keys.spendSummary, keys.ingestRules];
+export const useJoySummary = () => useQuery({ queryKey: keys.joy, queryFn: joyApi.summary, retry: 1 });
+/** Joy writes can re-label transactions as dates, so the spending data is refreshed too. */
+export const JOY_INVALIDATE: QueryKey[] = [keys.joy, keys.txns, keys.spendSummary];
+export const useJoyConnect = () =>
+  usePlannerMutation((c: JoyConnect) => joyApi.connect(c), JOY_INVALIDATE, { success: "Joy connected" });
+export const useJoySetPartner = () =>
+  usePlannerMutation((partner_paise: number) => joyApi.setPartner(partner_paise), JOY_INVALIDATE, {
+    success: "Partner amount saved",
+  });
+export const useJoyDisconnect = () =>
+  usePlannerMutation(() => joyApi.disconnect(), JOY_INVALIDATE, { success: "Joy disconnected" });
 export const useSettings = () => useQuery({ queryKey: keys.settings, queryFn: planApi.settings });
 export const useBreakdown = (cardId: string | undefined) =>
   useQuery({

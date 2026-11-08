@@ -93,6 +93,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/dashboard", protected(&state, routes::dashboard::routes(state.clone())))
         .nest("/api/moves", protected(&state, routes::moves::routes(state.clone())))
         .nest("/api/ingest", protected(&state, routes::ingest::routes(state.clone())))
+        .nest("/api/joy", protected(&state, routes::joy::routes(state.clone())))
         .nest("/api/hook", routes::ingest::hook_routes(state.clone()).layer(trace_layer()))
         // Unknown API paths must 404 instead of falling through to the SPA's index.html.
         .route("/api/{*rest}", any(api_not_found))

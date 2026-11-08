@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO joy_links (user_id, url, token, partner_paise, last_payload, synced_at, last_error)\n         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, NULL)\n         ON CONFLICT(user_id) DO UPDATE SET url = excluded.url, token = excluded.token, partner_paise = excluded.partner_paise,\n            last_payload = excluded.last_payload, synced_at = excluded.synced_at, last_error = NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "edc1bd5d4fed15fc5c16719d718ea1cc4a1c35d11db782c613267e38ad660159"
+}

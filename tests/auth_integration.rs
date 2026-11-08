@@ -228,3 +228,86 @@ async fn bank_alerts_arrive_through_the_hook() {
     authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
     assert_eq!(hook_post(&app, &key, sms).await.0, StatusCode::UNAUTHORIZED);
 }
+
+async fn authed_get(app: &Router, token: &str, path: &str) -> Value {
+    let req = Request::get(path).header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap();
+    let res = app.clone().oneshot(req).await.unwrap();
+    let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    serde_json::from_slice(&bytes).unwrap()
+}
+
+/// A stand-in for Joy's `/api/v1/spending` on a random local port.
+async fn fake_joy(today: &str) -> (String, tokio::task::JoinHandle<()>) {
+    let month = &today[..7];
+    let body = json!({
+        "currency": "₹", "monthly_budget": 20000,
+        "months": [{ "month": month, "budget": 20000, "carry": 0, "spent": 3000 }],
+        "entries": [
+            { "id": "date:1", "day": today, "amount": 2400, "title": "Saltt dinner", "kind": "date" },
+            { "id": "night:2", "day": today, "amount": 600, "title": "Blue Tokai", "kind": "regular" }
+        ]
+    });
+    let joy = Router::new().route(
+        "/api/v1/spending",
+        axum::routing::get(move |h: axum::http::HeaderMap| {
+            let body = body.clone();
+            async move {
+                if h.get("authorization").and_then(|v| v.to_str().ok()) == Some("Bearer joy-secret") {
+                    axum::Json(body).into_response()
+                } else {
+                    StatusCode::UNAUTHORIZED.into_response()
+                }
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port());
+    let handle = tokio::spawn(async move { axum::serve(listener, joy).await.unwrap() });
+    (url, handle)
+}
+
+#[tokio::test]
+async fn joy_dates_label_alerts_and_split_the_budget() {
+    let app = test_app().await;
+    post(&app, "10.0.0.23", "/api/common/register", json!({"user_name": "dater", "user_password": "correct horse"})).await;
+    let t = login_token(&app, "10.0.0.23", "dater", "correct horse").await;
+    authed_post(&app, &t, "/api/account/create",
+        json!({"name": "HDFC", "kind": "bank", "balance_paise": 100, "last_4_digits": "4821"})).await;
+    let (_, b) = authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
+    let key = serde_json::from_str::<Value>(&b).unwrap()["key"].as_str().unwrap().to_string();
+
+    let today = flinderax::handlers::common::today_local().to_string();
+    let (dinner, _) = hook_post(&app, &key, "Rs.2,400.00 debited from a/c **4821 to VPA saltt@okhdfc (UPI Ref No 430500000001).").await;
+    assert_eq!(dinner, StatusCode::OK);
+    let (_, coffee) = hook_post(&app, &key, "Rs.600.00 debited from a/c **4821 to VPA bluetokai@okicici (UPI Ref No 430500000002).").await;
+    let coffee_id = coffee["transaction"]["txn_id"].as_str().unwrap().to_string();
+    // Picked by hand: the Joy match must leave it alone.
+    let (s, _) = authed_post(&app, &t, "/api/ingest/transactions/update",
+        json!({"txn_id": coffee_id, "category": "food", "remember": false})).await;
+    assert!(s.is_success());
+
+    let (url, joy) = fake_joy(&today).await;
+    let (s, b) = authed_post(&app, &t, "/api/joy/connect", json!({"url": url, "token": "wrong", "partner_paise": 600_000})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
+    let (s, b) = authed_post(&app, &t, "/api/joy/connect", json!({"url": url, "token": "joy-secret", "partner_paise": 600_000})).await;
+    assert!(s.is_success(), "{b}");
+
+    let sum = authed_get(&app, &t, "/api/joy/summary").await;
+    assert_eq!(sum["connected"], true);
+    assert_eq!(sum["stale"], false);
+    assert_eq!(sum["month"]["spent_paise"], 300_000);
+    assert_eq!(sum["month"]["your_share_paise"], 210_000, "70% of ₹3,000");
+    assert_eq!(sum["month"]["your_budget_paise"], 1_400_000);
+
+    let txns = authed_get(&app, &t, "/api/ingest/transactions").await;
+    let cat = |m: &str| txns.as_array().unwrap().iter().find(|x| x["merchant"] == m).unwrap()["category"].clone();
+    assert_eq!(cat("saltt"), "dates");
+    assert_eq!(cat("bluetokai"), "food");
+
+    // Joy asleep or gone: the last figures, marked stale.
+    joy.abort();
+    let _ = joy.await;
+    let sum = authed_get(&app, &t, "/api/joy/summary").await;
+    assert_eq!(sum["stale"], true);
+    assert_eq!(sum["month"]["spent_paise"], 300_000);
+}

@@ -44,7 +44,7 @@ pub struct Alert {
 
 pub const CATEGORIES: &[&str] = &[
     "food", "groceries", "shopping", "transport", "fuel", "bills", "entertainment", "health", "travel", "rent",
-    "emi", "cash", "transfer", "income", "other", "uncategorized",
+    "emi", "cash", "dates", "transfer", "income", "other", "uncategorized",
 ];
 
 /// Categories that are not spending.

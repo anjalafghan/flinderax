@@ -6,6 +6,7 @@ pub mod color;
 pub mod common;
 pub mod dashboard;
 pub mod ingest;
+pub mod joy;
 pub mod moves;
 pub mod plan;
 pub mod projection;

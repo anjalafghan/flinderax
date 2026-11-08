@@ -24,6 +24,8 @@ import type {
   SpendSummary,
   Txn,
   UpdateTxnCategory,
+  JoyConnect,
+  JoySummary,
 } from "./types";
 
 // The Rust server serves both the API and this app, so every request is same-origin.
@@ -161,4 +163,13 @@ export const ingestApi = {
   rotateKey: () => data(api.post<{ key: string }>("/api/ingest/key/rotate", {})),
   rules: () => data(api.get<IngestRule[]>("/api/ingest/rules")),
   deleteRule: (pattern: string) => data(api.post<Ok>("/api/ingest/rules/delete", { pattern })),
+};
+
+// ---------- Joy (shared date jar) ----------
+
+export const joyApi = {
+  summary: () => data(api.get<JoySummary>("/api/joy/summary")),
+  connect: (c: JoyConnect) => data(api.post<Ok>("/api/joy/connect", c)),
+  setPartner: (partner_paise: number) => data(api.post<Ok>("/api/joy/partner", { partner_paise })),
+  disconnect: () => data(api.post<Ok>("/api/joy/disconnect", {})),
 };

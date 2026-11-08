@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT txn_id AS \"txn_id!\", occurred_on, amount_paise, category FROM transactions\n           WHERE user_id = ? AND direction = 'debit' AND occurred_on >= ?\n             AND (category = 'dates' OR (category_locked = 0 AND category NOT IN ('transfer', 'income')))",
+  "describe": {
+    "columns": [
+      {
+        "name": "txn_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "occurred_on",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "category",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "727b01dee6b925cff0dd0197bd4382fc2310c327f1416de72001ea9b11c00b32"
+}

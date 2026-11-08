@@ -14,6 +14,7 @@ import { CardUtilization } from "@/components/feature/CardUtilization";
 import { MaturityList } from "@/components/feature/MaturityList";
 import { AutoPostings } from "@/components/feature/AutoPostings";
 import { SpendingPanel } from "@/components/feature/SpendingPanel";
+import { DatesPanel } from "@/components/feature/DatesPanel";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 
 export interface CardData {
@@ -247,7 +248,10 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <SpendingPanel />
+        <div className="mx-auto mb-8 grid w-full max-w-5xl items-start gap-6 md:grid-cols-2 [&>section]:mb-0 [&>section]:max-w-none">
+          <SpendingPanel />
+          <DatesPanel />
+        </div>
 
         {history && (
           <div className="mx-auto mb-8 w-full max-w-5xl space-y-6">

@@ -384,7 +384,7 @@ pub async fn update(
     let current = load_txn(db, &user_id, &p.txn_id).await?.ok_or_else(|| not_found("Transaction not found"))?;
     let merchant = p.merchant.map(|m| m.trim().to_string()).filter(|m| !m.is_empty()).or(current.merchant);
     sqlx::query!(
-        "UPDATE transactions SET category = ?, merchant = ? WHERE txn_id = ? AND user_id = ?",
+        "UPDATE transactions SET category = ?, merchant = ?, category_locked = 1 WHERE txn_id = ? AND user_id = ?",
         p.category,
         merchant,
         p.txn_id,

@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Header } from "@/components/layout/Header";
 import { IngestSetup } from "@/components/feature/IngestSetup";
+import { JoyConnect } from "@/components/feature/JoyConnect";
 import { ManualTransaction } from "@/components/feature/ManualTransaction";
 import { PasteAlert } from "@/components/feature/PasteAlert";
 import { SpendingOverview } from "@/components/feature/SpendingOverview";
@@ -52,6 +53,10 @@ export default function SpendingPage() {
 
         <section aria-label="Import setup">
           <IngestSetup />
+        </section>
+
+        <section aria-label="Joy date budget">
+          <JoyConnect />
         </section>
 
         <section aria-label="Rules" className="space-y-3">

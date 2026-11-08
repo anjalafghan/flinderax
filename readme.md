@@ -91,6 +91,10 @@ function forwardAlerts() {
 }
 ```
 
+## Joy (the shared date jar)
+
+Link [Joy](https://joy-jar.fly.dev) on the Spending page (its address, its `JOY_API_TOKEN`, and how much your partner covers each month). Flinderax then pulls Joy's date spending (`GET <joy>/api/v1/spending`) whenever the dashboard loads: the **Dates** panel shows the month's date spending against Joy's budget and your share of it (proportional: with ₹6,000 of ₹20,000 from your partner, you pay 70%), and bank-alert debits within a day and 5% of a Joy entry are labelled **Dates** (`src/planner/joy.rs`), unless you picked their category by hand. Joy entries are never added as transactions, so nothing is counted twice. If Joy can't be reached, the last figures are shown marked stale. The link is one way: Joy never sees anything from here.
+
 ## Adding and removing things
 
 Everything is data, nothing is hard-coded: accounts (`bank`, `cash`, `fd`, `rd`), fixed payments (SIPs, rent, an RD instalment with optional first/last month), income sources, card EMIs and pending charges all have create/update/delete endpoints and screens (Accounts, Plan, card page).
@@ -109,4 +113,5 @@ Everything is data, nothing is hard-coded: accounts (`bank`, `cash`, `fd`, `rd`)
 | Projection | `POST /api/plan/project` (what-if items in, baseline + scenario out) |
 | History | `GET /api/dashboard/history?months=12` |
 | Spending | `/api/ingest/{parse,transactions/create,transactions/update,transactions/delete,rules/delete,key/rotate}`; `GET` `/api/ingest/{transactions?month=,summary?months=,rules,key/status}` |
+| Joy link | `POST /api/joy/{connect,partner,disconnect}`, `GET /api/joy/summary` |
 | Phone hook | `POST /api/hook/ingest` (header `X-Ingest-Key`, no bearer token) |
