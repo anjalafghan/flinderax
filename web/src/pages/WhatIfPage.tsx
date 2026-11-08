@@ -131,11 +131,11 @@ export default function WhatIfPage() {
   }, [chart]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       <Header />
-      <main className="container mx-auto max-w-4xl space-y-8 px-4 py-8">
+      <main className="page max-w-4xl space-y-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">What if...</h1>
+          <h1 className="page-title">What if...</h1>
           <p className="text-muted-foreground">
             Try an RD, an FD or a big purchase and see what it does to your savings, your spending and your balances
             over the coming months. Nothing here changes your real data.
@@ -159,7 +159,7 @@ export default function WhatIfPage() {
             />
           ))}
           {drafts.length === 0 && (
-            <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+            <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
               Nothing to try yet. Add the wedding RD to start, or just look at where you're heading below.
             </p>
           )}
@@ -185,7 +185,7 @@ export default function WhatIfPage() {
             ))}
           </div>
 
-          <div className={cn("rounded-xl border p-3 transition-opacity", isFetching && "opacity-70")}>
+          <div className={cn("glass rounded-3xl p-3 transition-opacity", isFetching && "opacity-70")}>
             {isError && <p className="text-sm text-destructive">Couldn't compute the projection.</p>}
             {chart && <LineChart labels={chart.labels} series={chart.series} markers={markers} />}
             {!chart && !isError && <div className="h-64 animate-pulse rounded-lg bg-muted/40" />}
@@ -215,7 +215,7 @@ export default function WhatIfPage() {
 
         {data && data.impacts.length > 0 && (
           <section className="space-y-4">
-            <h2 className="text-xl font-bold tracking-tight">What each change does</h2>
+            <h2 className="font-display text-3xl leading-none tracking-tight">What each change does</h2>
             {data.impacts.map((imp, i) => <ImpactCard key={`${imp.name}-${i}`} impact={imp} />)}
           </section>
         )}

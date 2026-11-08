@@ -97,7 +97,7 @@ export function CardSnapshotForm({ cardId, isFirst }: { cardId: string; isFirst:
   return (
     <Card id="snapshot-form">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Update from bank app</CardTitle>
+        <CardTitle className="text-3xl">Update from bank app</CardTitle>
         <p className="text-sm text-muted-foreground">Copy the numbers exactly as your bank app shows them.</p>
       </CardHeader>
       <CardContent>
@@ -109,7 +109,7 @@ export function CardSnapshotForm({ cardId, isFirst }: { cardId: string; isFirst:
             <Field id="unbilled-credit" label="Unbilled credit" help={HELP.unbilled_credit} value={unbilledCredit} onChange={setUnbilledCredit} optional />
           </div>
           {isFirst && (
-            <fieldset className="space-y-2 rounded-lg border p-3 text-sm">
+            <fieldset className="space-y-2 glass rounded-2xl p-3 text-sm">
               <legend className="px-1 font-medium">What are these numbers?</legend>
               <label className="flex items-start gap-2">
                 <input type="radio" name="first-kind" className="mt-1" checked={starting} onChange={() => setStarting(true)} />

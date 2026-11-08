@@ -55,14 +55,14 @@ export function CardLoansSection({ cardId, breakdown }: { cardId: string; breakd
     <div className="grid gap-6 md:grid-cols-2">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">EMIs</CardTitle>
+          <CardTitle className="text-3xl">EMIs</CardTitle>
           <p className="text-xs text-muted-foreground">Enter once. Months left and balance count down by themselves.</p>
         </CardHeader>
         <CardContent className="space-y-4">
           {breakdown.emis.length === 0 && <p className="text-sm text-muted-foreground">No EMIs on this card.</p>}
           <ul className="space-y-2">
             {breakdown.emis.map((e) => (
-              <li key={e.emi_id} className="flex items-center justify-between gap-2 rounded-lg border p-3 text-sm">
+              <li key={e.emi_id} className="flex items-center justify-between gap-2 glass rounded-2xl p-3 text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{e.label}</p>
                   <p className="text-xs text-muted-foreground">
@@ -109,14 +109,14 @@ export function CardLoansSection({ cardId, breakdown }: { cardId: string; breakd
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Pending charges</CardTitle>
+          <CardTitle className="text-3xl">Pending charges</CardTitle>
           <p className="text-xs text-muted-foreground">Spends that haven't posted to the card yet. They drop off by themselves after 30 days.</p>
         </CardHeader>
         <CardContent className="space-y-4">
           {breakdown.pending_charges.length === 0 && <p className="text-sm text-muted-foreground">Nothing pending.</p>}
           <ul className="space-y-2">
             {breakdown.pending_charges.map((c) => (
-              <li key={c.charge_id} className="flex items-center justify-between gap-2 rounded-lg border p-3 text-sm">
+              <li key={c.charge_id} className="flex items-center justify-between gap-2 glass rounded-2xl p-3 text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{c.label}</p>
                   <p className="text-xs text-muted-foreground">{formatINR(c.amount_paise)}</p>

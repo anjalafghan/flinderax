@@ -34,7 +34,7 @@ const ANSWER: Record<AffordAnswer, { label: string; box: string }> = {
 function Result({ r }: { r: AffordResult }) {
   const tone = ANSWER[r.answer];
   return (
-    <section aria-label="Answer" data-answer={r.answer} className={cn("space-y-3 rounded-2xl border p-5", tone.box)}>
+    <section aria-label="Answer" data-answer={r.answer} className={cn("space-y-3 glass rounded-3xl p-5", tone.box)}>
       <p className="text-sm font-semibold uppercase tracking-wide opacity-80">{tone.label}</p>
       <p className="text-xl font-bold leading-snug">{r.headline}</p>
       {r.reasons.length > 0 && (
@@ -87,7 +87,7 @@ export function AffordPanel() {
   return (
     <Card id="afford" className="scroll-mt-24">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Can I afford it?</CardTitle>
+        <CardTitle className="text-3xl">Can I afford it?</CardTitle>
         <p className="text-sm text-muted-foreground">Check a purchase against your budget before you buy.</p>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -13,23 +13,23 @@
 
 .joy {
 & {
-  --paper: #f5eee3;
-  --paper-2: #ebe2d3;
-  --slip: #fffaf2;
-  --ink: #2b2433;
-  --ink-soft: #675d6e;
-  --rule: #ddd1c1;
-  --stamp: #b9301b;
-  --stamp-ink: #fffaf2;
+  --paper: #f4eee6;
+  --paper-2: #ebe3d8;
+  --slip: rgba(255, 252, 247, .78);
+  --ink: #1b1b22;
+  --ink-soft: #5f5f6a;
+  --rule: rgba(27, 27, 34, .14);
+  --stamp: #c8361c;
+  --stamp-ink: #ffffff;
   --glow: rgba(255, 190, 110, 0);
-  --tint-home: #f3e2b3;
-  --tint-apart: #ddd3ee;
-  --tint-local: #f2cfc6;
-  --tint-day_trip: #d3e1c6;
-  --tint-travel: #cbdbea;
-  --shadow-slip: 0 1px 0 rgba(43, 36, 51, .06), 0 10px 24px -14px rgba(43, 36, 51, .35);
+  --tint-home: #f6e2b8;
+  --tint-apart: #dfd6ee;
+  --tint-local: #f4cfc4;
+  --tint-day_trip: #d2e3cc;
+  --tint-travel: #cbdcec;
+  --shadow-slip: 0 1px 0 rgba(255, 255, 255, .7) inset, 0 18px 44px -26px rgba(200, 54, 28, .35);
 
-  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --font-ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-hand: "Caveat", "Bradley Hand", cursive;
 
@@ -50,26 +50,26 @@
   --ease-in-out: cubic-bezier(.65, 0, .35, 1);
 
   --gutter: 16px;
-  --radius-slip: 3px;
+  --radius-slip: 20px;
   color-scheme: light;
 }
 :where(.dark) & {
 & {
-    --paper: #14121b;
-    --paper-2: #1d1a26;
-    --slip: #2a2533;
-    --ink: #f1e9df;
-    --ink-soft: #b3a8b8;
-    --rule: #383145;
-    --stamp: #ff7a63;
+    --paper: #070a11;
+    --paper-2: #0d121c;
+    --slip: rgba(14, 19, 30, .66);
+    --ink: #ece8e1;
+    --ink-soft: #a3a9b4;
+    --rule: rgba(236, 232, 225, .14);
+    --stamp: #f2d9c8;
     --stamp-ink: #1a0f0c;
-    --glow: rgba(255, 190, 110, .35);
-    --tint-home: #4a3f22;
-    --tint-apart: #3a3150;
-    --tint-local: #4d2f2b;
-    --tint-day_trip: #2f4030;
-    --tint-travel: #283a4d;
-    --shadow-slip: 0 1px 0 rgba(0, 0, 0, .3), 0 14px 30px -16px rgba(0, 0, 0, .8);
+    --glow: rgba(226, 70, 43, .35);
+    --tint-home: #4a3f2a;
+    --tint-apart: #33304f;
+    --tint-local: #4d2c2a;
+    --tint-day_trip: #2a4339;
+    --tint-travel: #20364f;
+    --shadow-slip: 0 1px 0 rgba(255, 255, 255, .08) inset, 0 20px 44px -22px rgba(0, 0, 0, .85);
     color-scheme: dark;
   }
 }
@@ -78,7 +78,11 @@
 & {
   margin: 0;
   min-height: 100dvh;
-  background: var(--paper);
+  background:
+    radial-gradient(closest-side at 82% 0%, color-mix(in srgb, #e2462b 30%, transparent), transparent) 100% 0 / 56rem 42rem no-repeat,
+    radial-gradient(closest-side at 0% 50%, color-mix(in srgb, #2d5fa0 30%, transparent), transparent) 0 40% / 48rem 48rem no-repeat,
+    var(--paper);
+  background-attachment: fixed;
   color: var(--ink);
   font: 400 var(--step-0)/1.55 var(--font-ui);
   font-feature-settings: "ss01";
@@ -88,8 +92,7 @@
 main { max-width: 680px; margin: 0 auto; padding: 8px var(--gutter) 96px; }
 h1, h2, h3 {
   font-family: var(--font-display);
-  font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 96;
-  font-weight: 560;
+  font-weight: 400;
   line-height: 1.08;
   letter-spacing: -0.015em;
   margin: 0;

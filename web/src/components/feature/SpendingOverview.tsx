@@ -61,10 +61,10 @@ export function SpendingOverview({
   const uncategorized = summary.uncategorized_count;
 
   return (
-    <section aria-label="This month" className="space-y-6 rounded-xl border p-4 md:p-6">
+    <section aria-label="This month" className="space-y-6 glass rounded-3xl p-4 md:p-6">
       <div>
         <p className="text-sm text-muted-foreground">Spent this month</p>
-        <p className="text-3xl font-extrabold tracking-tight tabular-nums md:text-4xl">{formatINR(spent)}</p>
+        <p className="font-serif-num text-5xl md:text-6xl">{formatINR(spent)}</p>
       </div>
 
       {uncategorized > 0 && (
@@ -82,7 +82,7 @@ export function SpendingOverview({
         <div className="min-w-0 space-y-3">
           <h3 className="text-sm font-semibold">By category</h3>
           {rows.length === 0 ? (
-            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No spending yet this month.</p>
+            <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No spending yet this month.</p>
           ) : (
             <CategoryBars rows={rows} total={spent} />
           )}
@@ -90,7 +90,7 @@ export function SpendingOverview({
         <div className="min-w-0 space-y-3">
           <h3 className="text-sm font-semibold">Last 6 months</h3>
           {summary.months.length === 0 ? (
-            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Nothing tracked yet.</p>
+            <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">Nothing tracked yet.</p>
           ) : (
             <MonthBars months={summary.months} />
           )}

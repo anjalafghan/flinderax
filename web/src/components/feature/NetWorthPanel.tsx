@@ -25,10 +25,10 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "ba
 /** Net worth this month, how it moved since last month, and the trend over time. */
 export function NetWorthPanel({ months }: { months: HistoryMonth[] }) {
   return (
-    <section aria-label="Net worth" className="space-y-3 rounded-xl border p-4 md:p-6">
-      <h2 className="text-lg font-bold tracking-tight">Net worth</h2>
+    <section aria-label="Net worth" className="space-y-3 glass rounded-3xl p-4 md:p-6">
+      <h2 className="font-display text-3xl leading-none tracking-tight">Net worth</h2>
       {months.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+        <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
           Net worth history starts building as you update balances.
         </p>
       ) : (
@@ -46,7 +46,7 @@ function NetWorthBody({ months }: { months: HistoryMonth[] }) {
   return (
     <>
       <div>
-        <p className="text-3xl font-extrabold tracking-tight tabular-nums md:text-4xl">
+        <p className="font-serif-num text-5xl md:text-6xl">
           {formatINR(current.net_worth_paise)}
         </p>
         {change === null ? (

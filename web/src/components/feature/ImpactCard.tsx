@@ -11,7 +11,7 @@ function Option({ title, a }: { title: string; a: Absorption }) {
     ["Spending allowance", a.from_spending_paise, a.spending_after_paise],
   ];
   return (
-    <div className="space-y-2 rounded-lg border p-3 text-sm">
+    <div className="space-y-2 glass rounded-2xl p-3 text-sm">
       <p className="font-semibold">{title}</p>
       <ul className="space-y-1">
         {rows.map(([label, cut, after]) => (
@@ -38,7 +38,7 @@ export function ImpactCard({ impact }: { impact: ItemImpact }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">{impact.name}</CardTitle>
+        <CardTitle className="text-3xl">{impact.name}</CardTitle>
         {impact.monthly_paise > 0 && (
           <p className="text-sm text-muted-foreground">Costs {formatINR(impact.monthly_paise)} a month. Who gives way?</p>
         )}
@@ -79,7 +79,7 @@ export function ImpactCard({ impact }: { impact: ItemImpact }) {
         {g && (
           <div
             className={cn(
-              "rounded-lg border p-3 text-sm",
+              "glass rounded-2xl p-3 text-sm",
               g.gap_paise >= 0 ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10",
             )}
           >

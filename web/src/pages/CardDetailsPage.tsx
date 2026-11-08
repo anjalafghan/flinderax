@@ -135,10 +135,10 @@ export default function CardDetailsPage() {
   const card = cardQuery.data;
 
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+    <div className="min-h-screen text-foreground transition-colors duration-300">
       <Header />
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl space-y-8">
+      <div className="page max-w-4xl space-y-8">
         {/* Header Actions */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="ghost" className="pl-0" onClick={() => navigate(-1)}>
@@ -234,7 +234,7 @@ export default function CardDetailsPage() {
                      return (
                        <div
                          key={tx.transaction_id}
-                         className="flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-all hover:bg-accent/5 group relative"
+                         className="flex items-center justify-between glass rounded-3xl p-4 transition-all hover:bg-accent/5 group relative"
                        >
                          <button
                            onClick={() => {
@@ -298,7 +298,7 @@ export default function CardDetailsPage() {
                 })()}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground bg-muted/20">
+              <div className="rounded-3xl border border-dashed border-primary/25 bg-card/30 border-border p-12 text-center text-muted-foreground bg-muted/20">
                 No transactions yet.
               </div>
             )}
