@@ -311,3 +311,34 @@ async fn joy_dates_label_alerts_and_split_the_budget() {
     assert_eq!(sum["stale"], true);
     assert_eq!(sum["month"]["spent_paise"], 300_000);
 }
+
+#[tokio::test]
+async fn statement_csv_imports_once() {
+    let app = test_app().await;
+    post(&app, "10.0.0.23", "/api/common/register", json!({"user_name": "stmtuser", "user_password": "correct horse"})).await;
+    let t = login_token(&app, "10.0.0.23", "stmtuser", "correct horse").await;
+    let (_, b) = authed_post(&app, &t, "/api/account/create",
+        json!({"name": "HDFC", "kind": "bank", "balance_paise": 100, "last_4_digits": "1234"})).await;
+    let account_id = serde_json::from_str::<Value>(&b).unwrap()["account_id"].as_str().unwrap().to_string();
+
+    let csv = "Date,Narration,Withdrawal Amt.,Deposit Amt.,Closing Balance\n\
+01/11/26,UPI-SWIGGY-swiggy@icici-1,450.00,,\"9,550.00\"\n\
+01/11/26,UPI-SWIGGY-swiggy@icici-2,450.00,,\"9,100.00\"\n\
+02/11/26,NEFT CR-ACME CORP,,\"1,00,000.00\",\"1,09,100.00\"\n";
+    let body = json!({"csv": csv, "account_id": account_id});
+
+    let (s, b) = authed_post(&app, &t, "/api/ingest/statement", body.clone()).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let v: Value = serde_json::from_str(&b).unwrap();
+    assert_eq!((v["total"].as_u64(), v["added"].as_u64()), (Some(3), Some(3)), "{v}");
+    // The account's balance was typed today, which is newer than the statement, so it stays.
+    assert!(v["balance_updated"].is_null(), "{v}");
+
+    // Same file again: nothing new.
+    let (_, b) = authed_post(&app, &t, "/api/ingest/statement", body).await;
+    let v: Value = serde_json::from_str(&b).unwrap();
+    assert_eq!((v["added"].as_u64(), v["duplicates"].as_u64()), (Some(0), Some(3)), "{v}");
+
+    let (s, _) = authed_post(&app, &t, "/api/ingest/statement", json!({"csv": "nothing,useful\n1,2\n"})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+}

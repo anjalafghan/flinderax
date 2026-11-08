@@ -18,6 +18,7 @@ import type {
   PlanSettings,
   SnapshotInput,
   IngestKeyStatus,
+  StatementResult,
   IngestRule,
   NewTxn,
   ParseResult,
@@ -158,6 +159,8 @@ export const ingestApi = {
   removeTxn: (txn_id: string) => data(api.post<Ok>("/api/ingest/transactions/delete", { txn_id })),
   createTxn: (t: NewTxn) => data(api.post<{ txn_id: string; status: boolean }>("/api/ingest/transactions/create", t)),
   parse: (text: string) => data(api.post<ParseResult>("/api/ingest/parse", { text })),
+  importStatement: (b: { csv: string; account_id?: string }) =>
+    data(api.post<StatementResult>("/api/ingest/statement", b)),
   summary: (months = 6) => data(api.get<SpendSummary>(`/api/ingest/summary?months=${months}`)),
   keyStatus: () => data(api.get<IngestKeyStatus>("/api/ingest/key/status")),
   rotateKey: () => data(api.post<{ key: string }>("/api/ingest/key/rotate", {})),

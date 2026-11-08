@@ -417,6 +417,18 @@ export interface ParseResult {
   balance_updated: { account_name: string; balance_paise: number } | null;
 }
 
+export interface StatementResult {
+  total: number;
+  added: number;
+  duplicates: number;
+  matched_alerts: number;
+  skipped: number;
+  uncategorized: number;
+  first_date: string | null;
+  last_date: string | null;
+  balance_updated: { account_name: string; balance_paise: number } | null;
+}
+
 export interface SpendMonth {
   /** "YYYY-MM". */
   month: string;

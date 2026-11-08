@@ -634,3 +634,192 @@ mod tests {
         assert_eq!(hash_key("fx_abc").len(), 64);
     }
 }
+
+// ---------- statement import ----------
+
+const MAX_STATEMENT_ROWS: usize = 5_000;
+
+#[derive(Deserialize)]
+pub struct StatementPayload {
+    /// The CSV text of a bank or card statement export.
+    pub csv: String,
+    /// The bank account or card the statement belongs to (optional; sets last 4 and the balance).
+    pub account_id: Option<String>,
+    pub card_id: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct StatementResult {
+    pub total: usize,
+    pub added: usize,
+    /// Already recorded: the same file or an overlapping one imported before.
+    pub duplicates: usize,
+    /// Matched a transaction a bank alert had already recorded.
+    pub matched_alerts: usize,
+    /// Rows under the header that could not be read.
+    pub skipped: usize,
+    pub uncategorized: usize,
+    pub first_date: Option<String>,
+    pub last_date: Option<String>,
+    pub balance_updated: Option<BalanceUpdated>,
+}
+
+/// `POST /api/ingest/statement`: stores every row of a CSV statement. Nothing is stored twice:
+/// re-importing a file, or an overlapping one, only adds what is new, and rows a bank alert already
+/// recorded (same day, direction and amount) are matched to it instead of doubled.
+pub async fn statement(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<StatementPayload>,
+) -> Result<Json<StatementResult>, AppError> {
+    let db = &state.db;
+    let parsed = crate::statement::parse(&p.csv)
+        .ok_or_else(|| bad_request("Couldn't find the transaction table. The file needs a Date column and Debit/Credit or Amount columns."))?;
+    if parsed.rows.is_empty() {
+        return Err(bad_request("No transactions found in that file."));
+    }
+    if parsed.rows.len() > MAX_STATEMENT_ROWS {
+        return Err(bad_request(format!("Too many rows (limit {MAX_STATEMENT_ROWS}). Import one period at a time.")));
+    }
+
+    // Which instrument this is, and its last digits.
+    let (mut account_id, mut card_id, mut last4) = (None, None, None);
+    if let Some(id) = p.account_id.as_deref().filter(|s| !s.is_empty()) {
+        let row = sqlx::query_as::<_, (String, Option<String>)>("SELECT account_id, last_4_digits FROM accounts WHERE account_id = ? AND user_id = ?")
+            .bind(id)
+            .bind(&user_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or_else(|| not_found("Account not found"))?;
+        account_id = Some(row.0);
+        last4 = row.1;
+    } else if let Some(id) = p.card_id.as_deref().filter(|s| !s.is_empty()) {
+        let row = sqlx::query_as::<_, (String, Option<String>)>("SELECT card_id, last_4_digits FROM cards WHERE card_id = ? AND user_id = ?")
+            .bind(id)
+            .bind(&user_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or_else(|| not_found("Card not found"))?;
+        card_id = Some(row.0);
+        last4 = row.1;
+    }
+    let target = account_id.clone().or_else(|| card_id.clone()).unwrap_or_default();
+    let rules = load_rules(db, &user_id).await?;
+
+    let mut res = StatementResult {
+        total: parsed.rows.len(),
+        added: 0,
+        duplicates: 0,
+        matched_alerts: 0,
+        skipped: parsed.skipped,
+        uncategorized: 0,
+        first_date: None,
+        last_date: None,
+        balance_updated: None,
+    };
+    let mut seen: BTreeMap<String, u32> = BTreeMap::new();
+    // How many alert-made transactions of each (day, direction, amount) are still unclaimed.
+    let mut alert_budget: BTreeMap<(String, &'static str, i64), i64> = BTreeMap::new();
+    let mut tx = db.begin().await?;
+
+    for row in &parsed.rows {
+        let on = row.date.to_string();
+        let dir = row.direction.as_str();
+        res.first_date = Some(res.first_date.take().map_or(on.clone(), |d| d.min(on.clone())));
+        res.last_date = Some(res.last_date.take().map_or(on.clone(), |d| d.max(on.clone())));
+
+        // Two identical rows on one day are two purchases; the n-th gets its own key.
+        let norm = alerts::normalize(&row.narration);
+        let base = format!("stmt:{target}:{on}:{dir}:{}:{norm}", row.amount_paise);
+        let n = seen.entry(base.clone()).and_modify(|n| *n += 1).or_insert(1);
+        let dedupe_key = format!("{base}:{n}");
+
+        let exists: Option<String> = sqlx::query_scalar("SELECT txn_id FROM transactions WHERE user_id = ? AND dedupe_key = ?")
+            .bind(&user_id)
+            .bind(&dedupe_key)
+            .fetch_optional(&mut *tx)
+            .await?;
+        if exists.is_some() {
+            res.duplicates += 1;
+            continue;
+        }
+
+        let budget_key = (on.clone(), dir, row.amount_paise);
+        if !alert_budget.contains_key(&budget_key) {
+            let alerts_seen: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM transactions WHERE user_id = ? AND occurred_on = ? AND direction = ? AND amount_paise = ? AND dedupe_key NOT LIKE 'stmt:%' AND source != 'manual'",
+            )
+            .bind(&user_id)
+            .bind(&on)
+            .bind(dir)
+            .bind(row.amount_paise)
+            .fetch_one(&mut *tx)
+            .await?;
+            alert_budget.insert(budget_key.clone(), alerts_seen);
+        }
+        let left = alert_budget.get_mut(&budget_key).expect("inserted above");
+        if *left > 0 {
+            *left -= 1;
+            res.matched_alerts += 1;
+            continue;
+        }
+
+        let merchant = crate::statement::merchant_of(&row.narration);
+        let lower = row.narration.to_lowercase();
+        let card_payment = card_id.is_some()
+            && row.direction == Direction::Credit
+            && (lower.contains("payment") || lower.contains("thank"));
+        let category = categorize(merchant.as_deref().or(Some(row.narration.as_str())), row.direction, card_payment, &rules);
+        if category == "uncategorized" {
+            res.uncategorized += 1;
+        }
+        let raw: String = row.narration.chars().take(500).collect();
+        sqlx::query(
+            "INSERT INTO transactions
+                (txn_id, user_id, occurred_on, direction, amount_paise, merchant, category, card_id, account_id, last4, source, raw_text, dedupe_key)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paste', ?, ?)",
+        )
+        .bind(nanoid!())
+        .bind(&user_id)
+        .bind(&on)
+        .bind(dir)
+        .bind(row.amount_paise)
+        .bind(&merchant)
+        .bind(&category)
+        .bind(&card_id)
+        .bind(&account_id)
+        .bind(&last4)
+        .bind(&raw)
+        .bind(&dedupe_key)
+        .execute(&mut *tx)
+        .await?;
+        res.added += 1;
+    }
+
+    // The statement's own balance, from its newest line, becomes the account balance unless a newer one exists.
+    if let Some(acct) = &account_id {
+        let newest = parsed.rows.iter().enumerate().filter(|(_, r)| r.balance_paise.is_some()).max_by_key(|(i, r)| (r.date, *i));
+        if let Some((_, r)) = newest {
+            let bal = r.balance_paise.expect("filtered");
+            let on = r.date.to_string();
+            let done = sqlx::query(
+                "UPDATE accounts SET balance_paise = ?, balance_set_on = ?, updated_at = CURRENT_TIMESTAMP
+                 WHERE account_id = ? AND user_id = ? AND (balance_set_on IS NULL OR balance_set_on <= ?)",
+            )
+            .bind(bal)
+            .bind(&on)
+            .bind(acct)
+            .bind(&user_id)
+            .bind(&on)
+            .execute(&mut *tx)
+            .await?
+            .rows_affected();
+            if done == 1 {
+                let name: String = sqlx::query_scalar("SELECT name FROM accounts WHERE account_id = ?").bind(acct).fetch_one(&mut *tx).await?;
+                res.balance_updated = Some(BalanceUpdated { account_name: name, balance_paise: bal });
+            }
+        }
+    }
+    tx.commit().await?;
+    Ok(Json(res))
+}

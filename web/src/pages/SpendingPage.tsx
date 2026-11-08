@@ -5,6 +5,7 @@ import { IngestSetup } from "@/components/feature/IngestSetup";
 import { JoyConnect } from "@/components/feature/JoyConnect";
 import { ManualTransaction } from "@/components/feature/ManualTransaction";
 import { PasteAlert } from "@/components/feature/PasteAlert";
+import { StatementImport } from "@/components/feature/StatementImport";
 import { SpendingOverview } from "@/components/feature/SpendingOverview";
 import { SpendingRules } from "@/components/feature/SpendingRules";
 import { TransactionList } from "@/components/feature/TransactionList";
@@ -45,6 +46,16 @@ export default function SpendingPage() {
             <p className="text-sm text-muted-foreground">Missed one? Copy the bank's message and paste it here.</p>
           </div>
           <PasteAlert />
+        </section>
+
+        <section aria-label="Upload a statement" className="space-y-3 rounded-xl border p-4 md:p-6">
+          <div>
+            <h2 className="text-lg font-bold">Upload a statement</h2>
+            <p className="text-sm text-muted-foreground">
+              Download the CSV from your bank's website and drop it here. Nothing is added twice, so overlapping files are fine.
+            </p>
+          </div>
+          <StatementImport />
         </section>
 
         <section aria-label="Add manually" className="space-y-3">

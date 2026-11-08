@@ -74,6 +74,8 @@ Spending so far is inferred from card snapshots, so nothing is logged by hand: `
 
 **Bank alerts become transactions.** Generate a key on the Spending page, then have your phone forward bank SMS/emails to `POST /api/hook/ingest` with header `X-Ingest-Key: <key>` and body `{"text": "<message>", "source": "sms"}`. `src/alerts.rs` reads the amount, direction, last digits, merchant, date and "Avl Bal"; OTPs, reminders and offers are ignored; the same alert is stored once. Set each bank account's last 4 digits (Accounts page) so alerts update its balance and auto-posting skips what an alert already recorded. Re-categorise a transaction with "Remember" ticked and every future one from that merchant follows.
 
+**Statements.** Spending page > *Upload a statement* takes a bank CSV export (`POST /api/ingest/statement` with `{csv, account_id?, card_id?}`, `src/statement.rs`). It finds the header row, handles separate Debit/Credit columns or one signed / Dr-Cr amount column, and dd/mm/yy, dd-Mon-yyyy and ISO dates. Re-importing, or overlapping files, never double-count, and rows a bank alert already recorded (same day, direction, amount) are matched instead of added. Picking an account sets its balance from the newest line unless a newer balance exists.
+
 - **iPhone:** Shortcuts → Automation → Message, sender contains your bank's ID (HDFCBK, KOTAKB...) → Run Immediately → *Get Contents of URL* (POST, header `X-Ingest-Key`, JSON body `text` = Shortcut Input, `source` = `sms`).
 - **Android:** any SMS-to-webhook forwarder with the same URL, header and body.
 - **Gmail:** filter bank alerts into a label `bank-alerts`, then in Google Apps Script (run every 15 minutes with a time trigger):

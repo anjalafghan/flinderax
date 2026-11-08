@@ -8,6 +8,7 @@ use crate::models::AppState;
 pub fn routes(state: AppState) -> Router {
     Router::new()
         .route("/parse", post(ingest::parse))
+        .route("/statement", post(ingest::statement))
         .route("/transactions", get(ingest::list))
         .route("/transactions/create", post(ingest::create))
         .route("/transactions/update", post(ingest::update))
