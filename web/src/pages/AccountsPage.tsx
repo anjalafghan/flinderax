@@ -80,7 +80,7 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
 
   const others = accounts.filter((a) => a.account_id !== account.account_id && !a.locked);
   return (
-    <details className="rounded-lg border p-3 text-sm">
+    <details className="glass rounded-2xl p-3 text-sm">
       <summary className="cursor-pointer font-medium">Details</summary>
       <form onSubmit={submit} className="mt-3 grid gap-3 sm:grid-cols-2" noValidate>
         {!isDeposit && (
@@ -179,7 +179,7 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
   const stale = !account.locked && age > STALE_DAYS;
 
   return (
-    <li className="space-y-3 rounded-xl border p-4">
+    <li className="space-y-3 glass rounded-3xl p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-semibold">
@@ -301,7 +301,7 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Add an account</CardTitle>
+        <CardTitle className="text-3xl">Add an account</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2" noValidate>
@@ -398,11 +398,11 @@ export default function AccountsPage() {
   const savings = accounts?.filter((a) => a.kind === "fd" || a.kind === "rd") ?? [];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       <Header />
-      <main className="container mx-auto max-w-3xl space-y-8 px-4 py-8">
+      <main className="page max-w-3xl space-y-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Accounts</h1>
+          <h1 className="page-title">Accounts</h1>
           <p className="text-muted-foreground">
             Mark one account as your spending account and one as your reserve. Locked accounts (like an FD) are never
             counted as spendable.
@@ -415,17 +415,17 @@ export default function AccountsPage() {
         {accounts && (
           <>
             <section className="space-y-3">
-              <h2 className="text-lg font-bold">Bank &amp; cash</h2>
+              <h2 className="font-display text-3xl leading-none">Bank &amp; cash</h2>
               {spendable.length === 0 ? (
-                <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No accounts yet.</p>
+                <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No accounts yet.</p>
               ) : (
                 <ul className="space-y-3">{spendable.map((a) => <AccountRow key={a.account_id} account={a} accounts={accounts} />)}</ul>
               )}
             </section>
             <section className="space-y-3">
-              <h2 className="text-lg font-bold">Deposits (FD / RD)</h2>
+              <h2 className="font-display text-3xl leading-none">Deposits (FD / RD)</h2>
               {savings.length === 0 ? (
-                <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No deposits yet.</p>
+                <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No deposits yet.</p>
               ) : (
                 <ul className="space-y-3">{savings.map((a) => <AccountRow key={a.account_id} account={a} accounts={accounts} />)}</ul>
               )}

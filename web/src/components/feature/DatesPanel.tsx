@@ -15,11 +15,11 @@ export function DatesPanel() {
   const recent = data.recent.slice(0, 4);
 
   return (
-    <section aria-label="Dates this month" className="space-y-4 rounded-xl border p-4 md:p-6">
+    <section aria-label="Dates this month" className="space-y-4 glass rounded-3xl p-4 md:p-6">
       <div>
-        <h2 className="text-lg font-bold tracking-tight">Dates</h2>
+        <h2 className="font-display text-3xl leading-none tracking-tight">Dates</h2>
         <DatesNudge budget_paise={m.budget_paise} spent_paise={m.spent_paise} />
-        <p className="text-2xl font-extrabold tabular-nums">
+        <p className="font-serif-num text-4xl">
           {formatINR(m.spent_paise)}
           {m.budget_paise !== null && <span className="text-base font-semibold text-muted-foreground"> of {formatINR(m.budget_paise)}</span>}
           <span className="text-base font-semibold text-muted-foreground"> spent</span>

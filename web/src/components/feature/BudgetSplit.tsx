@@ -27,7 +27,7 @@ export function BudgetSplit({ budget, spending }: { budget: DashboardSummary["bu
   return (
     <section aria-label="Monthly split" className="space-y-3">
       <div>
-        <h2 className="text-lg font-bold tracking-tight">Your monthly split</h2>
+        <h2 className="font-display text-3xl leading-none tracking-tight">Your monthly split</h2>
         <p className="text-xs text-muted-foreground">Out of {formatINR(budget.income_paise)} a month.</p>
       </div>
       <ul className="space-y-3">

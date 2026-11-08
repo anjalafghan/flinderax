@@ -15,15 +15,15 @@ import { formatINR } from "@/utils/money";
 export default function WorkingPage() {
   const { data, isLoading, isError } = useSummary();
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       <Header />
-      <main className="container mx-auto max-w-4xl space-y-8 px-4 py-8">
+      <main className="page max-w-4xl space-y-8">
         <div>
           <Link to="/" className="mb-3 inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to dashboard
           </Link>
-          <h1 className="text-3xl font-bold tracking-tight">The working</h1>
-          <p className="text-muted-foreground">How the dashboard number is made, step by step.</p>
+          <h1 className="page-title">The working</h1>
+          <p className="page-sub">How the dashboard number is made, step by step.</p>
         </div>
 
         {isLoading && <div className="h-40 animate-pulse rounded-xl bg-muted/40" />}
@@ -37,7 +37,7 @@ export default function WorkingPage() {
               <div className="space-y-8">
                 <BudgetSplit budget={data.budget} spending={data.spending} />
                 {data.next_period && (
-                  <section aria-label="Next period" className="rounded-xl border p-4 text-sm">
+                  <section aria-label="Next period" className="glass rounded-3xl p-4 text-sm">
                     <p className="font-semibold">Heads-up: {data.next_period.label}</p>
                     <p className="mt-1 text-muted-foreground">
                       {formatINR(data.next_period.income_paise)} arrives, and {formatINR(data.next_period.committed_paise)} of

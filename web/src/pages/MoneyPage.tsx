@@ -13,12 +13,12 @@ const LINKS = [
 
 export default function MoneyPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       <Header />
-      <main className="container mx-auto max-w-3xl space-y-6 px-4 py-6 md:py-8">
+      <main className="page max-w-3xl space-y-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Money</h1>
-          <p className="text-muted-foreground">Your accounts, cards and spending in one place.</p>
+          <h1 className="page-title">Money</h1>
+          <p className="page-sub">Your accounts, cards and spending in one place.</p>
         </div>
         <ul className="grid gap-3 sm:grid-cols-2">
           {LINKS.map((l) => (

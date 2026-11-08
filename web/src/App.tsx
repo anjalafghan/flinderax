@@ -22,7 +22,7 @@ const ReviewPage = lazy(() => import('./pages/ReviewPage'))
 
 // Simple loading fallback
 const PageLoader = () => (
-  <div className="flex h-screen items-center justify-center bg-background">
+  <div className="flex h-screen items-center justify-center">
     <div className="text-muted-foreground">Loading...</div>
   </div>
 )
@@ -35,7 +35,7 @@ function App() {
 
   return (
     <>
-      <div className={showTabs ? 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0' : undefined}>
+      <div className={showTabs ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0' : undefined}>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route

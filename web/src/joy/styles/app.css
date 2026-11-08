@@ -1,6 +1,7 @@
 /* Flinderax-side glue for the Dates section. Joy's own CSS is untouched; this only fits it into the app. */
 .joy { overflow-x: clip; }
-.joy .top { top: 65px; }
+.joy .top { top: 0; }
+.joy * { font-synthesis-weight: none; }
 .joy .subnav {
   max-width: 680px; margin: 0 auto; padding: 0 var(--gutter);
   display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: flex-end;
@@ -11,7 +12,7 @@
 }
 .joy .subnav a[aria-current="page"] { color: var(--ink); text-decoration-color: var(--stamp); }
 /* the phone tab bar is fixed to the bottom: keep the toast above it */
-.joy .toast-region { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 4.5rem); }
+.joy .toast-region { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 5.5rem); }
 @media (min-width: 768px) { .joy .toast-region { bottom: max(16px, env(safe-area-inset-bottom)); } }
 .joy main { padding-bottom: 120px; }
 .joy main:focus { outline: none; }
@@ -23,7 +24,8 @@
 .joy .set-page h1 { font-size: var(--step-3); }
 .joy .set-card {
   display: grid; gap: 12px; padding: 18px 16px; background: var(--slip); color: var(--ink);
-  border: 1px solid var(--rule); border-radius: 14px; box-shadow: var(--shadow-slip);
+  border: 1px solid var(--rule); border-radius: 24px; box-shadow: var(--shadow-slip);
+  backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3);
 }
 .joy .set-card h2 { font-size: var(--step-1); }
 .joy .set-card p { margin: 0; }
@@ -51,3 +53,4 @@
 .joy .placeholder-page { padding-top: 24px; display: grid; gap: 10px; }
 .joy .placeholder-page h1 { font-size: var(--step-3); }
 .joy .status-line { min-height: 1.4em; }
+.joy .top .wordmark { display: none; }

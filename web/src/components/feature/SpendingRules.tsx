@@ -19,9 +19,9 @@ export function SpendingRules() {
       {isError && <p className="text-sm text-destructive">Couldn't load rules.</p>}
       {rules &&
         (rules.length === 0 ? (
-          <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No rules yet.</p>
+          <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No rules yet.</p>
         ) : (
-          <ul className="divide-y rounded-xl border">
+          <ul className="divide-y glass rounded-3xl">
             {rules.map((r) => (
               <li key={r.pattern} className="flex items-center justify-between gap-3 p-3 text-sm">
                 <p className="min-w-0 truncate">

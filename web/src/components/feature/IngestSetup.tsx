@@ -67,11 +67,11 @@ export function IngestSetup() {
   const lastUsed = status?.last_used_at ? formatDay(status.last_used_at.slice(0, 10)) : null;
 
   return (
-    <details className="group rounded-xl border p-4 md:p-6">
+    <details className="group glass rounded-3xl p-4 md:p-6">
       <summary className="cursor-pointer list-none">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Automatic import setup</h2>
+            <h2 className="font-display text-3xl leading-none tracking-tight">Automatic import setup</h2>
             <p className="text-sm text-muted-foreground">
               {isError
                 ? "Couldn't check the import key."

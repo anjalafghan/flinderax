@@ -6,13 +6,13 @@ export function UpcomingList({ items, limit = 5 }: { items: DashboardSummary["up
   const shown = items.slice(0, limit);
   return (
     <section aria-label="Upcoming payments" className="space-y-3">
-      <h2 className="text-lg font-bold tracking-tight">Upcoming payments</h2>
+      <h2 className="font-display text-3xl leading-none tracking-tight">Upcoming payments</h2>
       {shown.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+        <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
           No payments before your next income.
         </p>
       ) : (
-        <ul className="divide-y rounded-xl border">
+        <ul className="divide-y glass rounded-3xl">
           {shown.map((u, i) => (
             <li key={`${u.date}-${u.label}-${i}`} className="flex items-center justify-between gap-3 p-3 text-sm">
               <div className="min-w-0">

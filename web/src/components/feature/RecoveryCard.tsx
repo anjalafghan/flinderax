@@ -7,7 +7,7 @@ export function RecoveryCard({ summary }: { summary: DashboardSummary }) {
   if (!r && summary.spending.overspend_paise === 0) return null;
   return (
     <section aria-label="Paying it back" className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
-      <h2 className="text-lg font-bold tracking-tight">Paying it back</h2>
+      <h2 className="font-display text-3xl leading-none tracking-tight">Paying it back</h2>
       {summary.spending.overspend_paise > 0 && (
         <p>
           You've spent {formatINR(summary.spending.overspend_paise)} more than this month's spending allowance of{" "}

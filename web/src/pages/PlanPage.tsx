@@ -59,13 +59,13 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Income</CardTitle>
+        <CardTitle className="text-3xl">Income</CardTitle>
         <p className="text-sm text-muted-foreground">Your next payday sets the "until" date for Safe to Spend.</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <ul className="space-y-2">
           {incomes?.map((i: Income) => (
-            <li key={i.income_id} className="flex items-center justify-between gap-2 rounded-lg border p-3 text-sm">
+            <li key={i.income_id} className="flex items-center justify-between gap-2 glass rounded-2xl p-3 text-sm">
               <div className="min-w-0">
                 <p className="truncate font-medium">{i.label}</p>
                 <p className="text-xs text-muted-foreground">
@@ -122,7 +122,7 @@ function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) 
       ? `yearly${c.due_month ? ` in ${MONTHS[c.due_month - 1]}` : ", month not set"} on the ${ordinal(c.day_of_month)}`
       : `on the ${ordinal(c.day_of_month)}`;
   return (
-    <li className={cn("flex items-center justify-between gap-2 rounded-lg border p-3 text-sm", !c.active && "opacity-60")}>
+    <li className={cn("flex items-center justify-between gap-2 glass rounded-2xl p-3 text-sm", !c.active && "opacity-60")}>
       <div className="min-w-0">
         <p className="truncate font-medium">{c.label}</p>
         <p className="text-xs text-muted-foreground">
@@ -198,7 +198,7 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Fixed payments</CardTitle>
+        <CardTitle className="text-3xl">Fixed payments</CardTitle>
         <p className="text-sm text-muted-foreground">
           Anything paid on a fixed day: SIPs, house, phone and internet, gym, subscriptions, an RD instalment. Yearly bills
           are set aside a twelfth a month. Each counts toward Needs, Savings or Spending.
@@ -360,7 +360,7 @@ function SettingsSection() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Budget</CardTitle>
+        <CardTitle className="text-3xl">Budget</CardTitle>
         <p className="text-sm text-muted-foreground">
           Needs are your listed bills. You set how much to spend each month; everything left over is savings.
         </p>
@@ -459,13 +459,13 @@ export default function PlanPage() {
   }, [hash]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       <Header />
-      <main className="container mx-auto max-w-3xl space-y-8 px-4 py-6 md:py-8">
+      <main className="page max-w-3xl space-y-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Plan</h1>
-            <p className="text-muted-foreground">What's coming, what you're saving for, and what you can afford.</p>
+            <h1 className="page-title">Plan</h1>
+            <p className="page-sub">What's coming, what you're saving for, and what you can afford.</p>
           </div>
           <Link
             to="/what-if"
