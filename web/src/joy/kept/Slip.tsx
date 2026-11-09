@@ -5,7 +5,7 @@ import { deleteDate, deletePhoto, rate, reveal, setCost, setLine, setWhen, uploa
 import { CalLink } from "./CalLink";
 import { Icon } from "./Defs";
 import { useKept } from "./ctx";
-import { rotOf, tapeOf, uploadLabel } from "./helpers";
+import { photoOf, rotOf, tapeOf, uploadLabel } from "./helpers";
 import { buzz, reduced, useFit } from "./motion";
 import { useStateFrom } from "../components/useStateFrom";
 import { shrinkImage } from "./photo";
@@ -249,34 +249,39 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
   const photoAct = useAction();
   const fileEl = useRef<HTMLInputElement>(null);
   const figEl = useRef<HTMLElement>(null);
+  // Several files go up one after another; the first one that can't stops the rest.
   const onFile = (e: ChangeEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
-    const file = input.files?.[0];
-    if (!file) return;
+    const files = Array.from(input.files ?? []);
+    if (files.length === 0) return;
     void photoAct.act(async () => {
-      setPhotoMsg({ text: "Getting it ready…", tone: "" });
-      setPhase({ k: "shrink" });
+      let added = 0;
       try {
-        const blob = await shrinkImage(file);
-        const go = await uploadPhoto(h.id, blob, (l, t) => {
-          const label = uploadLabel(l, t);
-          setPhotoMsg({ text: label, tone: "" });
-          setPhase(l < t ? { k: "upload", label } : { k: "dev" });
-        });
-        setPhase({ k: "dev" });
-        setPhotoMsg({ text: "Developing…", tone: "" });
-        await finish(go, { focus: `#p${h.id}` });
+        for (const [i, file] of files.entries()) {
+          const tell = (label: string) => setPhotoMsg({ text: photoOf(i + 1, files.length, label), tone: "" });
+          tell("Getting it ready…");
+          setPhase({ k: "shrink" });
+          const blob = await shrinkImage(file);
+          await uploadPhoto(h.id, blob, (l, t) => {
+            const label = uploadLabel(l, t);
+            tell(label);
+            setPhase(l < t ? { k: "upload", label } : { k: "dev" });
+          });
+          added += 1;
+          setPhase({ k: "dev" });
+          tell("Developing…");
+          await refresh();
+        }
         setFresh(true);
-        setPhotoMsg({ text: "Photo added.", tone: "" });
+        setPhotoMsg({ text: added > 1 ? `${added} photos added.` : "Photo added.", tone: "" });
         figEl.current?.scrollIntoView({ block: "nearest", behavior: reduced() ? "auto" : "smooth" });
       } catch (x) {
-        setPhotoMsg({
-          text: x instanceof TypeError ? "Offline? The photo didn’t go up. Try again in a moment." : x instanceof ApiError ? x.message : "That didn’t work. Try again?",
-          tone: "err",
-        });
+        const why = x instanceof TypeError ? "Offline? The photo didn’t go up. Try again in a moment." : x instanceof ApiError ? x.message : "That didn’t work. Try again?";
+        setPhotoMsg({ text: added > 0 ? `${added} added, then: ${why}` : why, tone: "err" });
       } finally {
         input.value = "";
         setPhase({ k: "idle" });
+        await refresh(`#p${h.id}`);
       }
     });
   };
@@ -324,7 +329,9 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
   const dateDel = useAction();
   const dateFold = useFold();
 
-  const hasPhoto = h.photo_url !== null;
+  const pics = h.photos ?? [];
+  const cover = pics[0];
+  const hasPhoto = cover !== undefined;
   return (
     <li
       className={`k-slip grain${hasPhoto ? " has-photo" : ""}`}
@@ -398,14 +405,32 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
         </p>
 
         {hasPhoto ? (
-          <figure ref={figEl} className={`k-polaroid${developing ? " is-developing" : ""}${fresh ? " k-fresh" : ""}`} id={`kp${h.id}`} tabIndex={-1}>
-            <a href={h.photo_url!} className="k-polaroid-frame" aria-label={`Open the photo from ${h.title}`}>
-              <img src={h.photo_url!} alt={`Photo from ${h.title}`} width={480} height={360} loading={fresh ? "eager" : "lazy"} decoding="async" />
-            </a>
-            <figcaption className="hand" aria-hidden="true">
-              {h.day_label}
-            </figcaption>
-          </figure>
+          <>
+            <figure ref={figEl} className={`k-polaroid${fresh ? " k-fresh" : ""}`} id={`kp${h.id}`} tabIndex={-1}>
+              <a href={cover.url} className="k-polaroid-frame" aria-label={`Open the photo from ${h.title}`}>
+                <img src={cover.url} alt={`Photo from ${h.title}`} width={480} height={360} loading={fresh ? "eager" : "lazy"} decoding="async" />
+              </a>
+              <figcaption className="hand" aria-hidden="true">
+                {h.day_label}
+              </figcaption>
+            </figure>
+            {(pics.length > 1 || developing) && (
+              <ul className="k-photo-strip" aria-label={`More photos from ${h.title}`}>
+                {pics.slice(1).map((p, i) => (
+                  <li key={p.id}>
+                    <a href={p.url} aria-label={`Open photo ${i + 2} of ${pics.length} from ${h.title}`}>
+                      <img src={p.url} alt="" width={160} height={120} loading="lazy" decoding="async" />
+                    </a>
+                  </li>
+                ))}
+                {developing && (
+                  <li className="k-pending" aria-hidden="true">
+                    <div className="k-dev">developing…</div>
+                  </li>
+                )}
+              </ul>
+            )}
+          </>
         ) : (
           developing && (
             <figure ref={figEl} className="k-polaroid k-pending" aria-hidden="true">
@@ -542,12 +567,16 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
 
         <div className="k-tools">
           <form className={`k-photo-form${photoAct.busy ? " is-busy" : ""}`} onSubmit={(e) => e.preventDefault()}>
-            <input ref={fileEl} className="k-file" type="file" name="photo" id={`p${h.id}`} accept="image/*" onChange={onFile} />
-            <label className="k-tool" htmlFor={`p${h.id}`}>
-              <Icon id="k-cam" size={18} />
-              {hasPhoto ? "Change photo" : "Add a photo"}
-              <span className="visually-hidden"> for {h.title}</span>
-            </label>
+            {h.can_add_photo !== false && (
+              <>
+                <input ref={fileEl} className="k-file" type="file" name="photo" id={`p${h.id}`} accept="image/*" multiple onChange={onFile} />
+                <label className="k-tool" htmlFor={`p${h.id}`}>
+                  <Icon id="k-cam" size={18} />
+                  {hasPhoto ? "Add more photos" : "Add photos"}
+                  <span className="visually-hidden"> for {h.title}</span>
+                </label>
+              </>
+            )}
             <span className="k-photo-status" role="status" aria-live="polite" data-tone={photoMsg.tone}>
               {photoMsg.text}
             </span>
@@ -628,19 +657,42 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
           </details>
           {hasPhoto && (
             <details className="k-photo-del" {...photoFold.props}>
-              <summary className="k-tool k-tool-quiet">Remove photo</summary>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void photoDel.act(async () => finish(await deletePhoto(h.id), { focus: `#p${h.id}` }));
-                }}
-              >
-                <p>Take the photo off this page? It can’t be undone.</p>
-                <button className="k-btn k-btn-stamp" type="submit" disabled={photoDel.busy}>
-                  Yes, remove it
-                </button>
-                <Err text={photoDel.err} />
-              </form>
+              <summary className="k-tool k-tool-quiet">{pics.length > 1 ? "Remove a photo" : "Remove photo"}</summary>
+              {pics.length > 1 ? (
+                <div>
+                  <p>Which one should come off this page? It can’t be undone.</p>
+                  <ul className="k-photo-pick">
+                    {pics.map((p, i) => (
+                      <li key={p.id}>
+                        <img src={p.url} alt="" width={96} height={72} loading="lazy" decoding="async" />
+                        <button
+                          className="k-btn k-btn-stamp"
+                          type="button"
+                          disabled={photoDel.busy}
+                          aria-label={`Remove photo ${i + 1} of ${pics.length}`}
+                          onClick={() => void photoDel.act(async () => finish(await deletePhoto(h.id, p.id), { focus: `#k${h.id} .k-photo-del > summary` }))}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <Err text={photoDel.err} />
+                </div>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void photoDel.act(async () => finish(await deletePhoto(h.id, cover.id), { focus: `#p${h.id}` }));
+                  }}
+                >
+                  <p>Take the photo off this page? It can’t be undone.</p>
+                  <button className="k-btn k-btn-stamp" type="submit" disabled={photoDel.busy}>
+                    Yes, remove it
+                  </button>
+                  <Err text={photoDel.err} />
+                </form>
+              )}
             </details>
           )}
           <details className="k-photo-del k-date-del" {...dateFold.props}>
@@ -654,7 +706,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
               }}
             >
               <p>
-                Take “{h.title}” out of Kept? Its rating{hasPhoto ? ", note and photo" : " and note"} go too. The slip stays in the jar.
+                Take “{h.title}” out of Kept? Its rating{hasPhoto ? `, note and ${pics.length > 1 ? "photos" : "photo"}` : " and note"} go too. The slip stays in the jar.
               </p>
               <button className="k-btn k-btn-stamp" type="submit" disabled={dateDel.busy}>
                 Yes, delete it

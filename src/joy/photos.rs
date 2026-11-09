@@ -1,5 +1,7 @@
-//! One photo per kept date: decoded, turned the right way up (EXIF), shrunk to
-//! fit 1600px and stored as <dir>/<history id>.jpg. Never served from /static.
+//! Photos of kept dates and regular nights: decoded, turned the right way up (EXIF), shrunk to
+//! fit 1600px and stored in the couple's folder. A kept date can hold several (see
+//! `joy_history_photos`); its first is <dir>/<history id>.jpg when it came from before that.
+//! Never served from /static.
 
 use std::{io::Cursor, path::PathBuf, sync::LazyLock};
 
@@ -14,8 +16,17 @@ const MAX_PIXELS: u64 = 40_000_000;
 /// At most this many photos decode at once, so a burst of uploads can't exhaust a 512 MB VM.
 static DECODE_SLOTS: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(2));
 
-pub fn path(dir: &std::path::Path, history_id: i64) -> PathBuf {
-    dir.join(format!("{history_id}.jpg"))
+/// Where a kept date's stored photo lives. `file` always comes from the database, never from a
+/// request, and is checked to be a bare name so it can't point outside `dir`.
+pub fn date_path(dir: &std::path::Path, file: &str) -> Option<PathBuf> {
+    let bare = !file.is_empty() && !file.contains(['/', '\\']) && !file.starts_with('.');
+    bare.then(|| dir.join(file))
+}
+
+/// A fresh file name for one more photo of a kept date: `<history id>-<16 hex>.jpg`. Random, so
+/// a removed photo's name (and anything cached under it) is never reused.
+pub fn new_date_file(history_id: i64) -> String {
+    format!("{history_id}-{:016x}.jpg", rand::random::<u64>())
 }
 
 /// A night at a regular: <dir>/v<visit id>.jpg, so it can never collide with a kept date's file.
@@ -113,6 +124,18 @@ mod tests {
         DynamicImage::ImageRgb8(RgbImage::new(3200, 2000)).write_to(&mut Cursor::new(&mut png), ImageFormat::Png).unwrap();
         let (w, h) = ImageReader::new(Cursor::new(&png)).with_guessed_format().unwrap().into_dimensions().unwrap();
         assert_eq!((w, h), (3200, 2000));
+    }
+
+    #[test]
+    fn date_files_stay_inside_the_folder() {
+        let dir = std::path::Path::new("/photos/c1");
+        assert_eq!(date_path(dir, "9.jpg").unwrap(), dir.join("9.jpg"));
+        assert!(date_path(dir, "../9.jpg").is_none());
+        assert!(date_path(dir, "a/9.jpg").is_none());
+        assert!(date_path(dir, "").is_none());
+        let a = new_date_file(9);
+        assert!(a.starts_with("9-") && a.ends_with(".jpg") && a.len() == "9-".len() + 16 + 4, "{a}");
+        assert_ne!(a, new_date_file(9));
     }
 
     #[test]

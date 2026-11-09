@@ -11,7 +11,7 @@ use serde::Serialize;
 
 use super::{
     regular::visit_photo_url,
-    year::{history_photo_url, rows, MONTHS},
+    year::{rows, MONTHS},
     AppError, Me,
 };
 use crate::{
@@ -163,7 +163,7 @@ pub async fn page(
                 kind_label: picker::setting_label(&r.setting).to_string(),
                 day: r.day_label.clone(),
                 stamp: r.stamp.clone(),
-                photo: if r.has_photo { history_photo_url(ctx, r.id) } else { String::new() },
+                photo: r.cover_url(),
                 rating: r.rating.unwrap_or(0),
                 note: r.note.lines().next().unwrap_or("").to_string(),
                 est: ctx.money(r.est),

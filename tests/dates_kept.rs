@@ -292,6 +292,8 @@ async fn a_surprise_is_hidden_from_the_partner_who_cannot_reveal_or_touch_it() {
     let hid = t.keep(&couple, &rohit, PLAY, true).await;
     t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch('now', '+1 days') WHERE id = {hid}")).await;
     t.exec(&format!("UPDATE joy_history SET has_photo = 1 WHERE id = {hid}")).await;
+    t.exec(&format!("INSERT INTO joy_history_photos (history_id, file) VALUES ({hid}, '{hid}.jpg')")).await;
+    let pid = t.scalar("SELECT max(id) FROM joy_history_photos").await;
 
     let page = t.get("/api/dates/kept", &neha).await;
     assert!(!page.text.contains("Prithvi") && !page.text.contains("Theatre"), "{}", page.text);
@@ -299,6 +301,7 @@ async fn a_surprise_is_hidden_from_the_partner_who_cannot_reveal_or_touch_it() {
     assert_eq!(item["sealed"], true);
     assert_eq!(item["title"], "");
     assert!(item["photo_url"].is_null(), "no photo link for a sealed date");
+    assert!(item["photos"].as_array().unwrap().is_empty(), "no photos for a sealed date");
     assert!(item["hints"].as_array().unwrap().len() >= 3);
     assert_eq!(item["can_reveal"], false);
 
@@ -313,7 +316,7 @@ async fn a_surprise_is_hidden_from_the_partner_who_cannot_reveal_or_touch_it() {
         (format!("/api/dates/history/{hid}/cost"), json!({"actual": "5"})),
         (format!("/api/dates/history/{hid}/line"), json!({"line": "peek"})),
         (format!("/api/dates/history/{hid}/delete"), json!({})),
-        (format!("/api/dates/history/{hid}/photo/delete"), json!({})),
+        (format!("/api/dates/history/{hid}/photos/{pid}/delete"), json!({})),
         (format!("/api/dates/history/{hid}/plan-b"), json!({})),
         (format!("/api/dates/history/when"), json!({"ids": hid, "at": "2030-01-02T19:00"})),
         (format!("/api/dates/budget/spend"), json!({"amount": 100, "history_id": hid})),
@@ -438,7 +441,7 @@ async fn other_spending_and_savings_work() {
 }
 
 #[tokio::test]
-async fn a_photo_uploads_and_is_served_through_a_signed_link_only() {
+async fn a_date_takes_several_photos_each_served_through_its_own_signed_link() {
     let t = setup().await;
     let (rohit, neha, couple) = t.couple().await;
     let hid = t.keep(&couple, &rohit, COOK, false).await;
@@ -449,41 +452,65 @@ async fn a_photo_uploads_and_is_served_through_a_signed_link_only() {
     assert!(bad.text.contains("photo"), "{}", bad.text);
     assert_eq!(t.scalar(&format!("SELECT has_photo FROM joy_history WHERE id = {hid}")).await, 0);
 
-    let up = t.upload(&format!("/api/dates/history/{hid}/photo"), &neha, &tiny_jpeg()).await;
-    assert_eq!((up.status, up.json["to"].as_str()), (StatusCode::OK, Some(format!("/joy/kept#k{hid}").as_str())), "{}", up.text);
+    // Each upload adds one more; the first stays the cover.
+    for who in [&neha, &rohit] {
+        let up = t.upload(&format!("/api/dates/history/{hid}/photo"), who, &tiny_jpeg()).await;
+        assert_eq!((up.status, up.json["to"].as_str()), (StatusCode::OK, Some(format!("/joy/kept#k{hid}").as_str())), "{}", up.text);
+    }
     assert_eq!(t.scalar(&format!("SELECT has_photo FROM joy_history WHERE id = {hid}")).await, 1);
+    let item = t.item(&rohit, hid).await;
+    let pics = item["photos"].as_array().unwrap().clone();
+    assert_eq!(pics.len(), 2);
+    assert_eq!(item["can_add_photo"], true);
+    let (first, second) = (pics[0]["id"].as_i64().unwrap(), pics[1]["id"].as_i64().unwrap());
+    assert!(first < second);
+    assert_eq!(item["photo_url"], pics[0]["url"], "the cover is the first photo");
 
-    let signed = t.item(&rohit, hid).await["photo_url"].as_str().unwrap().to_string();
-    assert!(signed.starts_with(&format!("/api/public/dates/history/{hid}/photo?v=")) && signed.contains("&exp=") && signed.contains("&sig="), "{signed}");
+    let signed = pics[0]["url"].as_str().unwrap().to_string();
+    assert!(signed.starts_with(&format!("/api/public/dates/history/{hid}/photos/{first}?exp=")) && signed.contains("&sig="), "{signed}");
     let url = public_url(&signed);
-    let ok = t.public(&url).await;
-    assert_eq!(ok.status, StatusCode::OK, "{}", ok.text);
-    assert_eq!(ok.headers["content-type"], "image/jpeg");
-    let decoded = image::load_from_memory(&ok.bytes).unwrap();
-    assert_eq!((decoded.width(), decoded.height()), (4, 4));
+    let url2 = public_url(pics[1]["url"].as_str().unwrap());
+    for u in [&url, &url2] {
+        let ok = t.public(u).await;
+        assert_eq!(ok.status, StatusCode::OK, "{}", ok.text);
+        assert_eq!(ok.headers["content-type"], "image/jpeg");
+        let decoded = image::load_from_memory(&ok.bytes).unwrap();
+        assert_eq!((decoded.width(), decoded.height()), (4, 4));
+    }
     // The link needs no login; the protected prefix has no such route.
     assert_ne!(t.call(Method::GET, &signed.replacen("/api/public", "/api", 1), None, None).await.status, StatusCode::OK);
 
-    // Tampering: a flipped signature, another id, a longer life, or no signature at all.
+    // Tampering: a flipped signature, another date, another photo, a longer life, or no signature.
     let flipped = if url.ends_with('0') { format!("{}1", &url[..url.len() - 1]) } else { format!("{}0", &url[..url.len() - 1]) };
     assert_eq!(t.public(&flipped).await.status, StatusCode::FORBIDDEN);
     assert_eq!(t.public(&url.replace(&format!("history/{hid}/"), &format!("history/{}/", hid + 1))).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(t.public(&url.replace(&format!("photos/{first}?"), &format!("photos/{second}?"))).await.status, StatusCode::FORBIDDEN);
     let exp = url.split("exp=").nth(1).unwrap().split('&').next().unwrap();
     assert_eq!(t.public(&url.replace(exp, &(exp.parse::<i64>().unwrap() + 100).to_string())).await.status, StatusCode::FORBIDDEN);
-    assert_eq!(t.public(&url.split("&exp=").next().unwrap()).await.status, StatusCode::FORBIDDEN);
-    // Expired: correctly signed an hour ago.
-    let v = signed.split("v=").nth(1).unwrap().split('&').next().unwrap();
-    let expired = public_url(&sign(&format!("/api/dates/history/{hid}/photo?v={v}"), -5));
+    assert_eq!(t.public(url.split("?exp=").next().unwrap()).await.status, StatusCode::FORBIDDEN);
+    // Expired: correctly signed, but already past.
+    let expired = public_url(&sign(&format!("/api/dates/history/{hid}/photos/{first}"), -5));
     assert_eq!(t.public(&expired).await.status, StatusCode::FORBIDDEN);
-    // A link made for one date can't open another's photo path with a different version either.
-    let other_v = public_url(&sign(&format!("/api/dates/history/{hid}/photo?v=1"), 60).replace("v=1", "v=2"));
-    assert_eq!(t.public(&other_v).await.status, StatusCode::FORBIDDEN);
+    // A good signature for a photo of another date is still a 404 here.
+    let wrong_date = public_url(&sign(&format!("/api/dates/history/{}/photos/{first}", hid + 1), 60));
+    assert_eq!(t.public(&wrong_date).await.status, StatusCode::NOT_FOUND);
 
-    // Gone once deleted: the link 404s and the page stops offering it.
-    let r = t.post(&format!("/api/dates/history/{hid}/photo/delete"), &rohit, json!({})).await;
+    // Removing one leaves the other, which becomes the cover.
+    let r = t.post(&format!("/api/dates/history/{hid}/photos/{first}/delete"), &rohit, json!({})).await;
     assert_eq!(r.status, StatusCode::OK);
     assert_eq!(t.public(&url).await.status, StatusCode::NOT_FOUND);
-    assert!(t.item(&rohit, hid).await["photo_url"].is_null());
+    assert_eq!(t.public(&url2).await.status, StatusCode::OK);
+    let item = t.item(&rohit, hid).await;
+    assert_eq!(item["photos"].as_array().unwrap().len(), 1);
+    assert!(item["photo_url"].as_str().unwrap().contains(&format!("/photos/{second}?")));
+    assert_eq!(t.scalar(&format!("SELECT has_photo FROM joy_history WHERE id = {hid}")).await, 1);
+
+    // Gone once the last is removed: the page stops offering any.
+    t.post(&format!("/api/dates/history/{hid}/photos/{second}/delete"), &neha, json!({})).await;
+    assert_eq!(t.public(&url2).await.status, StatusCode::NOT_FOUND);
+    let item = t.item(&rohit, hid).await;
+    assert!(item["photo_url"].is_null() && item["photos"].as_array().unwrap().is_empty());
+    assert_eq!(t.scalar(&format!("SELECT has_photo FROM joy_history WHERE id = {hid}")).await, 0);
 }
 
 #[tokio::test]
@@ -492,15 +519,15 @@ async fn a_sealed_surprise_photo_is_a_404_even_with_a_good_signature() {
     let (rohit, neha, couple) = t.couple().await;
     let hid = t.keep(&couple, &rohit, PLAY, true).await;
     assert_eq!(t.upload(&format!("/api/dates/history/{hid}/photo"), &rohit, &tiny_jpeg()).await.status, StatusCode::OK);
+    let pid = t.scalar("SELECT max(id) FROM joy_history_photos").await;
 
     // The planner's own link names them; it works for them and for nobody else.
     let mine = t.item(&rohit, hid).await["photo_url"].as_str().unwrap().to_string();
-    assert!(mine.contains("&who=0&"), "{mine}");
+    assert!(mine.contains("?who=0&"), "{mine}");
     assert_eq!(t.public(&public_url(&mine)).await.status, StatusCode::OK);
-    let v = mine.split("v=").nth(1).unwrap().split('&').next().unwrap();
-    let as_neha = public_url(&sign(&format!("/api/dates/history/{hid}/photo?v={v}&who=1"), 60));
+    let as_neha = public_url(&sign(&format!("/api/dates/history/{hid}/photos/{pid}?who=1"), 60));
     assert_eq!(t.public(&as_neha).await.status, StatusCode::NOT_FOUND);
-    let nobody = public_url(&sign(&format!("/api/dates/history/{hid}/photo?v={v}"), 60));
+    let nobody = public_url(&sign(&format!("/api/dates/history/{hid}/photos/{pid}"), 60));
     assert_eq!(t.public(&nobody).await.status, StatusCode::NOT_FOUND);
     // Swapping `who` by hand breaks the signature.
     assert_eq!(t.public(&public_url(&mine).replace("who=0", "who=1")).await.status, StatusCode::FORBIDDEN);
@@ -609,7 +636,7 @@ async fn another_couple_gets_404_for_everything() {
         (format!("/api/dates/history/{hid}/delete"), json!({})),
         (format!("/api/dates/history/{hid}/cost"), json!({"actual": "1"})),
         (format!("/api/dates/history/{hid}/line"), json!({"line": "hi"})),
-        (format!("/api/dates/history/{hid}/photo/delete"), json!({})),
+        (format!("/api/dates/history/{hid}/photos/1/delete"), json!({})),
         (format!("/api/dates/history/{hid}/plan-b"), json!({})),
         (format!("/api/dates/tasks/{task}/done"), json!({"done": "1"})),
         ("/api/dates/history/when".to_string(), json!({"ids": hid, "at": "2030-01-02T19:00"})),
