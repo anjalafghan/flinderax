@@ -284,7 +284,7 @@ pub async fn build(db: &SqlitePool, couple: &str, ctx: &Ctx, row: &HistoryRow, w
     let after = if sealed || slot.kind == Kind::Apart || a.latlng().is_none() {
         String::new()
     } else {
-        after(ctx, &a, &db::list(db, couple, false).await?, wd, fit.end)
+        after(ctx, &a, &db::visible_list(db, couple, who).await?, wd, fit.end)
     };
     let plan_b = match (sealed, row.plan_b) {
         (false, Some(id)) => db::get(db, couple, id).await?.map(|b| PlanB {
@@ -370,7 +370,9 @@ pub async fn on_keep(
             }
         }
     }
-    let acts = db::list(db, couple, false).await?;
+    // Plan B shows to both of us, so a slip that's a secret surprise from either one can't be it.
+    let sealed = db::sealed_any(db, couple).await?;
+    let acts: Vec<Activity> = db::list(db, couple, false).await?.into_iter().filter(|x| !sealed.contains(&x.id)).collect();
     let vetoed: Vec<i64> = db::vetoes(db, couple).await?.into_iter().map(|(a, _)| a).collect();
     let acts: Vec<Activity> = acts.into_iter().filter(|x| !vetoed.contains(&x.id)).collect();
     if row.plan_b.is_none() {

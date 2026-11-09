@@ -119,10 +119,7 @@ pub struct PlanForm {
 /// 404 when `id` is a sealed surprise the other partner drew for this viewer, so it can't be opened,
 /// changed or even confirmed to exist (a 403 would give the surprise away).
 async fn unsealed(db: &SqlitePool, j: &Joy, id: i64) -> Result<(), AppError> {
-    if db::sealed_from(db, &j.couple, j.who).await?.contains(&id) {
-        return Err(not_found("No such slip"));
-    }
-    Ok(())
+    super::unsealed(db, &j.couple, j.who, id).await
 }
 
 /// A slip of ours, or a 404.
@@ -212,7 +209,7 @@ pub struct FormView {
 
 async fn form(db: &SqlitePool, j: &Joy, id: Option<i64>, i: &ActivityInput, error: &str) -> Result<FormView, AppError> {
     let ctx = &j.ctx;
-    let mut pair_opts = db::list(db, &j.couple, false)
+    let mut pair_opts = db::visible_list(db, &j.couple, Some(j.who))
         .await?
         .iter()
         .filter(|o| Some(o.id) != id)

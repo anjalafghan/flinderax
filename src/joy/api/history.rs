@@ -392,14 +392,14 @@ fn cost_insight(l: &Learned) -> String {
     line
 }
 
-async fn savings_view(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<SavingsView, AppError> {
+async fn savings_view(db: &SqlitePool, couple: &str, ctx: &Ctx, who: usize) -> Result<SavingsView, AppError> {
     let saved = db::savings_balance(db, couple).await?;
     let learned = learned(db, couple).await?;
-    let mut slips: Vec<_> = db::list(db, couple, false).await?.into_iter().filter(|a| a.est_cost > 0).collect();
+    let mut slips: Vec<_> = db::visible_list(db, couple, Some(who)).await?.into_iter().filter(|a| a.est_cost > 0).collect();
     slips.sort_by_key(|a| std::cmp::Reverse(a.effective_cost(learned.cost)));
     let goal_id: Option<i64> = db::setting(db, couple, "saving_for").await?.and_then(|v| v.parse().ok());
     let goal = match goal_id {
-        Some(id) => db::get(db, couple, id).await?.map(|a| {
+        Some(id) => db::visible_get(db, couple, who, id).await?.map(|a| {
             let cost = a.effective_cost(learned.cost);
             Goal {
                 title: ctx.personalize(&a.title),
@@ -496,7 +496,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
         cost_insight: cost_insight(&learned(db, couple).await?),
         past: past_months(db, couple, ctx).await?,
         other_spend,
-        savings: savings_view(db, couple, ctx).await?,
+        savings: savings_view(db, couple, ctx, j.who).await?,
     }))
 }
 
@@ -984,7 +984,10 @@ pub struct GoalBody {
 pub async fn set_goal(State(s): State<AppState>, Extension((user_id, _)): User, Json(f): Json<GoalBody>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     let id = match f.id.trim().parse::<i64>() {
-        Ok(id) => db::get(&s.db, &j.couple, id).await?.map(|a| a.id.to_string()),
+        Ok(id) => {
+            super::unsealed(&s.db, &j.couple, j.who, id).await?;
+            db::visible_get(&s.db, &j.couple, j.who, id).await?.map(|a| a.id.to_string())
+        }
         Err(_) => None,
     };
     db::set_setting(&s.db, &j.couple, "saving_for", id.as_deref()).await?;
@@ -1013,7 +1016,7 @@ pub async fn keep_goal(State(s): State<AppState>, Extension((user_id, _)): User)
     let j = joy(&s, &user_id).await?;
     let (db, couple) = (&s.db, j.couple.as_str());
     let Some(a) = db::setting(db, couple, "saving_for").await?.and_then(|v| v.parse().ok()) else { return Ok(go(SAVINGS_TO)) };
-    let Some(a) = db::get(db, couple, a).await? else { return Ok(go(SAVINGS_TO)) };
+    let Some(a) = db::visible_get(db, couple, j.who, a).await? else { return Ok(go(SAVINGS_TO)) };
     let cost = a.effective_cost(learned(db, couple).await?.cost);
     Ok(match db::keep_from_savings(db, couple, a.id, cost, Some(j.who)).await? {
         Some(h) => go(kept_to(h)),

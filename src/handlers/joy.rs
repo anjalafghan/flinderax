@@ -198,7 +198,7 @@ pub async fn summary(State(state): State<AppState>, Extension((user_id, _)): Use
     let db = &state.db;
     // Dates lives in this app now: read it directly, nothing to fetch and nothing stale.
     if let Some((couple, who)) = couple_of(db, &user_id).await? {
-        let p = local_payload(db, &couple).await?;
+        let p = local_payload(db, &couple, Some(who)).await?;
         let partner = partner_covers(db, &couple, who, &p).await?;
         let mut out = Summary { connected: true, partner_paise: partner, ..Default::default() };
         out.labelled = label_dates(db, &user_id, &p).await?;
@@ -262,7 +262,7 @@ fn fill_month(out: &mut Summary, p: &JoyPayload, partner_paise: i64) {
 const LOCAL_MONTHS: i64 = 6;
 
 /// The same figures Joy's `/api/v1/spending` gave, read from the Dates tables (whole rupees).
-pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str) -> Result<JoyPayload, AppError> {
+pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str, who: Option<usize>) -> Result<JoyPayload, AppError> {
     use crate::joy::db as jdb;
     let mut months_list = Vec::new();
     for back in (0..LOCAL_MONTHS).rev() {
@@ -280,12 +280,16 @@ pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str) -> Result<JoyPay
         });
     }
     let (oldest, newest) = (months_list[0].clone(), months_list[months_list.len() - 1].clone());
-    // Kept dates (an unrevealed surprise keeps its amount but not its name), other date spending,
+    // Kept dates (an unrevealed surprise keeps its amount for the partner, but not its name or day: the day shows as the 1st of its month, so the budget adds up and the month still places it), other date spending,
     // and nights out with a regular: the same rules as Joy's spending API.
     let rows: Vec<(String, String, i64, String, String)> = sqlx::query_as(
-        "SELECT 'date:' || h.id, date(COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime'),
+        "SELECT 'date:' || h.id,
+                CASE WHEN h.surprise = 1 AND h.revealed = 0 AND COALESCE(h.drawn_by, -1) <> ?4
+                     THEN strftime('%Y-%m-01', COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime')
+                     ELSE date(COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime') END,
                 MAX(h.actual_cost - COALESCE(h.from_savings, 0), 0),
-                CASE WHEN h.surprise = 1 AND h.revealed = 0 THEN 'A surprise date' ELSE COALESCE(a.title, '') END, 'date'
+                CASE WHEN h.surprise = 1 AND h.revealed = 0 AND COALESCE(h.drawn_by, -1) <> ?4
+                     THEN 'A surprise date' ELSE COALESCE(a.title, '') END, 'date'
            FROM joy_history h LEFT JOIN joy_activities a ON a.id = h.activity_id
           WHERE h.couple_id = ?1 AND h.outcome = 'did_it' AND h.actual_cost IS NOT NULL
             AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()
@@ -302,6 +306,7 @@ pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str) -> Result<JoyPay
     .bind(couple)
     .bind(&oldest)
     .bind(&newest)
+    .bind(who.map_or(-1, |w| w as i64))
     .fetch_all(db)
     .await?;
     let entries = rows
@@ -357,7 +362,7 @@ pub struct SettleOut {
 pub async fn settle(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<SettleOut>, AppError> {
     let db = &state.db;
     let (couple, who) = crate::handlers::couple::require_couple(db, &user_id).await?;
-    let p = local_payload(db, &couple).await?;
+    let p = local_payload(db, &couple, Some(who)).await?;
     let partner = partner_covers(db, &couple, who, &p).await?;
     let budget = p.monthly_budget.unwrap_or(0) * 100;
     let your_share_bps = if budget > 0 { ((budget - partner).clamp(0, budget) * 10_000) / budget } else { 5_000 };
