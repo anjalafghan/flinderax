@@ -1,4 +1,4 @@
-import protobuf from 'protobufjs';
+import type { Type } from 'protobufjs';
 
 // Define the protobuf schema inline
 const historyProto = `
@@ -32,13 +32,14 @@ message CardList {
 }
 `;
 
-let CardHistoryListType: protobuf.Type | null = null;
-let CardListType: protobuf.Type | null = null;
+let CardHistoryListType: Type | null = null;
+let CardListType: Type | null = null;
 
-// Initialize the protobuf type
+// Initialize the protobuf type. protobufjs is loaded on first use, so it only ships with the card screens.
 async function initProto() {
     if (CardHistoryListType && CardListType) return { CardHistoryListType, CardListType };
 
+    const protobuf = (await import('protobufjs')).default;
     const root = protobuf.parse(historyProto).root;
     CardHistoryListType = root.lookupType('joy_backend.CardHistoryList');
     CardListType = root.lookupType('joy_backend.CardList');

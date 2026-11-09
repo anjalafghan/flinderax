@@ -1,5 +1,4 @@
-import { memo, useEffect } from "react"
-import { motion } from "framer-motion"
+import { memo, useEffect, useRef, type PointerEvent } from "react"
 import { ArrowRight } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
@@ -25,6 +24,11 @@ interface CardCarouselProps {
     isMobile: boolean
 }
 
+/** A swipe farther than this (px) moves to the next or previous card. */
+const SWIPE_PX = 40
+/** Past this (px) a pointer press counts as a drag, so the click that follows is ignored. */
+const DRAG_PX = 5
+
 export const CardCarousel = memo(function CardCarousel({
     cards,
     activeIndex,
@@ -32,6 +36,9 @@ export const CardCarousel = memo(function CardCarousel({
     isMobile
 }: CardCarouselProps) {
     const navigate = useNavigate()
+    // Swipe state: the CSS transitions replace framer's spring drag, so a swipe is read here.
+    const press = useRef<{ x: number; moved: boolean } | null>(null)
+    const swallowClick = useRef(false)
 
     // Keyboard navigation
     useEffect(() => {
@@ -56,6 +63,25 @@ export const CardCarousel = memo(function CardCarousel({
                 <Button onClick={() => navigate('/cards/new')}>Add Your First Card</Button>
             </div>
         )
+    }
+
+    const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+        e.currentTarget.setPointerCapture(e.pointerId)
+        press.current = { x: e.clientX, moved: false }
+        swallowClick.current = false
+    }
+    const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+        const p = press.current
+        if (p && Math.abs(e.clientX - p.x) > DRAG_PX) p.moved = true
+    }
+    const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+        const p = press.current
+        press.current = null
+        if (!p) return
+        const dx = e.clientX - p.x
+        if (p.moved) swallowClick.current = true
+        if (dx < -SWIPE_PX) setActiveIndex(prev => (prev + 1) % cards.length)
+        else if (dx > SWIPE_PX) setActiveIndex(prev => (prev - 1 + cards.length) % cards.length)
     }
 
     return (
@@ -93,41 +119,23 @@ export const CardCarousel = memo(function CardCarousel({
                 if (isFar && cards.length > 5) return null; // Cull only very far cards
 
                 return (
-                    <motion.div
+                    <div
                         key={card.card_id}
-                        className="absolute origin-center cursor-pointer touch-none will-change-transform"
-                        initial={false}
-                        animate={{
-                            x: `${x}%`,
-                            z: zDepth,
-                            scale,
-                            opacity,
-                            zIndex,
-                            rotateY: `${rotateY}deg`,
-                            filter: `brightness(${isActive ? 1 : 0.7})`
-                        }}
-                        transition={{
-                            type: "spring",
-                            stiffness: 200,
-                            damping: 25,
-                            mass: 0.8
-                        }}
-                        drag="x"
-                        dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={0.1}
-                        onDragEnd={(_, info) => {
-                            const swipeThreshold = 40;
-                            if (info.offset.x < -swipeThreshold) {
-                                setActiveIndex((activeIndex + 1) % cards.length);
-                            } else if (info.offset.x > swipeThreshold) {
-                                setActiveIndex((activeIndex - 1 + cards.length) % cards.length);
-                            }
-                        }}
+                        className="absolute origin-center cursor-pointer touch-none will-change-transform transition-[transform,opacity,filter] duration-500 ease-out"
                         style={{
                             width: isMobile ? '280px' : '340px',
+                            transform: `translateX(${x}%) translateZ(${zDepth}px) scale(${scale}) rotateY(${rotateY}deg)`,
+                            opacity,
+                            zIndex,
+                            filter: `brightness(${isActive ? 1 : 0.7})`,
                             transformStyle: 'preserve-3d', // Essential for 3D depth
                         }}
+                        onPointerDown={onPointerDown}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={onPointerUp}
+                        onPointerCancel={() => { press.current = null }}
                         onClick={() => {
+                            if (swallowClick.current) { swallowClick.current = false; return }
                             if (isActive) {
                                 // Persist active card ID before navigating
                                 sessionStorage.setItem('dashboard_active_card', card.card_id);
@@ -150,19 +158,16 @@ export const CardCarousel = memo(function CardCarousel({
                                 last4Digits={card.last_4_digits}
                             />
                             {isActive && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.1, duration: 0.3 }}
-                                    className="absolute -bottom-14 md:-bottom-20 left-0 right-0 flex justify-center z-50 pointer-events-none"
+                                <div
+                                    className="absolute -bottom-14 md:-bottom-20 left-0 right-0 flex justify-center z-50 pointer-events-none transition-[opacity,transform] duration-300 delay-100 starting:opacity-0 starting:translate-y-[15px]"
                                 >
                                     <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6 pointer-events-auto">
                                         View Details <ArrowRight className="ml-2 h-4 w-4" />
                                     </Button>
-                                </motion.div>
+                                </div>
                             )}
                         </div>
-                    </motion.div>
+                    </div>
                 )
             })}
         </div>

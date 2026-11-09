@@ -13,8 +13,8 @@ use rusty_paseto::{
 };
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
-use tower_http::compression::CompressionLayer;
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::compression::{CompressionLayer, CompressionLevel};
+use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{Level, error};
 
@@ -116,12 +116,40 @@ pub fn build_router(state: AppState) -> Router {
         .route("/year/{*rest}", axum::routing::get(old_joy_year))
         .route("/who", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/settings") }))
         .route("/login", axum::routing::get(|| async { axum::response::Redirect::permanent("/auth") }))
+        // Static files come from the fallback. It must be set before the layers below: `Router::layer`
+        // only wraps what exists when it is called, so headers, CORS and compression would skip it.
+        // `<file>.br` / `<file>.gz` are served when present, so those aren't compressed on the fly.
+        .fallback_service(
+            ServeDir::new(&dir)
+                .precompressed_br()
+                .precompressed_gzip()
+                .fallback(axum::handler::HandlerWithoutStateExt::into_service(spa_fallback(&index))),
+        )
         .layer(cors_layer())
         .layer(middleware::from_fn(crate::headers::security_headers))
-        .layer(CompressionLayer::new())
+        // Level 4 instead of brotli's default (11): dynamic JSON gets compressed on every request, and
+        // on a shared CPU the default costs far more than the few percent of size it saves.
+        .layer(CompressionLayer::new().quality(CompressionLevel::Precise(4)))
         // Safety net: a panic in one request answers 500 instead of taking the server down.
         .layer(tower_http::catch_panic::CatchPanicLayer::new())
-        .fallback_service(ServeDir::new(&dir).fallback(ServeFile::new(index)))
+}
+
+/// Unknown paths: app routes ("/money", "/joy/slips") get index.html so the client router takes over;
+/// a missing file ("/chunk-old.js" after a deploy) gets a plain 404. Answering a script request with
+/// HTML makes the browser fail with a MIME error instead of letting the app reload itself.
+/// index.html is read once at startup: it's tiny, and this keeps the fallback allocation-free.
+fn spa_fallback(index: &str) -> impl Fn(axum::http::Uri) -> std::future::Ready<axum::response::Response> + Clone + Send + Sync + 'static {
+    let html: std::sync::Arc<str> = std::fs::read_to_string(index).unwrap_or_default().into();
+    move |uri: axum::http::Uri| {
+        use axum::response::IntoResponse;
+        let last = uri.path().rsplit('/').next().unwrap_or("");
+        let is_file = last.contains('.') && !last.ends_with(".html");
+        std::future::ready(if is_file {
+            axum::http::StatusCode::NOT_FOUND.into_response()
+        } else {
+            axum::response::Html(html.to_string()).into_response()
+        })
+    }
 }
 
 async fn token_validator_middleware(

@@ -187,14 +187,24 @@ fn find_columns(header: &[String]) -> Option<Columns> {
 
 /// Reads a statement. `None` when no header row (a date column plus an amount column) is found.
 pub fn parse(text: &str) -> Option<Parsed> {
-    let records = split_records(text);
+    let mut records = split_records(text);
     let (hi, cols) = records.iter().enumerate().find_map(|(i, r)| find_columns(r).map(|c| (i, c)))?;
     let cell = |r: &[String], i: Option<usize>| -> String { i.and_then(|i| r.get(i)).map(|s| s.trim().to_string()).unwrap_or_default() };
+    let header_len = records[hi].len();
 
     let mut out = Parsed::default();
-    for r in &records[hi + 1..] {
+    for r in &mut records[hi + 1..] {
         if r.iter().all(|c| c.trim().is_empty()) {
             continue;
+        }
+        // A narration can contain commas ("UPI-ACME, PUNE-..."), which splits one cell into several.
+        // Extra fields beyond the header belong to the narration: join them back so the columns after it line up.
+        if let Some(ni) = cols.narration {
+            let extra = r.len().saturating_sub(header_len);
+            if extra > 0 && ni + extra < r.len() {
+                let joined = r[ni..=ni + extra].join(",");
+                r.splice(ni..=ni + extra, [joined]);
+            }
         }
         let Some(date) = r.get(cols.date).and_then(|d| parse_date(d)) else {
             // Opening/closing balance lines, totals and page footers have no date: not data.
@@ -342,6 +352,21 @@ mod tests {
         let p = parse(csv).unwrap();
         assert_eq!(p.skipped, 0);
         assert_eq!((p.rows[0].direction, p.rows[0].amount_paise, p.rows[0].balance_paise), (Direction::Credit, 50_000, Some(-25_000)));
+    }
+
+    #[test]
+    fn commas_inside_a_narration_are_rejoined() {
+        // Seven header fields; the narration holds two commas, so the row splits into nine.
+        let csv = "\nDate,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\r\n\
+01/11/26,UPI-ACME, PUNE-ACME@OKAXIS-SBIN0001234-612345678901-PAID VIA CRED,01/11/26,250.00,,612345678901,9750.00\r\n\
+02/11/26,NEFT CR-ACME CORP-PRIYA,02/11/26,,1000.00,N1,10750.00\r\n";
+        let p = parse(csv).unwrap();
+        assert_eq!(p.rows.len(), 2);
+        assert_eq!(p.rows[0].narration, "UPI-ACME, PUNE-ACME@OKAXIS-SBIN0001234-612345678901-PAID VIA CRED");
+        assert_eq!((p.rows[0].direction, p.rows[0].amount_paise, p.rows[0].balance_paise), (Direction::Debit, 25_000, Some(975_000)));
+        assert_eq!(p.rows[1].narration, "NEFT CR-ACME CORP-PRIYA");
+        assert_eq!((p.rows[1].direction, p.rows[1].amount_paise), (Direction::Credit, 100_000));
+        assert_eq!(p.skipped, 0);
     }
 
     #[test]

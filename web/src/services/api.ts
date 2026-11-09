@@ -175,6 +175,27 @@ export const ingestApi = {
   parse: (text: string) => data(api.post<ParseResult>("/api/ingest/parse", { text })),
   importStatement: (b: { csv: string; account_id?: string }) =>
     data(api.post<StatementResult>("/api/ingest/statement", b)),
+  /** Multipart upload: the server reads the file in memory and never stores it. */
+  uploadStatement: async (file: File, target: { account_id?: string } = {}): Promise<StatementResult> => {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    if (target.account_id) form.append("account_id", target.account_id);
+    // No Content-Type header here: the browser must set the multipart boundary itself.
+    const token = localStorage.getItem("token");
+    const response = await fetch("/api/ingest/statement/upload", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form,
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(text || `Upload failed (${response.status})`);
+    }
+    return (await response.json()) as StatementResult;
+  },
+  holderNames: () => data(api.get<{ names: string[] }>("/api/ingest/holder-names")),
+  saveHolderNames: (names: string[]) => data(api.post<{ names: string[] }>("/api/ingest/holder-names", { names })),
+  recategorize: () => data(api.post<{ status: boolean; recategorized: number }>("/api/ingest/recategorize", {})),
   summary: (months = 6) => data(api.get<SpendSummary>(`/api/ingest/summary?months=${months}`)),
   keyStatus: () => data(api.get<IngestKeyStatus>("/api/ingest/key/status")),
   rotateKey: () => data(api.post<{ key: string }>("/api/ingest/key/rotate", {})),

@@ -3,11 +3,12 @@
 //! the text; this file matches it to a card or account, stores it once, keeps the account balance
 //! in step when the alert carries "Avl Bal", and learns merchant categories from corrections.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use axum::{
-    extract::{Query, State},
+    extract::{multipart::MultipartError, Multipart, Query, State},
     http::{HeaderMap, StatusCode},
+    body::Bytes,
     Extension, Json,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
@@ -194,6 +195,15 @@ pub async fn ingest_text(
     .rows_affected();
     if inserted == 0 {
         return Ok(IngestResult { status: "duplicate", transaction: None, balance_updated: None });
+    }
+    // The bank reference lets a later statement row find this alert (the query above is unchanged).
+    if let Some(rrn) = crate::narration::rrn_of(text) {
+        sqlx::query("UPDATE transactions SET rrn = ? WHERE txn_id = ? AND user_id = ?")
+            .bind(rrn)
+            .bind(&txn_id)
+            .bind(user_id)
+            .execute(db)
+            .await?;
     }
 
     // "Avl Bal" is the bank's own figure: it becomes the typed-in balance, unless a newer one exists.
@@ -659,42 +669,19 @@ mod tests {
         let credit = StatementRow { direction: Direction::Credit, ..row.clone() };
         assert_ne!(statement_key(&row), statement_key(&credit));
     }
-
-    #[tokio::test]
-    async fn alert_on_one_card_does_not_match_a_statement_row_on_another_account() {
-        use sqlx::sqlite::SqlitePoolOptions;
-        let db = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
-        sqlx::migrate!().run(&db).await.unwrap();
-        for q in [
-            "INSERT INTO users (user_id, user_name, user_password, user_role) VALUES ('u', 'u', 'x', 'user')",
-            "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color) VALUES ('cardA', 'u', 'A', 'HDFC', 0, 0)",
-            "INSERT INTO accounts (account_id, user_id, name, kind) VALUES ('acctB', 'u', 'B', 'bank')",
-            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, card_id, source, dedupe_key)
-             VALUES ('t1', 'u', '2026-11-01', 'debit', 145000, 'cardA', 'sms', 'fp:alert-on-card-a')",
-        ] {
-            sqlx::query(q).execute(&db).await.unwrap();
-        }
-        let mut conn = db.acquire().await.unwrap();
-        let on_card_a = alerts_on_target(&mut *conn, "u", "2026-11-01", "debit", 145_000, None, Some("cardA")).await.unwrap();
-        let on_account_b = alerts_on_target(&mut *conn, "u", "2026-11-01", "debit", 145_000, Some("acctB"), None).await.unwrap();
-        let untargeted = alerts_on_target(&mut *conn, "u", "2026-11-01", "debit", 145_000, None, None).await.unwrap();
-        assert_eq!((on_card_a, on_account_b, untargeted), (1, 0, 1));
-        // An alert that never got a card or account still matches a targeted import, so it isn't doubled.
-        sqlx::query(
-            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, source, dedupe_key)
-             VALUES ('t2', 'u', '2026-11-02', 'debit', 9900, 'sms', 'fp:unscoped')",
-        )
-        .execute(&mut *conn)
-        .await
-        .unwrap();
-        let unscoped = alerts_on_target(&mut *conn, "u", "2026-11-02", "debit", 9900, Some("acctB"), None).await.unwrap();
-        assert_eq!(unscoped, 1);
-    }
 }
 
 // ---------- statement import ----------
 
 const MAX_STATEMENT_ROWS: usize = 5_000;
+/// The first bytes of an Excel (OLE2) file. Only the delimited text export can be read.
+const OLE2_MAGIC: [u8; 4] = [0xD0, 0xCF, 0x11, 0xE0];
+const EXCEL_MESSAGE: &str = "This is the Excel export. Download the Delimited (.txt) format instead.";
+/// A payee with a debit and a credit this large, and no holder names saved, is offered as the user.
+const HOLDER_SUGGESTION_PAISE: i64 = 500_000;
+const MAX_HOLDER_NAMES: usize = 5;
+/// Balances may differ by a paisa from rounding.
+const CHAIN_TOLERANCE_PAISE: i64 = 1;
 
 #[derive(Deserialize)]
 pub struct StatementPayload {
@@ -711,14 +698,27 @@ pub struct StatementResult {
     pub added: usize,
     /// Already recorded: the same file or an overlapping one imported before.
     pub duplicates: usize,
-    /// Matched a transaction a bank alert had already recorded.
+    /// Alert rows this statement confirmed. Same number as `upgraded`; kept for older clients.
     pub matched_alerts: usize,
+    /// Bank-alert transactions that the statement confirmed (kept, with the statement's reference and text).
+    pub upgraded: usize,
     /// Rows under the header that could not be read.
     pub skipped: usize,
+    /// Rows this import left without a category.
     pub uncategorized: usize,
+    /// Rows this import added or confirmed that got a category from structure, rules or keywords.
+    pub categorized: usize,
     pub first_date: Option<String>,
     pub last_date: Option<String>,
     pub balance_updated: Option<BalanceUpdated>,
+    /// Each row's balance follows from the one before it (in file order, or reversed).
+    pub chain_ok: bool,
+    pub opening_paise: Option<i64>,
+    pub closing_paise: Option<i64>,
+    /// Bank-alert transactions on this account or card inside the statement's dates that the statement never confirmed.
+    pub not_on_statement: usize,
+    /// A payee the user seems to pay and receive from, when no holder names are saved.
+    pub holder_name_suggestion: Option<String>,
 }
 
 /// The identity of a statement row. It deliberately leaves out the card or account the file is
@@ -727,48 +727,143 @@ fn statement_key(row: &StatementRow) -> String {
     format!("stmt:{}:{}:{}:{}", row.date, row.direction.as_str(), row.amount_paise, normalize(&row.narration))
 }
 
-/// How many bank-alert transactions on this card or account, on this day, in this direction and
-/// amount, no statement row has claimed yet. Alerts for other cards or accounts are not counted:
-/// an alert on one card must not swallow a row on another account.
-async fn alerts_on_target(
+/// Holder names: newline-separated in `user_settings.holder_names`.
+fn split_names(raw: &str) -> Vec<String> {
+    raw.lines().map(str::trim).filter(|s| !s.is_empty()).map(str::to_string).collect()
+}
+
+async fn load_holder_names(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<String>, AppError> {
+    let raw: Option<String> = sqlx::query_scalar("SELECT holder_names FROM user_settings WHERE user_id = ?")
+        .bind(user_id)
+        .fetch_optional(db)
+        .await?;
+    Ok(split_names(&raw.unwrap_or_default()))
+}
+
+/// Rows this statement row can confirm, nearest date first. Each is either a bank-alert row, or a
+/// row an earlier statement import confirmed from the same narration (so re-imports are duplicates).
+/// Bare rows from the statement itself (keyed 'stmt:') are never candidates: their own key already
+/// answers "seen before".
+async fn find_by_reference(
     conn: &mut sqlx::SqliteConnection,
     user_id: &str,
-    on: &str,
-    direction: &str,
-    amount_paise: i64,
-    account_id: Option<&str>,
-    card_id: Option<&str>,
-) -> Result<i64, sqlx::Error> {
-    sqlx::query_scalar(
-        "SELECT COUNT(*) FROM transactions
-         WHERE user_id = ?1 AND occurred_on = ?2 AND direction = ?3 AND amount_paise = ?4
-           -- An import with no target matches any alert. A targeted import matches alerts on the
-           -- same card/account, plus alerts that never got one (else those rows would double).
-           AND ((?5 = '' AND ?6 = '')
-                OR ((account_id IS NULL OR account_id = ?5) AND (card_id IS NULL OR card_id = ?6)))
-           AND dedupe_key NOT LIKE 'stmt:%' AND source != 'manual'",
+    row: &StatementRow,
+    rrn: Option<&str>,
+) -> Result<Vec<(String, i64, String)>, sqlx::Error> {
+    let on = row.date.to_string();
+    sqlx::query_as(
+        "SELECT txn_id, on_statement, category FROM transactions
+         WHERE user_id = ?1 AND direction = ?2 AND amount_paise = ?3
+           AND occurred_on BETWEEN date(?4, '-1 day') AND date(?4, '+1 day')
+           AND dedupe_key NOT LIKE 'stmt:%' AND source != 'manual'
+           AND (rrn = ?5 OR (on_statement = 1 AND raw_text = ?6))
+         ORDER BY on_statement ASC, ABS(julianday(occurred_on) - julianday(?4)) ASC, created_at ASC",
     )
     .bind(user_id)
-    .bind(on)
-    .bind(direction)
-    .bind(amount_paise)
-    .bind(account_id.unwrap_or(""))
-    .bind(card_id.unwrap_or(""))
-    .fetch_one(conn)
+    .bind(row.direction.as_str())
+    .bind(row.amount_paise)
+    .bind(&on)
+    .bind(rrn)
+    .bind(&row.narration)
+    .fetch_all(conn)
     .await
 }
 
-/// `POST /api/ingest/statement`: stores every row of a CSV statement. Nothing is stored twice:
-/// re-importing a file, or an overlapping one, only adds what is new, and rows a bank alert already
-/// recorded on the same card or account (same day, direction and amount) are matched to it instead
-/// of doubled.
-pub async fn statement(
-    State(state): State<AppState>,
-    Extension((user_id, _)): User,
-    Json(p): Json<StatementPayload>,
-) -> Result<Json<StatementResult>, AppError> {
-    let db = &state.db;
-    let parsed = crate::statement::parse(&p.csv)
+/// Bank-alert rows on this card or account, same direction and amount, within a day of the row,
+/// that no statement has confirmed yet. An alert on one card must not swallow a row on another
+/// account. An import with no target matches any alert.
+async fn find_alert_to_confirm(
+    conn: &mut sqlx::SqliteConnection,
+    user_id: &str,
+    row: &StatementRow,
+    account_id: Option<&str>,
+    card_id: Option<&str>,
+) -> Result<Vec<(String, i64, String)>, sqlx::Error> {
+    let on = row.date.to_string();
+    sqlx::query_as(
+        "SELECT txn_id, on_statement, category FROM transactions
+         WHERE user_id = ?1 AND direction = ?2 AND amount_paise = ?3
+           AND occurred_on BETWEEN date(?4, '-1 day') AND date(?4, '+1 day')
+           AND on_statement = 0 AND dedupe_key NOT LIKE 'stmt:%' AND source != 'manual'
+           -- A targeted import matches alerts on the same card/account, plus alerts that never got one.
+           AND ((?5 = '' AND ?6 = '')
+                OR ((account_id IS NULL OR account_id = ?5) AND (card_id IS NULL OR card_id = ?6)))
+         ORDER BY ABS(julianday(occurred_on) - julianday(?4)) ASC, created_at ASC",
+    )
+    .bind(user_id)
+    .bind(row.direction.as_str())
+    .bind(row.amount_paise)
+    .bind(&on)
+    .bind(account_id.unwrap_or(""))
+    .bind(card_id.unwrap_or(""))
+    .fetch_all(conn)
+    .await
+}
+
+/// Checks that each balance follows from the one before it: prev - debit + credit == balance.
+/// Tries file order first, then reversed (some exports list newest first). Returns
+/// (chain_ok, opening, closing), opening and closing in chronological order. Without a balance on
+/// every row there is nothing to check: (false, None, None).
+fn balance_chain(rows: &[StatementRow]) -> (bool, Option<i64>, Option<i64>) {
+    if rows.is_empty() || rows.iter().any(|r| r.balance_paise.is_none()) {
+        return (false, None, None);
+    }
+    let forward: Vec<&StatementRow> = rows.iter().collect();
+    let reversed: Vec<&StatementRow> = rows.iter().rev().collect();
+    let holds = |seq: &[&StatementRow]| {
+        seq.windows(2).all(|w| {
+            let prev = w[0].balance_paise.unwrap_or_default();
+            let step = if w[1].direction == Direction::Credit { w[1].amount_paise } else { -w[1].amount_paise };
+            (prev + step - w[1].balance_paise.unwrap_or_default()).abs() <= CHAIN_TOLERANCE_PAISE
+        })
+    };
+    let opening_of = |seq: &[&StatementRow]| {
+        let first = seq[0];
+        let signed = if first.direction == Direction::Debit { first.amount_paise } else { -first.amount_paise };
+        first.balance_paise.unwrap_or_default() + signed
+    };
+    for seq in [&forward, &reversed] {
+        if holds(seq) {
+            return (true, Some(opening_of(seq)), seq.last().and_then(|r| r.balance_paise));
+        }
+    }
+    (false, Some(opening_of(&forward)), forward.last().and_then(|r| r.balance_paise))
+}
+
+/// The payee with a debit and a credit of at least the threshold and the largest total. Offered as
+/// the user's own name, since they move money to and from themselves.
+fn holder_suggestion(rows: &[StatementRow]) -> Option<String> {
+    let mut by_payee: BTreeMap<String, (bool, bool, i64)> = BTreeMap::new();
+    for r in rows {
+        let Some(payee) = crate::narration::parse(&r.narration).payee else { continue };
+        let entry = by_payee.entry(payee).or_insert((false, false, 0));
+        if r.amount_paise >= HOLDER_SUGGESTION_PAISE {
+            match r.direction {
+                Direction::Debit => entry.0 = true,
+                Direction::Credit => entry.1 = true,
+            }
+        }
+        entry.2 += r.amount_paise;
+    }
+    by_payee
+        .into_iter()
+        .filter(|(_, (debit, credit, _))| *debit && *credit)
+        .max_by_key(|(_, (_, _, total))| *total)
+        .map(|(name, _)| name)
+}
+
+/// What one statement import asks for. The bytes of an uploaded file are read into `csv` and dropped.
+pub struct StatementInput {
+    pub csv: String,
+    pub account_id: Option<String>,
+    pub card_id: Option<String>,
+}
+
+/// Stores a parsed statement for `user_id`. Nothing is stored twice: a row already imported is a
+/// duplicate; a row a bank alert recorded is confirmed (kept, with the statement's reference and
+/// narration) rather than doubled; every other row is added.
+pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: StatementInput) -> Result<StatementResult, AppError> {
+    let parsed = crate::statement::parse(&input.csv)
         .ok_or_else(|| bad_request("Couldn't find the transaction table. The file needs a Date column and Debit/Credit or Amount columns."))?;
     if parsed.rows.is_empty() {
         return Err(bad_request("No transactions found in that file."));
@@ -779,41 +874,51 @@ pub async fn statement(
 
     // Which instrument this is, and its last digits.
     let (mut account_id, mut card_id, mut last4) = (None, None, None);
-    if let Some(id) = p.account_id.as_deref().filter(|s| !s.is_empty()) {
+    if let Some(id) = input.account_id.as_deref().filter(|s| !s.is_empty()) {
         let row = sqlx::query_as::<_, (String, Option<String>)>("SELECT account_id, last_4_digits FROM accounts WHERE account_id = ? AND user_id = ?")
             .bind(id)
-            .bind(&user_id)
+            .bind(user_id)
             .fetch_optional(db)
             .await?
             .ok_or_else(|| not_found("Account not found"))?;
         account_id = Some(row.0);
         last4 = row.1;
-    } else if let Some(id) = p.card_id.as_deref().filter(|s| !s.is_empty()) {
+    } else if let Some(id) = input.card_id.as_deref().filter(|s| !s.is_empty()) {
         let row = sqlx::query_as::<_, (String, Option<String>)>("SELECT card_id, last_4_digits FROM cards WHERE card_id = ? AND user_id = ?")
             .bind(id)
-            .bind(&user_id)
+            .bind(user_id)
             .fetch_optional(db)
             .await?
             .ok_or_else(|| not_found("Card not found"))?;
         card_id = Some(row.0);
         last4 = row.1;
     }
-    let rules = load_rules(db, &user_id).await?;
+    let rules = load_rules(db, user_id).await?;
+    let holder_names = load_holder_names(db, user_id).await?;
+    let owner = crate::narration::Owner { holder_names: &holder_names };
+    let (chain_ok, opening_paise, closing_paise) = balance_chain(&parsed.rows);
 
     let mut res = StatementResult {
         total: parsed.rows.len(),
         added: 0,
         duplicates: 0,
         matched_alerts: 0,
+        upgraded: 0,
         skipped: parsed.skipped,
         uncategorized: 0,
+        categorized: 0,
         first_date: None,
         last_date: None,
         balance_updated: None,
+        chain_ok,
+        opening_paise,
+        closing_paise,
+        not_on_statement: 0,
+        holder_name_suggestion: None,
     };
     let mut seen: BTreeMap<String, u32> = BTreeMap::new();
-    // How many alert-made transactions of each (day, direction, amount) are still unclaimed.
-    let mut alert_budget: BTreeMap<(String, &'static str, i64), i64> = BTreeMap::new();
+    // Rows this import has already confirmed or added: a second identical row must not claim them.
+    let mut claimed: HashSet<String> = HashSet::new();
     let mut tx = db.begin().await?;
 
     for row in &parsed.rows {
@@ -828,7 +933,7 @@ pub async fn statement(
         let dedupe_key = format!("{base}:{n}");
 
         let exists: Option<String> = sqlx::query_scalar("SELECT txn_id FROM transactions WHERE user_id = ? AND dedupe_key = ?")
-            .bind(&user_id)
+            .bind(user_id)
             .bind(&dedupe_key)
             .fetch_optional(&mut *tx)
             .await?;
@@ -837,36 +942,83 @@ pub async fn statement(
             continue;
         }
 
-        let budget_key = (on.clone(), dir, row.amount_paise);
-        if !alert_budget.contains_key(&budget_key) {
-            let alerts_seen =
-                alerts_on_target(&mut tx, &user_id, &on, dir, row.amount_paise, account_id.as_deref(), card_id.as_deref()).await?;
-            alert_budget.insert(budget_key.clone(), alerts_seen);
+        let parts = crate::narration::parse(&row.narration);
+        let credit = row.direction == Direction::Credit;
+        // Category order: the structure of the narration (own accounts, SIPs, salary, fees...), then the
+        // user's rules and the keywords, both read from the payee alone. The raw narration is never
+        // matched, so app tags such as "PAID VIA CRED" cannot pick a category.
+        let category = match crate::narration::structural_category(&parts, credit, &owner) {
+            Some(c) => c.to_string(),
+            None => {
+                let lower = row.narration.to_lowercase();
+                let card_payment = card_id.is_some() && credit && (lower.contains("payment") || lower.contains("thank"));
+                categorize(parts.payee.as_deref(), row.direction, card_payment, &rules)
+            }
+        };
+        let merchant = parts.payee.clone().or_else(|| crate::statement::merchant_of(&row.narration));
+        let raw: String = row.narration.chars().take(500).collect();
+
+        // (1) An existing row with the same reference (or the same narration, already confirmed by an
+        // earlier statement), same direction and amount, date within a day. References are not unique,
+        // so the amount and date must agree too.
+        let mut confirm = find_by_reference(&mut tx, user_id, row, parts.rrn.as_deref())
+            .await?
+            .into_iter()
+            .find(|(id, _, _)| !claimed.contains(id));
+        // (2) Otherwise a bank-alert row on the same card or account, within a day.
+        if confirm.is_none() {
+            confirm = find_alert_to_confirm(&mut tx, user_id, row, account_id.as_deref(), card_id.as_deref())
+                .await?
+                .into_iter()
+                .find(|(id, _, _)| !claimed.contains(id));
         }
-        let left = alert_budget.get_mut(&budget_key).expect("inserted above");
-        if *left > 0 {
-            *left -= 1;
+
+        if let Some((txn_id, on_statement, existing)) = confirm {
+            claimed.insert(txn_id.clone());
+            if on_statement == 1 {
+                // Already confirmed by an earlier import of this statement.
+                res.duplicates += 1;
+                continue;
+            }
+            let kept = if existing == "uncategorized" { category.clone() } else { existing.clone() };
+            sqlx::query(
+                // The statement is the source of truth: its posting date replaces the alert's (±1 day).
+                "UPDATE transactions SET on_statement = 1, occurred_on = ?, rrn = COALESCE(?, rrn), merchant = COALESCE(?, merchant), raw_text = ?,
+                     category = CASE WHEN category = 'uncategorized' THEN ? ELSE category END
+                 WHERE txn_id = ? AND user_id = ?",
+            )
+            .bind(&on)
+            .bind(&parts.rrn)
+            .bind(&merchant)
+            .bind(&raw)
+            .bind(&category)
+            .bind(&txn_id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await?;
+            res.upgraded += 1;
             res.matched_alerts += 1;
+            if kept == "uncategorized" {
+                res.uncategorized += 1;
+            } else {
+                res.categorized += 1;
+            }
             continue;
         }
 
-        let merchant = crate::statement::merchant_of(&row.narration);
-        let lower = row.narration.to_lowercase();
-        let card_payment = card_id.is_some()
-            && row.direction == Direction::Credit
-            && (lower.contains("payment") || lower.contains("thank"));
-        let category = categorize(merchant.as_deref().or(Some(row.narration.as_str())), row.direction, card_payment, &rules);
         if category == "uncategorized" {
             res.uncategorized += 1;
+        } else {
+            res.categorized += 1;
         }
-        let raw: String = row.narration.chars().take(500).collect();
+        let txn_id = nanoid!();
         sqlx::query(
             "INSERT INTO transactions
-                (txn_id, user_id, occurred_on, direction, amount_paise, merchant, category, card_id, account_id, last4, source, raw_text, dedupe_key)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paste', ?, ?)",
+                (txn_id, user_id, occurred_on, direction, amount_paise, merchant, category, card_id, account_id, last4, source, raw_text, dedupe_key, rrn, on_statement)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paste', ?, ?, ?, 1)",
         )
-        .bind(nanoid!())
-        .bind(&user_id)
+        .bind(&txn_id)
+        .bind(user_id)
         .bind(&on)
         .bind(dir)
         .bind(row.amount_paise)
@@ -877,8 +1029,10 @@ pub async fn statement(
         .bind(&last4)
         .bind(&raw)
         .bind(&dedupe_key)
+        .bind(&parts.rrn)
         .execute(&mut *tx)
         .await?;
+        claimed.insert(txn_id);
         res.added += 1;
     }
 
@@ -895,7 +1049,7 @@ pub async fn statement(
             .bind(bal)
             .bind(&on)
             .bind(acct)
-            .bind(&user_id)
+            .bind(user_id)
             .bind(&on)
             .execute(&mut *tx)
             .await?
@@ -906,6 +1060,396 @@ pub async fn statement(
             }
         }
     }
+
+    // Bank-alert rows on this target, inside the statement's dates, that the statement never confirmed.
+    if let (Some(first), Some(last)) = (&res.first_date, &res.last_date) {
+        let missing: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM transactions
+             WHERE user_id = ?1 AND on_statement = 0 AND dedupe_key NOT LIKE 'stmt:%' AND source != 'manual'
+               AND occurred_on BETWEEN ?2 AND ?3
+               AND ((?4 IS NOT NULL AND account_id = ?4) OR (?5 IS NOT NULL AND card_id = ?5))",
+        )
+        .bind(user_id)
+        .bind(first)
+        .bind(last)
+        .bind(account_id.as_deref())
+        .bind(card_id.as_deref())
+        .fetch_one(&mut *tx)
+        .await?;
+        res.not_on_statement = missing as usize;
+    }
+
+    if holder_names.is_empty() {
+        res.holder_name_suggestion = holder_suggestion(&parsed.rows);
+    }
+
+    sqlx::query(
+        "INSERT INTO statement_imports (import_id, user_id, account_id, card_id, first_date, last_date, rows, opening_paise, closing_paise, chain_ok)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(nanoid!())
+    .bind(user_id)
+    .bind(&account_id)
+    .bind(&card_id)
+    .bind(&res.first_date)
+    .bind(&res.last_date)
+    .bind(parsed.rows.len() as i64)
+    .bind(opening_paise)
+    .bind(closing_paise)
+    .bind(chain_ok as i64)
+    .execute(&mut *tx)
+    .await?;
     tx.commit().await?;
-    Ok(Json(res))
+    Ok(res)
+}
+
+/// `POST /api/ingest/statement`: the JSON form of the import (the body carries the CSV text).
+pub async fn statement(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<StatementPayload>,
+) -> Result<Json<StatementResult>, AppError> {
+    let input = StatementInput { csv: p.csv, account_id: p.account_id, card_id: p.card_id };
+    Ok(Json(import_statement(&state.db, &user_id, input).await?))
+}
+
+fn multipart_error(e: MultipartError) -> AppError {
+    AppError(e.status(), e.body_text())
+}
+
+/// `POST /api/ingest/statement/upload`: multipart with `file`, optional `account_id` and `card_id`.
+/// The file is read into memory, decoded, imported and dropped. It is never written to disk.
+pub async fn statement_upload(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    mut multipart: Multipart,
+) -> Result<Json<StatementResult>, AppError> {
+    let mut file: Option<Bytes> = None;
+    let (mut account_id, mut card_id) = (None, None);
+    while let Some(field) = multipart.next_field().await.map_err(multipart_error)? {
+        match field.name().unwrap_or_default() {
+            "file" => file = Some(field.bytes().await.map_err(multipart_error)?),
+            "account_id" => account_id = Some(field.text().await.map_err(multipart_error)?),
+            "card_id" => card_id = Some(field.text().await.map_err(multipart_error)?),
+            _ => {}
+        }
+    }
+    let bytes = file.ok_or_else(|| bad_request("Choose a statement file to upload."))?;
+    if bytes.starts_with(&OLE2_MAGIC) {
+        return Err(bad_request(EXCEL_MESSAGE));
+    }
+    let csv = String::from_utf8_lossy(&bytes).into_owned();
+    drop(bytes);
+    let input = StatementInput { csv, account_id, card_id };
+    Ok(Json(import_statement(&state.db, &user_id, input).await?))
+}
+
+// ---------- holder names and recategorising ----------
+
+#[derive(Serialize, Deserialize)]
+pub struct HolderNames {
+    pub names: Vec<String>,
+}
+
+/// `GET /api/ingest/holder-names`: the names the user holds accounts under (empty when none are saved).
+pub async fn holder_names(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<HolderNames>, AppError> {
+    Ok(Json(HolderNames { names: load_holder_names(&state.db, &user_id).await? }))
+}
+
+/// `POST /api/ingest/holder-names`: replaces the saved names. Up to 5, each 2 to 60 characters, no
+/// line breaks, no repeats (ignoring case).
+pub async fn set_holder_names(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<HolderNames>,
+) -> Result<Json<HolderNames>, AppError> {
+    if p.names.len() > MAX_HOLDER_NAMES {
+        return Err(bad_request(format!("Save up to {MAX_HOLDER_NAMES} names.")));
+    }
+    let mut kept: Vec<String> = Vec::new();
+    for name in &p.names {
+        let name = name.trim();
+        if name.contains(['\n', '\r']) {
+            return Err(bad_request("Names can't contain line breaks."));
+        }
+        let len = name.chars().count();
+        if !(2..=60).contains(&len) {
+            return Err(bad_request("Each name needs 2 to 60 characters."));
+        }
+        if !kept.iter().any(|k| k.eq_ignore_ascii_case(name)) {
+            kept.push(name.to_string());
+        }
+    }
+    sqlx::query(
+        "INSERT INTO user_settings (user_id, holder_names) VALUES (?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET holder_names = excluded.holder_names",
+    )
+    .bind(&user_id)
+    .bind(kept.join("\n"))
+    .execute(&state.db)
+    .await?;
+    Ok(Json(HolderNames { names: kept }))
+}
+
+#[derive(Serialize)]
+pub struct Recategorized {
+    pub status: bool,
+    /// Statement rows whose category changed.
+    pub recategorized: usize,
+}
+
+/// `POST /api/ingest/recategorize`: re-runs the structural categories (own accounts, SIPs, salary,
+/// fees...) on the user's statement rows, after the holder names change. Rows the user set by hand
+/// stay as they are.
+pub async fn recategorize(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Recategorized>, AppError> {
+    let db = &state.db;
+    let names = load_holder_names(db, &user_id).await?;
+    let owner = crate::narration::Owner { holder_names: &names };
+    let rows: Vec<(String, String, String, String)> = sqlx::query_as(
+        "SELECT txn_id, direction, raw_text, category FROM transactions
+         WHERE user_id = ? AND on_statement = 1 AND category_locked = 0 AND raw_text IS NOT NULL",
+    )
+    .bind(&user_id)
+    .fetch_all(db)
+    .await?;
+    let mut tx = db.begin().await?;
+    let mut changed = 0;
+    for (txn_id, direction, raw, current) in rows {
+        let parts = crate::narration::parse(&raw);
+        let credit = direction == Direction::Credit.as_str();
+        let Some(category) = crate::narration::structural_category(&parts, credit, &owner) else { continue };
+        if category == current {
+            continue;
+        }
+        sqlx::query("UPDATE transactions SET category = ? WHERE txn_id = ? AND user_id = ?")
+            .bind(category)
+            .bind(&txn_id)
+            .bind(&user_id)
+            .execute(&mut *tx)
+            .await?;
+        changed += 1;
+    }
+    tx.commit().await?;
+    Ok(Json(Recategorized { status: true, recategorized: changed }))
+}
+
+
+#[cfg(test)]
+mod statement_tests {
+    use super::*;
+    use axum::{body::Body, http::Request, http::StatusCode};
+    use sqlx::sqlite::SqlitePoolOptions;
+    use tower::ServiceExt;
+
+    /// HDFC's delimited export: an empty first line, then the header.
+    const HEADER: &str = "\r\nDate,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\r\n";
+    /// Six synthetic rows, oldest first. Opening balance 10,000.00, closing 55,130.50. Row 3's narration has a comma.
+    const ROWS: &str = "01/11/26,UPI-RAVI KUMAR-RAVIK123@OKAXIS-SBIN0001234-612345678901-PAID VIA CRED,01/11/26,250.00,,612345678901,9750.00\r\n\
+02/11/26,UPI-ASHA STORES-Q123456789@YBL-YESB0YBLUPI-612345678902-UPI,02/11/26,120.50,,612345678902,9629.50\r\n\
+03/11/26,UPI-ACME, PUNE-ACME@OKAXIS-SBIN0001234-612345678903-PAYMENT ON CRED,03/11/26,1000.00,,612345678903,8629.50\r\n\
+04/11/26,SALARYFORTHEMONTHOFOCT2026,04/11/26,,50000.00,,58629.50\r\n\
+05/11/26,UPI-ASHA RAO-98XXXXXX12@YESCRED-KKBK0001234-612345678904-PAID VIA CRED,05/11/26,3000.00,,612345678904,55629.50\r\n\
+06/11/26,UPI-STREAMCO-STREAMCO@YBL-YESB0YBLUPI-612345678905-SUBSCRIPTION DEBIT,06/11/26,499.00,,612345678905,55130.50\r\n";
+    const BOUNDARY: &str = "XSTATEMENTX";
+
+    fn csv(rows: &str) -> String {
+        format!("{HEADER}{rows}")
+    }
+
+    async fn test_state() -> AppState {
+        let db = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!().run(&db).await.unwrap();
+        for q in [
+            "INSERT INTO users (user_id, user_name, user_password, user_role) VALUES ('u', 'u', 'x', 'user')",
+            "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color) VALUES ('cardA', 'u', 'A', 'HDFC', 0, 0)",
+            "INSERT INTO accounts (account_id, user_id, name, kind) VALUES ('acctB', 'u', 'B', 'bank')",
+        ] {
+            sqlx::query(q).execute(&db).await.unwrap();
+        }
+        let key = rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::from(
+            rusty_paseto::prelude::Key::from(&[7u8; 32][..]),
+        );
+        AppState { db, redis: None, paseto_key: std::sync::Arc::new(key) }
+    }
+
+    async fn import(state: &AppState, csv: &str, account: Option<&str>) -> StatementResult {
+        let input = StatementInput { csv: csv.to_string(), account_id: account.map(str::to_string), card_id: None };
+        import_statement(&state.db, "u", input).await.unwrap_or_else(|e| panic!("import failed: {}", e.1))
+    }
+
+    fn user() -> Extension<(String, String)> {
+        Extension(("u".to_string(), "user".to_string()))
+    }
+
+    /// The bank's alerts for three of the rows, one for an unrelated row (never on the statement), and
+    /// one on another card that carries row 6's reference.
+    async fn seed_alerts(db: &sqlx::SqlitePool) {
+        for q in [
+            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, merchant, account_id, source, dedupe_key)
+             VALUES ('alert-asha', 'u', '2026-11-02', 'debit', 12050, 'ASHA STORES', 'acctB', 'sms', 'fp:asha')",
+            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, account_id, source, dedupe_key)
+             VALUES ('alert-salary', 'u', '2026-11-04', 'credit', 5000000, 'acctB', 'sms', 'fp:salary')",
+            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, account_id, source, dedupe_key)
+             VALUES ('alert-unmatched', 'u', '2026-11-03', 'debit', 99900, 'acctB', 'sms', 'fp:unmatched')",
+            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, card_id, source, dedupe_key, rrn)
+             VALUES ('alert-streamco', 'u', '2026-11-06', 'debit', 49900, 'cardA', 'sms', 'fp:stream', '612345678905')",
+        ] {
+            sqlx::query(q).execute(db).await.unwrap();
+        }
+    }
+
+    async fn count(db: &sqlx::SqlitePool, sql: &str) -> i64 {
+        sqlx::query_scalar(sql).fetch_one(db).await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn six_row_delimited_file_imports() {
+        let state = test_state().await;
+        let res = import(&state, &csv(ROWS), Some("acctB")).await;
+        assert_eq!((res.total, res.added, res.duplicates, res.skipped), (6, 6, 0, 0));
+        assert!(res.chain_ok);
+        assert_eq!((res.opening_paise, res.closing_paise), (Some(1_000_000), Some(5_513_050)));
+        assert_eq!(res.balance_updated.map(|b| b.balance_paise), Some(5_513_050));
+        assert_eq!((res.first_date.as_deref(), res.last_date.as_deref()), (Some("2026-11-01"), Some("2026-11-06")));
+        // The comma inside the narration is kept, and the row is stored once with its reference.
+        let acme: String = sqlx::query_scalar("SELECT raw_text FROM transactions WHERE rrn = '612345678903'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(acme, "UPI-ACME, PUNE-ACME@OKAXIS-SBIN0001234-612345678903-PAYMENT ON CRED");
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM transactions WHERE on_statement = 1").await, 6);
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM statement_imports WHERE chain_ok = 1 AND rows = 6").await, 1);
+    }
+
+    #[tokio::test]
+    async fn re_import_is_all_duplicates() {
+        let state = test_state().await;
+        seed_alerts(&state.db).await;
+        let first = import(&state, &csv(ROWS), Some("acctB")).await;
+        // Confirmed alerts keep their own keys, so a second import has to recognise them another way.
+        assert_eq!((first.added, first.upgraded, first.not_on_statement), (3, 3, 1));
+        let total = count(&state.db, "SELECT COUNT(*) FROM transactions").await;
+
+        let second = import(&state, &csv(ROWS), Some("acctB")).await;
+        assert_eq!((second.added, second.upgraded, second.duplicates), (0, 0, 6));
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM transactions").await, total);
+    }
+
+    #[tokio::test]
+    async fn alert_with_the_same_rrn_is_upgraded_not_duplicated() {
+        let state = test_state().await;
+        seed_alerts(&state.db).await;
+        // The streamco alert sits on another card, so only the reference can match it.
+        import(&state, &csv(ROWS), Some("acctB")).await;
+        let (on_statement, rrn, merchant): (i64, Option<String>, Option<String>) =
+            sqlx::query_as("SELECT on_statement, rrn, merchant FROM transactions WHERE txn_id = 'alert-streamco'")
+                .fetch_one(&state.db)
+                .await
+                .unwrap();
+        assert_eq!(on_statement, 1);
+        assert_eq!(rrn.as_deref(), Some("612345678905"));
+        assert_eq!(merchant.as_deref(), Some("STREAMCO"));
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM transactions WHERE rrn = '612345678905'").await, 1);
+    }
+
+    #[tokio::test]
+    async fn own_transfer_is_a_transfer_once_the_holder_name_is_saved() {
+        let state = test_state().await;
+        import(&state, &csv(ROWS), Some("acctB")).await;
+        let before: String = sqlx::query_scalar("SELECT category FROM transactions WHERE rrn = '612345678904'").fetch_one(&state.db).await.unwrap();
+        assert_ne!(before, "transfer");
+
+        let saved = set_holder_names(State(state.clone()), user(), Json(HolderNames { names: vec!["Asha Rao".into()] })).await;
+        assert_eq!(saved.map(|j| j.0.names).map_err(|e| e.1), Ok(vec!["Asha Rao".to_string()]));
+        let changed = recategorize(State(state.clone()), user()).await.unwrap_or_else(|e| panic!("{}", e.1));
+        assert!(changed.0.recategorized >= 1);
+        let after: String = sqlx::query_scalar("SELECT category FROM transactions WHERE rrn = '612345678904'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(after, "transfer");
+
+        // A fresh import with the name already saved categorises the row as a transfer straight away.
+        let fresh = test_state().await;
+        sqlx::query("INSERT INTO user_settings (user_id, holder_names) VALUES ('u', 'ASHA RAO')").execute(&fresh.db).await.unwrap();
+        import(&fresh, &csv(ROWS), Some("acctB")).await;
+        let direct: String = sqlx::query_scalar("SELECT category FROM transactions WHERE rrn = '612345678904'").fetch_one(&fresh.db).await.unwrap();
+        assert_eq!(direct, "transfer");
+    }
+
+    #[tokio::test]
+    async fn tampered_balance_fails_the_chain_check() {
+        let state = test_state().await;
+        let res = import(&state, &csv(&ROWS.replace("9629.50", "9629.00")), Some("acctB")).await;
+        assert!(!res.chain_ok);
+        assert!(res.opening_paise.is_some());
+    }
+
+    #[tokio::test]
+    async fn holder_names_are_validated_and_stored_without_duplicates() {
+        let state = test_state().await;
+        let names = |r: Result<Json<HolderNames>, AppError>| r.map(|j| j.0.names).map_err(|e| e.1);
+        let too_many = vec!["Aa", "Bb", "Cc", "Dd", "Ee", "Ff"].into_iter().map(String::from).collect();
+        assert!(names(set_holder_names(State(state.clone()), user(), Json(HolderNames { names: too_many })).await).is_err());
+        assert!(names(set_holder_names(State(state.clone()), user(), Json(HolderNames { names: vec!["A".into()] })).await).is_err());
+        assert!(names(set_holder_names(State(state.clone()), user(), Json(HolderNames { names: vec!["Ab\nCd".into()] })).await).is_err());
+        assert_eq!(names(holder_names(State(state.clone()), user()).await), Ok(vec![]));
+        let saved = names(set_holder_names(State(state.clone()), user(), Json(HolderNames { names: vec!["Asha Rao".into(), "asha rao".into(), "Ravi K".into()] })).await);
+        assert_eq!(saved, Ok(vec!["Asha Rao".to_string(), "Ravi K".to_string()]));
+        assert_eq!(names(holder_names(State(state.clone()), user()).await), Ok(vec!["Asha Rao".to_string(), "Ravi K".to_string()]));
+    }
+
+    #[test]
+    fn holder_suggestion_needs_a_large_debit_and_a_large_credit() {
+        use time::macros::date;
+        let row = |direction, amount_paise| StatementRow {
+            date: date!(2026 - 11 - 05),
+            direction,
+            amount_paise,
+            narration: "UPI-ASHA RAO-98XXXXXX12@YESCRED-KKBK0001234-612345678904-PAID VIA CRED".into(),
+            reference: None,
+            balance_paise: None,
+        };
+        assert_eq!(holder_suggestion(&[row(Direction::Debit, 600_000), row(Direction::Credit, 800_000)]).as_deref(), Some("ASHA RAO"));
+        assert_eq!(holder_suggestion(&[row(Direction::Debit, 600_000), row(Direction::Credit, 1_000)]), None);
+    }
+
+    #[tokio::test]
+    async fn excel_export_is_rejected_by_its_magic_bytes() {
+        let state = test_state().await;
+        let (status, body) = upload(&state, multipart_body(None, &[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1])).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(body, "This is the Excel export. Download the Delimited (.txt) format instead.");
+    }
+
+    #[tokio::test]
+    async fn upload_route_imports_a_multipart_file() {
+        let state = test_state().await;
+        let (status, body) = upload(&state, multipart_body(Some("acctB"), csv(ROWS).as_bytes())).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!((json["added"].as_u64(), json["total"].as_u64(), json["chain_ok"].as_bool()), (Some(6), Some(6), Some(true)));
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM transactions WHERE on_statement = 1").await, 6);
+    }
+
+    fn multipart_body(account_id: Option<&str>, file: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        if let Some(account) = account_id {
+            body.extend_from_slice(format!("--{BOUNDARY}\r\nContent-Disposition: form-data; name=\"account_id\"\r\n\r\n{account}\r\n").as_bytes());
+        }
+        body.extend_from_slice(
+            format!("--{BOUNDARY}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"statement.txt\"\r\nContent-Type: text/plain\r\n\r\n").as_bytes(),
+        );
+        body.extend_from_slice(file);
+        body.extend_from_slice(format!("\r\n--{BOUNDARY}--\r\n").as_bytes());
+        body
+    }
+
+    async fn upload(state: &AppState, body: Vec<u8>) -> (StatusCode, String) {
+        let app = crate::routes::ingest::routes(state.clone()).layer(user());
+        let req = Request::builder()
+            .method("POST")
+            .uri("/statement/upload")
+            .header("content-type", format!("multipart/form-data; boundary={BOUNDARY}"))
+            .body(Body::from(body))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        let status = resp.status();
+        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        (status, String::from_utf8_lossy(&bytes).into_owned())
+    }
 }

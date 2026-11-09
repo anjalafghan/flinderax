@@ -26,6 +26,30 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 )
 
+// After a deploy, an open tab can ask for code chunks that no longer exist. Reload once to pick up
+// the new build instead of showing a broken page; the flag stops a reload loop if it really is down.
+window.addEventListener("unhandledrejection", (e) => {
+  const msg = String((e.reason as { message?: string } | undefined)?.message ?? e.reason ?? "");
+  if (!/dynamically imported module|Importing a module script failed|error loading dynamically/i.test(msg)) return;
+  try {
+    if (sessionStorage.getItem("joy-chunk-reload")) return;
+    sessionStorage.setItem("joy-chunk-reload", "1");
+  } catch {
+    return;
+  }
+  window.location.reload();
+});
+// Clear the guard only once the page has run cleanly for a while (lazy chunks load after "load").
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    try {
+      sessionStorage.removeItem("joy-chunk-reload");
+    } catch {
+      /* storage unavailable */
+    }
+  }, 10_000);
+});
+
 // Offline copies of the shell and a few read-only screens (see public/sw.js).
 if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
   window.addEventListener("load", () => {

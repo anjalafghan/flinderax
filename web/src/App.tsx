@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { Toaster } from 'sonner'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import { TabBar } from './components/layout/Header'
 import { useAuth } from './context/AuthContext'
@@ -20,6 +19,8 @@ const DatesApp = lazy(() => import('./joy/DatesApp'))
 const EnvelopePage = lazy(() => import('./joy/pages/EnvelopePage'))
 const ReviewPage = lazy(() => import('./pages/ReviewPage'))
 const LifePage = lazy(() => import('./pages/LifePage'))
+// Toasts are rare and sonner is ~35 KB, so its Toaster is a lazy chunk, not part of the shell.
+const Toaster = lazy(() => import('sonner').then((m) => ({ default: m.Toaster })))
 
 // Simple loading fallback
 const PageLoader = () => (
@@ -146,7 +147,9 @@ function App() {
       </Suspense>
       </div>
       {showTabs && <TabBar />}
-      <Toaster position="top-center" />
+      <Suspense fallback={null}>
+        <Toaster position="top-center" />
+      </Suspense>
     </>
   )
 }

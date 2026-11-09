@@ -1,5 +1,4 @@
 import { memo } from "react"
-import { motion } from "framer-motion"
 import { ArrowDown, ArrowUp } from "lucide-react"
 import { cn } from "@/utils/cn"
 
@@ -35,9 +34,8 @@ export const CreditCard = memo(function CreditCard({
     }
 
     return (
-        <motion.div whileHover={{ scale: 1.02, y: -5 }}
-            whileTap={{ scale: 0.98 }}
-            className="relative aspect-[1.586/1] w-full max-w-[340px] cursor-pointer overflow-hidden rounded-2xl transition-all"
+        <div
+            className="relative aspect-[1.586/1] w-full max-w-[340px] cursor-pointer overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-[5px] active:scale-[0.98]"
             style={backgroundStyle}
             onClick={onClick}
         >
@@ -98,6 +96,6 @@ export const CreditCard = memo(function CreditCard({
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </div>
     )
 })

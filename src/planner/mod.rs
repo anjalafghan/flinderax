@@ -13,6 +13,7 @@
 //! is never used.
 
 pub mod afford;
+pub mod analytics;
 pub mod autopost;
 pub mod bills;
 pub mod cycle;
