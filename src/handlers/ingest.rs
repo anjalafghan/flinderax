@@ -58,6 +58,16 @@ pub struct BalanceUpdated {
     pub balance_paise: i64,
 }
 
+/// A newer balance the account already had, kept over the statement's closing balance.
+#[derive(Serialize)]
+pub struct BalanceKept {
+    pub account_name: String,
+    pub balance_paise: i64,
+    pub set_on: String,
+    pub statement_paise: i64,
+    pub statement_on: String,
+}
+
 #[derive(Serialize)]
 pub struct IngestResult {
     /// created | duplicate | unrecognized
@@ -712,6 +722,10 @@ pub struct StatementResult {
     pub first_date: Option<String>,
     pub last_date: Option<String>,
     pub balance_updated: Option<BalanceUpdated>,
+    /// The account kept a balance entered after this statement ends, so the statement's closing one wasn't applied.
+    pub balance_kept: Option<BalanceKept>,
+    /// Rows from earlier imports whose category changed when this import re-checked them.
+    pub older_recategorized: usize,
     /// Each row's balance follows from the one before it (in file order, or reversed).
     pub chain_ok: bool,
     pub opening_paise: Option<i64>,
@@ -921,6 +935,8 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
         first_date: None,
         last_date: None,
         balance_updated: None,
+        balance_kept: None,
+        older_recategorized: 0,
         chain_ok,
         opening_paise,
         closing_paise,
@@ -1069,6 +1085,19 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
             if done == 1 {
                 let name: String = sqlx::query_scalar("SELECT name FROM accounts WHERE account_id = ?").bind(acct).fetch_one(&mut *tx).await?;
                 res.balance_updated = Some(BalanceUpdated { account_name: name, balance_paise: bal });
+            } else if let Some((name, kept, set_on)) = sqlx::query_as::<_, (String, i64, String)>(
+                "SELECT name, balance_paise, balance_set_on FROM accounts
+                 WHERE account_id = ? AND user_id = ? AND balance_set_on IS NOT NULL",
+            )
+            .bind(acct)
+            .bind(user_id)
+            .fetch_optional(&mut *tx)
+            .await?
+            {
+                // Same number: nothing to point out.
+                if kept != bal {
+                    res.balance_kept = Some(BalanceKept { account_name: name, balance_paise: kept, set_on, statement_paise: bal, statement_on: on });
+                }
             }
         }
     }
@@ -1122,7 +1151,7 @@ pub async fn statement(
     Json(p): Json<StatementPayload>,
 ) -> Result<Json<StatementResult>, AppError> {
     let input = StatementInput { csv: p.csv, account_id: p.account_id, card_id: p.card_id, mapping: None };
-    Ok(Json(import_statement(&state.db, &user_id, input).await?))
+    Ok(Json(import_and_catch_up(&state.db, &user_id, input).await?))
 }
 
 fn multipart_error(e: MultipartError) -> AppError {
@@ -1237,7 +1266,7 @@ pub async fn statement_upload(State(state): State<AppState>, Extension((user_id,
     // Only a mapping the user sent is kept as a layout; the signature comes from this file's header.
     let to_save = explicit.filter(|_| form.save_profile).map(|m| (crate::statement::signature(&csv, m.header_row), m));
     let input = StatementInput { csv, account_id: form.account_id, card_id: form.card_id, mapping };
-    let result = import_statement(&state.db, &user_id, input).await?;
+    let result = import_and_catch_up(&state.db, &user_id, input).await?;
     if let Some((signature, mapping)) = to_save {
         save_layout(&state.db, &user_id, &signature, &mapping, &form.label).await?;
     }
@@ -1371,13 +1400,21 @@ pub struct Recategorized {
     pub recategorized: usize,
 }
 
-/// `POST /api/ingest/recategorize`: re-runs the structural categories (own accounts, SIPs, salary,
-/// fees...) on the user's statement rows, after the holder names change. Rows the user set by hand
-/// stay as they are.
+/// `POST /api/ingest/recategorize`: re-runs the import's categories on the user's statement rows: the
+/// structure (own accounts, SIPs, salary, fees...), then the user's rules and the shop keywords, so
+/// rows imported before a rule or keyword existed catch up. Rows the user set by hand stay as they
+/// are, and a row that already has a category is never put back to uncategorized.
 pub async fn recategorize(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Recategorized>, AppError> {
-    let db = &state.db;
+    let changed = recategorize_rows(&state.db, &user_id).await?;
+    Ok(Json(Recategorized { status: true, recategorized: changed }))
+}
+
+/// The work behind [`recategorize`]; also run after each statement import so older rows catch up.
+async fn recategorize_rows(db: &sqlx::SqlitePool, user_id: &str) -> Result<usize, AppError> {
+    let user_id = user_id.to_string();
     let names = load_holder_names(db, &user_id).await?;
     let owner = crate::narration::Owner { holder_names: &names };
+    let rules = load_rules(db, &user_id).await?;
     let rows: Vec<(String, String, String, String, bool)> = sqlx::query_as(
         "SELECT txn_id, direction, raw_text, category, card_id IS NOT NULL FROM transactions
          WHERE user_id = ? AND on_statement = 1 AND category_locked = 0 AND raw_text IS NOT NULL",
@@ -1390,8 +1427,12 @@ pub async fn recategorize(State(state): State<AppState>, Extension((user_id, _))
     for (txn_id, direction, raw, current, on_card) in rows {
         let parts = crate::narration::parse(&raw);
         let credit = direction == Direction::Credit.as_str();
-        let Some(category) = statement_structure(&raw, credit, on_card, &parts, &owner) else { continue };
-        if category == current {
+        let dir = if credit { Direction::Credit } else { Direction::Debit };
+        let category = match statement_structure(&raw, credit, on_card, &parts, &owner) {
+            Some(c) => c.to_string(),
+            None => categorize(parts.payee.as_deref(), dir, false, &rules),
+        };
+        if category == current || (category == "uncategorized" && current != "uncategorized") {
             continue;
         }
         sqlx::query("UPDATE transactions SET category = ? WHERE txn_id = ? AND user_id = ?")
@@ -1403,7 +1444,14 @@ pub async fn recategorize(State(state): State<AppState>, Extension((user_id, _))
         changed += 1;
     }
     tx.commit().await?;
-    Ok(Json(Recategorized { status: true, recategorized: changed }))
+    Ok(changed)
+}
+
+/// Imports, then re-checks the user's older statement rows against the current rules and keywords.
+async fn import_and_catch_up(db: &sqlx::SqlitePool, user_id: &str, input: StatementInput) -> Result<StatementResult, AppError> {
+    let mut result = import_statement(db, user_id, input).await?;
+    result.older_recategorized = recategorize_rows(db, user_id).await?;
+    Ok(result)
 }
 
 
@@ -1521,6 +1569,34 @@ mod statement_tests {
     }
 
     #[tokio::test]
+    async fn newer_typed_balance_is_kept_and_reported() {
+        let state = test_state().await;
+        sqlx::query("UPDATE accounts SET balance_paise = 7000000, balance_set_on = '2026-11-20' WHERE account_id = 'acctB'")
+            .execute(&state.db)
+            .await
+            .unwrap();
+        let res = import(&state, &csv(ROWS), Some("acctB")).await;
+        assert!(res.balance_updated.is_none());
+        let kept = res.balance_kept.expect("kept balance reported");
+        assert_eq!((kept.balance_paise, kept.set_on.as_str()), (7_000_000, "2026-11-20"));
+        assert_eq!((kept.statement_paise, kept.statement_on.as_str()), (5_513_050, "2026-11-06"));
+        let bal: i64 = sqlx::query_scalar("SELECT balance_paise FROM accounts WHERE account_id = 'acctB'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(bal, 7_000_000);
+    }
+
+    #[tokio::test]
+    async fn older_typed_balance_gives_way_to_the_statement() {
+        let state = test_state().await;
+        sqlx::query("UPDATE accounts SET balance_paise = 7000000, balance_set_on = '2026-10-01' WHERE account_id = 'acctB'")
+            .execute(&state.db)
+            .await
+            .unwrap();
+        let res = import(&state, &csv(ROWS), Some("acctB")).await;
+        assert_eq!(res.balance_updated.map(|b| b.balance_paise), Some(5_513_050));
+        assert!(res.balance_kept.is_none());
+    }
+
+    #[tokio::test]
     async fn re_import_is_all_duplicates() {
         let state = test_state().await;
         seed_alerts(&state.db).await;
@@ -1571,6 +1647,24 @@ mod statement_tests {
         import(&fresh, &csv(ROWS), Some("acctB")).await;
         let direct: String = sqlx::query_scalar("SELECT category FROM transactions WHERE rrn = '612345678904'").fetch_one(&fresh.db).await.unwrap();
         assert_eq!(direct, "transfer");
+    }
+
+    #[tokio::test]
+    async fn recategorize_applies_rules_added_after_the_import_but_keeps_hand_set_rows() {
+        let state = test_state().await;
+        import(&state, &csv(ROWS), Some("acctB")).await;
+        let cat = |db: sqlx::SqlitePool| async move {
+            sqlx::query_scalar::<_, String>("SELECT category FROM transactions WHERE rrn = '612345678903'").fetch_one(&db).await.unwrap()
+        };
+        sqlx::query("UPDATE transactions SET category = 'uncategorized' WHERE rrn = '612345678903'").execute(&state.db).await.unwrap();
+        sqlx::query("INSERT INTO merchant_rules (user_id, pattern, category) VALUES ('u', 'acme', 'shopping')").execute(&state.db).await.unwrap();
+        let _ = recategorize(State(state.clone()), user()).await.unwrap_or_else(|e| panic!("{}", e.1));
+        assert_eq!(cat(state.db.clone()).await, "shopping");
+
+        // A row the user set by hand stays.
+        sqlx::query("UPDATE transactions SET category = 'gifts', category_locked = 1 WHERE rrn = '612345678903'").execute(&state.db).await.unwrap();
+        let _ = recategorize(State(state.clone()), user()).await.unwrap_or_else(|e| panic!("{}", e.1));
+        assert_eq!(cat(state.db.clone()).await, "gifts");
     }
 
     #[tokio::test]

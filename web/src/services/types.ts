@@ -428,6 +428,16 @@ export interface StatementResult {
   first_date: string | null;
   last_date: string | null;
   balance_updated: { account_name: string; balance_paise: number } | null;
+  /** Rows from earlier imports whose category changed when this import re-checked them. */
+  older_recategorized?: number;
+  /** A balance entered after the statement ends, kept instead of the statement's closing balance. */
+  balance_kept?: {
+    account_name: string;
+    balance_paise: number;
+    set_on: string;
+    statement_paise: number;
+    statement_on: string;
+  } | null;
   /** Bank-alert rows this statement confirmed (kept, with the statement's reference and narration). */
   upgraded: number;
   /** Rows added or confirmed that got a category from structure, rules or keywords. */

@@ -227,6 +227,18 @@ function Outcome({
           {r.balance_updated.account_name} balance set to {formatINR(r.balance_updated.balance_paise)}
         </p>
       )}
+      {(r.older_recategorized ?? 0) > 0 && (
+        <p className="text-muted-foreground">
+          Also sorted {plural(r.older_recategorized ?? 0, "earlier payment", "earlier payments")} with your latest categories.
+        </p>
+      )}
+      {r.balance_kept && (
+        <p className="text-muted-foreground">
+          Kept the {r.balance_kept.account_name} balance of {formatINR(r.balance_kept.balance_paise)} you entered on{" "}
+          {formatDay(r.balance_kept.set_on)}, since it's newer than this statement (it ends {formatDay(r.balance_kept.statement_on)}{" "}
+          at {formatINR(r.balance_kept.statement_paise)}).
+        </p>
+      )}
       {suggestion && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
           <p>
