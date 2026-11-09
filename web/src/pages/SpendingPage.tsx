@@ -26,11 +26,6 @@ export default function SpendingPage() {
   const { data: summary, isLoading, isError } = useSpendSummary(6);
   const [uncategorizedOnly, setUncategorizedOnly] = useState(false);
 
-  const reviewUncategorized = () => {
-    setUncategorizedOnly(true);
-    document.getElementById("transactions")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   const [addMode, setAddMode] = useState<AddMode>("upload");
 
   return (
@@ -86,12 +81,7 @@ export default function SpendingPage() {
           </Card>
         </section>
 
-        <SpendingOverview
-          summary={summary}
-          isLoading={isLoading}
-          isError={isError}
-          onReviewUncategorized={reviewUncategorized}
-        />
+        <SpendingOverview summary={summary} isLoading={isLoading} isError={isError} />
 
         <TransactionList uncategorizedOnly={uncategorizedOnly} onUncategorizedOnlyChange={setUncategorizedOnly} />
 
