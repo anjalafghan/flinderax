@@ -1,0 +1,20 @@
+# The old app name. It only redirects to https://joy.fly.dev (the Fly app `joy`).
+# Its volume `joy_data` is no longer mounted and is kept as a copy of the data as it was on the
+# day of the move. Deploy from this folder: fly deploy --config fly.toml --depot=false
+app = 'joy-jar'
+primary_region = 'sin'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1

@@ -65,7 +65,7 @@ fn clean_url(raw: &str) -> Result<String, AppError> {
         .or_else(|| url.strip_prefix("http://").filter(|r| r.starts_with("localhost") || r.starts_with("127.0.0.1")))
         .ok_or_else(|| bad_request("Joy's address must start with https://"))?;
     if rest.is_empty() || rest.contains(['/', '?', '#', '@', ' ']) {
-        return Err(bad_request("Use just Joy's address, like https://joy-jar.fly.dev"));
+        return Err(bad_request("Use just Joy's address, like https://joy.fly.dev"));
     }
     Ok(url.to_string())
 }
@@ -339,10 +339,10 @@ mod tests {
 
     #[test]
     fn urls() {
-        assert_eq!(clean_url(" https://joy-jar.fly.dev/ ").ok().unwrap(), "https://joy-jar.fly.dev");
+        assert_eq!(clean_url(" https://joy.fly.dev/ ").ok().unwrap(), "https://joy.fly.dev");
         assert_eq!(clean_url("http://localhost:3000").ok().unwrap(), "http://localhost:3000");
-        assert!(clean_url("http://joy-jar.fly.dev").is_err());
-        assert!(clean_url("https://joy-jar.fly.dev/api").is_err());
+        assert!(clean_url("http://joy.fly.dev").is_err());
+        assert!(clean_url("https://joy.fly.dev/api").is_err());
         assert!(clean_url("https://user@evil.example").is_err());
         assert!(clean_url("ftp://x").is_err());
     }
