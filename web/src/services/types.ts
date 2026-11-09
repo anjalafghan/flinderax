@@ -421,12 +421,26 @@ export interface StatementResult {
   total: number;
   added: number;
   duplicates: number;
+  /** Bank-alert rows this statement confirmed. The same number as `upgraded`. */
   matched_alerts: number;
   skipped: number;
   uncategorized: number;
   first_date: string | null;
   last_date: string | null;
   balance_updated: { account_name: string; balance_paise: number } | null;
+  /** Bank-alert rows this statement confirmed (kept, with the statement's reference and narration). */
+  upgraded: number;
+  /** Rows added or confirmed that got a category from structure, rules or keywords. */
+  categorized: number;
+  /** Each balance follows from the one before it. Only meaningful when opening_paise is set. */
+  chain_ok: boolean;
+  /** Null when the file has no balance column. */
+  opening_paise: number | null;
+  closing_paise: number | null;
+  /** Bank-alert transactions on this account or card, inside the statement's dates, that it never confirmed. */
+  not_on_statement: number;
+  /** A payee the user seems to pay and receive from, offered as their own name when none are saved. */
+  holder_name_suggestion: string | null;
 }
 
 export interface SpendMonth {

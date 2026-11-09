@@ -17,8 +17,8 @@ import { useSpendSummary } from "@/hooks/usePlanner";
 
 type AddMode = "paste" | "upload" | "manual";
 const ADD_MODES = [
+  { id: "upload", label: "Statement", icon: FileUp },
   { id: "paste", label: "Paste", icon: ClipboardPaste },
-  { id: "upload", label: "Upload", icon: FileUp },
   { id: "manual", label: "Manual", icon: PenLine },
 ] as const;
 
@@ -31,7 +31,7 @@ export default function SpendingPage() {
     document.getElementById("transactions")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const [addMode, setAddMode] = useState<AddMode>("paste");
+  const [addMode, setAddMode] = useState<AddMode>("upload");
 
   return (
     <div className="min-h-screen text-foreground">
@@ -39,17 +39,8 @@ export default function SpendingPage() {
       <main className="page stack max-w-3xl">
         <div>
           <h1 className="page-title">Spending</h1>
-          <p className="page-sub">Bank alerts are picked up automatically. Fix a category and the app learns it.</p>
+          <p className="page-sub">Upload your bank statement to bring everything in; bank alerts fill the gaps in between. Fix a category and the app learns it.</p>
         </div>
-
-        <SpendingOverview
-          summary={summary}
-          isLoading={isLoading}
-          isError={isError}
-          onReviewUncategorized={reviewUncategorized}
-        />
-
-        <TransactionList uncategorizedOnly={uncategorizedOnly} onUncategorizedOnlyChange={setUncategorizedOnly} />
 
         <section aria-label="Add transactions">
           <Card>
@@ -85,7 +76,7 @@ export default function SpendingPage() {
               {addMode === "upload" && (
                 <>
                   <p className="max-w-prose text-sm leading-snug text-muted-foreground">
-                    Drop the CSV from your bank's website. Nothing is added twice, so overlapping files are fine.
+                    For HDFC, download the statement from NetBanking as <span className="font-medium text-foreground">Delimited (.txt)</span>. Nothing is added twice, so overlapping periods are fine.
                   </p>
                   <StatementImport />
                 </>
@@ -94,6 +85,16 @@ export default function SpendingPage() {
             </CardContent>
           </Card>
         </section>
+
+        <SpendingOverview
+          summary={summary}
+          isLoading={isLoading}
+          isError={isError}
+          onReviewUncategorized={reviewUncategorized}
+        />
+
+        <TransactionList uncategorizedOnly={uncategorizedOnly} onUncategorizedOnlyChange={setUncategorizedOnly} />
+
 
         <details className="group glass rounded-[1.75rem]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 md:px-8">

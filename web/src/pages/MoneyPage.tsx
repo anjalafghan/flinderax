@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CreditCard, Landmark, Plus, Receipt } from "lucide-react";
 
 import { Header } from "@/components/layout/Header";
+import { AnalyticsPanel } from "@/components/feature/AnalyticsPanel";
 import { InsightsPanel } from "@/components/feature/InsightsPanel";
 
 const LINKS = [
@@ -42,6 +43,7 @@ export default function MoneyPage() {
             </Link>
           ))}
         </nav>
+        <AnalyticsPanel />
         <InsightsPanel />
       </main>
     </div>

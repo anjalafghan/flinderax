@@ -20,6 +20,9 @@ export const CATEGORY_IDS: readonly string[] = [
   "dates",
   "transfer",
   "income",
+  "investments",
+  "fees",
+  "refund",
   "other",
   "uncategorized",
 ];
@@ -40,12 +43,15 @@ export const CATEGORY_LABEL: Record<string, string> = {
   dates: "Dates",
   transfer: "Transfers (not spending)",
   income: "Income",
+  investments: "Investments",
+  fees: "Fees",
+  refund: "Refunds",
   other: "Other",
   uncategorized: "Uncategorized",
 };
 
-/** Transfers and income are money moving, not spending. */
-const NOT_SPENDING = new Set(["transfer", "income"]);
+/** Transfers, income, investments and refunds are money moving, not spending. */
+const NOT_SPENDING = new Set(["transfer", "income", "investments", "refund"]);
 
 export function categoryLabel(id: string): string {
   return CATEGORY_LABEL[id] ?? id;

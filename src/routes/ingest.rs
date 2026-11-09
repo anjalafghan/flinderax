@@ -1,4 +1,5 @@
 use axum::{
+    extract::DefaultBodyLimit,
     routing::{get, post},
     Router,
 };
@@ -9,6 +10,10 @@ pub fn routes(state: AppState) -> Router {
     Router::new()
         .route("/parse", post(ingest::parse))
         .route("/statement", post(ingest::statement))
+        // The whole file is held in memory for the import, so the upload is capped at 5 MB.
+        .route("/statement/upload", post(ingest::statement_upload).layer(DefaultBodyLimit::max(5 * 1024 * 1024)))
+        .route("/holder-names", get(ingest::holder_names).post(ingest::set_holder_names))
+        .route("/recategorize", post(ingest::recategorize))
         .route("/transactions", get(ingest::list))
         .route("/transactions/create", post(ingest::create))
         .route("/transactions/update", post(ingest::update))

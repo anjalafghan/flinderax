@@ -13,12 +13,12 @@ nanoid = "0.5.0"
 rusty_paseto = { version = "0.9.0", features = ["batteries_included"] }
 serde = {version = "1.0.228", features=["derive"]}
 serde_json = "1.0.149"
-sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio-rustls", "migrate"] }
+sqlx = { version = "0.8.6", default-features = false, features = ["macros", "sqlite", "runtime-tokio-rustls", "migrate"] }
 redis = { version = "1.0.3", features = ["tokio-comp", "connection-manager"] }
-tokio = { version = "1.49.0", features = ["full"] }
+tokio = { version = "1.49.0", features = ["rt-multi-thread", "macros", "net", "time", "signal"] }
 tower-http = { version = "0.6.8", features = ["trace", "compression-gzip", "cors", "fs", "compression-br", "catch-panic"] }
 tracing = "0.1.44"
-tracing-subscriber = {version="0.3.22", features=["env-filter", "json"]}
+tracing-subscriber = {version="0.3.22", features=["env-filter"]}
 prost = "0.14.3"
 prost-types = "0.14.3"
 time = { version = "0.3.36", features = ["formatting", "parsing", "macros", "serde-human-readable"] }
@@ -29,8 +29,9 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 
 [profile.release]
 opt-level = 3
-lto = "thin"
-codegen-units = 16
+# Fat LTO + one codegen unit: slower to build, smaller and faster binary (the deploy build is the only one that matters).
+lto = "fat"
+codegen-units = 1
 strip = true
 # unwind (not abort) so CatchPanicLayer turns a stray panic into a 500 instead of killing the server.
 panic = "unwind"

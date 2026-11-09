@@ -44,12 +44,12 @@ pub struct Alert {
 
 pub const CATEGORIES: &[&str] = &[
     "food", "groceries", "shopping", "transport", "fuel", "bills", "entertainment", "health", "travel", "rent",
-    "emi", "cash", "dates", "transfer", "income", "other", "uncategorized",
+    "emi", "cash", "dates", "transfer", "income", "investments", "fees", "refund", "other", "uncategorized",
 ];
 
 /// Categories that are not spending.
 pub fn is_spending(category: &str) -> bool {
-    !matches!(category, "transfer" | "income")
+    !matches!(category, "transfer" | "income" | "investments" | "refund")
 }
 
 fn re(cell: &'static OnceLock<Regex>, pattern: &str) -> &'static Regex {

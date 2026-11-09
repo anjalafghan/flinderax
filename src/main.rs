@@ -1,18 +1,67 @@
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool, SqlitePoolOptions, SqliteSynchronous};
 use std::env;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use joy::{app, models};
+
+/// How often `PRAGMA optimize` refreshes the planner's statistics while the server runs.
+const OPTIMIZE_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
+
+/// One small SQLite file on a volume, one process: WAL so reads never wait on the writer, and a
+/// few pooled connections (SQLite serialises writers anyway). `foreign_keys` is ON, which the
+/// schema relies on for its `ON DELETE CASCADE`s.
+fn sqlite_options(database_url: &str) -> Result<SqliteConnectOptions, sqlx::Error> {
+    Ok(SqliteConnectOptions::from_str(database_url)?
+        .create_if_missing(true)
+        .journal_mode(SqliteJournalMode::Wal)
+        .synchronous(SqliteSynchronous::Normal)
+        .foreign_keys(true)
+        .busy_timeout(Duration::from_secs(5))
+        .pragma("cache_size", "-2000") // 2 MB per connection: the DB is small; keep RSS low
+        .pragma("temp_store", "MEMORY")
+        .pragma("mmap_size", "33554432")) // 32 MB window, file-backed (reclaimable)
+}
+
+async fn optimize(pool: &SqlitePool) {
+    if let Err(e) = sqlx::query("PRAGMA optimize").execute(pool).await {
+        error!("PRAGMA optimize failed: {e}");
+    }
+}
+
+/// Resolves on Ctrl-C or SIGTERM (what Fly sends on deploy/stop), so in-flight requests finish and
+/// the pool closes cleanly, which checkpoints the WAL into the main file.
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        let _ = tokio::signal::ctrl_c().await;
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut s) => {
+                s.recv().await;
+            }
+            Err(_) => std::future::pending::<()>().await,
+        }
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+    tokio::select! {
+        _ = ctrl_c => {}
+        _ = terminate => {}
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                "joy=debug,tower_http=debug,axum::rejection=trace".into()
+                // Info, not debug: per-request debug spans cost CPU and log volume on the small VM.
+                "joy=info,tower_http=info".into()
             }),
         )
         .with(tracing_subscriber::fmt::layer())
@@ -23,10 +72,13 @@ async fn main() -> Result<(), sqlx::Error> {
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL missing");
 
-    let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
-
-    let pool = SqlitePool::connect_with(options).await?;
+    let pool = SqlitePoolOptions::new()
+        .min_connections(1)
+        .max_connections(3)
+        .connect_with(sqlite_options(&database_url)?)
+        .await?;
     sqlx::migrate!().run(&pool).await?;
+    optimize(&pool).await;
     info!("Database connected successfully");
 
     // `joy import-joy <joy.db> <user name> [--as a|b] [--photos <dir>] [--dry-run]`
@@ -99,6 +151,15 @@ async fn main() -> Result<(), sqlx::Error> {
         paseto_key,
     };
 
+    let maintenance = pool.clone();
+    tokio::spawn(async move {
+        let mut tick = tokio::time::interval_at(tokio::time::Instant::now() + OPTIMIZE_EVERY, OPTIMIZE_EVERY);
+        loop {
+            tick.tick().await;
+            optimize(&maintenance).await;
+        }
+    });
+
     let app = app::build_router(state);
     info!("Running Server!");
 
@@ -108,6 +169,10 @@ async fn main() -> Result<(), sqlx::Error> {
         .unwrap();
     info!("Serving API and web app (from {}) on port {}", app::static_dir(), port);
 
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
+    pool.close().await;
     Ok(())
 }
