@@ -895,6 +895,55 @@ pub struct SpendBody {
     history_id: String,
 }
 
+#[derive(Deserialize)]
+pub struct CustomBody {
+    #[serde(default, deserialize_with = "flex")]
+    title: String,
+    /// Where, optional.
+    #[serde(default, deserialize_with = "flex")]
+    place: String,
+    /// One of the slip settings; blank is "local".
+    #[serde(default, deserialize_with = "flex")]
+    setting: String,
+    /// "YYYY-MM-DD"; blank means today. Never in the future.
+    #[serde(default, deserialize_with = "flex")]
+    on: String,
+    /// What it cost, in rupees; blank for unknown.
+    #[serde(default, deserialize_with = "flex")]
+    cost: String,
+}
+
+/// `POST /history/custom`: a date we had that never was a slip, straight into Kept, where it
+/// takes photos, a rating and lines like any other. Its slip is archived, so the jar never draws it.
+pub async fn add_custom(State(s): State<AppState>, Extension((user_id, _)): User, Json(f): Json<CustomBody>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    let title = f.title.trim();
+    if title.is_empty() || title.chars().count() > 80 {
+        return Err(unprocessable("Give the date a name, up to 80 characters."));
+    }
+    let place: String = f.place.trim().chars().take(80).collect();
+    let setting = match f.setting.trim() {
+        "" => "local",
+        s if crate::joy::picker::SETTINGS.iter().any(|(k, _)| *k == s) => s,
+        _ => return Err(unprocessable("That kind of date isn't one we know.")),
+    };
+    let today = crate::handlers::common::today_local();
+    let on = match f.on.trim() {
+        "" => today,
+        d => time::Date::parse(d, time::macros::format_description!("[year]-[month]-[day]"))
+            .map_err(|_| unprocessable("That date didn't look right."))?,
+    };
+    if on > today {
+        return Err(unprocessable("Pick a day that has already happened. Plan future dates from the jar."));
+    }
+    if on.year() < 2000 {
+        return Err(unprocessable("That date is too far back."));
+    }
+    let cost = money_in(&f.cost).map_err(|e| unprocessable(&e))?;
+    let id = db::keep_custom(&s.db, &j.couple, Some(j.who), title, &place, setting, &on.to_string(), cost).await?;
+    Ok(go(kept_to(id)))
+}
+
 /// If the body names a kept date, it must be ours and not sealed from us.
 async fn guard_history(j: &super::Joy, db: &SqlitePool, history_id: &str) -> Result<(), AppError> {
     match history_id.trim().parse::<i64>() {
@@ -980,6 +1029,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/kept", get(page))
         .route("/history/when", post(when))
+        .route("/history/custom", post(add_custom))
         .route("/history/{id}", post(rate))
         .route("/history/{id}/reveal", post(reveal))
         .route("/history/{id}/delete", post(delete))

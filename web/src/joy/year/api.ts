@@ -18,6 +18,8 @@ export interface BestNight {
   note: string;
   more: number;
   photo: string;
+  /** The kept date, to open all its photos. */
+  date_id: number;
 }
 export interface Kind {
   key: string;
@@ -49,6 +51,8 @@ export interface RatingRow {
 }
 export interface YearPhoto {
   id: number;
+  /** The kept date it belongs to. */
+  date_id: number;
   url: string;
   title: string;
   when: string;

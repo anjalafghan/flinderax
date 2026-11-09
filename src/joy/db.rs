@@ -454,6 +454,50 @@ pub async fn accept(db: &SqlitePool, couple: &str, id: i64, drawn_by: Option<usi
     Ok(row)
 }
 
+/// A date we had that never was a slip: kept straight into Kept on `on` ("YYYY-MM-DD", local
+/// noon), with its own one-off slip that is archived, so it never turns up in the jar. Returns
+/// the kept date's id.
+pub async fn keep_custom(
+    db: &SqlitePool,
+    couple: &str,
+    drawn_by: Option<usize>,
+    title: &str,
+    place: &str,
+    setting: &str,
+    on: &str,
+    cost: Option<i64>,
+) -> sqlx::Result<i64> {
+    let mut tx = db.begin().await?;
+    let activity = sqlx::query(
+        "INSERT INTO joy_activities (couple_id, title, est_cost, setting, venue, duration, added_by, archived, times_done, last_done_at)
+         VALUES (?, ?, ?, ?, ?, 'short', 'us', 1, 1, CAST(strftime('%s', ? || ' 12:00:00', 'utc') AS INTEGER))",
+    )
+    .bind(couple)
+    .bind(title)
+    .bind(cost.unwrap_or(0))
+    .bind(setting)
+    .bind(place)
+    .bind(on)
+    .execute(&mut *tx)
+    .await?
+    .last_insert_rowid();
+    let id = sqlx::query(
+        "INSERT INTO joy_history (couple_id, activity_id, picked_at, outcome, drawn_by, est_cost, actual_cost)
+         VALUES (?, ?, CAST(strftime('%s', ? || ' 12:00:00', 'utc') AS INTEGER), 'did_it', ?, ?, ?)",
+    )
+    .bind(couple)
+    .bind(activity)
+    .bind(on)
+    .bind(drawn_by.map(|w| w as i64))
+    .bind(cost.unwrap_or(0))
+    .bind(cost)
+    .execute(&mut *tx)
+    .await?
+    .last_insert_rowid();
+    tx.commit().await?;
+    Ok(id)
+}
+
 /// Today's local date for the "it's a date" stamp, e.g. "14 · 10 · 2026".
 pub async fn today(db: &SqlitePool) -> sqlx::Result<String> {
     sqlx::query_scalar("SELECT strftime('%d · %m · %Y', 'now', 'localtime')").fetch_one(db).await
@@ -1845,6 +1889,19 @@ mod tests {
         // Deleting the date forgets its photos.
         delete_history(&db, "B", kept).await.unwrap();
         assert!(all_photos(&db, "B").await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_custom_date_is_kept_on_its_day_and_stays_out_of_the_jar() {
+        let db = test_db().await;
+        let id = keep_custom(&db, "B", Some(0), "Picnic at the lake", "Powai", "local", "2026-03-14", Some(1200)).await.unwrap();
+        let row = history_row(&db, "B", id).await.unwrap().unwrap();
+        assert_eq!((row.title.as_str(), row.day.as_str(), row.outcome.as_str()), ("Picnic at the lake", "2026-03-14", "did_it"));
+        assert_eq!((row.place.as_str(), row.actual_cost, row.est_cost), ("Powai", Some(1200), 1200));
+        assert!(list(&db, "B", false).await.unwrap().iter().all(|a| a.title != "Picnic at the lake"), "not a slip in the jar");
+        assert!(history_row(&db, "A", id).await.unwrap().is_none(), "the other couple never sees it");
+        let free = keep_custom(&db, "B", None, "Walk", "", "home", "2026-03-15", None).await.unwrap();
+        assert_eq!(history_row(&db, "B", free).await.unwrap().unwrap().actual_cost, None);
     }
 
     #[tokio::test]

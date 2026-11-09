@@ -25,6 +25,7 @@ const JOY_CSS_ENTRY = [
   "src/joy/jar/jar-scope.css",
   "src/joy/kept/kept.css",
   "src/joy/regulars/regulars.css",
+  "src/joy/components/photo-viewer.css",
 ];
 const JOY_CSS_FILTER = /[\\/]src[\\/]joy[\\/].*\.css$/;
 const JOY_FONT_DIR = "joy-fonts";

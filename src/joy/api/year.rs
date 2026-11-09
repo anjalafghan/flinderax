@@ -117,6 +117,8 @@ pub struct BestNight {
     pub more: usize,
     /// Its signed photo link, when it has one.
     pub photo: String,
+    /// The kept date, to open all its photos.
+    pub date_id: i64,
 }
 
 /// One kind of night (home, local, …) and its share of the year, for the paper strip.
@@ -170,6 +172,8 @@ pub struct RatingRow {
 #[derive(Debug, Serialize)]
 pub struct YearPhoto {
     pub id: i64,
+    /// The kept date it belongs to, so a viewer can step through that date's photos.
+    pub date_id: i64,
     /// Signed photo link.
     pub url: String,
     pub title: String,
@@ -303,7 +307,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
     let photos: Vec<YearPhoto> = rows
         .iter()
         .flat_map(|x| {
-            x.photos().into_iter().map(move |pid| YearPhoto { id: pid, url: history_photo_url(x.id, pid), title: ctx.personalize(&x.title), when: x.day_label.clone() })
+            x.photos().into_iter().map(move |pid| YearPhoto { id: pid, date_id: x.id, url: history_photo_url(x.id, pid), title: ctx.personalize(&x.title), when: x.day_label.clone() })
         })
         .collect();
     let best = r.best.map(|(i, more)| {
@@ -315,6 +319,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
             note: b.note.lines().next().unwrap_or("").to_string(),
             more,
             photo: b.cover_url(),
+            date_id: b.id,
         }
     });
     let share = ShareData {

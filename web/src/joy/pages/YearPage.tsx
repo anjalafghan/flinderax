@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getYear, getYearGo, yearKeys, type YearView } from "../year/api";
 import { Defs, Jar, Lights } from "../year/Decor";
 import { DuskArt } from "../year/BestPhoto";
+import { PhotoViewer } from "../components/PhotoViewer";
 import { SharePanel } from "../year/SharePanel";
 import { MAX_PHOTOS } from "../year/layout";
 import { dealIn, dropSlips } from "../year/motion";
@@ -77,6 +78,7 @@ function Year({ v }: { v: YearView }) {
   const stage = useRef<HTMLDivElement>(null);
   const [ticked, setTicked] = useState<number[]>([]);
   const [cap, setCap] = useState("");
+  const [viewing, setViewing] = useState<{ list: YearView["photos"]; at: number } | null>(null);
 
   useEffect(() => {
     if (!stage.current) return;
@@ -85,6 +87,7 @@ function Year({ v }: { v: YearView }) {
   }, [year]);
 
   const shareIds = new Set(v.share.photos.map((p) => p.id));
+  const bestPhotos = v.best ? v.photos.filter((p) => p.date_id === v.best!.date_id) : [];
   const wall = v.photos.filter((p) => shareIds.has(p.id));
   const tick = (id: number, on: boolean) => {
     if (!on) {
@@ -305,7 +308,18 @@ function Year({ v }: { v: YearView }) {
                         <span className="y-tape y-tape-stripe" aria-hidden="true"></span>
                         <figure className="y-print">
                           <span className="y-print-photo">
-                            {v.best.photo ? <img src={v.best.photo} alt={`Photo from ${v.best.title}`} loading="lazy" decoding="async" width={480} height={600} /> : <DuskArt />}
+                            {v.best.photo ? (
+                              <button
+                                type="button"
+                                className="y-open"
+                                onClick={() => setViewing({ list: bestPhotos.length > 0 ? bestPhotos : v.photos, at: 0 })}
+                                aria-label={bestPhotos.length > 1 ? `Open the ${bestPhotos.length} photos from ${v.best.title}` : `Open the photo from ${v.best.title}`}
+                              >
+                                <img src={v.best.photo} alt={`Photo from ${v.best.title}`} loading="lazy" decoding="async" width={480} height={600} />
+                              </button>
+                            ) : (
+                              <DuskArt />
+                            )}
                           </span>
                           <figcaption>
                             <span id="y-best-h" className="y-cap-big">our best night ♡</span>
@@ -360,11 +374,13 @@ function Year({ v }: { v: YearView }) {
                 <p className="y-hand-label">{v.photos.length} {plural(v.photos.length, "photo", "photos")} ♡</p>
               </div>
               <ul className="y-photos">
-                {v.photos.map((p) => (
+                {v.photos.map((p, at) => (
                   <li className="y-polaroid" key={p.id} style={{ "--r": p.id % 5 } as React.CSSProperties}>
                     <figure>
                       <span className="y-tape" aria-hidden="true"></span>
-                      <span className="y-frame"><img src={p.url} alt={`Photo from ${p.title}, ${p.when}`} loading="lazy" decoding="async" width={480} height={600} /></span>
+                      <button type="button" className="y-frame y-open" onClick={() => setViewing({ list: v.photos, at })} aria-label={`Open photo ${at + 1} of ${v.photos.length}: ${p.title}, ${p.when}`}>
+                        <img src={p.url} alt={`Photo from ${p.title}, ${p.when}`} loading="lazy" decoding="async" width={480} height={600} />
+                      </button>
                       <figcaption><span className="y-cap-title">{p.title}</span> <span className="y-cap-when">{p.when}</span></figcaption>
                     </figure>
                     {shareIds.has(p.id) && (
@@ -381,6 +397,11 @@ function Year({ v }: { v: YearView }) {
           <SharePanel data={v.share} ticked={ticked} hasWall={wall.length > 0} say={cap} />
         </>
       )}
+      <PhotoViewer
+        photos={(viewing?.list ?? []).map((p) => ({ url: p.url, alt: `Photo from ${p.title}, ${p.when}`, caption: `${p.title} · ${p.when}` }))}
+        start={viewing?.at ?? null}
+        onClose={() => setViewing(null)}
+      />
     </div>
   );
 }
