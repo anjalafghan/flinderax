@@ -236,7 +236,8 @@ fn parse_token(
         }
         Err(err) => {
             error!("Error parsing token {}", err);
-            Err(AppError(StatusCode::UNAUTHORIZED, err.to_string()))
+            // The library's reason stays in the log; the client only learns to sign in again.
+            Err(AppError(StatusCode::UNAUTHORIZED, "Please sign in again.".to_string()))
         }
     }
 }

@@ -158,6 +158,10 @@ pub async fn join(
     if couple_of(&state.db, &user_id).await?.is_some() {
         return Err(bad_request("You're already in Dates. Leave it first to join someone else"));
     }
+    // Guessing codes is slow: a few tries a minute per account.
+    if !crate::ratelimit::allow(&format!("join-user:{user_id}"), 5) {
+        return Err(AppError(StatusCode::TOO_MANY_REQUESTS, "Too many tries. Wait a minute and check the code.".into()));
+    }
     let hash = hash_code(&p.code);
     let mut tx = state.db.begin().await?;
     let couple = sqlx::query_scalar!(
