@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileUp, Shield, Target, Utensils, Wallet, type LucideIcon } from "lucide-react";
+import { FileUp, HeartPulse, Shield, Target, Users, Utensils, Wallet, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ const AREA_ICON: Record<Habit["area"], LucideIcon> = {
   food: Utensils,
   goals: Target,
   protection: Shield,
+  health: HeartPulse,
+  people: Users,
 };
 
 const CADENCE_LABEL: Record<Habit["cadence"], string> = {

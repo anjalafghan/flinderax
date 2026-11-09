@@ -14,10 +14,10 @@ use time::OffsetDateTime;
 use crate::{
     handlers::{
         common::{today_local, AppError},
-        habits,
+        habits, people,
     },
     models::AppState,
-    planner::reminders::{from_habits, render, token_from_file, Reminder},
+    planner::reminders::{from_dates, from_habits, hide_names, render, token_from_file, Reminder},
 };
 
 const DEFAULT_PUBLIC_URL: &str = "https://joy-jar.fly.dev";
@@ -92,9 +92,15 @@ async fn feed_body(state: &AppState, file: &str) -> Result<Option<String>, AppEr
         return Ok(None);
     };
     let today = today_local();
-    let habits = habits::compute(state, &user_id, today).await?;
+    let mut habits = habits::compute(state, &user_id, today).await?;
+    let names = people::feed_names(&state.db, &user_id).await?;
+    if !names {
+        hide_names(&mut habits);
+    }
     let url = public_url();
     let mut reminders = from_habits(&habits, today, &url);
+    let (dates, seasons) = people::feed_input(&state.db, &user_id).await?;
+    reminders.extend(from_dates(&dates, &seasons, today, names, &url));
     let status = crate::handlers::checkin::compute_status(state, &user_id, today).await?;
     reminders.push(checkin_reminder(&status.next_due_on, today, &url));
     let now = OffsetDateTime::now_utc().unix_timestamp();
@@ -270,5 +276,77 @@ mod tests {
         assert!(url.starts_with("http"));
         assert!(url.ends_with(&format!("/api/public/reminders/{}.ics", "a".repeat(64))));
         assert!(!url.contains("//api"));
+    }
+
+    /// Unfolds the calendar text so long lines can be searched.
+    fn unfolded(text: &str) -> String {
+        text.replace("\r\n ", "")
+    }
+
+    async fn feed_with_people(state: &AppState, names: bool) -> String {
+        let today = today_local();
+        let url = link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url;
+        for q in [
+            "INSERT INTO people (person_id, user_id, name, circle, every_days, created_at) VALUES ('p1', 'u', 'Person A', 'family', 28, '2026-01-01 10:00:00')",
+            "INSERT INTO people (person_id, user_id, name, circle) VALUES ('p2', 'v', 'Person X', 'family')",
+        ] {
+            sqlx::query(q).execute(&state.db).await.unwrap();
+        }
+        sqlx::query("INSERT INTO gift_seasons (season_id, user_id, label, month, budget_paise) VALUES ('s1', 'u', 'Diwali', ?, 500000)")
+            .bind(today.month().next() as i64)
+            .execute(&state.db)
+            .await
+            .unwrap();
+        let soon = today + time::Duration::days(10);
+        let far = today + time::Duration::days(120);
+        sqlx::query("INSERT INTO person_dates (date_id, user_id, person_id, kind, month, day, year, gift_budget_paise) VALUES ('d1', 'u', 'p1', 'birthday', ?, ?, 1966, 200000)")
+            .bind(soon.month() as i64)
+            .bind(soon.day() as i64)
+            .execute(&state.db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO person_dates (date_id, user_id, person_id, kind, month, day) VALUES ('d2', 'u', 'p1', 'anniversary', ?, ?)")
+            .bind(far.month() as i64)
+            .bind(far.day() as i64)
+            .execute(&state.db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO person_dates (date_id, user_id, person_id, kind, month, day) VALUES ('d3', 'v', 'p2', 'birthday', ?, ?)")
+            .bind(soon.month() as i64)
+            .bind(soon.day() as i64)
+            .execute(&state.db)
+            .await
+            .unwrap();
+        if names {
+            sqlx::query("INSERT INTO user_settings (user_id, feed_names) VALUES ('u', 1)").execute(&state.db).await.unwrap();
+        }
+        let (status, _, body) = get_feed(state, &file_of(&url)).await;
+        assert_eq!(status, StatusCode::OK);
+        unfolded(&body)
+    }
+
+    #[tokio::test]
+    async fn the_feed_keeps_names_out_by_default() {
+        let state = test_state().await;
+        let soon = today_local() + time::Duration::days(10);
+        let text = feed_with_people(&state, false).await;
+        assert!(text.contains("SUMMARY:Birthday (family)\r\n"), "{text}");
+        assert!(text.contains(&format!("UID:joy-pdate-d1-{}@joy\r\n", soon.year())), "{text}");
+        assert!(text.contains("SUMMARY:Gift season: Diwali\r\n"), "{text}");
+        assert!(text.contains("SUMMARY:Catch up with someone\r\n"), "{text}");
+        assert!(text.contains("SUMMARY:Gift for an upcoming date\r\n"), "{text}");
+        assert!(!text.contains("Person A") && !text.contains("Person X"), "no names anywhere: {text}");
+        assert!(!text.contains("d3"), "another user's date is not in this feed");
+        assert!(!text.contains("joy-pdate-d2"), "120 days away is out of range");
+    }
+
+    #[tokio::test]
+    async fn the_feed_shows_names_when_the_user_turns_them_on() {
+        let state = test_state().await;
+        let text = feed_with_people(&state, true).await;
+        assert!(text.contains("SUMMARY:Person A's birthday\r\n"), "{text}");
+        assert!(text.contains("SUMMARY:Catch up with Person A\r\n"), "{text}");
+        assert!(text.contains("SUMMARY:Gift for Person A's birthday on "), "{text}");
+        assert!(!text.contains("Person X"), "another user's person never appears");
     }
 }

@@ -6,7 +6,7 @@ import api from "@/services/api";
 
 export interface Habit {
   key: string;
-  area: "data" | "money" | "food" | "goals" | "protection";
+  area: "data" | "money" | "food" | "goals" | "protection" | "health" | "people";
   title: string;
   why: string;
   action: { label: string; to: string } | null;

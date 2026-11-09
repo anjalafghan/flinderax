@@ -57,6 +57,16 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         ("goals", "SELECT * FROM goals WHERE user_id = ?"),
         ("goal_contributions", "SELECT c.* FROM goal_contributions c JOIN goals g ON g.goal_id = c.goal_id WHERE g.user_id = ?"),
         ("settings", "SELECT * FROM user_settings WHERE user_id = ?"),
+        ("checkins", "SELECT * FROM checkins WHERE user_id = ?"),
+        ("diet_habits", "SELECT * FROM diet_habits WHERE user_id = ?"),
+        ("diet_weeks", "SELECT * FROM diet_weeks WHERE user_id = ?"),
+        ("diet_week_habits", "SELECT * FROM diet_week_habits WHERE user_id = ?"),
+        ("health_marks", "SELECT * FROM health_marks WHERE user_id = ?"),
+        ("people", "SELECT * FROM people WHERE user_id = ?"),
+        ("person_dates", "SELECT * FROM person_dates WHERE user_id = ?"),
+        ("touches", "SELECT * FROM touches WHERE user_id = ?"),
+        ("gifts", "SELECT * FROM gifts WHERE user_id = ?"),
+        ("gift_seasons", "SELECT * FROM gift_seasons WHERE user_id = ?"),
     ];
     for (name, sql) in mine {
         out.insert((*name).into(), Value::Array(rows(db, sql, &user_id).await?));

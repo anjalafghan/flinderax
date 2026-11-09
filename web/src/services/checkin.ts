@@ -17,11 +17,13 @@ export interface Upload {
 }
 
 export interface Step {
-  key: "statements" | "balances" | "payees" | "report";
+  key: "statements" | "balances" | "payees" | "body" | "report";
   title: string;
   detail: string;
   done: boolean;
   count: number;
+  /** An optional step never holds back finishing. */
+  optional?: boolean;
 }
 
 export interface Estimate {
@@ -71,6 +73,51 @@ export interface QuarterReport {
   habits: Habit[];
   /** The forecast kept with the last check-in, set against what happened since. */
   calibration?: Calibration | null;
+  /** Phase 5: food money, diet habits and weight. */
+  diet?: DietReport | null;
+  /** Phase 5: catch-ups, gifts and money sent to people. No names. */
+  people?: PeopleReport | null;
+}
+
+export interface DietHabitRate {
+  label: string;
+  target_days: number;
+  hit_bps: number | null;
+  weeks_on_target: number;
+  weeks_logged: number;
+}
+
+export interface DietReport {
+  eating_out_paise: number;
+  groceries_paise: number;
+  prev_eating_out_paise: number | null;
+  prev_groceries_paise: number | null;
+  eating_out_share_bps: number | null;
+  /** Hundredths: 350 is 3.5 orders a week. */
+  delivery_per_week_x100: number;
+  weeks_logged: number;
+  weeks_in_period: number;
+  habits: DietHabitRate[];
+  /** kg x10 */
+  weight_x10: number | null;
+  weight_change_x10: number | null;
+  checkup_due_on: string | null;
+  wins: string[];
+  watch: string[];
+}
+
+export interface PeopleReport {
+  catch_ups: number;
+  overdue_people: number;
+  gifts_given_paise: number;
+  gifts_budgeted_paise: number;
+  next_quarter_gifts_paise: number;
+  next_quarter_occasions: number;
+  visit_cost_paise: number;
+  sent_to_people_paise: number;
+  prev_sent_to_people_paise: number | null;
+  wins: string[];
+  watch: string[];
 }
 
 export interface GoalCheck {

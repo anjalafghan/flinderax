@@ -113,6 +113,8 @@ pub async fn load_input(
             term_gap_paise: saved.plan.insurance.term_gap_paise,
             health_gap_paise: saved.plan.insurance.health_gap_paise,
         }),
+        diet: crate::handlers::diet::habits_input(db, user_id, today).await?,
+        people: crate::handlers::people::habits_input(db, user_id, today).await?,
     })
 }
 
@@ -320,7 +322,9 @@ mod tests {
 
         // Food is tagged, so the weekly budget shows, not the tagging habit. No life plan is saved.
         assert!(find("tag_food_payees").is_none());
-        assert!(find("food_budget").is_some());
+        // Food and health share two slots; with mostly eating out, the eating-out habit can take
+        // the food one.
+        assert!(find("food_budget").is_some() || find("eating_out").is_some());
         assert!(find("life_plan_missing").is_some());
     }
 }

@@ -55,6 +55,8 @@ pub enum Area {
     Food,
     Goals,
     Protection,
+    Health,
+    People,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -187,6 +189,10 @@ pub struct HabitsInput {
     pub food: FoodIn,
     /// None when no life profile is saved.
     pub life: Option<LifeIn>,
+    /// Phase 5: weekly diet habits, eating out and the check-up.
+    pub diet: crate::planner::diet::DietIn,
+    /// Phase 5: catch-ups and gifts.
+    pub people: crate::planner::people::PeopleIn,
 }
 
 /// The habits to act on now, sorted: overdue, then due soon, then ok; within each by impact,
@@ -204,6 +210,8 @@ pub fn build(input: &HabitsInput, today: Date) -> Vec<Habit> {
     food_budget(input, &mut out);
     life_habits(input, &mut out);
     tax_dates(today, &mut out);
+    out.extend(crate::planner::diet::habits(&input.diet, today));
+    out.extend(crate::planner::people::habits(&input.people, today));
 
     out.retain(|h| !(h.status == Status::Ok && h.cadence == Cadence::Once));
     out.sort_by(|a, b| {
@@ -214,8 +222,26 @@ pub fn build(input: &HabitsInput, today: Date) -> Vec<Habit> {
             .then(a.due_on.cmp(&b.due_on))
             .then(a.key.cmp(&b.key))
     });
+    cap_life_areas(&mut out);
     out.truncate(MAX_HABITS);
     out
+}
+
+/// joy stays money-first: at most this many habits from food and health together, and from
+/// people. Applied after sorting, so the most urgent ones are kept.
+const MAX_PER_LIFE_AREA: usize = 2;
+
+fn cap_life_areas(out: &mut Vec<Habit>) {
+    let (mut body, mut people) = (0, 0);
+    out.retain(|h| {
+        let n = match h.area {
+            Area::Food | Area::Health => &mut body,
+            Area::People => &mut people,
+            _ => return true,
+        };
+        *n += 1;
+        *n <= MAX_PER_LIFE_AREA
+    });
 }
 
 fn link(label: &str, to: &str) -> Option<Link> {
@@ -604,9 +630,29 @@ fn food_budget(input: &HabitsInput, out: &mut Vec<Habit>) {
         / WEEKS_PER_MONTH_HUNDREDTHS;
     let days = i64::from(f.days_in_month.max(1));
     let pace = f.prior_avg_paise.saturating_mul(i64::from(f.day)) / days;
-    let over = pace > 0
-        && f.this_month_paise.saturating_mul(100) >= pace.saturating_mul(FOOD_OVER_PACE_PCT);
-    let why = if over {
+    // With an eating-out cap set, the cap sets the pace and eating out is what is measured.
+    let capped = input.diet.cap_paise.is_some();
+    let over = if let Some(cap) = input.diet.cap_paise {
+        input.diet.over_cap_pace() && cap > 0
+    } else {
+        pace > 0 && f.this_month_paise.saturating_mul(100) >= pace.saturating_mul(FOOD_OVER_PACE_PCT)
+    };
+    let why = if capped {
+        let cap = input.diet.cap_paise.unwrap_or(0);
+        if over {
+            format!(
+                "Eating out is {} this month, past the pace of your {} cap.",
+                inr(input.diet.eating_out_month_paise),
+                inr(cap)
+            )
+        } else {
+            format!(
+                "Eating out is {} this month, within your {} cap.",
+                inr(input.diet.eating_out_month_paise),
+                inr(cap)
+            )
+        }
+    } else if over {
         format!(
             "Food is {} this month, {} over your usual pace.",
             inr(f.this_month_paise),
@@ -782,9 +828,10 @@ mod tests {
 
     #[test]
     fn empty_input_only_asks_for_the_life_plan() {
+        // Plus the one-off check-up nudge, which every user without a recorded check-up gets.
         let habits = build(&HabitsInput::default(), today());
         let keys: Vec<&str> = habits.iter().map(|h| h.key.as_str()).collect();
-        assert_eq!(keys, vec!["life_plan_missing"]);
+        assert_eq!(keys, vec!["life_plan_missing", "health_checkup"]);
         assert_eq!(habits[0].status, Status::Overdue);
         assert_eq!(habits[0].impact, Impact::High);
         assert_eq!(habits[0].cadence, Cadence::Once);
@@ -1209,6 +1256,38 @@ mod tests {
     }
 
     #[test]
+    fn food_budget_uses_the_eating_out_cap_for_pace_when_set() {
+        let food = FoodIn {
+            any_tagged: true,
+            this_month_paise: 1_600_000,
+            prior_avg_paise: 4_330_000,
+            day: 9,
+            days_in_month: 30,
+        };
+        let mk = |eating_out: i64| HabitsInput {
+            food: food.clone(),
+            life: life_fits(),
+            diet: crate::planner::diet::DietIn {
+                cap_paise: Some(300_000),
+                eating_out_month_paise: eating_out,
+                day: 9,
+                days_in_month: 30,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        // Total food is well over the old pace, but eating out of ₹800 is under a ₹900 cap pace.
+        let h = find(&build(&mk(80_000), today()), "food_budget").expect("food habit").clone();
+        assert_eq!(h.status, Status::Ok);
+        assert_eq!(h.why, "Eating out is ₹800 this month, within your ₹3,000 cap.");
+        assert_eq!(h.title, "Plan this week's meals within ₹10,000");
+        // ₹1,200 is over 1.15x the pace of ₹900.
+        let h = find(&build(&mk(120_000), today()), "food_budget").expect("food habit").clone();
+        assert_eq!(h.status, Status::DueSoon);
+        assert_eq!(h.why, "Eating out is ₹1,200 this month, past the pace of your ₹3,000 cap.");
+    }
+
+    #[test]
     fn untagged_food_asks_for_tags_only_when_there_is_spend() {
         let spend = SpendIn {
             any_spend: true,
@@ -1354,6 +1433,7 @@ mod tests {
                 "bank_statement:acctA",
                 "card_statement:cardX",
                 "food_budget",
+                "health_checkup",
                 "bank_statement:acctC",
             ]
         );

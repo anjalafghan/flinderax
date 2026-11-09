@@ -62,7 +62,9 @@ const isAuthEndpoint = (url: string) => url === "/api/common/login" || url === "
  * A 401 on an authenticated request ends the session and redirects to /auth; the rejection still
  * settles the promise. A 401 on the login/register endpoints just rejects with the server's message.
  */
-async function send(method: "GET" | "POST", url: string, body?: unknown): Promise<Response> {
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+async function send(method: Method, url: string, body?: unknown): Promise<Response> {
   const headers: HeadersInit = { "Content-Type": "application/json" };
   const token = localStorage.getItem("token");
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -83,10 +85,12 @@ async function send(method: "GET" | "POST", url: string, body?: unknown): Promis
   return response;
 }
 
-async function json<T>(method: "GET" | "POST", url: string, body?: unknown): Promise<ApiResponse<T>> {
+async function json<T>(method: Method, url: string, body?: unknown): Promise<ApiResponse<T>> {
   const response = await send(method, url, body);
+  // A 204 (a delete) has no body.
+  const text = response.status === 204 ? "" : await response.text();
   return {
-    data: await response.json(),
+    data: (text ? JSON.parse(text) : undefined) as T,
     status: response.status,
     statusText: response.statusText,
   };
@@ -100,6 +104,9 @@ async function binary(method: "GET" | "POST", url: string, body?: unknown): Prom
 const api = {
   get: <T>(url: string) => json<T>("GET", url),
   post: <T>(url: string, body: unknown) => json<T>("POST", url, body),
+  put: <T>(url: string, body: unknown) => json<T>("PUT", url, body),
+  patch: <T>(url: string, body: unknown) => json<T>("PATCH", url, body),
+  del: <T = void>(url: string) => json<T>("DELETE", url),
   postProtobuf: (url: string, body: unknown) => binary("POST", url, body),
   getProtobuf: (url: string) => binary("GET", url),
 };

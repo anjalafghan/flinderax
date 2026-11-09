@@ -156,6 +156,8 @@ pub struct StatusIn {
     pub accounts: Vec<AccountIn>,
     pub cards: Vec<CardIn>,
     pub txns: Vec<TxnIn>,
+    /// Days a weight was recorded (Phase 5's optional weigh-in step).
+    pub weighed_on: Vec<Date>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -189,6 +191,8 @@ pub struct Step {
     pub detail: String,
     pub done: bool,
     pub count: i64,
+    /// An optional step never holds back finishing.
+    pub optional: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -255,6 +259,10 @@ pub struct QuarterReport {
     pub habits: Vec<Habit>,
     /// The forecast kept with the last check-in, set against what happened since.
     pub calibration: Option<Calibration>,
+    /// Phase 5: food money, diet habits and weight.
+    pub diet: Option<crate::planner::diet::DietReport>,
+    /// Phase 5: catch-ups, gifts and money sent to people.
+    pub people: Option<crate::planner::people::PeopleReport>,
 }
 
 /// The status: what is due, the four steps, and the estimated balances.
@@ -269,6 +277,7 @@ pub fn status(input: &StatusIn) -> CheckinStatus {
         statements_step(&uploads),
         balances_step(&input.accounts, period),
         payees_step(&in_period),
+        body_step(&input.weighed_on, period),
         report_step(period),
     ];
     CheckinStatus {
@@ -352,6 +361,7 @@ fn statements_step(uploads: &[Upload]) -> Step {
         detail,
         done: needed == 0,
         count: needed as i64,
+        optional: false,
     }
 }
 
@@ -376,6 +386,7 @@ fn balances_step(accounts: &[AccountIn], period: Period) -> Step {
         detail,
         done: stale == 0,
         count: stale as i64,
+        optional: false,
     }
 }
 
@@ -417,10 +428,27 @@ fn payees_step(in_period: &[&TxnIn]) -> Step {
         detail,
         done,
         count: if done { 0 } else { payees.len() as i64 },
+        optional: false,
     }
 }
 
 /// Always open: finishing the check-in completes it.
+/// Optional: a weight recorded in the period. Done once there is one.
+fn body_step(weighed_on: &[Date], period: Period) -> Step {
+    let last = weighed_on.iter().filter(|d| period.contains(**d)).max();
+    Step {
+        key: "body",
+        title: "Weigh in",
+        detail: match last {
+            Some(d) => format!("Weight added on {}.", short_date(*d)),
+            None => "Optional: add this quarter's weight on the Health page.".to_string(),
+        },
+        done: last.is_some(),
+        count: 0,
+        optional: true,
+    }
+}
+
 fn report_step(period: Period) -> Step {
     let detail = if period.days() > 0 {
         format!(
@@ -438,6 +466,7 @@ fn report_step(period: Period) -> Step {
         detail,
         done: false,
         count: 1,
+        optional: false,
     }
 }
 
@@ -527,6 +556,8 @@ pub fn quarter_report(txns: &[TxnIn], period: Period, habits: Vec<Habit>) -> Qua
         watch,
         habits: habits.into_iter().take(MAX_HABITS).collect(),
         calibration: None,
+        diet: None,
+        people: None,
     }
 }
 
@@ -751,6 +782,7 @@ mod tests {
             accounts: vec![],
             cards: vec![],
             txns: vec![],
+            weighed_on: vec![],
         }
     }
 
@@ -994,7 +1026,7 @@ mod tests {
         assert_eq!(s.status, DueState::DueSoon);
         assert_eq!(s.period, Span { start: "2026-08-11".into(), end: "2026-11-09".into() });
         let keys: Vec<&str> = s.steps.iter().map(|x| x.key).collect();
-        assert_eq!(keys, vec!["statements", "balances", "payees", "report"]);
+        assert_eq!(keys, vec!["statements", "balances", "payees", "body", "report"]);
         assert!(step(&s, "statements").done);
         assert!(step(&s, "balances").done);
         assert!(step(&s, "payees").done);
