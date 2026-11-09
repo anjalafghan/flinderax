@@ -293,30 +293,22 @@ async fn joy_dates_label_alerts_and_split_the_budget() {
         json!({"txn_id": coffee_id, "category": "food", "remember": false})).await;
     assert!(s.is_success());
 
+    // The old link to a separate Joy app is gone: the server refuses it and never calls the address.
     let (url, joy) = fake_joy(&today).await;
-    let (s, b) = authed_post(&app, &t, "/api/joy/connect", json!({"url": url, "token": "wrong", "partner_paise": 600_000})).await;
-    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
     let (s, b) = authed_post(&app, &t, "/api/joy/connect", json!({"url": url, "token": "joy-secret", "partner_paise": 600_000})).await;
-    assert!(s.is_success(), "{b}");
-
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
+    assert!(b.contains("Dates is part of joy now"), "{b}");
+    let (s, _) = authed_post(&app, &t, "/api/joy/connect", json!({"url": "http://localhost.evil.example", "token": "x", "partner_paise": 0})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
     let sum = authed_get(&app, &t, "/api/joy/summary").await;
-    assert_eq!(sum["connected"], true);
-    assert_eq!(sum["stale"], false);
-    assert_eq!(sum["month"]["spent_paise"], 300_000);
-    assert_eq!(sum["month"]["your_share_paise"], 210_000, "70% of ₹3,000");
-    assert_eq!(sum["month"]["your_budget_paise"], 1_400_000);
-
+    assert_eq!(sum["connected"], false);
+    // Nothing was labelled from an outside source.
     let txns = authed_get(&app, &t, "/api/ingest/transactions").await;
     let cat = |m: &str| txns.as_array().unwrap().iter().find(|x| x["merchant"] == m).unwrap()["category"].clone();
-    assert_eq!(cat("saltt"), "dates");
+    assert_ne!(cat("saltt"), "dates");
     assert_eq!(cat("bluetokai"), "food");
-
-    // Joy asleep or gone: the last figures, marked stale.
     joy.abort();
     let _ = joy.await;
-    let sum = authed_get(&app, &t, "/api/joy/summary").await;
-    assert_eq!(sum["stale"], true);
-    assert_eq!(sum["month"]["spent_paise"], 300_000);
 }
 
 #[tokio::test]

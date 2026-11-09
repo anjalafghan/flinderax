@@ -342,9 +342,10 @@ pub async fn photo(State(s): State<AppState>, Path(vid): Path<i64>, Query(q): Qu
     let Some((couple,)) = row else { return Err(not_found("No photo")) };
     let path = photos::visit_path(&crate::import_joy::photos_root().join(&couple), vid);
     let Ok(bytes) = tokio::fs::read(&path).await else { return Err(not_found("No photo")) };
-    // The link carries the file's modified time, so a matching ?v= can be cached for good.
+    // The link carries the file's modified time, so a matching ?v= may be cached, but no longer
+    // than the link itself lives (7 days), so a removed photo doesn't linger in a browser cache.
     let fresh = v == mtime_secs(&path).to_string();
-    let cache = if fresh { "private, max-age=31536000, immutable" } else { "private, no-cache" };
+    let cache = if fresh { "private, max-age=604800" } else { "private, no-cache" };
     Ok(([(header::CONTENT_TYPE, "image/jpeg"), (header::CACHE_CONTROL, cache)], bytes).into_response())
 }
 

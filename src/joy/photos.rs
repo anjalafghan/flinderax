@@ -13,8 +13,9 @@ const MAX_SIDE: u32 = 1600;
 /// Declared size cap, checked from the header before any pixels are decoded. `max_alloc` does not
 /// bound JPEG decoding in image 0.25, so this is what keeps a 12000x12000 file from costing ~430 MB.
 const MAX_PIXELS: u64 = 40_000_000;
-/// At most this many photos decode at once, so a burst of uploads can't exhaust a 512 MB VM.
-static DECODE_SLOTS: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(2));
+/// One photo decodes at a time, so a burst of uploads can't exhaust a 512 MB VM (the web app
+/// shrinks photos before sending, so real uploads decode in well under a second).
+static DECODE_SLOTS: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(1));
 
 /// Where a kept date's stored photo lives. `file` always comes from the database, never from a
 /// request, and is checked to be a bare name so it can't point outside `dir`.
@@ -62,11 +63,12 @@ pub fn process(bytes: &[u8]) -> Result<Vec<u8>, PhotoError> {
     reader.limits(limits);
     let mut decoder = reader.into_decoder().map_err(|_| PhotoError("That file doesn't look like a photo."))?;
     let orientation = decoder.orientation().ok();
-    let mut img = DynamicImage::from_decoder(decoder).map_err(|_| PhotoError("That photo couldn't be read. Try another one."))?;
+    let img = DynamicImage::from_decoder(decoder).map_err(|_| PhotoError("That photo couldn't be read. Try another one."))?;
+    // Shrink first, then turn: rotating the full-size image would need a second full-size copy.
+    let mut img = if img.width() > MAX_SIDE || img.height() > MAX_SIDE { img.thumbnail(MAX_SIDE, MAX_SIDE) } else { img };
     if let Some(o) = orientation {
         img.apply_orientation(o);
     }
-    let img = if img.width() > MAX_SIDE || img.height() > MAX_SIDE { img.thumbnail(MAX_SIDE, MAX_SIDE) } else { img };
     let mut out = Vec::new();
     JpegEncoder::new_with_quality(&mut out, 82)
         .encode_image(&img.to_rgb8())

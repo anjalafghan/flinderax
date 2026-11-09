@@ -290,13 +290,26 @@ const MIN_TRUNCATED: usize = 5;
 /// True when the end of `norm` is a leading fragment of `pat`, starting at a word boundary:
 /// "sparsh leela restaur" ends with "restaur", the start of "restauran". Only fragments of
 /// `MIN_TRUNCATED` characters or more count, so "ravi kumar" does not match anything.
+///
+/// A tail longer than `pat` can't be a prefix of it, so only the last `pat.len()` bytes are looked
+/// at: linear in the pattern, whatever the length of the payee.
 fn truncated_match(norm: &str, pat: &str) -> bool {
-    let words: Vec<&str> = norm.split(' ').collect();
-    (0..words.len()).any(|i| {
-        let tail = words[i..].join(" ");
-        tail.len() >= MIN_TRUNCATED && pat.starts_with(&tail)
-    })
+    if norm.is_empty() {
+        return false;
+    }
+    let from = norm.len().saturating_sub(pat.len());
+    std::iter::once(0)
+        .chain(norm.char_indices().filter(|&(i, c)| i + 1 >= from && c == ' ').map(|(i, _)| i + 1))
+        .filter(|&start| start >= from && start < norm.len())
+        .any(|start| {
+            let tail = &norm[start..];
+            tail.len() >= MIN_TRUNCATED && pat.starts_with(tail)
+        })
 }
+
+/// Payee text beyond this many characters is never matched against rules: real narrations are far
+/// shorter, and it keeps categorising cheap however long a pasted or uploaded line is.
+const MAX_MATCHED_CHARS: usize = 200;
 
 /// The category for a transaction: the user's longest matching rule, then the built-in list.
 pub fn categorize(merchant: Option<&str>, direction: Direction, card_payment: bool, user_rules: &[(String, String)]) -> String {
@@ -304,7 +317,8 @@ pub fn categorize(merchant: Option<&str>, direction: Direction, card_payment: bo
         return "transfer".into();
     }
     if let Some(m) = merchant {
-        let norm = normalize(m);
+        let m: String = m.chars().take(MAX_MATCHED_CHARS).collect();
+        let norm = normalize(&m);
         let padded = format!(" {norm} ");
         let contains = |pat: &str| padded.contains(&format!(" {pat} ")) || (pat.len() >= 5 && norm.contains(pat));
         if let Some((_, cat)) = user_rules.iter().filter(|(p, _)| contains(p)).max_by_key(|(p, _)| p.len()) {
@@ -333,6 +347,38 @@ pub fn categorize(merchant: Option<&str>, direction: Direction, card_payment: bo
 mod tests {
     use super::*;
     use time::macros::date;
+
+    /// The old, quadratic version: the reference the fast one must agree with.
+    fn truncated_match_slow(norm: &str, pat: &str) -> bool {
+        let words: Vec<&str> = norm.split(' ').collect();
+        (0..words.len()).any(|i| {
+            let tail = words[i..].join(" ");
+            tail.len() >= MIN_TRUNCATED && pat.starts_with(&tail)
+        })
+    }
+
+    #[test]
+    fn truncated_match_agrees_with_the_slow_version() {
+        let pats = ["restaurant", "general store", "service centre", "medicals", "kirana"];
+        let norms = [
+            "sparsh leela restaur", "restaur", "ravi kumar", "a b general sto", "general store", "x service cent",
+            "medic", "medi", "", "kiran", "joe kiranaa", "x  restaurant", " restaurant", "restaurant ",
+        ];
+        for n in norms {
+            for p in pats {
+                assert_eq!(truncated_match(n, p), truncated_match_slow(n, p), "{n:?} vs {p:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn huge_payees_categorise_quickly() {
+        let huge = "z ".repeat(1_000_000);
+        let t = std::time::Instant::now();
+        let _ = categorize(Some(&huge), Direction::Debit, false, &[]);
+        assert!(truncated_match(&format!("{huge}restaur"), "restaurant"));
+        assert!(t.elapsed() < std::time::Duration::from_millis(500), "{:?}", t.elapsed());
+    }
 
     fn p(s: &str) -> Alert {
         parse(s).unwrap_or_else(|| panic!("did not parse: {s}"))

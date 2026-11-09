@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::compression::{CompressionLayer, CompressionLevel};
 use tower_http::services::ServeDir;
-use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
+use tower_http::trace::{DefaultOnResponse, TraceLayer};
 use tracing::{Level, error};
 
 use crate::models::AppState;
@@ -27,14 +27,22 @@ pub fn static_dir() -> String {
     std::env::var("STATIC_DIR").unwrap_or_else(|_| "web/dist".to_string())
 }
 
+/// Logs each request by method and route TEMPLATE ("/api/public/reminders/{file}"), never the real
+/// path or query: those carry calendar-feed tokens, envelope tokens and photo signatures, and Fly
+/// keeps the logs.
+fn request_span(req: &axum::http::Request<axum::body::Body>) -> tracing::Span {
+    let route = req.extensions().get::<axum::extract::MatchedPath>().map_or("unmatched", |m| m.as_str());
+    tracing::info_span!("request", method = %req.method(), route)
+}
+
 fn trace_layer() -> TraceLayer<
     tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>,
-    DefaultMakeSpan,
+    fn(&axum::http::Request<axum::body::Body>) -> tracing::Span,
     tower_http::trace::DefaultOnRequest,
     DefaultOnResponse,
 > {
     TraceLayer::new_for_http()
-        .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+        .make_span_with(request_span as fn(&axum::http::Request<axum::body::Body>) -> tracing::Span)
         .on_response(DefaultOnResponse::new().level(Level::INFO))
 }
 
