@@ -1,6 +1,7 @@
 pub mod account;
 pub mod bills;
 pub mod card;
+pub mod checkin;
 pub mod common;
 pub mod couple;
 pub mod dashboard;
@@ -10,5 +11,6 @@ pub mod ingest;
 pub mod joy;
 pub mod moves;
 pub mod plan;
+pub mod reminders;
 pub mod review;
 pub mod user;

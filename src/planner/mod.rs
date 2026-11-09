@@ -16,6 +16,7 @@ pub mod afford;
 pub mod analytics;
 pub mod autopost;
 pub mod bills;
+pub mod checkin;
 pub mod cycle;
 pub mod goals;
 pub mod habits;
@@ -25,6 +26,7 @@ pub mod joy;
 pub mod life;
 pub mod projection;
 pub mod recurring;
+pub mod reminders;
 pub mod review;
 pub mod tax;
 
