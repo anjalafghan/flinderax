@@ -2,6 +2,7 @@ import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "reac
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Baby, ChevronDown, GraduationCap, Heart, Shield, Sunset, type LucideIcon } from "lucide-react";
 
+import { ForecastPanel } from "@/components/feature/ForecastPanel";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import {
   type LifePlan,
   type LifeProfile,
 } from "@/services/life";
+import { forecastKey } from "@/services/forecast";
 import { formatDay } from "@/utils/dates";
 import { formatINR as formatExact, formatPercent, paiseToInput, toPaise } from "@/utils/money";
 
@@ -35,6 +37,8 @@ function useSaveLife() {
     // The server answers with the recomputed plan, so the page refreshes straight from that.
     onSuccess: (out) => {
       qc.setQueryData(lifeKey, out);
+      // The forecast reads the same profile, so it is stale as soon as the details change.
+      void qc.invalidateQueries({ queryKey: forecastKey });
     },
   });
 }
@@ -513,7 +517,7 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
             "monthly_expenses",
             "monthly_expenses",
             "Monthly expenses (₹)",
-            "Blank uses your spending budget, or half of combined take-home.",
+            "Blank uses what your statements show you spend, else your spending budget, else half of combined take-home.",
             "col-span-full",
           )}
         </Group>
@@ -590,6 +594,7 @@ export default function LifePage() {
 
         {data && (
           <>
+            <ForecastPanel />
             <PlanSummary plan={data.plan} profile={data.profile} />
             <GoalsLedger goals={data.plan.goals} />
             <Timeline rows={data.plan.timeline} />

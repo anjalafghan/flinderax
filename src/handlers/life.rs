@@ -71,11 +71,17 @@ async fn respond(db: &SqlitePool, user_id: &str, today: Date, profile: LifeProfi
     Ok(LifeOut { saved, profile, plan })
 }
 
-/// Monthly expenses: the profile's figure if given, else needs + spending from the plan's budget,
+/// Monthly expenses: the profile's figure if given, else the statements' average spend (3+ full
+/// months), else needs + spending from the plan's budget,
 /// else half of the couple's combined take-home.
-async fn resolve_expenses(db: &SqlitePool, user_id: &str, today: Date, profile: &LifeProfile) -> Result<i64, AppError> {
+pub(crate) async fn resolve_expenses(db: &SqlitePool, user_id: &str, today: Date, profile: &LifeProfile) -> Result<i64, AppError> {
     if let Some(expenses) = profile.monthly_expenses_paise {
         return Ok(expenses);
+    }
+    // Three or more full months of statements say what the household really spends.
+    let analytics = crate::handlers::analytics::compute(db, user_id, today).await?;
+    if let Some(spend) = crate::handlers::forecast::statement_spend(&analytics, today) {
+        return Ok(spend);
     }
     autopost::apply(db, user_id, today).await?;
     let input = load_input(db, user_id, today).await?;

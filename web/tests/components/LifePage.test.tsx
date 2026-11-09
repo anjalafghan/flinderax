@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { forecastKey, type Forecast } from "@/services/forecast";
 import { MemoryRouter } from "react-router-dom";
 
 import LifePage from "@/pages/LifePage";
@@ -124,6 +125,14 @@ const fixture: LifeOut = {
 function withData(data: LifeOut) {
   const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
   qc.setQueryData(lifeKey, data);
+  // The forecast panel sits on this page; an empty forecast keeps it from calling the network.
+  qc.setQueryData(forecastKey, {
+    basis: { source: "profile", months_used: 0, income_paise: 0, spend_paise: 0, invested_paise: 0, surplus_paise: 0, surplus_sd_paise: 0, entered_income_paise: 0, note: null },
+    goals: [],
+    path: [],
+    summary: "",
+    saved_profile: false,
+  } satisfies Forecast);
   return render(
     <QueryClientProvider client={qc}>
       <AuthContext.Provider value={{ isAuthenticated: true, token: "t", login: () => {}, logout: () => {}, isLoading: false }}>

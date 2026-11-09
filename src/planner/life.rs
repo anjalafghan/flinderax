@@ -11,7 +11,7 @@ use time::{macros::format_description, Date, Month};
 use super::format_inr;
 
 /// Money in advice text: whole rupees (planning figures, not ledger entries).
-fn inr(paise: i64) -> String {
+pub(crate) fn inr(paise: i64) -> String {
     format_inr(paise.saturating_add(50).div_euclid(100).saturating_mul(100))
 }
 use crate::validate::{MAX_AMOUNT_PAISE, MAX_MONTHS};

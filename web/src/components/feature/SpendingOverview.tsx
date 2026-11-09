@@ -51,8 +51,6 @@ export function SpendingOverview({
   summary: SpendSummary | undefined;
   isLoading: boolean;
   isError: boolean;
-  /** Kept so existing callers still compile. The review control now links to /spending/sort. */
-  onReviewUncategorized?: () => void;
 }) {
   if (isLoading) return <div className="h-48 animate-pulse rounded-xl bg-muted/40" />;
   if (isError || !summary) return <p className="text-sm text-destructive">Couldn't load your spending.</p>;

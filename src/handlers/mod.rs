@@ -10,6 +10,7 @@ pub mod common;
 pub mod couple;
 pub mod dashboard;
 pub mod export;
+pub mod forecast;
 pub mod goals;
 pub mod habits;
 pub mod ingest;
