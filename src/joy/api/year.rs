@@ -11,14 +11,10 @@ use axum::{
 use serde::Serialize;
 use sqlx::FromRow;
 
-use super::{
-    go,
-    regular::{mtime_secs, public_link},
-    AppError, Go, Me,
-};
+use super::{go, AppError, Go, Me};
 use crate::{
     handlers::common::not_found,
-    joy::{ctx::Ctx, db, photos, picker},
+    joy::{ctx::Ctx, db, picker},
     models::AppState,
 };
 
@@ -35,6 +31,8 @@ pub struct YearRow {
     pub rating: Option<i64>,
     pub note: String,
     pub has_photo: bool,
+    /// The date's photo ids, oldest first, comma-separated ("" for none). The first is the cover.
+    pub photo_ids: String,
     pub est: i64,
     pub actual: Option<i64>,
     pub cab_0: Option<i64>,
@@ -54,6 +52,7 @@ pub(crate) async fn rows(db: &sqlx::SqlitePool, couple: &str, year: i32) -> sqlx
         "SELECT h.id, a.title, a.setting, a.tags,
                 CASE WHEN a.venue != '' THEN a.venue ELSE a.area END AS place,
                 h.rating, h.note, h.has_photo,
+                COALESCE((SELECT group_concat(id) FROM (SELECT p.id FROM joy_history_photos p WHERE p.history_id = h.id ORDER BY p.id)), '') AS photo_ids,
                 COALESCE(h.est_cost, a.est_cost) AS est, h.actual_cost AS actual, h.cab_fare_0 AS cab_0, h.cab_fare_1 AS cab_1,
                 CAST(strftime('%m', COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime') AS INTEGER) AS month,
                 CAST(julianday(date(COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime')) AS INTEGER) AS jd,
@@ -303,8 +302,9 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
     });
     let photos: Vec<YearPhoto> = rows
         .iter()
-        .filter(|x| x.has_photo)
-        .map(|x| YearPhoto { id: x.id, url: history_photo_url(ctx, x.id), title: ctx.personalize(&x.title), when: x.day_label.clone() })
+        .flat_map(|x| {
+            x.photos().into_iter().map(move |pid| YearPhoto { id: pid, url: history_photo_url(x.id, pid), title: ctx.personalize(&x.title), when: x.day_label.clone() })
+        })
         .collect();
     let best = r.best.map(|(i, more)| {
         let b = &rows[i];
@@ -314,7 +314,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
             rating: b.rating.unwrap_or(0),
             note: b.note.lines().next().unwrap_or("").to_string(),
             more,
-            photo: if b.has_photo { history_photo_url(ctx, b.id) } else { String::new() },
+            photo: b.cover_url(),
         }
     });
     let share = ShareData {
@@ -431,11 +431,21 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
     }))
 }
 
-/// Signed link to a kept date's photo (the file's mtime busts the cache). The history module
-/// serves it: verify `/api/dates/history/{id}/photo?v={v}` with `exp` and `sig`.
-pub fn history_photo_url(ctx: &Ctx, id: i64) -> String {
-    let v = mtime_secs(&photos::path(&ctx.photos_dir, id));
-    public_link(super::sign(&format!("/api/dates/history/{id}/photo?v={v}"), 7 * 24 * 3600))
+/// Signed link (a week) to one photo of a kept date. The history module serves it.
+pub fn history_photo_url(history_id: i64, photo_id: i64) -> String {
+    super::history::open_photo_url(history_id, photo_id, 7 * 24 * 3600)
+}
+
+impl YearRow {
+    /// Photo ids, oldest first.
+    pub fn photos(&self) -> Vec<i64> {
+        self.photo_ids.split(',').filter_map(|p| p.trim().parse().ok()).collect()
+    }
+
+    /// The cover photo's signed link, or empty.
+    pub fn cover_url(&self) -> String {
+        self.photos().first().map(|&pid| history_photo_url(self.id, pid)).unwrap_or_default()
+    }
 }
 
 /// Text that's safe to put in a picture others may see: personal placeholders and our names
@@ -620,6 +630,7 @@ mod tests {
             rating,
             note: String::new(),
             has_photo: false,
+            photo_ids: String::new(),
             est: 1000,
             actual,
             cab_0: Some(200),

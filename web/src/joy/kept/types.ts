@@ -31,7 +31,12 @@ export interface KeptView {
   planned_label: string;
   planned_input: string;
   ics_url: string;
+  /** The cover (first) photo's signed link. */
   photo_url: string | null;
+  /** Every photo, oldest first; the first is the cover. */
+  photos: KeptPhoto[];
+  /** Room for more photos on this date. */
+  can_add_photo: boolean;
   cost_est: string;
   cost_actual: string;
   cost_actual_raw: string;
@@ -127,4 +132,10 @@ export interface PlannedView {
   ics_url: string;
   send_url: string;
   partner: string;
+}
+
+/** One photo of a kept date: its id and a signed link (good for an hour). */
+export interface KeptPhoto {
+  id: number;
+  url: string;
 }

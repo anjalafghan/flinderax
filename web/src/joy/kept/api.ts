@@ -18,11 +18,11 @@ export const setCost = (id: number, actual: string, updateEstimate: boolean, cab
 export const setLine = (id: number, line: string) => post(`/history/${id}/line`, lineBody(line));
 export const reveal = (id: number) => post(`/history/${id}/reveal`);
 export const deleteDate = (id: number) => post(`/history/${id}/delete`);
-export const deletePhoto = (id: number) => post(`/history/${id}/photo/delete`);
+export const deletePhoto = (id: number, photoId: number) => post(`/history/${id}/photos/${photoId}/delete`);
 /** Signed `ics_url` / `send_url` in the answer are public links: use them as an href as they are. */
 export const setWhen = (ids: string, at: string) => post<PlannedView>("/history/when", whenBody(ids, at));
 
-/** Multipart `photo`, over XHR so the bar can move. Resolves with the server's Go. */
+/** Multipart `photo`, over XHR so the bar can move: adds one more photo to the date. Resolves with the server's Go. */
 export function uploadPhoto(id: number, file: Blob, onProgress: (loaded: number, total: number) => void): Promise<Go> {
   const fd = new FormData();
   fd.append("photo", file, "photo.jpg");

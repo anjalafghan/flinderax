@@ -171,6 +171,15 @@ pub async fn run(
         .await?
         .last_insert_rowid();
         hist.insert(h.get::<i64, _>(0), new_id);
+        // Joy's one photo per date arrives as <new id>.jpg (copied below): its first photo here.
+        if h.get::<i64, _>(10) != 0 {
+            sqlx::query("INSERT INTO joy_history_photos (history_id, file, added_at) VALUES (?, ?, ?)")
+                .bind(new_id)
+                .bind(format!("{new_id}.jpg"))
+                .bind(h.get::<i64, _>(2))
+                .execute(&mut *tx)
+                .await?;
+        }
     }
     report.counts.push(("dates", hrows.len()));
 

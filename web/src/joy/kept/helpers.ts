@@ -26,6 +26,9 @@ export function uploadLabel(loaded: number, total: number): string {
   return loaded < total ? `Uploading… ${Math.round((loaded / total) * 100)}%` : "Developing…";
 }
 
+/** The same line when several photos go up one after another: "Photo 2 of 3: Uploading… 40%". */
+export const photoOf = (n: number, of: number, label: string) => (of > 1 ? `Photo ${n} of ${of}: ${label}` : label);
+
 // ---- the book ----
 /** The slip's angle and tape come from its id, so they hold still between visits. */
 export const rotOf = (id: number) => ((id % 7) + 7) % 7;

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   budgetBody, costBody, dealPose, dealSeed, fitEdge, flatIds, isBudgetHash, lineBody, moneyBody, moveFor, needsShrink,
-  rateBody, rolloverBody, rotOf, sinceLabel, splitTo, stepIndex, tapeOf, uploadLabel, whenBody,
+  photoOf, rateBody, rolloverBody, rotOf, sinceLabel, splitTo, stepIndex, tapeOf, uploadLabel, whenBody,
 } from "./helpers";
 import type { KeptView, Month } from "./types";
 
@@ -35,6 +35,10 @@ describe("photo shrink maths", () => {
     expect(uploadLabel(50, 200)).toBe("Uploading… 25%");
     expect(uploadLabel(200, 200)).toBe("Developing…");
     expect(uploadLabel(0, 0)).toBe("Uploading…");
+  });
+  test("several photos say which one is going up", () => {
+    expect(photoOf(2, 3, "Uploading… 40%")).toBe("Photo 2 of 3: Uploading… 40%");
+    expect(photoOf(1, 1, "Developing…")).toBe("Developing…");
   });
 });
 

@@ -606,6 +606,7 @@ pub async fn delete_history(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Res
     .await?;
     sqlx::query("DELETE FROM joy_memories WHERE history_id = ?").bind(id).execute(&mut *tx).await?;
     sqlx::query("DELETE FROM joy_tasks WHERE history_id = ?").bind(id).execute(&mut *tx).await?;
+    sqlx::query("DELETE FROM joy_history_photos WHERE history_id = ?").bind(id).execute(&mut *tx).await?;
     sqlx::query("DELETE FROM joy_history WHERE id = ? AND couple_id = ?").bind(id).bind(couple).execute(&mut *tx).await?;
     if let Some(a) = activity {
         sqlx::query(
@@ -652,14 +653,101 @@ pub async fn reveal(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<()> 
     Ok(())
 }
 
-pub async fn set_photo(db: &SqlitePool, couple: &str, id: i64, has: bool) -> sqlx::Result<()> {
-    sqlx::query("UPDATE joy_history SET has_photo = ? WHERE id = ? AND couple_id = ?")
-        .bind(has)
-        .bind(id)
-        .bind(couple)
-        .execute(db)
-        .await?;
-    Ok(())
+/// Most photos one kept date can hold.
+pub const MAX_PHOTOS_PER_DATE: i64 = 24;
+
+/// One stored photo of a kept date: its id and its file name in the couple's photos folder.
+#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
+pub struct DatePhoto {
+    pub id: i64,
+    pub history_id: i64,
+    pub file: String,
+}
+
+/// Every photo of this couple's kept dates, oldest first within each date.
+pub async fn all_photos(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<DatePhoto>> {
+    sqlx::query_as(
+        "SELECT p.id, p.history_id, p.file FROM joy_history_photos p JOIN joy_history h ON h.id = p.history_id
+         WHERE h.couple_id = ? ORDER BY p.history_id, p.id",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await
+}
+
+/// The photos of one kept date, oldest first (the first is its cover).
+pub async fn photos_of(db: &SqlitePool, couple: &str, history_id: i64) -> sqlx::Result<Vec<DatePhoto>> {
+    sqlx::query_as(
+        "SELECT p.id, p.history_id, p.file FROM joy_history_photos p JOIN joy_history h ON h.id = p.history_id
+         WHERE h.couple_id = ? AND p.history_id = ? ORDER BY p.id",
+    )
+    .bind(couple)
+    .bind(history_id)
+    .fetch_all(db)
+    .await
+}
+
+/// One photo, with the couple whose date it is (the signed public link has no login to ask).
+pub async fn photo_by_id(db: &SqlitePool, history_id: i64, photo_id: i64) -> sqlx::Result<Option<(String, DatePhoto)>> {
+    let row: Option<(String, i64, i64, String)> = sqlx::query_as(
+        "SELECT h.couple_id, p.id, p.history_id, p.file FROM joy_history_photos p JOIN joy_history h ON h.id = p.history_id
+         WHERE p.id = ? AND p.history_id = ?",
+    )
+    .bind(photo_id)
+    .bind(history_id)
+    .fetch_optional(db)
+    .await?;
+    Ok(row.map(|(c, id, history_id, file)| (c, DatePhoto { id, history_id, file })))
+}
+
+/// Records a stored file as the date's newest photo. `None` when the date isn't this couple's or
+/// it already holds [`MAX_PHOTOS_PER_DATE`].
+pub async fn add_photo(db: &SqlitePool, couple: &str, history_id: i64, file: &str) -> sqlx::Result<Option<i64>> {
+    let mut tx = db.begin().await?;
+    let n: Option<i64> = sqlx::query_scalar(
+        "SELECT (SELECT COUNT(*) FROM joy_history_photos WHERE history_id = h.id) FROM joy_history h WHERE h.id = ? AND h.couple_id = ?",
+    )
+    .bind(history_id)
+    .bind(couple)
+    .fetch_optional(&mut *tx)
+    .await?;
+    if n.is_none_or(|n| n >= MAX_PHOTOS_PER_DATE) {
+        tx.rollback().await?;
+        return Ok(None);
+    }
+    let id = sqlx::query("INSERT INTO joy_history_photos (history_id, file) VALUES (?, ?)")
+        .bind(history_id)
+        .bind(file)
+        .execute(&mut *tx)
+        .await?
+        .last_insert_rowid();
+    sqlx::query("UPDATE joy_history SET has_photo = 1 WHERE id = ?").bind(history_id).execute(&mut *tx).await?;
+    tx.commit().await?;
+    Ok(Some(id))
+}
+
+/// Forgets one photo; returns its file so the caller can remove it. Keeps `has_photo` true while
+/// any photo is left.
+pub async fn remove_photo(db: &SqlitePool, couple: &str, history_id: i64, photo_id: i64) -> sqlx::Result<Option<String>> {
+    let mut tx = db.begin().await?;
+    let file: Option<String> = sqlx::query_scalar(
+        "SELECT p.file FROM joy_history_photos p JOIN joy_history h ON h.id = p.history_id
+         WHERE p.id = ? AND p.history_id = ? AND h.couple_id = ?",
+    )
+    .bind(photo_id)
+    .bind(history_id)
+    .bind(couple)
+    .fetch_optional(&mut *tx)
+    .await?;
+    if file.is_some() {
+        sqlx::query("DELETE FROM joy_history_photos WHERE id = ?").bind(photo_id).execute(&mut *tx).await?;
+        sqlx::query("UPDATE joy_history SET has_photo = EXISTS (SELECT 1 FROM joy_history_photos WHERE history_id = ?1) WHERE id = ?1")
+            .bind(history_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await?;
+    Ok(file)
 }
 
 /// Who kept the most recent date (0 or 1), if we know.
@@ -1734,9 +1822,40 @@ mod tests {
         let v = visit(&db, "B", visit_id).await.unwrap().unwrap();
         assert_eq!(v.status, "went");
         assert!(!v.has_photo);
+        // Photos: B's date takes them, A can neither add to it nor remove from it.
+        let p1 = add_photo(&db, "B", kept, "x-1.jpg").await.unwrap().unwrap();
+        let p2 = add_photo(&db, "B", kept, "x-2.jpg").await.unwrap().unwrap();
+        assert!(add_photo(&db, "A", kept, "evil.jpg").await.unwrap().is_none());
+        assert!(remove_photo(&db, "A", kept, p1).await.unwrap().is_none());
+        assert!(photos_of(&db, "A", kept).await.unwrap().is_empty());
+        assert!(all_photos(&db, "A").await.unwrap().is_empty());
+        assert_eq!(photos_of(&db, "B", kept).await.unwrap().iter().map(|p| p.id).collect::<Vec<_>>(), vec![p1, p2]);
+        assert_eq!(photo_by_id(&db, kept, p2).await.unwrap().unwrap().0, "B");
+        assert!(photo_by_id(&db, kept + 1, p2).await.unwrap().is_none(), "a photo only answers to its own date");
+        assert!(history_row(&db, "B", kept).await.unwrap().unwrap().has_photo);
+        assert_eq!(remove_photo(&db, "B", kept, p1).await.unwrap().as_deref(), Some("x-1.jpg"));
+        assert!(history_row(&db, "B", kept).await.unwrap().unwrap().has_photo, "one photo is still there");
+        remove_photo(&db, "B", kept, p2).await.unwrap();
+        assert!(!history_row(&db, "B", kept).await.unwrap().unwrap().has_photo);
+        add_photo(&db, "B", kept, "x-3.jpg").await.unwrap().unwrap();
         // A can't delete B's kept date either.
         delete_history(&db, "A", kept).await.unwrap();
         assert!(history_row(&db, "B", kept).await.unwrap().is_some());
         assert!(history_row(&db, "A", kept).await.unwrap().is_none());
+        // Deleting the date forgets its photos.
+        delete_history(&db, "B", kept).await.unwrap();
+        assert!(all_photos(&db, "B").await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_date_holds_a_limited_number_of_photos() {
+        let db = test_db().await;
+        let slip = add_slip(&db, "B", "B's slip").await;
+        let kept = accept(&db, "B", slip, Some(1), false).await.unwrap();
+        for i in 0..MAX_PHOTOS_PER_DATE {
+            assert!(add_photo(&db, "B", kept, &format!("{i}.jpg")).await.unwrap().is_some());
+        }
+        assert!(add_photo(&db, "B", kept, "one-too-many.jpg").await.unwrap().is_none());
+        assert_eq!(photos_of(&db, "B", kept).await.unwrap().len() as i64, MAX_PHOTOS_PER_DATE);
     }
 }

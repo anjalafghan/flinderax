@@ -9,7 +9,10 @@
 //! the links this module hands out use the `/api/public/dates/` prefix (no bearer token) while the
 //! signature covers the `/api/dates/...` path, which is what the handlers verify.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use axum::{
     extract::{DefaultBodyLimit, Multipart, Path, Query, State},
@@ -28,7 +31,7 @@ use super::{
 use crate::{
     joy::{
         ctx::Ctx,
-        db::{self, HistoryRow},
+        db::{self, DatePhoto, HistoryRow},
         ics, photos,
         picker::Duration,
         weather,
@@ -111,8 +114,12 @@ pub struct KeptView {
     pub planned_input: String,
     /// Signed calendar invite, when a time is set.
     pub ics_url: String,
-    /// Signed photo link (1 hour), never a bare path.
+    /// The cover (first) photo's signed link (1 hour), never a bare path.
     pub photo_url: Option<String>,
+    /// Every photo, oldest first; empty when sealed.
+    pub photos: Vec<KeptPhoto>,
+    /// More photos fit on this date.
+    pub can_add_photo: bool,
     /// "₹1,000": the slip's estimate.
     pub cost_est: String,
     /// "₹5,000", or empty when the real cost isn't filled in.
@@ -258,28 +265,37 @@ fn lines(ctx: &Ctx, history_id: i64, who: Option<usize>, all: &[(i64, i64, Strin
     }
 }
 
-/// A signed link to a kept date's photo, good for an hour, on the public prefix (the signature
-/// covers the `/api/dates/...` path). The file's modified time is the `v`,
-/// so a replaced photo never shows stale from cache. A surprise that isn't revealed yet puts the
-/// viewer in the signed path, so the handler can keep it sealed from the other one of us.
-pub fn photo_url(ctx: &Ctx, r: &HistoryRow, who: Option<usize>) -> String {
-    let v = std::fs::metadata(photos::path(&ctx.photos_dir, r.id))
-        .and_then(|m| m.modified())
-        .ok()
-        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-        .map_or(0, |d| d.as_secs());
-    public_link(sign(&photo_path(r.id, &v.to_string(), if r.surprise && !r.revealed { who } else { None }), PHOTO_TTL_SECS))
+/// One photo of a kept date, as the page shows it.
+#[derive(Serialize, Debug)]
+pub struct KeptPhoto {
+    pub id: i64,
+    /// Signed link (1 hour).
+    pub url: String,
+}
+
+/// A signed link to one photo of a kept date, good for an hour, on the public prefix (the
+/// signature covers the `/api/dates/...` path). Photo files are never replaced, so the photo id
+/// is enough to keep caches honest. A surprise that isn't revealed yet puts the viewer in the
+/// signed path, so the handler can keep it sealed from the other one of us.
+pub fn photo_url(r: &HistoryRow, photo_id: i64, who: Option<usize>) -> String {
+    let who = if r.surprise && !r.revealed { who } else { None };
+    public_link(sign(&photo_path(r.id, photo_id, who), PHOTO_TTL_SECS))
+}
+
+/// The same link for a date both of us may see (the Year and Month pages), good for `ttl`.
+pub fn open_photo_url(history_id: i64, photo_id: i64, ttl: i64) -> String {
+    public_link(sign(&photo_path(history_id, photo_id, None), ttl))
 }
 
 /// The path a photo link signs (what [`photo`] checks the signature against).
-fn photo_path(id: i64, v: &str, who: Option<usize>) -> String {
+fn photo_path(id: i64, photo_id: i64, who: Option<usize>) -> String {
     match who {
-        Some(w) => format!("/api/dates/history/{id}/photo?v={v}&who={w}"),
-        None => format!("/api/dates/history/{id}/photo?v={v}"),
+        Some(w) => format!("/api/dates/history/{id}/photos/{photo_id}?who={w}"),
+        None => format!("/api/dates/history/{id}/photos/{photo_id}"),
     }
 }
 
-fn view(ctx: &Ctx, r: &HistoryRow, who: Option<usize>, rain: bool, pair_ids: String, memories: &[(i64, i64, String)]) -> KeptView {
+fn view(ctx: &Ctx, r: &HistoryRow, who: Option<usize>, rain: bool, pair_ids: String, memories: &[(i64, i64, String)], pics: &[DatePhoto]) -> KeptView {
     let sealed = sealed_for(r, who);
     let planned = r.planned_local.as_deref().map(planned_label).unwrap_or_default();
     let from_name = r.drawn_by.and_then(|d| ctx.people.get(d as usize)).map(|p| p.0.clone()).unwrap_or_default();
@@ -303,7 +319,9 @@ fn view(ctx: &Ctx, r: &HistoryRow, who: Option<usize>, rain: bool, pair_ids: Str
         hints: if sealed { hints(r, &planned, rain) } else { vec![] },
         planned_input: r.planned_local.as_deref().map(planned_input).unwrap_or_default(),
         ics_url: if r.planned_at.is_some() { public_link(dayplan::ics_url(r.id, who)) } else { String::new() },
-        photo_url: (r.has_photo && !sealed).then(|| photo_url(ctx, r, who)),
+        photo_url: pics.first().filter(|_| !sealed).map(|p| photo_url(r, p.id, who)),
+        photos: if sealed { vec![] } else { pics.iter().map(|p| KeptPhoto { id: p.id, url: photo_url(r, p.id, who) }).collect() },
+        can_add_photo: !sealed && r.outcome == "did_it" && (pics.len() as i64) < db::MAX_PHOTOS_PER_DATE,
         pair_ids,
         cost_est: if sealed { String::new() } else { ctx.money(r.est_cost) },
         cost_actual: r.actual_cost.filter(|_| !sealed).map(|c| ctx.money(c)).unwrap_or_default(),
@@ -442,10 +460,14 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
         .collect();
     let pairs = db::pairs(db, couple).await?;
     let memories = db::memories(db, couple).await?;
+    let mut pics: HashMap<i64, Vec<DatePhoto>> = HashMap::new();
+    for p in db::all_photos(db, couple).await? {
+        pics.entry(p.history_id).or_default().push(p);
+    }
     let mut months: Vec<Month> = vec![];
     for row in &done {
         let label = row.month_label();
-        let v = view(ctx, row, who, rain, pair_ids(row, &done, &pairs), &memories);
+        let v = view(ctx, row, who, rain, pair_ids(row, &done, &pairs), &memories, pics.get(&row.id).map_or(&[], Vec::as_slice));
         match months.last_mut() {
             Some(m) if m.label == label => m.items.push(v),
             _ => {
@@ -563,7 +585,6 @@ pub async fn when(State(s): State<AppState>, Extension((user_id, _)): User, Json
 #[derive(Deserialize)]
 pub struct SignedQuery {
     who: Option<usize>,
-    v: Option<String>,
     exp: Option<i64>,
     sig: Option<String>,
 }
@@ -647,11 +668,14 @@ pub async fn reveal(State(s): State<AppState>, Extension((user_id, _)): User, Pa
 pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     // A surprise still sealed for you isn't yours to throw away.
-    let row = open_row(&s.db, &j.couple, id, Some(j.who)).await?;
-    if row.has_photo {
-        let _ = tokio::fs::remove_file(photos::path(&j.ctx.photos_dir, id)).await;
-    }
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    let pics = db::photos_of(&s.db, &j.couple, id).await?;
     db::delete_history(&s.db, &j.couple, id).await?;
+    for p in pics {
+        if let Some(path) = photos::date_path(&j.ctx.photos_dir, &p.file) {
+            let _ = tokio::fs::remove_file(path).await;
+        }
+    }
     Ok(go("/joy/kept"))
 }
 
@@ -718,7 +742,8 @@ pub async fn set_line(State(s): State<AppState>, Extension((user_id, _)): User, 
 
 // ── photos ────────────────────────────────────────────────────────────────
 
-/// `POST /history/{id}/photo`: multipart field `photo`. 422 + a message when it can't be used.
+/// `POST /history/{id}/photo`: multipart field `photo`, added after the date's other photos.
+/// 422 + a message when it can't be used or the date is full.
 pub async fn upload_photo(
     State(s): State<AppState>,
     Extension((user_id, _)): User,
@@ -729,6 +754,9 @@ pub async fn upload_photo(
     let row = open_row(&s.db, &j.couple, id, Some(j.who)).await?;
     if row.outcome != "did_it" {
         return Err(missing());
+    }
+    if db::photos_of(&s.db, &j.couple, id).await?.len() as i64 >= db::MAX_PHOTOS_PER_DATE {
+        return Err(unprocessable(&full_message()));
     }
     let mut bytes = None;
     while let Ok(Some(field)) = form.next_field().await {
@@ -747,35 +775,55 @@ pub async fn upload_photo(
         Err(e) => return Err(unprocessable(e.0)),
     };
     tokio::fs::create_dir_all(&j.ctx.photos_dir).await.map_err(internal)?;
-    tokio::fs::write(photos::path(&j.ctx.photos_dir, id), jpeg).await.map_err(internal)?;
-    db::set_photo(&s.db, &j.couple, id, true).await?;
+    let file = photos::new_date_file(id);
+    let path = photos::date_path(&j.ctx.photos_dir, &file).ok_or_else(|| internal("bad photo file name"))?;
+    tokio::fs::write(&path, jpeg).await.map_err(internal)?;
+    if db::add_photo(&s.db, &j.couple, id, &file).await?.is_none() {
+        // Filled up by the other one of us while this one was going up.
+        let _ = tokio::fs::remove_file(&path).await;
+        return Err(unprocessable(&full_message()));
+    }
     Ok(go(kept_to(id)))
 }
 
-/// `POST /history/{id}/photo/delete`
-pub async fn delete_photo(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+fn full_message() -> String {
+    format!("This date already has {} photos. Remove one to add another.", db::MAX_PHOTOS_PER_DATE)
+}
+
+/// `POST /history/{id}/photos/{photo_id}/delete`: takes that one photo off the date.
+pub async fn delete_photo(
+    State(s): State<AppState>,
+    Extension((user_id, _)): User,
+    Path((id, photo_id)): Path<(i64, i64)>,
+) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     open_row(&s.db, &j.couple, id, Some(j.who)).await?;
-    let _ = tokio::fs::remove_file(photos::path(&j.ctx.photos_dir, id)).await;
-    db::set_photo(&s.db, &j.couple, id, false).await?;
+    if let Some(file) = db::remove_photo(&s.db, &j.couple, id, photo_id).await?
+        && let Some(path) = photos::date_path(&j.ctx.photos_dir, &file)
+    {
+        let _ = tokio::fs::remove_file(path).await;
+    }
     Ok(go(kept_to(id)))
 }
 
-/// `GET /history/{id}/photo?v=..&exp=..&sig=..` (public): the signed link [`photo_url`] made.
-/// A sealed surprise (for the viewer the link names, else for anyone) is a 404.
-pub async fn photo(State(s): State<AppState>, Path(id): Path<i64>, Query(q): Query<SignedQuery>) -> Result<Response, AppError> {
-    let (Some(exp), Some(sig), Some(v)) = (q.exp, q.sig.as_deref(), q.v.as_deref()) else {
+/// `GET /history/{id}/photos/{photo_id}?exp=..&sig=..` (public): the signed link [`photo_url`]
+/// made. A sealed surprise (for the viewer the link names, else for anyone) is a 404.
+pub async fn photo(State(s): State<AppState>, Path((id, photo_id)): Path<(i64, i64)>, Query(q): Query<SignedQuery>) -> Result<Response, AppError> {
+    let (Some(exp), Some(sig)) = (q.exp, q.sig.as_deref()) else {
         return Err(forbidden("This link is missing its signature."));
     };
-    if !verify(&photo_path(id, v, q.who), exp, sig) {
+    if !verify(&photo_path(id, photo_id, q.who), exp, sig) {
         return Err(forbidden("This link has expired or isn't valid."));
     }
     let who = q.who.filter(|w| *w < 2);
-    let Some(couple) = couple_of_history(&s.db, id).await? else { return Err(missing()) };
-    let row = db::history_row(&s.db, &couple, id).await?.filter(|r| r.has_photo && !sealed_for(r, who));
-    let Some(row) = row else { return Err(missing()) };
+    let Some((couple, pic)) = db::photo_by_id(&s.db, id, photo_id).await? else { return Err(missing()) };
+    if db::history_row(&s.db, &couple, id).await?.is_none_or(|r| sealed_for(&r, who)) {
+        return Err(missing());
+    }
     let ctx = load_ctx(&s.db, &couple).await?;
-    let Ok(bytes) = tokio::fs::read(photos::path(&ctx.photos_dir, row.id)).await else { return Err(missing()) };
+    let Some(path) = photos::date_path(&ctx.photos_dir, &pic.file) else { return Err(missing()) };
+    let Ok(bytes) = tokio::fs::read(path).await else { return Err(missing()) };
+    // A photo id always means the same picture, so it may be cached for as long as the link lives.
     Ok(([(header::CONTENT_TYPE, "image/jpeg"), (header::CACHE_CONTROL, "private, max-age=3000")], bytes).into_response())
 }
 
@@ -938,7 +986,7 @@ pub fn router() -> Router<AppState> {
         .route("/history/{id}/cost", post(set_cost))
         .route("/history/{id}/line", post(set_line))
         .route("/history/{id}/photo", post(upload_photo).layer(DefaultBodyLimit::max(photos::MAX_UPLOAD_BYTES + UPLOAD_SLACK)))
-        .route("/history/{id}/photo/delete", post(delete_photo))
+        .route("/history/{id}/photos/{photo_id}/delete", post(delete_photo))
         .route("/history/{id}/plan-b", post(dayplan::swap_plan_b))
         .route("/tasks/{id}/done", post(dayplan::task_done))
         .route("/budget", post(set_budget))
@@ -953,7 +1001,7 @@ pub fn router() -> Router<AppState> {
 
 /// No login, but each needs the signature its link carries.
 pub fn public_router() -> Router<AppState> {
-    Router::new().route("/history/{id}/invite.ics", get(invite)).route("/history/{id}/photo", get(photo))
+    Router::new().route("/history/{id}/invite.ics", get(invite)).route("/history/{id}/photos/{photo_id}", get(photo))
 }
 
 #[cfg(test)]
@@ -1032,14 +1080,28 @@ mod tests {
 
     #[test]
     fn photo_links_sign_the_viewer_only_for_unrevealed_surprises() {
-        let ctx = Ctx::for_tests();
         let mut r = row(9, 1, 0);
-        let url = photo_url(&ctx, &r, Some(0));
-        assert!(url.starts_with("/api/public/dates/history/9/photo?v=0&who=0&exp="), "{url}");
+        let url = photo_url(&r, 4, Some(0));
+        assert!(url.starts_with("/api/public/dates/history/9/photos/4?who=0&exp="), "{url}");
         r.revealed = true;
-        let url = photo_url(&ctx, &r, Some(0));
-        assert!(url.starts_with("/api/public/dates/history/9/photo?v=0&exp="), "{url}");
+        let url = photo_url(&r, 4, Some(0));
+        assert!(url.starts_with("/api/public/dates/history/9/photos/4?exp="), "{url}");
         assert!(!url.contains("who"));
+    }
+
+    #[test]
+    fn a_date_shows_all_its_photos_unless_sealed() {
+        let ctx = Ctx::for_tests();
+        let pics = [DatePhoto { id: 4, history_id: 9, file: "9.jpg".into() }, DatePhoto { id: 7, history_id: 9, file: "9-ab.jpg".into() }];
+        let mut r = row(9, 1, 0);
+        r.revealed = true;
+        let v = view(&ctx, &r, Some(1), false, "9".into(), &[], &pics);
+        assert_eq!(v.photos.iter().map(|p| p.id).collect::<Vec<_>>(), vec![4, 7]);
+        assert!(v.photo_url.as_deref().is_some_and(|u| u.contains("/photos/4?")), "the first photo is the cover");
+        assert!(v.can_add_photo);
+        r.revealed = false;
+        let v = view(&ctx, &r, Some(1), false, "9".into(), &[], &pics);
+        assert!(v.sealed && v.photos.is_empty() && v.photo_url.is_none() && !v.can_add_photo);
     }
 
     #[test]
