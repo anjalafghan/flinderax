@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
-import { addSaving, addSpend, deleteSaving, deleteSpend, keepGoal, rollover, setBudget, setGoal } from "./api";
+import { addCustomDate, addSaving, addSpend, deleteSaving, deleteSpend, keepGoal, rollover, setBudget, setGoal } from "./api";
 import { useKept } from "./ctx";
 import { useStateFrom } from "../components/useStateFrom";
 import { isBudgetHash, type RolloverChoice } from "./helpers";
@@ -147,6 +147,69 @@ function BudgetEdit({ v, hash }: { v: HistoryView; hash: string }) {
   );
 }
 
+/** The kinds a custom date can be, as the jar names them. */
+const KINDS: [string, string][] = [
+  ["local", "Around town"],
+  ["home", "At home, together"],
+  ["day_trip", "Day trip"],
+  ["travel", "Travel"],
+  ["apart", "Long distance"],
+];
+
+/** A date we had that never was a slip. It lands in Kept, ready for photos, a rating and lines. */
+function CustomDateFold() {
+  const { finish } = useKept();
+  const { busy, err, act } = useAction();
+  const fold = useFold();
+  const [title, setTitle] = useState("");
+  const [place, setPlace] = useState("");
+  const [setting, setSetting] = useState("local");
+  const [on, setOn] = useState("");
+  const [cost, setCost] = useState("");
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    void act(async () => {
+      const go = await addCustomDate({ title, place, setting, on, cost });
+      setTitle("");
+      setPlace("");
+      setOn("");
+      setCost("");
+      fold.setOpen(false);
+      await finish(go);
+    });
+  };
+  return (
+    <details className="k-budget-edit" {...fold.props}>
+      <summary>Add a date we had</summary>
+      <form className="k-budget-form" onSubmit={submit}>
+        <label className="k-label" htmlFor="custom-title">
+          What did you do?
+        </label>
+        <input className="k-field" id="custom-title" name="title" type="text" maxLength={80} required autoComplete="off" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Picnic at the lake" />
+        <div className="k-inline">
+          <input className="k-field" name="place" type="text" maxLength={80} autoComplete="off" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Where? (optional)" aria-label="Where" />
+          <select className="k-field" name="setting" value={setting} onChange={(e) => setSetting(e.target.value)} aria-label="Kind of date">
+            {KINDS.map(([k, l]) => (
+              <option key={k} value={k}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="k-inline">
+          <input className="k-field" name="on" type="date" value={on} onChange={(e) => setOn(e.target.value)} aria-label="When (blank is today)" />
+          <input className="k-field" name="cost" type="text" {...MONEY} value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Cost (optional)" aria-label="What it cost" />
+          <button className="k-btn" type="submit" disabled={busy}>
+            Keep it
+          </button>
+        </div>
+        <p className="k-hint">It goes straight into Kept for photos, a rating and your lines. It won’t be added to the jar.</p>
+        <Err text={err} />
+      </form>
+    </details>
+  );
+}
+
 function OtherSpendFold({ v }: { v: HistoryView }) {
   const { finish } = useKept();
   const { busy, err, act } = useAction();
@@ -166,7 +229,7 @@ function OtherSpendFold({ v }: { v: HistoryView }) {
   };
   return (
     <details className="k-budget-edit" {...fold.props}>
-      <summary>Add a date that wasn’t a slip</summary>
+      <summary>Add spending that wasn’t a slip</summary>
       <form className="k-budget-form" onSubmit={submit}>
         <label className="k-label" htmlFor="spend-amount">
           What we spent
@@ -379,6 +442,7 @@ export function Budget({ v, hash }: { v: HistoryView; hash: string }) {
           </ul>
         </details>
       )}
+      <CustomDateFold />
       <OtherSpendFold v={v} />
       <Savings s={v.savings} />
     </div>

@@ -9,6 +9,7 @@ import { photoOf, rotOf, tapeOf, uploadLabel } from "./helpers";
 import { buzz, reduced, useFit } from "./motion";
 import { useStateFrom } from "../components/useStateFrom";
 import { shrinkImage } from "./photo";
+import { PhotoViewer } from "../components/PhotoViewer";
 import type { KeptView, PlannedView } from "./types";
 import { useAction } from "./useAction";
 import { useFold } from "./useFold";
@@ -247,6 +248,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
   const [photoMsg, setPhotoMsg] = useState<{ text: string; tone: "" | "err" }>({ text: "", tone: "" });
   const [fresh, setFresh] = useState(false);
   const photoAct = useAction();
+  const [viewing, setViewing] = useState<number | null>(null);
   const fileEl = useRef<HTMLInputElement>(null);
   const figEl = useRef<HTMLElement>(null);
   // Several files go up one after another; the first one that can't stops the rest.
@@ -332,6 +334,12 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
   const pics = h.photos ?? [];
   const cover = pics[0];
   const hasPhoto = cover !== undefined;
+  // A plain click opens the viewer on that photo; a modified click still opens the file itself.
+  const view = (at: number) => (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    setViewing(at);
+  };
   return (
     <li
       className={`k-slip grain${hasPhoto ? " has-photo" : ""}`}
@@ -407,7 +415,12 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
         {hasPhoto ? (
           <>
             <figure ref={figEl} className={`k-polaroid${fresh ? " k-fresh" : ""}`} id={`kp${h.id}`} tabIndex={-1}>
-              <a href={cover.url} className="k-polaroid-frame" aria-label={`Open the photo from ${h.title}`}>
+              <a
+                href={cover.url}
+                className="k-polaroid-frame"
+                onClick={view(0)}
+                aria-label={pics.length > 1 ? `Open the ${pics.length} photos from ${h.title}` : `Open the photo from ${h.title}`}
+              >
                 <img src={cover.url} alt={`Photo from ${h.title}`} width={480} height={360} loading={fresh ? "eager" : "lazy"} decoding="async" />
               </a>
               <figcaption className="hand" aria-hidden="true">
@@ -418,7 +431,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
               <ul className="k-photo-strip" aria-label={`More photos from ${h.title}`}>
                 {pics.slice(1).map((p, i) => (
                   <li key={p.id}>
-                    <a href={p.url} aria-label={`Open photo ${i + 2} of ${pics.length} from ${h.title}`}>
+                    <a href={p.url} onClick={view(i + 1)} aria-label={`Open photo ${i + 2} of ${pics.length} from ${h.title}`}>
                       <img src={p.url} alt="" width={160} height={120} loading="lazy" decoding="async" />
                     </a>
                   </li>
@@ -430,6 +443,11 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
                 )}
               </ul>
             )}
+            <PhotoViewer
+              photos={pics.map((p, i) => ({ url: p.url, alt: `Photo ${i + 1} of ${pics.length} from ${h.title}`, caption: `${h.title} · ${h.day_label}` }))}
+              start={viewing}
+              onClose={() => setViewing(null)}
+            />
           </>
         ) : (
           developing && (

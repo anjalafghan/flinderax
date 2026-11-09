@@ -36,6 +36,8 @@ export function uploadPhoto(id: number, file: Blob, onProgress: (loaded: number,
 export const setBudget = (amount: string) => post("/budget", budgetBody(amount));
 export const rollover = (choice: RolloverChoice) => post("/budget/rollover", rolloverBody(choice));
 export const addSpend = (amount: string, note: string, on: string) => post("/budget/spend", moneyBody(amount, note, on));
+/** A date we had that never was a slip: straight into Kept (its one-off slip never reaches the jar). */
+export const addCustomDate = (d: { title: string; place: string; setting: string; on: string; cost: string }) => post("/history/custom", d);
 export const deleteSpend = (id: number) => post(`/budget/spend/${id}/delete`);
 
 // ---- savings jar ----

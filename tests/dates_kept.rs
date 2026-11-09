@@ -661,3 +661,35 @@ async fn another_couple_gets_404_for_everything() {
     let loose = t.user("dave").await;
     assert_eq!(t.get("/api/dates/kept", &loose).await.status, StatusCode::FORBIDDEN);
 }
+
+#[tokio::test]
+async fn a_date_we_had_without_a_slip_goes_straight_into_kept_and_takes_photos() {
+    let t = setup().await;
+    let (rohit, neha, _) = t.couple().await;
+    for (body, why) in [
+        (json!({"title": "", "on": "2026-03-14"}), "a name"),
+        (json!({"title": "Picnic", "on": "2999-01-01"}), "already happened"),
+        (json!({"title": "Picnic", "on": "14/03/2026"}), "didn't look right"),
+        (json!({"title": "Picnic", "setting": "moon"}), "isn't one we know"),
+        (json!({"title": "Picnic", "cost": "-5"}), ""),
+    ] {
+        let r = t.post("/api/dates/history/custom", &rohit, body).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", r.text);
+        assert!(r.text.contains(why), "{}", r.text);
+    }
+    let r = t.post("/api/dates/history/custom", &rohit, json!({"title": "Picnic at the lake", "place": "Powai", "on": "2026-03-14", "cost": "1,200"})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    let hid: i64 = r.json["to"].as_str().unwrap().rsplit("#k").next().unwrap().parse().unwrap();
+    // Both of us see it in Kept, on its day, with what it cost.
+    for who in [&rohit, &neha] {
+        let item = t.item(who, hid).await;
+        assert_eq!((item["title"].as_str(), item["day"].as_str(), item["place"].as_str()), (Some("Picnic at the lake"), Some("2026-03-14"), Some("Powai")));
+        assert_eq!(item["cost_actual_raw"], "1200");
+        assert_eq!(item["can_add_photo"], true);
+    }
+    // Its slip never reaches the jar.
+    assert_eq!(t.scalar(&format!("SELECT archived FROM joy_activities WHERE id = (SELECT activity_id FROM joy_history WHERE id = {hid})")).await, 1);
+    // It takes photos like any kept date.
+    assert_eq!(t.upload(&format!("/api/dates/history/{hid}/photo"), &neha, &tiny_jpeg()).await.status, StatusCode::OK);
+    assert_eq!(t.item(&rohit, hid).await["photos"].as_array().unwrap().len(), 1);
+}
