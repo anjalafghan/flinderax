@@ -41,6 +41,8 @@ import type {
   NewTaxEntry,
 } from "./types";
 
+import { clearSession } from "../session";
+
 // The Rust server serves both the API and this app, so every request is same-origin.
 
 interface ApiResponse<T> {
@@ -50,7 +52,7 @@ interface ApiResponse<T> {
 }
 
 const handleUnauthorized = () => {
-  localStorage.removeItem("token");
+  clearSession();
   window.location.href = "/auth";
 };
 
