@@ -156,14 +156,18 @@ pub async fn login(
         .to_string();
 
     let expiration = OffsetDateTime::now_utc() + Duration::hours(24);
-    let token = get_paseto_token(&user_id, user.user_role, &state.paseto_key, expiration)?;
+    let version: i64 = sqlx::query_scalar("SELECT token_version FROM users WHERE user_id = ?")
+        .bind(&user_id)
+        .fetch_one(&state.db)
+        .await?;
+    let token = get_paseto_token(&user_id, user.user_role, version, &state.paseto_key, expiration)?;
 
     Ok(Json(LoginResponse {
         access_token: token,
         expires_at: expiration.unix_timestamp(),
     }))
 }
-fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
+pub fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
     let parsed_hash = PasswordHash::new(&database_password)
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -180,9 +184,10 @@ fn verify_user(database_password: String, user_input_password: String) -> Result
     Ok(())
 }
 
-fn get_paseto_token(
+pub fn get_paseto_token(
     user_id: &str,
     user_role: String,
+    token_version: i64,
     key: &Arc<PasetoSymmetricKey<V4, Local>>,
     expiration: OffsetDateTime,
 ) -> Result<String, AppError> {
@@ -192,6 +197,10 @@ fn get_paseto_token(
     let token = PasetoBuilder::<V4, Local>::default()
         .set_claim(SubjectClaim::from(user_id))
         .set_claim(role_claim)
+        .set_claim(
+            CustomClaim::try_from(("tv", token_version))
+                .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?,
+        )
         .set_claim(
             ExpirationClaim::try_from(
                 expiration
@@ -215,6 +224,10 @@ pub fn validate_credentials(user_name: &str, user_password: &str) -> Result<(), 
             "Username must be 3-32 characters: letters, digits, '_', '-' or '.'",
         ));
     }
+    validate_password(user_password)
+}
+
+pub fn validate_password(user_password: &str) -> Result<(), AppError> {
     if !(8..=128).contains(&user_password.chars().count()) {
         return Err(bad_request("Password must be 8-128 characters"));
     }
@@ -277,7 +290,7 @@ pub async fn register(
     Ok(Json(CreateUserResponse { status: true }))
 }
 
-fn get_password_hash(user_password: String) -> Result<String, AppError> {
+pub fn get_password_hash(user_password: String) -> Result<String, AppError> {
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
     let password_hash = argon2
