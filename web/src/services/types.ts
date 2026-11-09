@@ -443,6 +443,57 @@ export interface StatementResult {
   holder_name_suggestion: string | null;
 }
 
+/** How a file's amounts say which side a row is on. */
+export type SignRule =
+  | { kind: "separate_columns" }
+  | { kind: "negative_is_debit" }
+  | { kind: "dr_cr_column"; column: number }
+  | { kind: "cr_suffix" };
+
+/** Which column holds what. Column numbers count from zero; header_row counts every line of the file, blank ones too. */
+export interface StatementMapping {
+  header_row: number;
+  date: number;
+  narration: number;
+  debit: number | null;
+  credit: number | null;
+  amount: number | null;
+  sign: SignRule;
+  balance: number | null;
+  reference: number | null;
+  date_order: "dmy" | "mdy" | "ymd";
+}
+
+/** The file's header and the rows under it, for mapping its columns. */
+export interface StatementPreview {
+  header_row: number;
+  rows: string[][];
+  /** The mapping automatic detection would use, or null when it finds no header. */
+  guessed: StatementMapping | null;
+}
+
+export interface StatementPreviewResponse {
+  preview: StatementPreview;
+  /** Identifies the layout: a saved mapping is found again by it. */
+  signature: string;
+  known_profile: boolean;
+}
+
+/** The body of the 422 an upload answers with when the file's layout can't be read automatically. */
+export interface StatementNeedsMapping {
+  error: "needs_mapping";
+  preview: StatementPreview;
+}
+
+/** Where a statement goes, and optionally the mapping to read it with. */
+export interface StatementTarget {
+  account_id?: string;
+  card_id?: string;
+  mapping?: StatementMapping;
+  save_profile?: boolean;
+  label?: string;
+}
+
 export interface SpendMonth {
   /** "YYYY-MM". */
   month: string;

@@ -383,7 +383,7 @@ fn categorise(s: &SpendIn, out: &mut Vec<Habit>) {
             inr(total),
             pct
         ),
-        action: link("Categorise", "/spending"),
+        action: link("Categorise", "/spending/sort"),
         cadence: Cadence::Once,
         due_on: None,
         status: Status::Overdue,
@@ -933,7 +933,7 @@ mod tests {
             (h.cadence, h.status, h.impact),
             (Cadence::Once, Status::Overdue, Impact::High)
         );
-        assert_eq!(h.action.map(|a| a.to), Some("/spending".to_string()));
+        assert_eq!(h.action.map(|a| a.to), Some("/spending/sort".to_string()));
     }
 
     #[test]

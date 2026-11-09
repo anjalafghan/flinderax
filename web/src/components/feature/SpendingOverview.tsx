@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import { CategoryBars } from "@/components/feature/CategoryBars";
 import type { SpendMonth, SpendSummary } from "@/services/types";
 import { formatINR } from "@/utils/money";
@@ -45,12 +47,12 @@ export function SpendingOverview({
   summary,
   isLoading,
   isError,
-  onReviewUncategorized,
 }: {
   summary: SpendSummary | undefined;
   isLoading: boolean;
   isError: boolean;
-  onReviewUncategorized: () => void;
+  /** Kept so existing callers still compile. The review control now links to /spending/sort. */
+  onReviewUncategorized?: () => void;
 }) {
   if (isLoading) return <div className="h-48 animate-pulse rounded-xl bg-muted/40" />;
   if (isError || !summary) return <p className="text-sm text-destructive">Couldn't load your spending.</p>;
@@ -68,14 +70,13 @@ export function SpendingOverview({
       </div>
 
       {uncategorized > 0 && (
-        <button
-          type="button"
-          onClick={onReviewUncategorized}
-          className="flex w-full items-center justify-between gap-3 rounded-lg border border-warn/40 bg-warn-tint p-3 text-left text-sm font-medium text-warn transition-colors hover:bg-warn-tint"
+        <Link
+          to="/spending/sort"
+          className="flex w-full items-center justify-between gap-3 rounded-lg border border-warn/40 bg-warn-tint p-3 text-left text-sm font-medium text-warn no-underline transition-colors hover:bg-warn-tint"
         >
           <span>{plural(uncategorized, "transaction needs a category", "transactions need a category")}</span>
           <span aria-hidden="true">Review</span>
-        </button>
+        </Link>
       )}
 
       <div className="grid gap-6 md:grid-cols-2">

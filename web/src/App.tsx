@@ -15,6 +15,7 @@ const WorkingPage = lazy(() => import('./pages/WorkingPage'))
 const WhatIfPage = lazy(() => import('./pages/WhatIfPage'))
 const SpendingPage = lazy(() => import('./pages/SpendingPage'))
 const MoneyPage = lazy(() => import('./pages/MoneyPage'))
+const SortPayeesPage = lazy(() => import('./pages/SortPayeesPage'))
 const DatesApp = lazy(() => import('./joy/DatesApp'))
 const EnvelopePage = lazy(() => import('./joy/pages/EnvelopePage'))
 const ReviewPage = lazy(() => import('./pages/ReviewPage'))
@@ -113,6 +114,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <MoneyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/spending/sort"
+            element={
+              <ProtectedRoute>
+                <SortPayeesPage />
               </ProtectedRoute>
             }
           />

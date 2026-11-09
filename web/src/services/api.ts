@@ -19,6 +19,8 @@ import type {
   SnapshotInput,
   IngestKeyStatus,
   StatementResult,
+  StatementPreviewResponse,
+  StatementTarget,
   IngestRule,
   NewTxn,
   ParseResult,
@@ -165,6 +167,21 @@ export const movesApi = {
 
 // ---------- spending (automatic transaction tracking) ----------
 
+/** A statement multipart post. No Content-Type header: the browser must set the multipart boundary itself. */
+async function postStatement<T>(url: string, form: FormData): Promise<T> {
+  const token = localStorage.getItem("token");
+  const response = await fetch(url, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(text || `Upload failed (${response.status})`);
+  }
+  return (await response.json()) as T;
+}
+
 export const ingestApi = {
   transactions: (month?: string) =>
     data(api.get<Txn[]>(`/api/ingest/transactions${month ? `?month=${encodeURIComponent(month)}` : ""}`)),
@@ -176,22 +193,24 @@ export const ingestApi = {
   importStatement: (b: { csv: string; account_id?: string }) =>
     data(api.post<StatementResult>("/api/ingest/statement", b)),
   /** Multipart upload: the server reads the file in memory and never stores it. */
-  uploadStatement: async (file: File, target: { account_id?: string } = {}): Promise<StatementResult> => {
+  uploadStatement: async (file: File, target: StatementTarget = {}): Promise<StatementResult> => {
     const form = new FormData();
     form.append("file", file, file.name);
     if (target.account_id) form.append("account_id", target.account_id);
-    // No Content-Type header here: the browser must set the multipart boundary itself.
-    const token = localStorage.getItem("token");
-    const response = await fetch("/api/ingest/statement/upload", {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      body: form,
-    });
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(text || `Upload failed (${response.status})`);
+    if (target.card_id) form.append("card_id", target.card_id);
+    if (target.mapping) {
+      form.append("mapping", JSON.stringify(target.mapping));
+      form.append("save_profile", target.save_profile ? "true" : "false");
+      form.append("label", target.label ?? "");
     }
-    return (await response.json()) as StatementResult;
+    return postStatement<StatementResult>("/api/ingest/statement/upload", form);
+  },
+  /** Reads the file's header and first rows so its columns can be mapped. Nothing is stored. */
+  previewStatement: (file: File, target: { card_id?: string } = {}): Promise<StatementPreviewResponse> => {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    if (target.card_id) form.append("card_id", target.card_id);
+    return postStatement<StatementPreviewResponse>("/api/ingest/statement/preview", form);
   },
   holderNames: () => data(api.get<{ names: string[] }>("/api/ingest/holder-names")),
   saveHolderNames: (names: string[]) => data(api.post<{ names: string[] }>("/api/ingest/holder-names", { names })),
