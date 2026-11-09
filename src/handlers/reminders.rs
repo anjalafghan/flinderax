@@ -17,7 +17,7 @@ use crate::{
         habits,
     },
     models::AppState,
-    planner::reminders::{from_habits, render, token_from_file},
+    planner::reminders::{from_habits, render, token_from_file, Reminder},
 };
 
 const DEFAULT_PUBLIC_URL: &str = "https://joy-jar.fly.dev";
@@ -93,9 +93,25 @@ async fn feed_body(state: &AppState, file: &str) -> Result<Option<String>, AppEr
     };
     let today = today_local();
     let habits = habits::compute(state, &user_id, today).await?;
-    let reminders = from_habits(&habits, today, &public_url());
+    let url = public_url();
+    let mut reminders = from_habits(&habits, today, &url);
+    let status = crate::handlers::checkin::compute_status(state, &user_id, today).await?;
+    reminders.push(checkin_reminder(&status.next_due_on, today, &url));
     let now = OffsetDateTime::now_utc().unix_timestamp();
     Ok(Some(render(&reminders, now)))
+}
+
+/// The quarterly check-in, on its due day (today when it is overdue).
+fn checkin_reminder(next_due_on: &str, today: time::Date, public_url: &str) -> Reminder {
+    let due = time::Date::parse(next_due_on, time::macros::format_description!("[year]-[month]-[day]")).unwrap_or(today);
+    Reminder {
+        uid: "joy-checkin@joy".into(),
+        on: due.max(today),
+        summary: "Quarterly check-in with joy".into(),
+        description: format!(
+            "About 20 minutes: upload your statements, confirm balances, sort new payees and read your quarter.\n{public_url}/checkin"
+        ),
+    }
 }
 
 fn feed_url(token: &str) -> String {
@@ -222,6 +238,8 @@ mod tests {
         assert!(text.contains("UID:joy-habit-bank_statement-acctB@joy\r\n"), "{text}");
         assert!(text.contains("SUMMARY:Upload your Asha bank statement\r\n"), "{text}");
         assert!(text.contains(&format!("{}/spending\r\n", public_url())), "action link in the description: {text}");
+        assert!(text.contains("UID:joy-checkin@joy\r\n"), "the check-in is in the feed: {text}");
+        assert!(text.contains("SUMMARY:Quarterly check-in with joy\r\n"), "{text}");
     }
 
     #[tokio::test]

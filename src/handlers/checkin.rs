@@ -192,16 +192,17 @@ async fn load_status_input(
     user_id: &str,
     today: Date,
 ) -> Result<StatusIn, AppError> {
-    let last: Option<(String, String)> = sqlx::query_as(
-        "SELECT done_on, period_end FROM checkins WHERE user_id = ?
+    let last: Option<(String, String, String)> = sqlx::query_as(
+        "SELECT done_on, period_start, period_end FROM checkins WHERE user_id = ?
          ORDER BY done_on DESC, created_at DESC LIMIT 1",
     )
     .bind(user_id)
     .fetch_optional(db)
     .await?;
-    let last = last.and_then(|(done, end)| {
+    let last = last.and_then(|(done, start, end)| {
         Some(LastCheckin {
             done_on: stored_day(&done)?,
+            period_start: stored_day(&start)?,
             period_end: stored_day(&end)?,
         })
     });
@@ -586,15 +587,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_report_on_the_day_of_a_completed_check_in_still_works() {
+    async fn on_the_day_a_check_in_is_finished_status_and_report_show_its_quarter() {
         let state = test_state().await;
         seed_user_data(&state).await;
         let today = day(2026, 11, 9);
         ok(complete_on(&state, "u", today).await);
         let no_query = ReportQuery { start: None, end: None };
+        // The report shows the quarter that check-in covered.
         let r = ok(report_on(&state, "u", today, no_query).await);
-        assert_eq!(r.period.start, "2026-11-09");
+        assert_eq!(r.period.start, "2026-08-11");
         assert_eq!(r.period.end, "2026-11-09");
+        let s = ok(compute_status(&state, "u", today).await);
+        assert!(s.done_today);
+        assert_eq!(s.period, r.period);
     }
 }
 

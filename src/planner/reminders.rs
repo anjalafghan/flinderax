@@ -28,6 +28,11 @@ pub fn from_habits(habits: &[Habit], today: Date, public_url: &str) -> Vec<Remin
         .iter()
         .filter_map(|h| {
             let due = Date::parse(h.due_on.as_deref()?, ISO).ok()?;
+            // One-off to-dos already past would land on "today" at every refresh and nag daily; they
+            // stay in the app. Recurring ones (statements, SIPs) move to today until done.
+            if h.cadence == crate::planner::habits::Cadence::Once && due < today {
+                return None;
+            }
             let description = match &h.action {
                 Some(link) => format!("{}\n{}{}", h.why, public_url, link.to),
                 None => h.why.clone(),
@@ -178,11 +183,19 @@ mod tests {
     }
 
     #[test]
-    fn habits_without_due_on_are_skipped() {
-        let habits = [habit("k", "t", None, None), habit("j", "u", Some("2026-12-01"), None)];
+    fn undated_habits_and_past_one_offs_stay_out_of_the_calendar() {
+        let once = |key: &str, due: &str| Habit { cadence: Cadence::Once, ..habit(key, "t", Some(due), None) };
+        let habits = [
+            habit("k", "t", None, None),
+            habit("j", "u", Some("2026-12-01"), None),
+            once("past", "2026-11-01"),
+            once("tax", "2026-12-15"),
+            habit("late", "Upload your Acme statement", Some("2026-10-01"), None),
+        ];
         let got = from_habits(&habits, date!(2026 - 11 - 09), "https://joy.example");
-        assert_eq!(got.len(), 1);
-        assert_eq!(got[0].uid, "joy-habit-j@joy");
+        let uids: Vec<&str> = got.iter().map(|r| r.uid.as_str()).collect();
+        assert_eq!(uids, vec!["joy-habit-j@joy", "joy-habit-tax@joy", "joy-habit-late@joy"]);
+        assert_eq!(got[2].on, date!(2026 - 11 - 09), "a late recurring habit shows today");
     }
 
     #[test]

@@ -99,14 +99,19 @@ pub fn period_after(today: Date, last_period_end: Option<Date>) -> Period {
 }
 
 /// The period the status covers, given the last check-in.
+/// A check-in finished today keeps showing the period it covered, until tomorrow.
 pub fn period_for(today: Date, last: Option<&LastCheckin>) -> Period {
-    period_after(today, last.map(|l| l.period_end))
+    match last {
+        Some(l) if l.done_on == today => Period { start: l.period_start.min(l.period_end), end: l.period_end },
+        _ => period_after(today, last.map(|l| l.period_end)),
+    }
 }
 
 /// A check-in already done.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LastCheckin {
     pub done_on: Date,
+    pub period_start: Date,
     pub period_end: Date,
 }
 
@@ -199,6 +204,8 @@ pub struct Estimate {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct CheckinStatus {
     pub last_done_on: Option<String>,
+    /// A check-in was finished today: `period` is the one it covered.
+    pub done_today: bool,
     pub next_due_on: String,
     pub status: DueState,
     pub period: Span,
@@ -263,6 +270,7 @@ pub fn status(input: &StatusIn) -> CheckinStatus {
     ];
     CheckinStatus {
         last_done_on: last.map(|l| l.done_on.to_string()),
+        done_today: last.is_some_and(|l| l.done_on == today),
         next_due_on: next.to_string(),
         status: due_state(today, next),
         period: period.span(),
@@ -442,6 +450,9 @@ pub fn estimates(today: Date, accounts: &[AccountIn], txns: &[TxnIn]) -> Vec<Est
 }
 
 fn estimate(today: Date, a: &AccountIn, txns: &[TxnIn]) -> Option<Estimate> {
+    if a.locked {
+        return None;
+    }
     let known_on = a.balance_set_on?;
     let days_since = (today - known_on).whole_days();
     if days_since < ESTIMATE_AFTER_DAYS {
@@ -495,7 +506,7 @@ pub fn report(txns: &[TxnIn], period: Period, previous: Period) -> ReportParts {
     let prev = (!before.is_empty()).then(|| sum_totals(&before));
     let categories = category_changes(&now, &before);
     let wins = win_lines(&totals, prev.as_ref(), &categories);
-    let watch = watch_lines(&categories);
+    let watch = watch_lines(&totals, prev.as_ref(), &categories);
     (totals, prev, categories, wins, watch)
 }
 
@@ -605,7 +616,9 @@ fn win_lines(now: &Totals, prev: Option<&Totals>, categories: &[CategoryChange])
     let biggest_fall = categories
         .iter()
         .filter(|c| {
-            c.change_bps.is_some_and(|b| b <= -SWING_BPS) && c.prev_paise - c.paise >= SWING_PAISE
+            c.category != "uncategorized"
+                && c.change_bps.is_some_and(|b| b <= -SWING_BPS)
+                && c.prev_paise - c.paise >= SWING_PAISE
         })
         .min_by_key(|c| c.paise - c.prev_paise);
     if let Some(c) = biggest_fall {
@@ -620,10 +633,22 @@ fn win_lines(now: &Totals, prev: Option<&Totals>, categories: &[CategoryChange])
     lines
 }
 
-/// Categories that rose sharply, biggest rise first.
-fn watch_lines(categories: &[CategoryChange]) -> Vec<String> {
+/// A savings rate that fell five points or more, then categories that rose sharply, biggest rise
+/// first. Uncategorised spend is left out: the payees step already asks for it, and a rise there
+/// says more about tagging than about spending.
+/// A savings rate this many basis points lower than last time is worth a line.
+const RATE_DROP_BPS: i64 = 500;
+
+fn watch_lines(now: &Totals, prev: Option<&Totals>, categories: &[CategoryChange]) -> Vec<String> {
+    let mut lines = Vec::new();
+    if let (Some(rate), Some(before)) = (now.savings_rate_bps, prev.and_then(|p| p.savings_rate_bps))
+        && before - rate >= RATE_DROP_BPS
+    {
+        lines.push(format!("You kept {}% of your income, down from {}%.", pct(rate), pct(before)));
+    }
     let mut rises: Vec<(&CategoryChange, i64)> = categories
         .iter()
+        .filter(|c| c.category != "uncategorized")
         .filter_map(|c| {
             let bps = c.change_bps?;
             let rise = c.paise - c.prev_paise;
@@ -631,18 +656,11 @@ fn watch_lines(categories: &[CategoryChange]) -> Vec<String> {
         })
         .collect();
     rises.sort_by_key(|(c, _)| Reverse(c.paise - c.prev_paise));
-    rises
-        .into_iter()
-        .take(MAX_LINES)
-        .map(|(c, bps)| {
-            format!(
-                "{} rose {}% to {}.",
-                label(&c.category),
-                pct(bps),
-                rupees(c.paise)
-            )
-        })
-        .collect()
+    lines.extend(rises.into_iter().map(|(c, bps)| {
+        format!("{} rose {}% to {}.", label(&c.category), pct(bps), rupees(c.paise))
+    }));
+    lines.truncate(MAX_LINES);
+    lines
 }
 
 /// Basis points as whole percent, rounded.
@@ -906,6 +924,20 @@ mod tests {
     }
 
     #[test]
+    fn watch_names_a_falling_savings_rate_and_skips_uncategorised() {
+        let all = vec![
+            txn("2026-08-01", false, rs(100_000), "income", "Acme Payroll"),
+            txn("2026-08-05", true, rs(60_000), "uncategorized", "Someone"),
+            txn("2026-08-06", true, rs(20_000), "food", "Tea"),
+            txn("2026-07-01", false, rs(100_000), "income", "Acme Payroll"),
+            txn("2026-07-05", true, rs(10_000), "uncategorized", "Someone"),
+            txn("2026-07-06", true, rs(20_000), "food", "Tea"),
+        ];
+        let (_, _, _, _, watch) = report(&all, period("2026-08-01", "2026-08-31"), period("2026-07-01", "2026-07-31"));
+        assert_eq!(watch, vec!["You kept 20% of your income, down from 70%.".to_string()]);
+    }
+
+    #[test]
     fn watch_is_at_most_three_and_biggest_rise_first() {
         let mut all = Vec::new();
         for (i, now) in [(1, 90_000), (2, 70_000), (3, 60_000), (4, 50_000)] {
@@ -971,6 +1003,7 @@ mod tests {
         let mut input = empty_status("2026-11-09");
         input.last = Some(LastCheckin {
             done_on: d("2026-08-10"),
+            period_start: d("2026-05-12"),
             period_end: d("2026-08-10"),
         });
         let s = status(&input);
@@ -1002,6 +1035,22 @@ mod tests {
     }
 
     #[test]
+    fn a_check_in_finished_today_keeps_its_own_period() {
+        let mut input = empty_status("2026-11-09");
+        input.last = Some(LastCheckin { done_on: d("2026-11-09"), period_start: d("2026-08-11"), period_end: d("2026-11-09") });
+        let s = status(&input);
+        assert!(s.done_today);
+        assert_eq!(s.period, Span { start: "2026-08-11".into(), end: "2026-11-09".into() });
+        assert_eq!(s.next_due_on, "2027-02-08");
+        assert_eq!(s.status, DueState::Ok);
+        // Tomorrow the next period starts the day after it.
+        input.today = d("2026-11-10");
+        let next = status(&input);
+        assert!(!next.done_today);
+        assert_eq!(next.period, Span { start: "2026-11-10".into(), end: "2026-11-10".into() });
+    }
+
+    #[test]
     fn due_states_use_the_day_boundaries() {
         let today = d("2026-11-09");
         assert_eq!(due_state(today, d("2026-11-08")), DueState::Overdue);
@@ -1015,6 +1064,7 @@ mod tests {
         let mut input = empty_status("2026-11-09");
         input.last = Some(LastCheckin {
             done_on: d("2026-06-01"),
+            period_start: d("2026-03-04"),
             period_end: d("2026-06-01"),
         });
         let s = status(&input);
