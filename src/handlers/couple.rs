@@ -201,20 +201,54 @@ pub async fn join(
     Ok(Json(Done { status: true }))
 }
 
-/// Leaves the couple: your slot empties and the shared history stays with your partner. When
-/// nobody is left, Dates is deleted with everything in it.
-pub async fn leave(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Done>, AppError> {
-    let (couple, me) = couple_of(&state.db, &user_id).await?.ok_or_else(|| not_found("You're not in Dates"))?;
-    let mut tx = state.db.begin().await?;
-    if me == 0 {
-        sqlx::query!("UPDATE couples SET user_0 = NULL WHERE couple_id = ?", couple).execute(&mut *tx).await?;
-    } else {
-        sqlx::query!("UPDATE couples SET user_1 = NULL WHERE couple_id = ?", couple).execute(&mut *tx).await?;
-    }
-    sqlx::query!("DELETE FROM couples WHERE couple_id = ? AND user_0 IS NULL AND user_1 IS NULL", couple)
+/// Takes `user_id` out of their couple, inside `tx`: the slot empties and the shared history stays
+/// with the partner. When nobody is left the couple row goes, and with it everything in Dates.
+/// Returns `None` for someone who is not in a couple, otherwise `Some(emptied)` where `emptied` is
+/// the couple's id when it was deleted, so the caller can remove its photo folder after the commit.
+pub async fn leave_in_tx(tx: &mut sqlx::SqliteConnection, user_id: &str) -> Result<Option<Option<String>>, AppError> {
+    let row: Option<(String, Option<String>)> =
+        sqlx::query_as("SELECT couple_id, user_0 FROM couples WHERE user_0 = ? OR user_1 = ?")
+            .bind(user_id)
+            .bind(user_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let Some((couple, user_0)) = row else { return Ok(None) };
+    let slot = if user_0.as_deref() == Some(user_id) { "user_0" } else { "user_1" };
+    sqlx::query(&format!("UPDATE couples SET {slot} = NULL WHERE couple_id = ?"))
+        .bind(&couple)
         .execute(&mut *tx)
         .await?;
+    let gone = sqlx::query("DELETE FROM couples WHERE couple_id = ? AND user_0 IS NULL AND user_1 IS NULL")
+        .bind(&couple)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+    Ok(Some((gone > 0).then_some(couple)))
+}
+
+/// Deletes a couple's photo folder (`<photos root>/<couple id>`). A folder that is already gone is fine.
+pub async fn remove_couple_photos(couple: &str) {
+    // Couple ids are nanoids; anything else must never become part of a path.
+    if couple.is_empty() || !couple.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        return;
+    }
+    let dir = crate::import_joy::photos_root().join(couple);
+    if let Err(e) = tokio::fs::remove_dir_all(&dir).await
+        && e.kind() != std::io::ErrorKind::NotFound
+    {
+        tracing::error!("could not remove photos of a deleted couple: {e}");
+    }
+}
+
+/// Leaves the couple: your slot empties and the shared history stays with your partner. When
+/// nobody is left, Dates is deleted with everything in it, photos included.
+pub async fn leave(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Done>, AppError> {
+    let mut tx = state.db.begin().await?;
+    let emptied = leave_in_tx(&mut tx, &user_id).await?.ok_or_else(|| not_found("You're not in Dates"))?;
     tx.commit().await?;
+    if let Some(couple) = emptied {
+        remove_couple_photos(&couple).await;
+    }
     Ok(Json(Done { status: true }))
 }
 

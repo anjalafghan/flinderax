@@ -1,19 +1,24 @@
 use crate::models::{AppState, GetUserResponse, GetUsers};
 use crate::handlers::common::AppError;
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use tracing::error;
 
+/// Admin delete: the same full clean-up as deleting your own account (see `lifecycle::delete_user`).
+/// You can't delete yourself here, and the last admin can't be deleted at all.
 pub async fn delete(
     State(state): State<AppState>,
+    Extension((caller, _)): Extension<(String, String)>,
     user_name: String,
 ) -> Result<Json<bool>, AppError> {
-    sqlx::query!("DELETE FROM users WHERE user_name  = ?", user_name)
-        .execute(&state.db)
-        .await
-        .map_err(|e| {
-            error!("Failed to insert user {}", e);
-            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        })?;
+    let id: Option<String> = sqlx::query_scalar("SELECT user_id FROM users WHERE user_name = ?")
+        .bind(user_name.trim())
+        .fetch_optional(&state.db)
+        .await?;
+    let Some(id) = id else { return Ok(Json(true)) };
+    if id == caller {
+        return Err(AppError(StatusCode::CONFLICT, "Use delete account in your own settings to remove yourself.".into()));
+    }
+    crate::handlers::lifecycle::delete_user(&state.db, &id).await?;
     Ok(Json(true))
 }
 

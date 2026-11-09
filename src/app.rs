@@ -165,7 +165,7 @@ fn spa_fallback(index: &str) -> impl Fn(axum::http::Uri) -> std::future::Ready<a
     }
 }
 
-async fn token_validator_middleware(
+pub async fn token_validator_middleware(
     State(state): State<AppState>,
     headers: HeaderMap,
     mut request: Request,
@@ -173,12 +173,31 @@ async fn token_validator_middleware(
 ) -> Result<Response, AppError> {
     match get_token(&headers) {
         Some(token) => {
-            let (user_id, role) = parse_token(token, &state.paseto_key)?;
+            let (user_id, role) = authenticate(token, &state).await?;
             request.extensions_mut().insert((user_id, role));
             let response = next.run(request).await;
             Ok(response)
         }
         _ => Err(AppError(StatusCode::UNAUTHORIZED, "error".to_string())),
+    }
+}
+
+fn sign_in_again() -> AppError {
+    AppError(StatusCode::UNAUTHORIZED, "Please sign in again.".to_string())
+}
+
+/// A valid token whose user still exists and whose version is still current. Password changes,
+/// "sign out everywhere" and account deletion all end older tokens this way. The role comes from
+/// the database, so a demotion applies at once.
+async fn authenticate(token: &str, state: &AppState) -> Result<(String, String), AppError> {
+    let (user_id, _token_role, version) = parse_token(token, &state.paseto_key)?;
+    let row: Option<(String, i64)> = sqlx::query_as("SELECT user_role, token_version FROM users WHERE user_id = ?")
+        .bind(&user_id)
+        .fetch_optional(&state.db)
+        .await?;
+    match row {
+        Some((role, current)) if version == Some(current) => Ok((user_id, role)),
+        _ => Err(sign_in_again()),
     }
 }
 
@@ -190,7 +209,7 @@ pub async fn token_validator_auth_middleware(
 ) -> Result<Response, AppError> {
     match get_token(&headers) {
         Some(token) => {
-            let (user_id, role) = parse_token(token, &state.paseto_key)?;
+            let (user_id, role) = authenticate(token, &state).await?;
             if role != "admin" {
                 return Err(AppError(
                     StatusCode::FORBIDDEN,
@@ -216,7 +235,7 @@ fn get_token(headers: &HeaderMap) -> Option<&str> {
 fn parse_token(
     token: &str,
     key: &Arc<PasetoSymmetricKey<V4, Local>>,
-) -> Result<(String, String), AppError> {
+) -> Result<(String, String, Option<i64>), AppError> {
     match PasetoParser::<V4, Local>::default()
         .check_claim(rusty_paseto::prelude::ExpirationClaim::default())
         .parse(token, key)
@@ -240,7 +259,9 @@ fn parse_token(
                     )
                 })?
                 .to_string();
-            Ok((user_id, role))
+            // Tokens issued before versions existed have none and no longer pass.
+            let version = json_value["tv"].as_i64();
+            Ok((user_id, role, version))
         }
         Err(err) => {
             error!("Error parsing token {}", err);

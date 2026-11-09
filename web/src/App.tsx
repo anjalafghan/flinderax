@@ -5,6 +5,7 @@ import { TabBar } from './components/layout/Header'
 import { useAuth } from './context/AuthContext'
 
 // Lazy load pages for code splitting
+const AccountPage = lazy(() => import('./pages/AccountPage'))
 const AuthPage = lazy(() => import('./pages/AuthPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const CreateCardPage = lazy(() => import('./pages/CreateCardPage'))
@@ -54,6 +55,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <AccountPage />
               </ProtectedRoute>
             }
           />
