@@ -303,11 +303,11 @@ async fn a_night_photo_uploads_and_is_served_only_to_a_valid_signature() {
     assert!(url.starts_with(&format!("/api/public/dates/nights/{vid}/photo?v=")), "{url}");
     assert_eq!(t.get(&format!("/api/dates/regulars/{id}"), &rohit).await.json["stamps"][0]["photo"].as_str().unwrap().split("&exp").next(), url.split("&exp").next());
 
-    // The signed link works with no login at all, and caches for good.
+    // The signed link works with no login at all, and caches no longer than the link lives.
     let img = t.call(Method::GET, &url, None, None).await;
     assert_eq!(img.status, StatusCode::OK);
     assert_eq!(img.headers["content-type"], "image/jpeg");
-    assert!(img.headers["cache-control"].to_str().unwrap().contains("immutable"));
+    assert_eq!(img.headers["cache-control"], "private, max-age=604800");
     assert!(img.text.len() > 100);
 
     // Tampering with anything breaks it.
