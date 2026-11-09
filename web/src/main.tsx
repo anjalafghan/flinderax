@@ -6,6 +6,7 @@ import App from './App.tsx'
 import { AuthProvider } from '@/context/AuthProvider'
 import { ThemeProvider } from "@/context/ThemeContext"
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { sweepOfflineCopies } from '@/session'
 
 
 const queryClient = new QueryClient()
@@ -49,6 +50,9 @@ window.addEventListener("load", () => {
     }
   }, 10_000);
 });
+
+// Saved offline copies of an older login must not outlive it: keep only the current token's.
+void sweepOfflineCopies();
 
 // Offline copies of the shell and a few read-only screens (see public/sw.js).
 if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {

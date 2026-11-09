@@ -4,7 +4,7 @@
 //   bun build.ts           one-off production build (minified, console dropped, .br/.gz copies)
 //   bun build.ts --watch   rebuild on change (dev); refresh the Rust server's page to see it
 import { copyFile, cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { watch } from "node:fs";
+import { existsSync, watch } from "node:fs";
 import { brotliCompressSync, constants as zlib } from "node:zlib";
 import path from "node:path";
 import tailwind from "bun-plugin-tailwind";
@@ -55,6 +55,8 @@ function shellFontsPlugin(): BunPlugin {
     name: "shell-fonts",
     setup(build) {
       build.onResolve({ filter: /JetBrainsMono\.woff2$/ }, () => ({ path: "/fonts/JetBrainsMono.woff2", external: true }));
+      // Newsreader and Figtree (@font-face in index.css): same, root-relative and left as-is.
+      build.onResolve({ filter: /^\/fonts\// }, ({ path: p }) => ({ path: p, external: true }));
     },
   };
 }
@@ -96,6 +98,9 @@ const FONT_DIRS: Record<string, string> = {
   fonts: path.join(root, "src", "fonts"),
 };
 
+/** Self-hosted Newsreader/Figtree woff2 files come from these npm packages rather than src/fonts. */
+const PACKAGE_FONT_DIRS = ["newsreader", "figtree"].map((n) => path.join(root, "node_modules", "@fontsource-variable", n, "files"));
+
 /** Copies only the fonts the emitted css really references (unused woff2 files stay out of dist). */
 async function copyReferencedFonts(dir: string) {
   const css = (await readdir(dir, { recursive: true })).filter((f) => f.endsWith(".css"));
@@ -104,7 +109,11 @@ async function copyReferencedFonts(dir: string) {
     for (const m of text.matchAll(/url\(["']?\/(joy-fonts|fonts)\/([^"')]+)["']?\)/g)) {
       const [, group, name] = m;
       await mkdir(path.join(dir, group!), { recursive: true });
-      await copyFile(path.join(FONT_DIRS[group!]!, name!), path.join(dir, group!, name!));
+      let src = path.join(FONT_DIRS[group!]!, name!);
+      if (group === "fonts" && !(await Bun.file(src).exists())) {
+        src = PACKAGE_FONT_DIRS.map((d) => path.join(d, name!)).find((f) => existsSync(f)) ?? src;
+      }
+      await copyFile(src, path.join(dir, group!, name!));
     }
   }
 }

@@ -17,8 +17,8 @@ const HSTS: &str = "max-age=31536000; includeSubDomains";
 /// injected by some future bug can't run, and couldn't send a token anywhere if it did.
 pub const CSP: &str = "default-src 'self'; \
 script-src 'self' 'sha256-dKgSjMjLHzOElpOWR0uUDjeOd7Ua5Zg1zKyZwm4QY8s='; \
-style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
-font-src 'self' data: https://fonts.gstatic.com; \
+style-src 'self' 'unsafe-inline'; \
+font-src 'self' data:; \
 img-src 'self' data: blob:; \
 media-src 'self' blob:; \
 connect-src 'self'; \

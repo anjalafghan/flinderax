@@ -39,12 +39,17 @@ self.addEventListener("message", (e) => {
   }
 });
 
-async function userCache(req) {
+async function cacheName(req) {
   const auth = req.headers.get("authorization");
   if (!auth) return null;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(auth));
   const hex = [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
-  return caches.open(DATA_PREFIX + hex);
+  return DATA_PREFIX + hex;
+}
+
+async function userCache(req) {
+  const name = await cacheName(req);
+  return name && caches.open(name);
 }
 
 function withTimeout(p, ms) {
@@ -55,6 +60,8 @@ async function keptApi(req) {
   const cache = await userCache(req);
   try {
     const res = await withTimeout(fetch(req), NETWORK_TIMEOUT_MS);
+    // The login is no longer valid: its saved copies go too.
+    if (res.status === 401 && cache) await caches.delete(await cacheName(req));
     if (cache && res.ok) {
       const body = await res.clone().blob();
       const headers = new Headers(res.headers);
