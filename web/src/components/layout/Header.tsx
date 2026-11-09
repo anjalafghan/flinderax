@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ClipboardCheck, Heart, ListChecks, LogOut, Plus, Sun, Wallet, type LucideIcon } from "lucide-react";
+import { ClipboardCheck, HeartPulse, ListChecks, LogOut, Plus, Sun, Users, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -17,8 +17,15 @@ const TABS: Tab[] = [
   { to: "/", label: "Today", icon: Sun, prefixes: ["/", "/cards"] },
   { to: "/money", label: "Money", icon: Wallet, prefixes: ["/money", "/accounts", "/spending"] },
   { to: "/plan", label: "Plan", icon: ListChecks, prefixes: ["/plan", "/what-if", "/working", "/life"] },
-  { to: "/joy", label: "Dates", icon: Heart, prefixes: ["/joy"] },
+  { to: "/joy", label: "People", icon: Users, prefixes: ["/joy", "/people"] },
+  { to: "/health", label: "Health", icon: HeartPulse, prefixes: ["/health"] },
   { to: "/review", label: "Review", icon: ClipboardCheck, prefixes: ["/review"] },
+];
+
+/** Inside the People tab: the two of you (Dates), and everyone else. */
+const PEOPLE_SUBTABS = [
+  { to: "/joy", label: "Us", prefixes: ["/joy"] },
+  { to: "/people", label: "Circle", prefixes: ["/people"] },
 ];
 
 /** The tab whose prefixes match the path. "/" only matches exactly, so it doesn't light up everything. */
@@ -28,7 +35,33 @@ function activeTab(pathname: string): Tab | undefined {
   );
 }
 
-/** Top bar: italic wordmark, the five tabs as quiet pills from md up, and account actions. */
+/** Us / Circle, shown under the top bar while the People tab is open. */
+export function PeopleSubTabs() {
+  const { pathname } = useLocation();
+  if (activeTab(pathname)?.to !== "/joy") return null;
+  return (
+    <nav aria-label="People" className="mx-auto mt-4 flex w-full max-w-[1040px] gap-1 px-4 md:px-6">
+      {PEOPLE_SUBTABS.map((t) => {
+        const on = t.prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+        return (
+          <Link
+            key={t.to}
+            to={t.to}
+            aria-current={on ? "page" : undefined}
+            className={cn(
+              "inline-flex min-h-11 items-center rounded-full px-4 text-sm no-underline transition-colors",
+              on ? "bg-[hsl(var(--chip))] font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** Top bar: italic wordmark, the six tabs as quiet pills from md up, and account actions. */
 export function Header() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -74,6 +107,7 @@ export function Header() {
           </Button>
         </div>
       </div>
+      <PeopleSubTabs />
     </header>
   );
 }
@@ -87,7 +121,7 @@ export function TabBar() {
       aria-label="Main"
       className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 md:hidden"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-5 rounded-full border border-border bg-card px-1">
+      <ul className="mx-auto grid max-w-md grid-cols-6 rounded-full border border-border bg-card px-1">
         {TABS.map((t) => {
           const active = current?.to === t.to;
           return (

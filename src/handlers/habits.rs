@@ -113,6 +113,8 @@ pub async fn load_input(
             term_gap_paise: saved.plan.insurance.term_gap_paise,
             health_gap_paise: saved.plan.insurance.health_gap_paise,
         }),
+        diet: crate::handlers::diet::habits_input(db, user_id, today).await?,
+        people: crate::handlers::people::habits_input(db, user_id, today).await?,
     })
 }
 

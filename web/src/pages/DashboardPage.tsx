@@ -20,6 +20,7 @@ import { DueSoonCard } from "@/components/feature/BillsPanel";
 import { InsightsNudge } from "@/components/feature/InsightsPanel";
 import { HabitsCard } from "@/components/feature/HabitsCard";
 import { CheckInCard } from "@/components/feature/CheckInCard";
+import { UpcomingDatesCard } from "@/components/feature/people/UpcomingDatesCard";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 
 const QUICK_ACTIONS: { to: string; label: string; hint: string; icon: LucideIcon }[] = [
@@ -220,6 +221,7 @@ export default function DashboardPage() {
           <InsightsNudge />
           <HabitsCard />
           <CheckInCard />
+          <UpcomingDatesCard />
         </div>
 
         <nav aria-label="Quick actions" className="mb-12 grid w-full grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">

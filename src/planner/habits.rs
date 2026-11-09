@@ -55,6 +55,8 @@ pub enum Area {
     Food,
     Goals,
     Protection,
+    Health,
+    People,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -187,6 +189,10 @@ pub struct HabitsInput {
     pub food: FoodIn,
     /// None when no life profile is saved.
     pub life: Option<LifeIn>,
+    /// Phase 5: weekly diet habits, eating out and the check-up.
+    pub diet: crate::planner::diet::DietIn,
+    /// Phase 5: catch-ups and gifts.
+    pub people: crate::planner::people::PeopleIn,
 }
 
 /// The habits to act on now, sorted: overdue, then due soon, then ok; within each by impact,
@@ -204,6 +210,8 @@ pub fn build(input: &HabitsInput, today: Date) -> Vec<Habit> {
     food_budget(input, &mut out);
     life_habits(input, &mut out);
     tax_dates(today, &mut out);
+    out.extend(crate::planner::diet::habits(&input.diet, today));
+    out.extend(crate::planner::people::habits(&input.people, today));
 
     out.retain(|h| !(h.status == Status::Ok && h.cadence == Cadence::Once));
     out.sort_by(|a, b| {
@@ -214,8 +222,26 @@ pub fn build(input: &HabitsInput, today: Date) -> Vec<Habit> {
             .then(a.due_on.cmp(&b.due_on))
             .then(a.key.cmp(&b.key))
     });
+    cap_life_areas(&mut out);
     out.truncate(MAX_HABITS);
     out
+}
+
+/// joy stays money-first: at most this many habits from food and health together, and from
+/// people. Applied after sorting, so the most urgent ones are kept.
+const MAX_PER_LIFE_AREA: usize = 2;
+
+fn cap_life_areas(out: &mut Vec<Habit>) {
+    let (mut body, mut people) = (0, 0);
+    out.retain(|h| {
+        let n = match h.area {
+            Area::Food | Area::Health => &mut body,
+            Area::People => &mut people,
+            _ => return true,
+        };
+        *n += 1;
+        *n <= MAX_PER_LIFE_AREA
+    });
 }
 
 fn link(label: &str, to: &str) -> Option<Link> {

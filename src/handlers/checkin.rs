@@ -15,7 +15,7 @@ use crate::{
     handlers::{
         calibration,
         common::{bad_request, today_local, AppError},
-        habits,
+        diet, habits, people,
     },
     models::AppState,
     planner::checkin::{
@@ -139,6 +139,8 @@ pub async fn report_on(
     let habits = habits::compute(state, user_id, today).await?;
     let mut report = checkin::quarter_report(&input.txns, period, habits);
     report.calibration = calibration::latest(state, user_id, today).await?;
+    report.diet = diet::report(&state.db, user_id, period, today).await?;
+    report.people = people::report(&state.db, user_id, period, today).await?;
     Ok(report)
 }
 
@@ -165,6 +167,8 @@ pub async fn complete_on(
     let habits = habits::compute(state, user_id, today).await?;
     let mut report = checkin::quarter_report(&txns, period, habits);
     report.calibration = calibration::latest(state, user_id, today).await?;
+    report.diet = diet::report(db, user_id, period, today).await?;
+    report.people = people::report(db, user_id, period, today).await?;
     let summary = serde_json::to_string(&report).map_err(stored_error)?;
     // The forecast as it stands now, for the next check-in to compare with.
     let snap = calibration::snapshot(state, user_id, today).await?;
@@ -264,12 +268,17 @@ async fn load_status_input(
         })
         .collect();
 
+    let weighed: Vec<String> = sqlx::query_scalar("SELECT measured_on FROM health_marks WHERE user_id = ? AND kind = 'weight'")
+        .bind(user_id)
+        .fetch_all(db)
+        .await?;
     Ok(StatusIn {
         today,
         last,
         accounts,
         cards,
         txns: load_txns(db, user_id).await?,
+        weighed_on: weighed.iter().filter_map(|d| stored_day(d)).collect(),
     })
 }
 
@@ -412,8 +421,8 @@ mod tests {
         assert_eq!(s.status, DueState::DueSoon);
         assert_eq!(s.period, Span { start: "2026-08-11".into(), end: "2026-11-09".into() });
         let keys: Vec<&str> = s.steps.iter().map(|x| x.key).collect();
-        assert_eq!(keys, vec!["statements", "balances", "payees", "report"]);
-        assert_eq!(s.steps.iter().map(|x| x.done).collect::<Vec<_>>(), vec![true, true, true, false]);
+        assert_eq!(keys, vec!["statements", "balances", "payees", "body", "report"]);
+        assert_eq!(s.steps.iter().map(|x| x.done).collect::<Vec<_>>(), vec![true, true, true, false, false]);
         assert!(s.uploads.is_empty() && s.estimates.is_empty());
     }
 

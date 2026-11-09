@@ -23,6 +23,8 @@ import {
   type Totals,
 } from "@/services/checkin";
 import { formatDay } from "@/utils/dates";
+import { DietReportSection } from "@/components/feature/health/DietReportSection";
+import { PeopleReportSection } from "@/components/feature/people/PeopleReportSection";
 
 const SECTION = "flex flex-col gap-6 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10";
 const PILL = "inline-flex min-h-7 shrink-0 items-center whitespace-nowrap rounded-full px-3 text-[13px] font-semibold";
@@ -182,6 +184,27 @@ function PayeesStep({ status, n }: { status: CheckinStatus; n: number }) {
   );
 }
 
+/** Optional: this quarter's weight, added on the Health page. */
+function BodyStep({ status }: { status: CheckinStatus }) {
+  const step = status.steps.find((s) => s.key === "body");
+  if (!step) return null;
+  return (
+    <section aria-labelledby="checkin-step-body" className={SECTION}>
+      <div className="flex flex-col gap-1">
+        <h2 id="checkin-step-body" className="m-0 text-[17px] font-medium">
+          {step.title} <span className="text-sm font-normal text-muted-foreground">(optional)</span>
+        </h2>
+        <p className="m-0 text-sm text-muted-foreground">{step.detail}</p>
+      </div>
+      {!step.done && (
+        <Link to="/health" className="self-start text-sm font-medium text-primary">
+          Add your weight
+        </Link>
+      )}
+    </section>
+  );
+}
+
 function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
   const step = status.steps.find((s) => s.key === "report");
   const report = useCheckinReport(true);
@@ -244,6 +267,9 @@ function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
             )}
           </div>
         </div>
+
+        {data.diet && <DietReportSection report={data.diet} />}
+        {data.people && <PeopleReportSection report={data.people} />}
 
         {data.calibration && data.calibration.lines.length > 0 && (
           <div className="flex flex-col gap-3">
@@ -383,6 +409,7 @@ export default function CheckInPage() {
             <StatementsStep status={s} n={1} />
             <BalancesStep status={s} n={2} />
             <PayeesStep status={s} n={3} />
+            <BodyStep status={s} />
             <QuarterStep status={s} n={4} />
 
             {!saved && (

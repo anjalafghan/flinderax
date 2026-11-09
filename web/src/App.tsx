@@ -21,6 +21,9 @@ const EnvelopePage = lazy(() => import('./joy/pages/EnvelopePage'))
 const ReviewPage = lazy(() => import('./pages/ReviewPage'))
 const LifePage = lazy(() => import('./pages/LifePage'))
 const CheckInPage = lazy(() => import('./pages/CheckInPage'))
+const HealthPage = lazy(() => import('./pages/HealthPage'))
+const PeoplePage = lazy(() => import('./pages/PeoplePage'))
+const PersonPage = lazy(() => import('./pages/PersonPage'))
 // Toasts are rare and sonner is ~35 KB, so its Toaster is a lazy chunk, not part of the shell.
 const Toaster = lazy(() => import('sonner').then((m) => ({ default: m.Toaster })))
 
@@ -133,6 +136,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <DatesApp />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/health"
+            element={
+              <ProtectedRoute>
+                <HealthPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/people"
+            element={
+              <ProtectedRoute>
+                <PeoplePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/people/:id"
+            element={
+              <ProtectedRoute>
+                <PersonPage />
               </ProtectedRoute>
             }
           />
