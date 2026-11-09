@@ -65,14 +65,23 @@ pub fn from_dates(dates: &[DateIn], seasons: &[SeasonIn], today: Date, feed_name
         .collect()
 }
 
-/// Swaps the names in people habit titles for plain words, for a feed that keeps names out.
+/// For a feed that keeps details out (the default): calendar services see that something is due
+/// and a link back to joy, never names, account or card names, amounts or health details.
 pub fn hide_names(habits: &mut [Habit]) {
+    use crate::planner::habits::Area;
     for h in habits {
-        if h.key.starts_with("catch_up:") {
-            h.title = "Catch up with someone".into();
+        h.title = if h.key.starts_with("catch_up:") {
+            "Catch up with someone".into()
         } else if h.key.starts_with("gift:") {
-            h.title = "Gift for an upcoming date".into();
-        }
+            "Gift for an upcoming date".into()
+        } else {
+            match h.area {
+                Area::Food | Area::Health => "A health task in joy".into(),
+                Area::People => "Something for the people you care about".into(),
+                _ => "A money task in joy".into(),
+            }
+        };
+        h.why = "Open joy for the details.".into();
     }
 }
 
@@ -319,15 +328,17 @@ mod tests {
     }
 
     #[test]
-    fn hiding_names_rewrites_only_people_habits() {
+    fn a_private_feed_keeps_every_detail_out() {
         let mut habits = vec![
             habit("catch_up:p1", "Catch up with Person A", Some("2026-11-20"), None),
             habit("gift:d1:2026", "Gift for Person A's birthday on 14 Dec, about Rs 2,000.", Some("2026-12-01"), None),
             habit("bank_statement:acctB", "Upload your Asha bank statement", Some("2026-11-20"), None),
         ];
+        habits[2].why = "Your Asha bank statements stop at 1 Oct; the ₹40,000 balance is a guess.".into();
         hide_names(&mut habits);
         assert_eq!(habits[0].title, "Catch up with someone");
         assert_eq!(habits[1].title, "Gift for an upcoming date");
-        assert_eq!(habits[2].title, "Upload your Asha bank statement");
+        assert_eq!(habits[2].title, "A money task in joy");
+        assert!(habits.iter().all(|h| h.why == "Open joy for the details."));
     }
 }

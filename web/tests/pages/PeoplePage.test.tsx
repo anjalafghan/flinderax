@@ -207,7 +207,7 @@ describe("PeoplePage", () => {
   it("saves the calendar feed setting with names off or on", async () => {
     const calls = serve(standardRoutes());
     renderWithRouter(<PeoplePage />);
-    const box = (await screen.findByLabelText("Show names in my calendar feed")) as HTMLInputElement;
+    const box = (await screen.findByLabelText("Show details in my calendar feed")) as HTMLInputElement;
     expect(box.checked).toBe(false);
     fireEvent.click(box);
 

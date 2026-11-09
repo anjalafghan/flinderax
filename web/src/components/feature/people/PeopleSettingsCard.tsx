@@ -38,10 +38,10 @@ export function PeopleSettingsCard() {
               );
             }}
           />
-          Show names in my calendar feed
+          Show details in my calendar feed
         </label>
         <p id={`${id}-feed-hint`} className={NOTE}>
-          Off keeps names out of your synced calendar.
+          Off, events just say a money, health or people task is due. On, they include names, accounts and amounts.
         </p>
       </div>
     </section>
