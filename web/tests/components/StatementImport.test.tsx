@@ -85,6 +85,29 @@ describe("StatementImport", () => {
     expect(screen.getByText(/isn't on the statement/)).toBeInTheDocument();
   });
 
+  it("says when it kept a newer typed balance and how many earlier payments it sorted", async () => {
+    spyOn(api, "get").mockImplementation((url: string) =>
+      Promise.resolve({ data: url.includes("holder-names") ? { names: [] } : [], status: 200, statusText: "OK" }) as never,
+    );
+    spyOn(ingestApi, "uploadStatement").mockResolvedValue({
+      ...result,
+      holder_name_suggestion: null,
+      older_recategorized: 4,
+      balance_kept: {
+        account_name: "Spending",
+        balance_paise: 7_000_000,
+        set_on: "2026-11-20",
+        statement_paise: 5_513_050,
+        statement_on: "2026-11-06",
+      },
+    });
+    renderImport();
+
+    fireEvent.change(screen.getByLabelText("Statement file"), { target: { files: [new File(["csv"], "statement.txt")] } });
+    expect(await screen.findByText(/Kept the Spending balance of ₹70,000/)).toHaveTextContent("it ends 6 Nov at ₹55,130.50");
+    expect(screen.getByText("Also sorted 4 earlier payments with your latest categories.")).toBeInTheDocument();
+  });
+
   it("shows a warning instead of a pass when the balances do not chain", async () => {
     spyOn(api, "get").mockImplementation((url: string) =>
       Promise.resolve({ data: url.includes("holder-names") ? { names: [] } : [], status: 200, statusText: "OK" }) as never,
