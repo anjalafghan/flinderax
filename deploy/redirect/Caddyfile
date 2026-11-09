@@ -1,5 +1,8 @@
 # joy-jar.fly.dev → joy.fly.dev, keeping the path and query, so envelope links already sent,
 # calendar subscriptions and bookmarks keep working. 308 keeps the method and body.
 :8080 {
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header Referrer-Policy "no-referrer"
+	header -Server
 	redir https://joy.fly.dev{uri} 308
 }
