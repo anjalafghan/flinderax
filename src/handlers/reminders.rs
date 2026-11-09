@@ -1,12 +1,256 @@
-//! Phase 2 reminder calendar feed (see the contract). Stubs until the builder fills them in.
+//! The reminder calendar feed. `link` and `reset_link` are behind login and manage the user's private
+//! URL; `feed` is public and is keyed only by the unguessable token in the file name.
 
-use axum::http::StatusCode;
-use crate::handlers::common::AppError;
+use axum::{
+    extract::{Path, State},
+    http::{header, StatusCode},
+    response::{IntoResponse, Response},
+    Extension, Json,
+};
+use rand::RngCore;
+use serde::Serialize;
+use time::OffsetDateTime;
 
-fn todo() -> AppError {
-    AppError(StatusCode::NOT_IMPLEMENTED, "Not built yet".to_string())
+use crate::{
+    handlers::{
+        common::{today_local, AppError},
+        habits,
+    },
+    models::AppState,
+    planner::reminders::{from_habits, render, token_from_file},
+};
+
+const DEFAULT_PUBLIC_URL: &str = "https://joy-jar.fly.dev";
+
+#[derive(Serialize)]
+pub struct LinkOut {
+    pub url: String,
 }
 
-pub async fn link() -> Result<(), AppError> { Err(todo()) }
-pub async fn reset_link() -> Result<(), AppError> { Err(todo()) }
-pub async fn feed() -> Result<(), AppError> { Err(todo()) }
+/// `GET /api/reminders/link`: the user's feed URL, created on first use.
+pub async fn link(
+    State(state): State<AppState>,
+    Extension((user_id, _)): Extension<(String, String)>,
+) -> Result<Json<LinkOut>, AppError> {
+    sqlx::query(
+        "INSERT INTO reminder_feeds (user_id, token) VALUES (?, ?) ON CONFLICT(user_id) DO NOTHING",
+    )
+    .bind(&user_id)
+    .bind(new_token())
+    .execute(&state.db)
+    .await?;
+    let token: String = sqlx::query_scalar("SELECT token FROM reminder_feeds WHERE user_id = ?")
+        .bind(&user_id)
+        .fetch_one(&state.db)
+        .await?;
+    Ok(Json(LinkOut { url: feed_url(&token) }))
+}
+
+/// `POST /api/reminders/link/reset`: a new token. The old URL stops working at once.
+pub async fn reset_link(
+    State(state): State<AppState>,
+    Extension((user_id, _)): Extension<(String, String)>,
+) -> Result<Json<LinkOut>, AppError> {
+    let token = new_token();
+    sqlx::query(
+        "INSERT INTO reminder_feeds (user_id, token) VALUES (?, ?) \
+         ON CONFLICT(user_id) DO UPDATE SET token = excluded.token",
+    )
+    .bind(&user_id)
+    .bind(&token)
+    .execute(&state.db)
+    .await?;
+    Ok(Json(LinkOut { url: feed_url(&token) }))
+}
+
+/// `GET /api/public/reminders/{file}`: the calendar for the user who owns the token in `file`.
+pub async fn feed(State(state): State<AppState>, Path(file): Path<String>) -> Response {
+    match feed_body(&state, &file).await {
+        Ok(Some(body)) => (
+            [
+                (header::CONTENT_TYPE, "text/calendar; charset=utf-8"),
+                (header::CACHE_CONTROL, "private, no-store"),
+            ],
+            body,
+        )
+            .into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+/// The calendar text for a feed file, or None when the name or token is unknown.
+async fn feed_body(state: &AppState, file: &str) -> Result<Option<String>, AppError> {
+    let Some(token) = token_from_file(file) else {
+        return Ok(None);
+    };
+    let user_id: Option<String> = sqlx::query_scalar("SELECT user_id FROM reminder_feeds WHERE token = ?")
+        .bind(token)
+        .fetch_optional(&state.db)
+        .await?;
+    let Some(user_id) = user_id else {
+        return Ok(None);
+    };
+    let today = today_local();
+    let habits = habits::compute(state, &user_id, today).await?;
+    let reminders = from_habits(&habits, today, &public_url());
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+    Ok(Some(render(&reminders, now)))
+}
+
+fn feed_url(token: &str) -> String {
+    format!("{}/api/public/reminders/{token}.ics", public_url())
+}
+
+/// `PUBLIC_URL` without a trailing slash.
+fn public_url() -> String {
+    std::env::var("PUBLIC_URL")
+        .ok()
+        .map(|v| v.trim().trim_end_matches('/').to_string())
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| DEFAULT_PUBLIC_URL.to_string())
+}
+
+/// 32 random bytes as 64 lowercase hex characters.
+fn new_token() -> String {
+    let mut bytes = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::to_bytes;
+    use sqlx::sqlite::SqlitePoolOptions;
+
+    async fn test_state() -> AppState {
+        let db = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!().run(&db).await.unwrap();
+        for q in [
+            "INSERT INTO users (user_id, user_name, user_password, user_role) VALUES ('u', 'u', 'x', 'user')",
+            "INSERT INTO users (user_id, user_name, user_password, user_role) VALUES ('v', 'v', 'x', 'user')",
+            "INSERT INTO accounts (account_id, user_id, name, kind) VALUES ('acctB', 'u', 'Asha bank', 'bank')",
+        ] {
+            sqlx::query(q).execute(&db).await.unwrap();
+        }
+        let key = rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::from(
+            rusty_paseto::prelude::Key::from(&[7u8; 32][..]),
+        );
+        AppState { db, redis: None, paseto_key: std::sync::Arc::new(key) }
+    }
+
+    fn user(id: &str) -> Extension<(String, String)> {
+        Extension((id.to_string(), String::new()))
+    }
+
+    /// The `{token}.ics` file name from a feed URL.
+    fn file_of(url: &str) -> String {
+        url.rsplit('/').next().unwrap().to_string()
+    }
+
+    async fn get_feed(state: &AppState, file: &str) -> (StatusCode, Option<String>, String) {
+        let res = feed(State(state.clone()), Path(file.to_string())).await;
+        let status = res.status();
+        let ctype = res.headers().get(header::CONTENT_TYPE).map(|v| v.to_str().unwrap().to_string());
+        let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        (status, ctype, String::from_utf8(body.to_vec()).unwrap())
+    }
+
+    #[tokio::test]
+    async fn link_is_created_once_and_is_stable() {
+        let state = test_state().await;
+        let first = link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url;
+        let second = link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url;
+        assert_eq!(first, second);
+        assert!(first.ends_with(".ics") && first.contains("/api/public/reminders/"));
+        let token = file_of(&first);
+        assert!(crate::planner::reminders::token_from_file(&token).is_some());
+        let rows: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM reminder_feeds").fetch_one(&state.db).await.unwrap();
+        assert_eq!(rows, 1);
+    }
+
+    #[tokio::test]
+    async fn each_user_gets_their_own_token() {
+        let state = test_state().await;
+        let a = link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url;
+        let b = link(State(state.clone()), user("v")).await.map_err(|e| e.1).unwrap().0.url;
+        assert_ne!(a, b);
+    }
+
+    #[tokio::test]
+    async fn reset_changes_the_token_and_the_old_one_stops_working() {
+        let state = test_state().await;
+        let old = link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url;
+        let old_file = file_of(&old);
+        assert_eq!(get_feed(&state, &old_file).await.0, StatusCode::OK);
+
+        let new = reset_link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url;
+        assert_ne!(old, new);
+        assert_eq!(get_feed(&state, &old_file).await.0, StatusCode::NOT_FOUND);
+        assert_eq!(get_feed(&state, &file_of(&new)).await.0, StatusCode::OK);
+        assert_eq!(link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url, new);
+    }
+
+    #[tokio::test]
+    async fn reset_without_a_link_creates_one() {
+        let state = test_state().await;
+        let url = reset_link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url;
+        assert_eq!(get_feed(&state, &file_of(&url)).await.0, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn feed_serves_a_calendar_with_private_headers() {
+        let state = test_state().await;
+        let url = link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url;
+        // A statement that ended long ago makes the next upload due in the past, so it shows up today.
+        sqlx::query(
+            "INSERT INTO statement_imports (import_id, user_id, account_id, first_date, last_date, rows) \
+             VALUES ('imp1', 'u', 'acctB', '2025-12-01', '2026-01-01', 3)",
+        )
+        .execute(&state.db)
+        .await
+        .unwrap();
+        let res = feed(State(state.clone()), Path(file_of(&url))).await;
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::CONTENT_TYPE], "text/calendar; charset=utf-8");
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "private, no-store");
+        let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let text = String::from_utf8(body.to_vec()).unwrap();
+        assert!(text.starts_with("BEGIN:VCALENDAR\r\n"));
+        assert!(text.ends_with("END:VCALENDAR\r\n"));
+        assert!(text.contains("UID:joy-habit-bank_statement-acctB@joy\r\n"), "{text}");
+        assert!(text.contains("SUMMARY:Upload your Asha bank statement\r\n"), "{text}");
+        assert!(text.contains(&format!("{}/spending\r\n", public_url())), "action link in the description: {text}");
+    }
+
+    #[tokio::test]
+    async fn bad_or_unknown_files_are_404() {
+        let state = test_state().await;
+        let url = link(State(state.clone()), user("u")).await.map_err(|e| e.1).unwrap().0.url;
+        let token = file_of(&url);
+        let bare = token.trim_end_matches(".ics").to_string();
+        assert_eq!(get_feed(&state, &bare).await.0, StatusCode::NOT_FOUND, "suffix required");
+        assert_eq!(get_feed(&state, &format!("{}.ics", "a".repeat(64))).await.0, StatusCode::NOT_FOUND);
+        assert_eq!(get_feed(&state, "not-a-token.ics").await.0, StatusCode::NOT_FOUND);
+        let upper = format!("{}.ics", token.trim_end_matches(".ics").to_uppercase());
+        assert_eq!(get_feed(&state, &upper).await.0, StatusCode::NOT_FOUND, "tokens are lowercase");
+    }
+
+    #[test]
+    fn tokens_are_64_lowercase_hex() {
+        let t = new_token();
+        assert_eq!(t.len(), 64);
+        assert!(crate::planner::reminders::is_token(&t));
+        assert_ne!(t, new_token());
+    }
+
+    #[test]
+    fn public_url_has_a_default() {
+        // Only checks the shape: the env var is not set by the test runner.
+        let url = feed_url(&"a".repeat(64));
+        assert!(url.starts_with("http"));
+        assert!(url.ends_with(&format!("/api/public/reminders/{}.ics", "a".repeat(64))));
+        assert!(!url.contains("//api"));
+    }
+}
