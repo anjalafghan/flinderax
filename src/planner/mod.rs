@@ -18,6 +18,7 @@ pub mod autopost;
 pub mod bills;
 pub mod cycle;
 pub mod goals;
+pub mod habits;
 pub mod history;
 pub mod insights;
 pub mod joy;
