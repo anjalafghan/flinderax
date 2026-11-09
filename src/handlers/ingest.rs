@@ -9,6 +9,7 @@ use axum::{
     extract::{multipart::MultipartError, Multipart, Query, State},
     http::{HeaderMap, StatusCode},
     body::Bytes,
+    response::{IntoResponse, Response},
     Extension, Json,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
@@ -24,7 +25,7 @@ use crate::{
     models::AppState,
     planner::cycle::add_months,
     ratelimit,
-    statement::StatementRow,
+    statement::{Mapping, StatementRow},
 };
 
 type User = Extension<(String, String)>;
@@ -857,21 +858,14 @@ pub struct StatementInput {
     pub csv: String,
     pub account_id: Option<String>,
     pub card_id: Option<String>,
+    /// The columns the user mapped. Without one, the layout is auto-detected.
+    pub mapping: Option<Mapping>,
 }
 
 /// Stores a parsed statement for `user_id`. Nothing is stored twice: a row already imported is a
 /// duplicate; a row a bank alert recorded is confirmed (kept, with the statement's reference and
 /// narration) rather than doubled; every other row is added.
 pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: StatementInput) -> Result<StatementResult, AppError> {
-    let parsed = crate::statement::parse(&input.csv)
-        .ok_or_else(|| bad_request("Couldn't find the transaction table. The file needs a Date column and Debit/Credit or Amount columns."))?;
-    if parsed.rows.is_empty() {
-        return Err(bad_request("No transactions found in that file."));
-    }
-    if parsed.rows.len() > MAX_STATEMENT_ROWS {
-        return Err(bad_request(format!("Too many rows (limit {MAX_STATEMENT_ROWS}). Import one period at a time.")));
-    }
-
     // Which instrument this is, and its last digits.
     let (mut account_id, mut card_id, mut last4) = (None, None, None);
     if let Some(id) = input.account_id.as_deref().filter(|s| !s.is_empty()) {
@@ -893,6 +887,23 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
         card_id = Some(row.0);
         last4 = row.1;
     }
+    let card = card_id.is_some();
+    let parsed = match &input.mapping {
+        Some(mapping) => crate::statement::parse_with(&input.csv, mapping),
+        None => crate::statement::parse_for(&input.csv, card)
+            .ok_or_else(|| bad_request("Couldn't find the transaction table. The file needs a Date column and Debit/Credit or Amount columns."))?,
+    };
+    if parsed.rows.is_empty() {
+        return Err(bad_request(if input.mapping.is_some() {
+            "Couldn't read any transactions with these columns. Check the column mapping."
+        } else {
+            "No transactions found in that file."
+        }));
+    }
+    if parsed.rows.len() > MAX_STATEMENT_ROWS {
+        return Err(bad_request(format!("Too many rows (limit {MAX_STATEMENT_ROWS}). Import one period at a time.")));
+    }
+
     let rules = load_rules(db, user_id).await?;
     let holder_names = load_holder_names(db, user_id).await?;
     let owner = crate::narration::Owner { holder_names: &holder_names };
@@ -947,13 +958,9 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
         // Category order: the structure of the narration (own accounts, SIPs, salary, fees...), then the
         // user's rules and the keywords, both read from the payee alone. The raw narration is never
         // matched, so app tags such as "PAID VIA CRED" cannot pick a category.
-        let category = match crate::narration::structural_category(&parts, credit, &owner) {
+        let category = match statement_structure(&row.narration, credit, card, &parts, &owner) {
             Some(c) => c.to_string(),
-            None => {
-                let lower = row.narration.to_lowercase();
-                let card_payment = card_id.is_some() && credit && (lower.contains("payment") || lower.contains("thank"));
-                categorize(parts.payee.as_deref(), row.direction, card_payment, &rules)
-            }
+            None => categorize(parts.payee.as_deref(), row.direction, false, &rules),
         };
         let merchant = parts.payee.clone().or_else(|| crate::statement::merchant_of(&row.narration));
         let raw: String = row.narration.chars().take(500).collect();
@@ -980,17 +987,22 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
                 res.duplicates += 1;
                 continue;
             }
-            let kept = if existing == "uncategorized" { category.clone() } else { existing.clone() };
+            // A card credit is never income: the statement's category replaces an alert's, unless the user locked it.
+            let forced = card && credit;
+            let kept = if forced || existing == "uncategorized" { category.clone() } else { existing.clone() };
             sqlx::query(
                 // The statement is the source of truth: its posting date replaces the alert's (±1 day).
                 "UPDATE transactions SET on_statement = 1, occurred_on = ?, rrn = COALESCE(?, rrn), merchant = COALESCE(?, merchant), raw_text = ?,
-                     category = CASE WHEN category = 'uncategorized' THEN ? ELSE category END
+                     category = CASE WHEN category_locked = 1 THEN category
+                                     WHEN ? = 0 AND category <> 'uncategorized' THEN category
+                                     ELSE ? END
                  WHERE txn_id = ? AND user_id = ?",
             )
             .bind(&on)
             .bind(&parts.rrn)
             .bind(&merchant)
             .bind(&raw)
+            .bind(forced as i64)
             .bind(&category)
             .bind(&txn_id)
             .bind(user_id)
@@ -1109,7 +1121,7 @@ pub async fn statement(
     Extension((user_id, _)): User,
     Json(p): Json<StatementPayload>,
 ) -> Result<Json<StatementResult>, AppError> {
-    let input = StatementInput { csv: p.csv, account_id: p.account_id, card_id: p.card_id };
+    let input = StatementInput { csv: p.csv, account_id: p.account_id, card_id: p.card_id, mapping: None };
     Ok(Json(import_statement(&state.db, &user_id, input).await?))
 }
 
@@ -1117,31 +1129,192 @@ fn multipart_error(e: MultipartError) -> AppError {
     AppError(e.status(), e.body_text())
 }
 
-/// `POST /api/ingest/statement/upload`: multipart with `file`, optional `account_id` and `card_id`.
-/// The file is read into memory, decoded, imported and dropped. It is never written to disk.
-pub async fn statement_upload(
-    State(state): State<AppState>,
-    Extension((user_id, _)): User,
-    mut multipart: Multipart,
-) -> Result<Json<StatementResult>, AppError> {
-    let mut file: Option<Bytes> = None;
-    let (mut account_id, mut card_id) = (None, None);
+/// The fields of a statement upload or preview, read in one pass.
+#[derive(Default)]
+struct StatementForm {
+    file: Option<Bytes>,
+    account_id: Option<String>,
+    card_id: Option<String>,
+    /// The mapping as JSON (`statement::Mapping`), when the user chose one.
+    mapping: Option<String>,
+    save_profile: bool,
+    label: String,
+}
+
+async fn read_statement_form(mut multipart: Multipart) -> Result<StatementForm, AppError> {
+    let mut form = StatementForm::default();
     while let Some(field) = multipart.next_field().await.map_err(multipart_error)? {
         match field.name().unwrap_or_default() {
-            "file" => file = Some(field.bytes().await.map_err(multipart_error)?),
-            "account_id" => account_id = Some(field.text().await.map_err(multipart_error)?),
-            "card_id" => card_id = Some(field.text().await.map_err(multipart_error)?),
+            "file" => form.file = Some(field.bytes().await.map_err(multipart_error)?),
+            "account_id" => form.account_id = Some(field.text().await.map_err(multipart_error)?),
+            "card_id" => form.card_id = Some(field.text().await.map_err(multipart_error)?),
+            "mapping" => form.mapping = Some(field.text().await.map_err(multipart_error)?),
+            "save_profile" => form.save_profile = matches!(field.text().await.map_err(multipart_error)?.trim(), "true" | "1" | "on"),
+            "label" => form.label = field.text().await.map_err(multipart_error)?,
             _ => {}
         }
     }
+    Ok(form)
+}
+
+/// The file's text, or 400 when there is no file or it is an Excel export.
+fn statement_text(file: Option<Bytes>) -> Result<String, AppError> {
     let bytes = file.ok_or_else(|| bad_request("Choose a statement file to upload."))?;
     if bytes.starts_with(&OLE2_MAGIC) {
         return Err(bad_request(EXCEL_MESSAGE));
     }
-    let csv = String::from_utf8_lossy(&bytes).into_owned();
-    drop(bytes);
-    let input = StatementInput { csv, account_id, card_id };
-    Ok(Json(import_statement(&state.db, &user_id, input).await?))
+    Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+
+fn is_card(card_id: Option<&str>) -> bool {
+    card_id.is_some_and(|s| !s.trim().is_empty())
+}
+
+/// The saved layout whose header this file has, with the header row it has here. A saved layout
+/// that reads no rows from this file does not count.
+async fn saved_layout(db: &sqlx::SqlitePool, user_id: &str, csv: &str) -> Result<Option<Mapping>, AppError> {
+    let candidates = crate::statement::header_signatures(csv);
+    if candidates.is_empty() {
+        return Ok(None);
+    }
+    let saved: Vec<(String, String)> = sqlx::query_as("SELECT signature, mapping_json FROM statement_profiles WHERE user_id = ?")
+        .bind(user_id)
+        .fetch_all(db)
+        .await?;
+    for (row, sig) in candidates {
+        let Some((_, json)) = saved.iter().find(|(s, _)| *s == sig) else { continue };
+        let Ok(mut mapping) = serde_json::from_str::<Mapping>(json) else { continue };
+        mapping.header_row = row;
+        if !crate::statement::parse_with(csv, &mapping).rows.is_empty() {
+            return Ok(Some(mapping));
+        }
+    }
+    Ok(None)
+}
+
+/// Keeps a layout under its header signature, replacing any saved one for it.
+async fn save_layout(db: &sqlx::SqlitePool, user_id: &str, signature: &str, mapping: &Mapping, label: &str) -> Result<(), AppError> {
+    let json = serde_json::to_string(mapping).map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let label: String = label.trim().chars().take(60).collect();
+    let label = if label.is_empty() { "Statement layout".to_string() } else { label };
+    sqlx::query(
+        "INSERT INTO statement_profiles (user_id, signature, mapping_json, label) VALUES (?, ?, ?, ?)
+         ON CONFLICT (user_id, signature) DO UPDATE SET mapping_json = excluded.mapping_json, label = excluded.label",
+    )
+    .bind(user_id)
+    .bind(signature)
+    .bind(json)
+    .bind(label)
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+/// `POST /api/ingest/statement/upload`: multipart with `file`, optional `account_id` or `card_id`,
+/// and optionally a `mapping` (JSON) with `save_profile` and `label`. Without a mapping, a layout
+/// saved for this header is used, else auto-detection. A file neither reads is a 422 with
+/// `{ error: "needs_mapping", preview }`. The file is read into memory, imported and dropped. It is
+/// never written to disk.
+pub async fn statement_upload(State(state): State<AppState>, Extension((user_id, _)): User, multipart: Multipart) -> Result<Response, AppError> {
+    let form = read_statement_form(multipart).await?;
+    let card = is_card(form.card_id.as_deref());
+    let csv = statement_text(form.file)?;
+
+    let explicit = match form.mapping.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(raw) => Some(serde_json::from_str::<Mapping>(raw).map_err(|_| bad_request("The column mapping isn't valid."))?),
+        None => None,
+    };
+    let mapping = match &explicit {
+        Some(_) => explicit.clone(),
+        None => saved_layout(&state.db, &user_id, &csv).await?,
+    };
+    if mapping.is_none() && crate::statement::parse_for(&csv, card).is_none() {
+        let preview = crate::statement::preview_for(&csv, card);
+        let body = serde_json::json!({ "error": "needs_mapping", "preview": preview });
+        return Ok((StatusCode::UNPROCESSABLE_ENTITY, Json(body)).into_response());
+    }
+
+    // Only a mapping the user sent is kept as a layout; the signature comes from this file's header.
+    let to_save = explicit.filter(|_| form.save_profile).map(|m| (crate::statement::signature(&csv, m.header_row), m));
+    let input = StatementInput { csv, account_id: form.account_id, card_id: form.card_id, mapping };
+    let result = import_statement(&state.db, &user_id, input).await?;
+    if let Some((signature, mapping)) = to_save {
+        save_layout(&state.db, &user_id, &signature, &mapping, &form.label).await?;
+    }
+    Ok(Json(result).into_response())
+}
+
+#[derive(Serialize)]
+pub struct StatementPreview {
+    pub preview: crate::statement::Preview,
+    /// The header's signature: what a saved layout is found by.
+    pub signature: String,
+    /// Whether a layout is already saved for this file's header.
+    pub known_profile: bool,
+}
+
+/// `POST /api/ingest/statement/preview`: the file's header and first rows, for mapping its columns.
+/// Nothing is stored and the file is not imported.
+pub async fn statement_preview(State(state): State<AppState>, Extension((user_id, _)): User, multipart: Multipart) -> Result<Json<StatementPreview>, AppError> {
+    let form = read_statement_form(multipart).await?;
+    let card = is_card(form.card_id.as_deref());
+    let csv = statement_text(form.file)?;
+    let preview = crate::statement::preview_for(&csv, card);
+    let signature = crate::statement::signature(&csv, preview.header_row);
+    let known_profile = saved_layout(&state.db, &user_id, &csv).await?.is_some();
+    Ok(Json(StatementPreview { preview, signature, known_profile }))
+}
+
+/// Phrases that mark a credit on a card as a payment in. Anything else is a refund, reversal or cashback.
+const CARD_PAYMENT_PHRASES: &[&str] = &["PAYMENT", "THANK YOU", "BBPS", "NEFT", "IMPS", "UPI"];
+/// Bill payments to a card from a bank account. A bank's name alone does not make one.
+const CARD_BILL_PHRASES: &[&str] = &["CRED CLUB", "CREDIT CARD", "CC PAYMENT"];
+const CARD_ISSUERS: &[&str] = &["HDFC", "ICICI", "SBI", "AXIS", "KOTAK", "CITI", "AMEX", "HSBC", "RBL", "INDUSIND", "IDFC", "YES BANK", "STANDARD CHARTERED"];
+
+/// Whether `phrase` appears in `upper` as whole words: "UPI" is not part of "SUPIN".
+fn has_phrase(upper: &str, phrase: &str) -> bool {
+    upper.match_indices(phrase).any(|(i, _)| {
+        let before = upper[..i].chars().next_back().is_some_and(|c| c.is_ascii_alphanumeric());
+        let after = upper[i + phrase.len()..].chars().next().is_some_and(|c| c.is_ascii_alphanumeric());
+        !before && !after
+    })
+}
+
+/// A credit on a card is never income: a payment in is a transfer (a bill paid), anything else a refund.
+fn card_credit_category(narration: &str) -> &'static str {
+    let upper = narration.to_ascii_uppercase();
+    if CARD_PAYMENT_PHRASES.iter().any(|p| has_phrase(&upper, p)) {
+        "transfer"
+    } else {
+        "refund"
+    }
+}
+
+/// A debit from a bank account that pays a credit card's bill. Not spending.
+fn is_card_bill_payment(narration: &str) -> bool {
+    let upper = narration.to_ascii_uppercase();
+    CARD_BILL_PHRASES.iter().any(|p| has_phrase(&upper, p))
+        || (has_phrase(&upper, "BILLDESK") && has_phrase(&upper, "CARD"))
+        || (has_phrase(&upper, "CARDS") && CARD_ISSUERS.iter().any(|b| has_phrase(&upper, b)))
+}
+
+/// The category a statement row gets from its structure: a card's credits and a bank's card bill
+/// payments first, then the narration rules (own accounts, salary, fees...). `None` leaves the row
+/// to the payee rules. Shared by the import and by recategorising, so both agree.
+fn statement_structure(
+    narration: &str,
+    credit: bool,
+    on_card: bool,
+    parts: &crate::narration::Narration,
+    owner: &crate::narration::Owner,
+) -> Option<&'static str> {
+    if on_card && credit {
+        return Some(card_credit_category(narration));
+    }
+    if !on_card && !credit && is_card_bill_payment(narration) {
+        return Some("transfer");
+    }
+    crate::narration::structural_category(parts, credit, owner)
 }
 
 // ---------- holder names and recategorising ----------
@@ -1205,8 +1378,8 @@ pub async fn recategorize(State(state): State<AppState>, Extension((user_id, _))
     let db = &state.db;
     let names = load_holder_names(db, &user_id).await?;
     let owner = crate::narration::Owner { holder_names: &names };
-    let rows: Vec<(String, String, String, String)> = sqlx::query_as(
-        "SELECT txn_id, direction, raw_text, category FROM transactions
+    let rows: Vec<(String, String, String, String, bool)> = sqlx::query_as(
+        "SELECT txn_id, direction, raw_text, category, card_id IS NOT NULL FROM transactions
          WHERE user_id = ? AND on_statement = 1 AND category_locked = 0 AND raw_text IS NOT NULL",
     )
     .bind(&user_id)
@@ -1214,10 +1387,10 @@ pub async fn recategorize(State(state): State<AppState>, Extension((user_id, _))
     .await?;
     let mut tx = db.begin().await?;
     let mut changed = 0;
-    for (txn_id, direction, raw, current) in rows {
+    for (txn_id, direction, raw, current, on_card) in rows {
         let parts = crate::narration::parse(&raw);
         let credit = direction == Direction::Credit.as_str();
-        let Some(category) = crate::narration::structural_category(&parts, credit, &owner) else { continue };
+        let Some(category) = statement_structure(&raw, credit, on_card, &parts, &owner) else { continue };
         if category == current {
             continue;
         }
@@ -1273,8 +1446,37 @@ mod statement_tests {
     }
 
     async fn import(state: &AppState, csv: &str, account: Option<&str>) -> StatementResult {
-        let input = StatementInput { csv: csv.to_string(), account_id: account.map(str::to_string), card_id: None };
+        let input = StatementInput { csv: csv.to_string(), account_id: account.map(str::to_string), card_id: None, mapping: None };
         import_statement(&state.db, "u", input).await.unwrap_or_else(|e| panic!("import failed: {}", e.1))
+    }
+
+    /// An import against the card `cardA`, where a single amount column is spending.
+    async fn import_card(state: &AppState, csv: &str) -> StatementResult {
+        let input = StatementInput { csv: csv.to_string(), account_id: None, card_id: Some("cardA".into()), mapping: None };
+        import_statement(&state.db, "u", input).await.unwrap_or_else(|e| panic!("import failed: {}", e.1))
+    }
+
+    async fn category_of(db: &sqlx::SqlitePool, raw: &str) -> String {
+        sqlx::query_scalar("SELECT category FROM transactions WHERE raw_text = ?").bind(raw).fetch_one(db).await.unwrap()
+    }
+
+    /// Synthetic card export: purchases unsigned, payments and refunds marked "Cr".
+    const CARD_CSV: &str = "Date,Description,Amount\n\
+12-11-2026,AMAZON PAY,\"2,000.00\"\n\
+13-11-2026,PAYMENT RECEIVED,\"5,000.00 Cr\"\n\
+14-11-2026,REFUND FLIPKART,\"300.00 Cr\"\n\
+15-11-2026,SALARY PAYMENT CREDIT,\"1,000.00 Cr\"\n";
+
+    /// Synthetic layout no detector reads: no column says date or amount.
+    const UNKNOWN_CSV: &str = "Posted On,Memo,Out,In\n03/11/2026,Coffee shop,120.00,\n04/11/2026,Salary,,5000.00\n";
+
+    /// The same layout as `UNKNOWN_CSV`, with other rows.
+    const LATER_CSV: &str = "Posted On,Memo,Out,In\n10/11/2026,Taxi,250.00,\n11/11/2026,Refund,,80.00\n";
+
+    const UNKNOWN_MAPPING: &str = r#"{"header_row":0,"date":0,"narration":1,"debit":2,"credit":3,"amount":null,"sign":{"kind":"separate_columns"},"balance":null,"reference":null,"date_order":"dmy"}"#;
+
+    async fn count_where(db: &sqlx::SqlitePool, sql: &str) -> i64 {
+        sqlx::query_scalar(sql).fetch_one(db).await.unwrap()
     }
 
     fn user() -> Extension<(String, String)> {
@@ -1409,6 +1611,120 @@ mod statement_tests {
     }
 
     #[tokio::test]
+    async fn card_payments_are_transfers_refunds_are_refunds_and_nothing_is_income() {
+        let state = test_state().await;
+        let res = import_card(&state, CARD_CSV).await;
+        assert_eq!((res.added, res.total), (4, 4));
+        assert_eq!(category_of(&state.db, "AMAZON PAY").await, "shopping");
+        assert_eq!(category_of(&state.db, "PAYMENT RECEIVED").await, "transfer");
+        assert_eq!(category_of(&state.db, "REFUND FLIPKART").await, "refund");
+        // The salary-looking narration is a card credit first: a payment in, not income.
+        assert_eq!(category_of(&state.db, "SALARY PAYMENT CREDIT").await, "transfer");
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM transactions WHERE card_id = 'cardA' AND category = 'income'").await, 0);
+        // Payments and refunds are not spending; the purchase is.
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM transactions WHERE card_id = 'cardA' AND direction = 'debit' AND amount_paise = 200000").await, 1);
+    }
+
+    #[tokio::test]
+    async fn a_card_payment_that_matches_an_alert_takes_the_statement_category_not_income() {
+        let state = test_state().await;
+        sqlx::query(
+            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, card_id, source, dedupe_key, category)
+             VALUES ('alert-pay', 'u', '2026-11-13', 'credit', 500000, 'cardA', 'sms', 'fp:pay', 'income')",
+        )
+        .execute(&state.db)
+        .await
+        .unwrap();
+        let res = import_card(&state, CARD_CSV).await;
+        assert_eq!(res.upgraded, 1);
+        let category: String = sqlx::query_scalar("SELECT category FROM transactions WHERE txn_id = 'alert-pay'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(category, "transfer");
+    }
+
+    #[tokio::test]
+    async fn bank_debits_that_pay_a_card_bill_are_transfers() {
+        let state = test_state().await;
+        // Synthetic: a bill paid through a bill-payment app, and an NEFT to a card issuer.
+        let bills = "\r\nDate,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\r\n\
+07/11/26,UPI-CRED CLUB-CREDCLUB@ICICI-ICIC0000001-612345678906-CRED CLUB,07/11/26,15000.00,,612345678906,40129.50\r\n\
+08/11/26,NEFT-HDFC CARDS-PAYMENT-HDFC0000001-N7654321,08/11/26,2500.00,,N7654321,37629.50\r\n";
+        import(&state, bills, Some("acctB")).await;
+        assert_eq!(category_of(&state.db, "UPI-CRED CLUB-CREDCLUB@ICICI-ICIC0000001-612345678906-CRED CLUB").await, "transfer");
+        assert_eq!(category_of(&state.db, "NEFT-HDFC CARDS-PAYMENT-HDFC0000001-N7654321").await, "transfer");
+        // The app tags on ordinary rows ("PAID VIA CRED") must not make them transfers.
+        import(&state, &csv(ROWS), Some("acctB")).await;
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM transactions WHERE raw_text LIKE '%PAID VIA CRED' AND category = 'transfer'").await, 0);
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM transactions WHERE raw_text LIKE '%PAYMENT ON CRED' AND category = 'transfer'").await, 0);
+    }
+
+    #[tokio::test]
+    async fn unknown_layout_is_422_needs_mapping_with_a_preview() {
+        let state = test_state().await;
+        let (status, body) = post_form(&state, "/statement/upload", multipart_fields(&[("account_id", "acctB")], UNKNOWN_CSV.as_bytes())).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["error"], "needs_mapping");
+        assert_eq!(json["preview"]["header_row"], 0);
+        assert_eq!(json["preview"]["rows"][0], serde_json::json!(["Posted On", "Memo", "Out", "In"]));
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM transactions").await, 0);
+    }
+
+    #[tokio::test]
+    async fn preview_shows_the_header_and_whether_a_layout_is_known() {
+        let state = test_state().await;
+        let (status, body) = post_form(&state, "/statement/preview", multipart_fields(&[], UNKNOWN_CSV.as_bytes())).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["known_profile"], false);
+        assert_eq!(json["preview"]["guessed"], serde_json::Value::Null);
+        assert_eq!(json["signature"].as_str().map(str::len), Some(16));
+        // Nothing is stored by a preview.
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM statement_profiles").await, 0);
+    }
+
+    #[tokio::test]
+    async fn a_saved_layout_is_reused_by_its_header_signature() {
+        let state = test_state().await;
+        let (status, body) = post_form(
+            &state,
+            "/statement/upload",
+            multipart_fields(
+                &[("account_id", "acctB"), ("mapping", UNKNOWN_MAPPING), ("save_profile", "true"), ("label", "Posted layout")],
+                UNKNOWN_CSV.as_bytes(),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM statement_profiles WHERE label = 'Posted layout'").await, 1);
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM transactions WHERE on_statement = 1 AND direction = 'debit' AND amount_paise = 12000").await, 1);
+
+        // Another file with the same header, and no mapping: the preview knows it, and the import reads it.
+        let (_, body) = post_form(&state, "/statement/preview", multipart_fields(&[], LATER_CSV.as_bytes())).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["known_profile"], true);
+        let (status, body) = post_form(&state, "/statement/upload", multipart_fields(&[("account_id", "acctB")], LATER_CSV.as_bytes())).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["added"], 2);
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM statement_profiles").await, 1);
+    }
+
+    #[tokio::test]
+    async fn a_mapping_that_reads_no_rows_is_a_bad_request_and_saves_nothing() {
+        let state = test_state().await;
+        let wrong = r#"{"header_row":0,"date":0,"narration":1,"debit":9,"credit":9,"amount":null,"sign":{"kind":"separate_columns"},"balance":null,"reference":null,"date_order":"dmy"}"#;
+        let (status, body) = post_form(
+            &state,
+            "/statement/upload",
+            multipart_fields(&[("account_id", "acctB"), ("mapping", wrong), ("save_profile", "true")], UNKNOWN_CSV.as_bytes()),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(body.contains("Check the column mapping"), "{body}");
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM statement_profiles").await, 0);
+    }
+
+    #[tokio::test]
     async fn excel_export_is_rejected_by_its_magic_bytes() {
         let state = test_state().await;
         let (status, body) = upload(&state, multipart_body(None, &[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1])).await;
@@ -1440,10 +1756,28 @@ mod statement_tests {
     }
 
     async fn upload(state: &AppState, body: Vec<u8>) -> (StatusCode, String) {
+        post_form(state, "/statement/upload", body).await
+    }
+
+    /// A multipart body with text fields before the file, for the mapping and profile fields.
+    fn multipart_fields(fields: &[(&str, &str)], file: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        for (name, value) in fields {
+            body.extend_from_slice(format!("--{BOUNDARY}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n").as_bytes());
+        }
+        body.extend_from_slice(
+            format!("--{BOUNDARY}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"statement.txt\"\r\nContent-Type: text/plain\r\n\r\n").as_bytes(),
+        );
+        body.extend_from_slice(file);
+        body.extend_from_slice(format!("\r\n--{BOUNDARY}--\r\n").as_bytes());
+        body
+    }
+
+    async fn post_form(state: &AppState, path: &str, body: Vec<u8>) -> (StatusCode, String) {
         let app = crate::routes::ingest::routes(state.clone()).layer(user());
         let req = Request::builder()
             .method("POST")
-            .uri("/statement/upload")
+            .uri(path)
             .header("content-type", format!("multipart/form-data; boundary={BOUNDARY}"))
             .body(Body::from(body))
             .unwrap();

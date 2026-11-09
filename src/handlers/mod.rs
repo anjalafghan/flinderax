@@ -16,6 +16,7 @@ pub mod insights;
 pub mod joy;
 pub mod life;
 pub mod moves;
+pub mod payees;
 pub mod plan;
 pub mod projection;
 pub mod review;

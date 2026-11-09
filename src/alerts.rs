@@ -44,7 +44,7 @@ pub struct Alert {
 
 pub const CATEGORIES: &[&str] = &[
     "food", "groceries", "shopping", "transport", "fuel", "bills", "entertainment", "health", "travel", "rent",
-    "emi", "cash", "dates", "transfer", "income", "investments", "fees", "refund", "other", "uncategorized",
+    "emi", "cash", "dates", "people", "transfer", "income", "investments", "fees", "refund", "other", "uncategorized",
 ];
 
 /// Categories that are not spending.
@@ -271,6 +271,33 @@ const DEFAULT_RULES: &[(&str, &[&str])] = &[
     ("emi", &["emi", "loan"]),
 ];
 
+/// Small-merchant words (Indian shops, restaurants, clinics). Checked only after `DEFAULT_RULES`
+/// finds nothing, so they never move a name that already has a category. A word also matches a
+/// name the bank cut short: see `truncated_match`.
+/// "fuel" and "petrol" are not repeated under transport: they already mean fuel in `DEFAULT_RULES`.
+const SMALL_MERCHANT_RULES: &[(&str, &[&str])] = &[
+    ("food", &["restaurant", "restauran", "hotel", "cafe", "bakery", "sweets", "dhaba", "biryani", "chai", "tea", "juice", "kitchen", "foods"]),
+    ("groceries", &["kirana", "general store", "provision", "supermarket", "mart", "dairy", "vegetable", "fruits"]),
+    ("health", &["medical", "medicals", "chemist", "pharma", "clinic", "hospital", "diagnostic", "dental"]),
+    ("transport", &["auto", "garage", "motors", "service centre", "parking", "toll"]),
+    ("shopping", &["fashion", "garments", "footwear", "electronics", "mobile", "textiles", "collection"]),
+    ("bills", &["recharge", "broadband", "electricity"]),
+];
+
+/// Shortest bank-truncated fragment that counts as a match. Shorter ones would match common names.
+const MIN_TRUNCATED: usize = 5;
+
+/// True when the end of `norm` is a leading fragment of `pat`, starting at a word boundary:
+/// "sparsh leela restaur" ends with "restaur", the start of "restauran". Only fragments of
+/// `MIN_TRUNCATED` characters or more count, so "ravi kumar" does not match anything.
+fn truncated_match(norm: &str, pat: &str) -> bool {
+    let words: Vec<&str> = norm.split(' ').collect();
+    (0..words.len()).any(|i| {
+        let tail = words[i..].join(" ");
+        tail.len() >= MIN_TRUNCATED && pat.starts_with(&tail)
+    })
+}
+
 /// The category for a transaction: the user's longest matching rule, then the built-in list.
 pub fn categorize(merchant: Option<&str>, direction: Direction, card_payment: bool, user_rules: &[(String, String)]) -> String {
     if card_payment {
@@ -286,6 +313,11 @@ pub fn categorize(merchant: Option<&str>, direction: Direction, card_payment: bo
         if direction == Direction::Debit {
             for (cat, pats) in DEFAULT_RULES {
                 if pats.iter().any(|p| contains(p)) {
+                    return (*cat).into();
+                }
+            }
+            for (cat, pats) in SMALL_MERCHANT_RULES {
+                if pats.iter().any(|p| contains(p) || truncated_match(&norm, p)) {
                     return (*cat).into();
                 }
             }
@@ -433,5 +465,42 @@ mod tests {
         assert_eq!(categorize(Some("sharma.medicals"), Direction::Debit, false, &[]), "health");
         // Short patterns only match whole words: "ola" must not match "Coca Cola".
         assert_eq!(categorize(Some("Coca Cola"), Direction::Debit, false, &[]), "uncategorized");
+    }
+
+    #[test]
+    fn small_merchants_match_their_full_name_and_bank_truncations() {
+        assert_eq!(categorize(Some("SPARSH LEELA RESTAUR"), Direction::Debit, false, &[]), "food");
+        assert_eq!(categorize(Some("SAINATH AUTO GARAGE"), Direction::Debit, false, &[]), "transport");
+        assert_eq!(categorize(Some("SHREE GENERAL STO"), Direction::Debit, false, &[]), "groceries");
+        assert_eq!(categorize(Some("NEW MEDICALS"), Direction::Debit, false, &[]), "health");
+        assert_eq!(categorize(Some("CITY HOSPITA"), Direction::Debit, false, &[]), "health");
+        assert_eq!(categorize(Some("ABC DIAGNOSTI"), Direction::Debit, false, &[]), "health");
+        assert_eq!(categorize(Some("FRESH SUPERMARK"), Direction::Debit, false, &[]), "groceries");
+        assert_eq!(categorize(Some("RAJU MOBILES"), Direction::Debit, false, &[]), "shopping");
+        assert_eq!(categorize(Some("MOBILE RECHARGE"), Direction::Debit, false, &[]), "bills");
+        assert_eq!(categorize(Some("JIO MOBILE RECHARGE"), Direction::Debit, false, &[]), "bills");
+    }
+
+    #[test]
+    fn google_india_stays_uncategorized() {
+        // "india" is a prefix of "indian oil" in the fuel rules, so the truncation match must not reach them.
+        assert_eq!(categorize(Some("GOOGLE INDIA"), Direction::Debit, false, &[]), "uncategorized");
+        assert_eq!(categorize(Some("NATURE"), Direction::Debit, false, &[]), "uncategorized");
+    }
+
+    #[test]
+    fn people_and_short_fragments_stay_uncategorized() {
+        assert_eq!(categorize(Some("RAVI KUMAR"), Direction::Debit, false, &[]), "uncategorized");
+        // Fragments shorter than the minimum, or words that only start like a keyword, do not match.
+        assert_eq!(categorize(Some("CHAITANYA"), Direction::Debit, false, &[]), "uncategorized");
+        assert_eq!(categorize(Some("MARTIN"), Direction::Debit, false, &[]), "uncategorized");
+        assert_eq!(categorize(Some("RAVI KUMAR CHA"), Direction::Debit, false, &[]), "uncategorized");
+    }
+
+    #[test]
+    fn existing_categories_win_over_small_merchant_words() {
+        // "fuel" and "petrol" already mean fuel; transport must not take them.
+        assert_eq!(categorize(Some("HPCL PETROL PUMP"), Direction::Debit, false, &[]), "fuel");
+        assert_eq!(categorize(Some("IOCL FUEL STATION"), Direction::Debit, false, &[]), "fuel");
     }
 }

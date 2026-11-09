@@ -1,7 +1,12 @@
-//! Bank / card statement CSV exports -> rows. Pure: no database. Banks differ in column names,
-//! date formats and whether debits and credits share a column, so the header row is found by
-//! looking for a date column plus an amount column, and everything else is optional.
+//! Bank / card statement exports -> rows. Pure: no database. Banks differ in column names,
+//! date formats, whether debits and credits share a column, and how a card marks payments. The
+//! header row is found by looking for a date column plus an amount column. Where that fails, a
+//! `Mapping` the user chose (and maybe saved for the layout) says which column is which.
 
+use std::collections::BTreeMap;
+
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use time::{Date, Month};
 
 use crate::alerts::Direction;
@@ -23,16 +28,88 @@ pub struct Parsed {
     pub skipped: usize,
 }
 
-/// Splits CSV text into records, honouring quotes. The delimiter is comma, tab, semicolon or pipe,
-/// whichever the header line uses most.
+/// How a single amount column says which side a row is on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "column", rename_all = "snake_case")]
+pub enum SignRule {
+    /// Debit and credit are separate columns; whichever is filled gives the side.
+    SeparateColumns,
+    /// One signed amount: a minus sign is money out, a plain figure is money in.
+    NegativeIsDebit,
+    /// One amount column and a separate Dr/Cr column, given by its index.
+    DrCrColumn(usize),
+    /// One amount column of spending: a plain figure is a debit, a "Cr" suffix (or a minus sign) a credit.
+    CrSuffix,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DateOrder {
+    #[default]
+    Dmy,
+    Mdy,
+    Ymd,
+}
+
+/// Which column of a file holds what. Column indices count from zero; `header_row` counts every
+/// record in the file, blank lines included.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Mapping {
+    pub header_row: usize,
+    pub date: usize,
+    pub narration: usize,
+    pub debit: Option<usize>,
+    pub credit: Option<usize>,
+    pub amount: Option<usize>,
+    pub sign: SignRule,
+    pub balance: Option<usize>,
+    pub reference: Option<usize>,
+    #[serde(default)]
+    pub date_order: DateOrder,
+}
+
+/// What the user sees before choosing a mapping: the header and the rows under it, and the
+/// mapping auto-detection would use (None when it finds no header).
+#[derive(Debug, Serialize)]
+pub struct Preview {
+    pub header_row: usize,
+    pub rows: Vec<Vec<String>>,
+    pub guessed: Option<Mapping>,
+}
+
+/// How many records the preview shows, the header included.
+const PREVIEW_RECORDS: usize = 13;
+/// How many records from the top of a file can be the header.
+const HEADER_CANDIDATES: usize = 30;
+
+/// The delimiter is the one whose per-line count is most consistent across the first lines. A
+/// comma in a narration varies from row to row; the real delimiter appears the same number of
+/// times on the header and on the data.
+fn delimiter(text: &str) -> char {
+    const CANDIDATES: [char; 4] = [',', '\t', ';', '|'];
+    let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).take(20).collect();
+    let mut best = (0_usize, 0_usize, ',');
+    for d in CANDIDATES {
+        let mut freq: BTreeMap<usize, usize> = BTreeMap::new();
+        for l in &lines {
+            let c = l.matches(d).count();
+            if c > 0 {
+                *freq.entry(c).or_default() += 1;
+            }
+        }
+        // Most lines agreeing on one count, then the larger count: (lines, count) per delimiter.
+        let top = freq.iter().max_by_key(|(c, f)| (**f, **c)).map(|(&count, &lines_with)| (lines_with, count));
+        if let Some((lines_with, count)) = top.filter(|&t| t > (best.0, best.1)) {
+            best = (lines_with, count, d);
+        }
+    }
+    best.2
+}
+
+/// Splits CSV text into records, honouring quotes.
 fn split_records(text: &str) -> Vec<Vec<String>> {
     let text = text.trim_start_matches('\u{feff}');
-    let first = text.lines().find(|l| l.contains("ate")).unwrap_or("");
-    let delim = [',', '\t', ';', '|']
-        .into_iter()
-        .max_by_key(|d| first.matches(*d).count())
-        .filter(|d| first.contains(*d))
-        .unwrap_or(',');
+    let delim = delimiter(text);
 
     let mut records = Vec::new();
     let mut row: Vec<String> = Vec::new();
@@ -80,11 +157,17 @@ fn month_from(s: &str) -> Option<Month> {
     })
 }
 
-/// 01/11/26, 01-11-2026, 2026-11-01, 1 Nov 2026, 01-Nov-26, optionally followed by a time.
+/// 01/11/26, 01-11-2026, 2026-11-01, 1 Nov 2026, 01-Nov-26, Nov 1, 2026, optionally followed by a
+/// time. Day first unless the date says otherwise.
 pub fn parse_date(raw: &str) -> Option<Date> {
+    parse_date_in(raw, DateOrder::Dmy)
+}
+
+/// As `parse_date`, but a numeric date is read in the given order (month first for `Mdy`).
+pub fn parse_date_in(raw: &str, order: DateOrder) -> Option<Date> {
     let s = raw.trim();
     let s = s.split([' ', 'T']).next().filter(|_| !s.contains(char::is_alphabetic)).unwrap_or(s);
-    let parts: Vec<&str> = s.split(['/', '-', '.', ' ']).filter(|p| !p.is_empty()).collect();
+    let parts: Vec<&str> = s.split(['/', '-', '.', ' ', ',']).filter(|p| !p.is_empty()).collect();
     if parts.len() != 3 {
         return None;
     }
@@ -98,8 +181,15 @@ pub fn parse_date(raw: &str) -> Option<Date> {
     };
     let (y, m, d) = if parts[0].len() == 4 {
         (year(parts[0])?, parts[1], parts[2])
+    } else if parts[0].chars().all(char::is_alphabetic) {
+        // "Nov 1, 2026": a month name first.
+        (year(parts[2])?, parts[0], parts[1])
     } else {
-        (year(parts[2])?, parts[1], parts[0])
+        match order {
+            DateOrder::Mdy => (year(parts[2])?, parts[0], parts[1]),
+            DateOrder::Dmy => (year(parts[2])?, parts[1], parts[0]),
+            DateOrder::Ymd => (year(parts[0])?, parts[1], parts[2]),
+        }
     };
     let month = match m.parse::<u8>() {
         Ok(n) => Month::try_from(n).ok()?,
@@ -128,14 +218,56 @@ fn parse_amount(raw: &str) -> Option<i64> {
     (total != 0).then_some(total)
 }
 
+fn flip(side: Direction) -> Direction {
+    if matches!(side, Direction::Debit) {
+        Direction::Credit
+    } else {
+        Direction::Debit
+    }
+}
+
 /// A signed figure in a debit or credit column: a minus sign reverses the side it sits in (a
 /// negative withdrawal is money coming back). Returns the side and the positive amount.
 fn sided(side: Direction, signed: i64) -> (Direction, i64) {
     if signed >= 0 {
-        return (side, signed);
+        (side, signed)
+    } else {
+        (flip(side), -signed)
     }
-    let flipped = if matches!(side, Direction::Debit) { Direction::Credit } else { Direction::Debit };
-    (flipped, -signed)
+}
+
+/// The side of a row from its single amount column, as the sign rule reads it.
+fn amount_side(sign: SignRule, raw: &str, signed: i64, row: &[String]) -> Direction {
+    let lower = raw.to_lowercase();
+    let suffix_cr = lower.ends_with("cr") || lower.ends_with("cr.");
+    let suffix_dr = lower.ends_with("dr") || lower.ends_with("dr.");
+    match sign {
+        SignRule::DrCrColumn(i) => {
+            let flag = row.get(i).map(|s| s.trim().to_lowercase()).unwrap_or_default();
+            if suffix_cr || flag.starts_with("cr") || flag.contains("credit") {
+                Direction::Credit
+            } else {
+                Direction::Debit
+            }
+        }
+        SignRule::CrSuffix => {
+            let base = if suffix_cr { Direction::Credit } else { Direction::Debit };
+            if signed < 0 {
+                flip(base)
+            } else {
+                base
+            }
+        }
+        SignRule::NegativeIsDebit | SignRule::SeparateColumns => {
+            if suffix_cr {
+                Direction::Credit
+            } else if suffix_dr || signed < 0 {
+                Direction::Debit
+            } else {
+                Direction::Credit
+            }
+        }
+    }
 }
 
 #[derive(Default)]
@@ -185,68 +317,164 @@ fn find_columns(header: &[String]) -> Option<Columns> {
     })
 }
 
-/// Reads a statement. `None` when no header row (a date column plus an amount column) is found.
-pub fn parse(text: &str) -> Option<Parsed> {
-    let mut records = split_records(text);
+/// The mapping auto-detection would use for a header. A card's single amount column is read as
+/// spending with "Cr" marking payments and refunds; a bank's as signed.
+fn mapping_of(header_row: usize, c: &Columns, header: &[String], card: bool) -> Mapping {
+    // With no narration column, the first column nothing else uses is the best guess.
+    let used = [Some(c.date), c.debit, c.credit, c.amount, c.flag, c.balance, c.reference, c.narration];
+    let narration = c.narration.or_else(|| (0..header.len()).find(|i| !used.contains(&Some(*i)))).unwrap_or(0);
+    let sign = match (c.flag, c.debit.is_some() || c.credit.is_some()) {
+        (_, true) => SignRule::SeparateColumns,
+        (Some(flag), false) => SignRule::DrCrColumn(flag),
+        (None, false) if card => SignRule::CrSuffix,
+        (None, false) => SignRule::NegativeIsDebit,
+    };
+    Mapping {
+        header_row,
+        date: c.date,
+        narration,
+        debit: c.debit,
+        credit: c.credit,
+        amount: c.amount,
+        sign,
+        balance: c.balance,
+        reference: c.reference,
+        date_order: DateOrder::Dmy,
+    }
+}
+
+/// The header row auto-detection finds, with the mapping it implies.
+fn guess_in(records: &[Vec<String>], card: bool) -> Option<Mapping> {
     let (hi, cols) = records.iter().enumerate().find_map(|(i, r)| find_columns(r).map(|c| (i, c)))?;
+    Some(mapping_of(hi, &cols, &records[hi], card))
+}
+
+/// Without a detectable header, the record most likely to be one: the one with the most cells
+/// that are words rather than dates or amounts (the earliest on a tie).
+fn label_header(records: &[Vec<String>]) -> usize {
+    let words = |r: &[String]| r.iter().filter(|c| c.chars().any(char::is_alphabetic) && parse_date(c).is_none() && parse_amount(c).is_none()).count();
+    records
+        .iter()
+        .take(40)
+        .enumerate()
+        .max_by_key(|(i, r)| (words(r), std::cmp::Reverse(*i)))
+        .map(|(i, _)| i)
+        .unwrap_or(0)
+}
+
+/// Reads a statement with the layout auto-detection finds. `None` when no header row (a date column
+/// plus an amount column) is found. A bank's single amount column is read as signed.
+pub fn parse(text: &str) -> Option<Parsed> {
+    parse_for(text, false)
+}
+
+/// As `parse`. `card` says the file is a credit card's: a single amount column is then spending,
+/// with a "Cr" suffix (or a minus sign) for payments and refunds.
+pub fn parse_for(text: &str, card: bool) -> Option<Parsed> {
+    let mut records = split_records(text);
+    let mapping = guess_in(&records, card)?;
+    Some(rows_from(&mut records, &mapping))
+}
+
+/// Reads a statement with the columns the user mapped.
+pub fn parse_with(text: &str, mapping: &Mapping) -> Parsed {
+    let mut records = split_records(text);
+    rows_from(&mut records, mapping)
+}
+
+/// What the user sees before mapping, for a bank statement. See `preview_for`.
+pub fn preview(text: &str) -> Preview {
+    preview_for(text, false)
+}
+
+/// What the user sees before mapping: the header, the rows under it and the auto-detected mapping.
+pub fn preview_for(text: &str, card: bool) -> Preview {
+    let records = split_records(text);
+    let guessed = guess_in(&records, card);
+    let header_row = guessed.as_ref().map_or_else(|| label_header(&records), |m| m.header_row);
+    let rows = records
+        .iter()
+        .skip(header_row)
+        .filter(|r| r.iter().any(|c| !c.trim().is_empty()))
+        .take(PREVIEW_RECORDS)
+        .map(|r| r.iter().map(|c| c.trim().to_string()).collect())
+        .collect();
+    Preview { header_row, rows, guessed }
+}
+
+/// The signature of a header: its lowercased, trimmed column names joined by '|', hashed to 16 hex
+/// characters. A saved layout is found again by it, whatever the rows and the file name.
+pub fn header_signature(header: &[String]) -> String {
+    let joined = header.iter().map(|h| h.trim().to_lowercase()).collect::<Vec<_>>().join("|");
+    Sha256::digest(joined.as_bytes()).iter().take(8).map(|b| format!("{b:02x}")).collect()
+}
+
+/// The signature of each of the first records that could be a header, as (record index, signature).
+pub fn header_signatures(text: &str) -> Vec<(usize, String)> {
+    split_records(text)
+        .iter()
+        .enumerate()
+        .filter(|(_, r)| r.iter().any(|c| !c.trim().is_empty()))
+        .take(HEADER_CANDIDATES)
+        .map(|(i, r)| (i, header_signature(r)))
+        .collect()
+}
+
+/// The signature of the record at `header_row`.
+pub fn signature(text: &str, header_row: usize) -> String {
+    let records = split_records(text);
+    header_signature(records.get(header_row).map_or(&[][..], Vec::as_slice))
+}
+
+/// The rows under the header, read with the mapping. A short row never panics: a missing cell is
+/// empty. Rows that fail to read are counted as skipped.
+fn rows_from(records: &mut [Vec<String>], m: &Mapping) -> Parsed {
     let cell = |r: &[String], i: Option<usize>| -> String { i.and_then(|i| r.get(i)).map(|s| s.trim().to_string()).unwrap_or_default() };
-    let header_len = records[hi].len();
+    let header_len = records.get(m.header_row).map_or(0, Vec::len);
 
     let mut out = Parsed::default();
-    for r in &mut records[hi + 1..] {
+    for r in records.iter_mut().skip(m.header_row + 1) {
         if r.iter().all(|c| c.trim().is_empty()) {
             continue;
         }
         // A narration can contain commas ("UPI-ACME, PUNE-..."), which splits one cell into several.
         // Extra fields beyond the header belong to the narration: join them back so the columns after it line up.
-        if let Some(ni) = cols.narration {
-            let extra = r.len().saturating_sub(header_len);
-            if extra > 0 && ni + extra < r.len() {
-                let joined = r[ni..=ni + extra].join(",");
-                r.splice(ni..=ni + extra, [joined]);
-            }
+        let extra = r.len().saturating_sub(header_len);
+        if extra > 0 && m.narration + extra < r.len() {
+            let joined = r[m.narration..=m.narration + extra].join(",");
+            r.splice(m.narration..=m.narration + extra, [joined]);
         }
-        let Some(date) = r.get(cols.date).and_then(|d| parse_date(d)) else {
+        let Some(date) = r.get(m.date).and_then(|d| parse_date_in(d, m.date_order)) else {
             // Opening/closing balance lines, totals and page footers have no date: not data.
             if r.iter().filter(|c| !c.trim().is_empty()).count() >= 3 && r.iter().any(|c| parse_amount(c).is_some()) && !r.iter().any(|c| c.to_lowercase().contains("total") || c.to_lowercase().contains("balance")) {
                 out.skipped += 1;
             }
             continue;
         };
-        let debit = cols.debit.and_then(|i| r.get(i)).and_then(|s| parse_amount(s));
-        let credit = cols.credit.and_then(|i| r.get(i)).and_then(|s| parse_amount(s));
-        let (direction, amount_paise) = match (debit, credit, cols.amount) {
+        let debit = m.debit.and_then(|i| r.get(i)).and_then(|s| parse_amount(s));
+        let credit = m.credit.and_then(|i| r.get(i)).and_then(|s| parse_amount(s));
+        let (direction, amount_paise) = match (debit, credit, m.amount) {
             (Some(d), None, _) => sided(Direction::Debit, d),
             (None, Some(c), _) => sided(Direction::Credit, c),
             (None, None, Some(ai)) => {
-                let raw = r.get(ai).map(|s| s.trim()).unwrap_or("");
-                let Some(signed) = parse_amount(raw) else {
+                let raw = cell(r, Some(ai));
+                let Some(signed) = parse_amount(&raw) else {
                     out.skipped += 1;
                     continue;
                 };
-                let a = signed.abs();
-                let flag = cell(r, cols.flag).to_lowercase();
-                let lower = raw.to_lowercase();
-                let credit = flag.starts_with("cr") || flag.contains("credit") || lower.ends_with("cr") || lower.ends_with("cr.");
-                let debit = flag.starts_with("dr") || flag.contains("debit") || lower.ends_with("dr") || lower.ends_with("dr.") || signed < 0;
-                // Signed columns: a minus sign is money out. With no flag at all, positive is money in.
-                if credit || (!debit && cols.flag.is_none()) {
-                    (Direction::Credit, a)
-                } else {
-                    (Direction::Debit, a)
-                }
+                (amount_side(m.sign, &raw, signed, r), signed.abs())
             }
             _ => {
                 out.skipped += 1;
                 continue;
             }
         };
-        let narration = cell(r, cols.narration);
-        let reference = Some(cell(r, cols.reference)).filter(|s| !s.is_empty() && s.chars().any(|c| c.is_ascii_digit()) && !s.chars().all(|c| c == '0'));
-        let balance_paise = cols.balance.and_then(|i| r.get(i)).and_then(|s| parse_amount(s));
+        let narration = cell(r, Some(m.narration));
+        let reference = Some(cell(r, m.reference)).filter(|s| !s.is_empty() && s.chars().any(|c| c.is_ascii_digit()) && !s.chars().all(|c| c == '0'));
+        let balance_paise = m.balance.and_then(|i| r.get(i)).and_then(|s| parse_amount(s));
         out.rows.push(StatementRow { date, direction, amount_paise, narration, reference, balance_paise });
     }
-    Some(out)
+    out
 }
 
 /// A short merchant name from a narration: "UPI-SWIGGY-swiggy@icici-4305..." -> "SWIGGY".
@@ -372,6 +600,131 @@ mod tests {
     #[test]
     fn not_a_statement() {
         assert!(parse("hello,world\n1,2\n").is_none());
+    }
+
+    /// A savings statement with a title block and a "Withdrawal (Dr)" / "Deposit (Cr)" pair, as
+    /// banks print them. Synthetic figures.
+    const KOTAK_LIKE: &str = "Account Statement\n\nTransaction Date,Description,Chq/Ref No,Withdrawal (Dr),Deposit (Cr),Balance\n\
+05-11-2026,UPI-ASHA STORES-ASHA@YBL-YESB0YBLUPI-612345678902-UPI,612345678902,120.50,,9629.50\n\
+06-11-2026,NEFT CR-ACME CORP-PRIYA,N1234567,,1000.00,10629.50\n";
+
+    fn kotak_mapping() -> Mapping {
+        Mapping {
+            header_row: 2,
+            date: 0,
+            narration: 1,
+            debit: Some(3),
+            credit: Some(4),
+            amount: None,
+            sign: SignRule::SeparateColumns,
+            balance: Some(5),
+            reference: Some(2),
+            date_order: DateOrder::Dmy,
+        }
+    }
+
+    #[test]
+    fn kotak_style_layout_parses_by_detection_and_by_mapping() {
+        let auto = parse(KOTAK_LIKE).unwrap();
+        assert_eq!(auto.rows.len(), 2);
+        assert_eq!(auto.rows[0].date, date!(2026 - 11 - 05));
+        assert_eq!((auto.rows[0].direction, auto.rows[0].amount_paise), (Direction::Debit, 12_050));
+        assert_eq!((auto.rows[1].direction, auto.rows[1].amount_paise), (Direction::Credit, 100_000));
+        assert_eq!(auto.rows[0].balance_paise, Some(962_950));
+        assert_eq!(auto.rows[1].reference.as_deref(), Some("N1234567"));
+
+        let mapped = parse_with(KOTAK_LIKE, &kotak_mapping());
+        assert_eq!(mapped, auto);
+    }
+
+    #[test]
+    fn card_file_reads_cr_as_payments_and_purchases_as_spending() {
+        let csv = "Date,Description,Amount\n12-11-2026,AMAZON PAY,\"2,000.00\"\n13-11-2026,PAYMENT RECEIVED,\"5,000.00 Cr\"\n14-11-2026,REFUND FLIPKART,\"-300.00\"\n";
+        let p = parse_for(csv, true).unwrap();
+        assert_eq!(p.rows.len(), 3);
+        assert_eq!((p.rows[0].direction, p.rows[0].amount_paise), (Direction::Debit, 200_000));
+        assert_eq!((p.rows[1].direction, p.rows[1].amount_paise), (Direction::Credit, 500_000));
+        assert_eq!((p.rows[2].direction, p.rows[2].amount_paise), (Direction::Credit, 30_000));
+        // The same file read as a bank statement would flip the purchase, which is why the target matters.
+        assert_eq!(parse(csv).unwrap().rows[0].direction, Direction::Credit);
+    }
+
+    #[test]
+    fn unknown_layout_has_no_detected_mapping_and_reads_with_one() {
+        // No column name says date or amount, so detection finds nothing.
+        let csv = "Posted On,Memo,Out,In\n03/11/2026,Coffee shop,120.00,\n04/11/2026,Salary,,5000.00\n";
+        assert!(parse(csv).is_none());
+        let pv = preview(csv);
+        assert!(pv.guessed.is_none());
+        assert_eq!(pv.header_row, 0);
+        assert_eq!(pv.rows.len(), 3);
+        assert_eq!(pv.rows[0], vec!["Posted On", "Memo", "Out", "In"]);
+
+        let mapping = Mapping {
+            header_row: 0,
+            date: 0,
+            narration: 1,
+            debit: Some(2),
+            credit: Some(3),
+            amount: None,
+            sign: SignRule::SeparateColumns,
+            balance: None,
+            reference: None,
+            date_order: DateOrder::Dmy,
+        };
+        let p = parse_with(csv, &mapping);
+        assert_eq!(p.rows.len(), 2);
+        assert_eq!((p.rows[1].direction, p.rows[1].amount_paise), (Direction::Credit, 500_000));
+    }
+
+    #[test]
+    fn semicolon_file_with_a_preamble_that_has_commas() {
+        let csv = "Statement for Customer, ANJAL\nDate;Details;Amount\n01/11/2026;Coffee, Pune;-120.00\n02/11/2026;Refund, Pune;45.00\n";
+        let p = parse(csv).unwrap();
+        assert_eq!(p.rows.len(), 2);
+        assert_eq!(p.rows[0].narration, "Coffee, Pune");
+        assert_eq!((p.rows[0].direction, p.rows[0].amount_paise), (Direction::Debit, 12_000));
+        assert_eq!((p.rows[1].direction, p.rows[1].amount_paise), (Direction::Credit, 4_500));
+    }
+
+    #[test]
+    fn date_orders_and_month_names() {
+        assert_eq!(parse_date_in("11/05/2026", DateOrder::Mdy), Some(date!(2026 - 11 - 05)));
+        assert_eq!(parse_date("11/05/2026"), Some(date!(2026 - 05 - 11)));
+        assert_eq!(parse_date_in("2026/11/05", DateOrder::Ymd), Some(date!(2026 - 11 - 05)));
+        assert_eq!(parse_date_in("26/11/05", DateOrder::Ymd), Some(date!(2026 - 11 - 05)));
+        assert_eq!(parse_date("Nov 5, 2026"), Some(date!(2026 - 11 - 05)));
+        assert_eq!(parse_date("13/13/2026"), None);
+    }
+
+    #[test]
+    fn mapping_round_trips_through_json() {
+        let card = Mapping { sign: SignRule::DrCrColumn(3), date_order: DateOrder::Mdy, ..kotak_mapping() };
+        let json = serde_json::to_string(&card).unwrap();
+        assert!(json.contains("\"kind\":\"dr_cr_column\""), "{json}");
+        assert!(json.contains("\"date_order\":\"mdy\""), "{json}");
+        assert_eq!(serde_json::from_str::<Mapping>(&json).unwrap(), card);
+
+        let json = r#"{"header_row":0,"date":0,"narration":1,"debit":null,"credit":null,"amount":2,"sign":{"kind":"cr_suffix"},"balance":null,"reference":null}"#;
+        let m: Mapping = serde_json::from_str(json).unwrap();
+        assert_eq!((m.sign, m.date_order), (SignRule::CrSuffix, DateOrder::Dmy));
+    }
+
+    #[test]
+    fn signature_ignores_case_and_spacing_but_not_columns() {
+        let a = header_signature(&["Date ".to_string(), "Narration".to_string()]);
+        assert_eq!(a, header_signature(&["date".to_string(), " narration".to_string()]));
+        assert_eq!(a.len(), 16);
+        assert_ne!(a, header_signature(&["Date".to_string(), "Details".to_string()]));
+        assert_eq!(signature(KOTAK_LIKE, 2), header_signature(&["Transaction Date", "Description", "Chq/Ref No", "Withdrawal (Dr)", "Deposit (Cr)", "Balance"].map(str::to_string)));
+    }
+
+    #[test]
+    fn short_rows_never_panic() {
+        let csv = "Date,Narration,Amount\n01/11/2026,Coffee\n02/11/2026\n";
+        let p = parse_with(csv, &Mapping { header_row: 0, date: 0, narration: 1, debit: None, credit: None, amount: Some(2), sign: SignRule::NegativeIsDebit, balance: Some(5), reference: Some(7), date_order: DateOrder::Dmy });
+        assert!(p.rows.is_empty());
+        assert_eq!(p.skipped, 2);
     }
 
     #[test]
