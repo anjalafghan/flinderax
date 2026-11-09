@@ -345,6 +345,16 @@ pub struct WeekPayload {
     pub entries: Vec<EntryIn>,
 }
 
+/// `GET /weeks/{week_start}`: what was logged for that week (empty entries when nothing was).
+pub async fn get_week(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(week_start): Path<String>,
+) -> Result<Json<Week>, AppError> {
+    let start = parse_day(&week_start).ok_or_else(|| unprocessable("The week must look like 2026-11-09."))?;
+    Ok(Json(week_out(&state.db, &user_id, &start.to_string()).await?))
+}
+
 pub async fn put_week(
     State(state): State<AppState>,
     Extension((user_id, _)): User,
@@ -1115,6 +1125,16 @@ mod tests {
         assert_eq!((ov.recent[0].logged, ov.recent[0].hit_bps), (true, Some(5_000)));
         assert_eq!((ov.recent[1].logged, ov.recent[1].hit_bps), (false, None));
         assert!(ov.recent[8].logged && ov.recent[8].week_start == "2026-09-14");
+
+        // A past week reads back for filling in; another user's read of the same week is empty.
+        let got = |user: &'static str| {
+            let st = s.clone();
+            async move { ok(get_week(State(st), Extension((user.to_string(), String::new())), Path("2026-11-09".into())).await).0 }
+        };
+        let mine = got("u").await;
+        assert_eq!((mine.note.as_str(), mine.entries.len()), ("Busy week", 1));
+        let theirs = got("other").await;
+        assert!(theirs.entries.is_empty() && theirs.note.is_empty());
     }
 
     #[tokio::test]

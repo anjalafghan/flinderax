@@ -11,6 +11,8 @@ import { jsonResponse, marksFor, overview, renderWithProviders, respond, stubFet
 const serve = (data = overview) =>
   spyOn(api, "get").mockImplementation((url: string) => {
     if (url === "/api/diet") return respond(data);
+    if (url === "/api/diet/weeks/2026-10-26") return respond({ week_start: "2026-10-26", feel: 3, note: "", entries: [{ habit_id: "h2", days_hit: 3 }] });
+    if (url.startsWith("/api/diet/weeks/")) return respond({ week_start: url.slice(-10), feel: null, note: "", entries: [] });
     if (url.startsWith("/api/diet/marks")) {
       const kind = new URL(url, "http://x").searchParams.get("kind") ?? "";
       return respond({ marks: marksFor(kind) });
@@ -69,13 +71,15 @@ describe("HealthPage", () => {
     expect(screen.getByRole("button", { name: "Fewer days for Walk 30 minutes" })).toBeDisabled();
   });
 
-  it("back-fills a past week, starting blank and saying what saving does", async () => {
+  it("back-fills a past week, starting from what was logged that week", async () => {
     serve();
     renderWithProviders(<HealthPage />);
     await screen.findByText("2 of 5 days");
 
     fireEvent.change(screen.getByLabelText("Log a past week"), { target: { value: "2026-10-26" } });
-    expect(screen.getByText("You're logging the week of 26 Oct. Saving replaces what was there.")).toBeInTheDocument();
+    expect(await screen.findByText("You're logging the week of 26 Oct.")).toBeInTheDocument();
+    // That week had 3 walks and no home dinners logged.
+    expect(await screen.findByText("3 of 4 days")).toBeInTheDocument();
     expect(screen.getByText("0 of 5 days")).toBeInTheDocument();
     expect(screen.queryByText("2 of 5 days")).toBeNull();
   });

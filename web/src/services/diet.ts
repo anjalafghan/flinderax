@@ -124,28 +124,18 @@ export const saveDietWeek = (weekStart: string, week: WeekInput) =>
   sendJson<Week>("PUT", `/api/diet/weeks/${weekStart}`, week);
 export const removeDietMark = (id: string) => sendJson<void>("DELETE", `/api/diet/marks/${id}`);
 
-/**
- * PUT, PATCH and DELETE. The shared api client only has GET and POST, so these go through fetch with the
- * same bearer token. A failed request throws the server's plain message, which the page shows as it is.
- */
-async function sendJson<T>(method: "PUT" | "PATCH" | "DELETE", url: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const token = localStorage.getItem("token");
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(text || `Request failed with status ${response.status}`);
-  }
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+/** PUT, PATCH and DELETE through the shared client, so a lapsed session goes back to sign-in. */
+function sendJson<T>(method: "PUT" | "PATCH" | "DELETE", url: string, body?: unknown): Promise<T> {
+  const call = method === "PUT" ? api.put<T>(url, body) : method === "PATCH" ? api.patch<T>(url, body) : api.del<T>(url);
+  return call.then((r) => r.data);
 }
 
 export const useDiet = () => useQuery({ queryKey: dietKey, queryFn: getDiet, retry: 1 });
+/** One week as logged (entries empty when nothing was). Under ["diet"], so saves refresh it too. */
+export const getDietWeek = (weekStart: string) => api.get<Week>(`/api/diet/weeks/${weekStart}`).then((r) => r.data);
+export const useDietWeek = (weekStart: string, enabled: boolean) =>
+  useQuery({ queryKey: [...dietKey, "week", weekStart], queryFn: () => getDietWeek(weekStart), enabled, retry: 1 });
+
 export const useDietMarks = (kind: MarkKind) =>
   useQuery({ queryKey: dietMarksKey(kind), queryFn: () => getDietMarks(kind), retry: 1 });
 

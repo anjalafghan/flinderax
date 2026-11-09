@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { rate } from "@/services/checkin";
-import { useSaveDietWeek, type DietHabit, type DietOverview, type Week, type WeekInput } from "@/services/diet";
+import { useDietWeek, useSaveDietWeek, type DietHabit, type DietOverview, type Week, type WeekInput } from "@/services/diet";
 import { formatDay } from "@/utils/dates";
 import { cn } from "@/utils/cn";
 
@@ -164,8 +164,9 @@ export function WeekCard({ overview }: { overview: DietOverview }) {
   // The last eight weeks before this one: the server's recent list starts with the current week.
   const pastWeeks = overview.recent.slice(1, 9);
   const isPast = weekStart !== current;
-  // Past weeks come back blank from the server, so their form starts at zero; saving replaces what was there.
-  const week: Week = isPast ? { week_start: weekStart, feel: null, note: "", entries: [] } : overview.week;
+  // A past week loads what was logged then, so filling it in starts from that.
+  const past = useDietWeek(weekStart, isPast);
+  const week: Week = isPast ? (past.data ?? { week_start: weekStart, feel: null, note: "", entries: [] }) : overview.week;
 
   const onSave = (input: WeekInput) =>
     save.mutate(
@@ -189,11 +190,11 @@ export function WeekCard({ overview }: { overview: DietOverview }) {
         <>
           {isPast && (
             <p className="m-0 text-sm text-muted-foreground">
-              {`You're logging the week of ${formatDay(weekStart)}. Saving replaces what was there.`}
+              {past.isLoading ? `Loading the week of ${formatDay(weekStart)}…` : `You're logging the week of ${formatDay(weekStart)}.`}
             </p>
           )}
           <WeekForm
-            key={weekStart}
+            key={`${weekStart}:${past.dataUpdatedAt}`}
             habits={active}
             week={week}
             saving={save.isPending}
