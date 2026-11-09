@@ -59,7 +59,7 @@ export function CircleList({ people, archived }: { people: PersonRow[]; archived
       )}
       {archived.length > 0 && (
         <details className="flex flex-col gap-3">
-          <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-muted-foreground">
             {`Archived (${archived.length})`}
           </summary>
           <p className={NOTE}>{plural(archived.length, "person is", "people are")} kept out of reminders.</p>

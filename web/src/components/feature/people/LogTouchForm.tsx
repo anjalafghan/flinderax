@@ -80,7 +80,7 @@ export function LogTouchForm({ personId, onDone }: { personId: string; onDone?: 
             aria-describedby={costError ? `${id}-cost-error` : undefined}
           />
           {costError && (
-            <span id={`${id}-cost-error`} className="text-[13px] text-destructive">
+            <span id={`${id}-cost-error`} role="alert" className="text-[13px] text-destructive">
               {costError}
             </span>
           )}

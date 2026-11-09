@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { MONTH_NAMES, errorMessage } from "@/components/feature/people/ui";
 import { rupees } from "@/services/checkin";
 import { addSeason, deleteSeason, updateSeason, useSeasons, usePeopleMutation, type Season } from "@/services/people";
-import { toPaise } from "@/utils/money";
+import { paiseToInput, toPaise } from "@/utils/money";
 
 /** Add or edit a festival season: a name, the month it starts, and the budget for that season. */
 export function SeasonForm({ initial, onDone }: { initial?: Season; onDone: () => void }) {
@@ -19,7 +19,7 @@ export function SeasonForm({ initial, onDone }: { initial?: Season; onDone: () =
   );
   const [label, setLabel] = useState(initial?.label ?? "");
   const [month, setMonth] = useState(initial?.month ?? 10);
-  const [budget, setBudget] = useState(initial ? String(initial.budget_paise / 100) : "");
+  const [budget, setBudget] = useState(initial ? paiseToInput(initial.budget_paise) : "");
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

@@ -46,7 +46,7 @@ export function GiftPlanCard() {
           ))}
         </div>
 
-        {data.total_paise > 0 && (
+        {(data.goal_id !== null || data.total_paise > 0) && (
           <div className="flex flex-wrap items-center gap-3">
             {data.goal_id ? (
               <Link to="/plan" className={TEXT_LINK}>

@@ -196,8 +196,19 @@ describe("PersonPage", () => {
     });
   });
 
-  it("deletes the person only after the confirm", async () => {
-    const calls = serve(routes((c) => (c.method === "DELETE" && c.url === "/api/people/p1" ? { status: 204 } : undefined)));
+  it("deletes the person only after the confirm, and leaves without waiting on a refetch of the deleted person", async () => {
+    let gone = false;
+    const calls = serve(
+      routes((c) => {
+        if (c.method === "DELETE" && c.url === "/api/people/p1") {
+          gone = true;
+          return { status: 204 };
+        }
+        // After the delete the person is gone: any refetch of their page answers 404.
+        if (gone && c.method === "GET" && c.url === "/api/people/p1") return NOT_FOUND;
+        return undefined;
+      }),
+    );
     renderWithRouter(ui, "/people/p1");
     fireEvent.click(await screen.findByRole("button", { name: "Delete Person A" }));
 
@@ -205,13 +216,106 @@ describe("PersonPage", () => {
     expect(calls.some((c) => c.method === "DELETE")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    expect(await screen.findByText("Circle list")).toBeInTheDocument();
+    expect(await screen.findByText("Circle list", undefined, { timeout: 500 })).toBeInTheDocument();
     expect(calls.some((c) => c.method === "DELETE" && c.url === "/api/people/p1")).toBe(true);
+  });
+
+  it("edits a gift's amount and given day, sending the new values", async () => {
+    const success = spyOn(toast, "success");
+    const calls = serve(routes());
+    renderWithRouter(ui, "/people/p1");
+    fireEvent.click(await screen.findByRole("button", { name: "Edit A book" }));
+
+    const form = screen.getByRole("form", { name: "Edit gift" });
+    fireEvent.change(within(form).getByLabelText("Amount (₹, optional)"), { target: { value: "250" } });
+    fireEvent.change(within(form).getByLabelText("Given on (optional)"), { target: { value: "2026-10-22" } });
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith("Gift saved."));
+    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/gifts/g1")?.body).toEqual({
+      title: "A book",
+      status: "idea",
+      amount_paise: 25_000,
+      on_day: "2026-10-22",
+    });
+  });
+
+  it("clears a gift's amount and given day when they are emptied", async () => {
+    const success = spyOn(toast, "success");
+    const withAmount: PersonDetail = {
+      ...detail,
+      gifts: [{ ...detail.gifts[0], amount_paise: 150_000, on_day: "2026-10-22" }],
+    };
+    const calls = serve(routes((c) => (c.method === "GET" && c.url === "/api/people/p1" ? { json: withAmount } : undefined)));
+    renderWithRouter(ui, "/people/p1");
+    fireEvent.click(await screen.findByRole("button", { name: "Edit A book" }));
+
+    const form = screen.getByRole("form", { name: "Edit gift" });
+    expect(within(form).getByLabelText("Amount (₹, optional)")).toHaveValue("1500");
+    fireEvent.change(within(form).getByLabelText("Amount (₹, optional)"), { target: { value: "" } });
+    fireEvent.change(within(form).getByLabelText("Given on (optional)"), { target: { value: "" } });
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith("Gift saved."));
+    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/gifts/g1")?.body).toEqual({
+      title: "A book",
+      status: "idea",
+      amount_paise: null,
+      on_day: null,
+    });
+  });
+
+  it("clears a date's gift budget with null, and keeps its year", async () => {
+    const success = spyOn(toast, "success");
+    const calls = serve(routes());
+    renderWithRouter(ui, "/people/p1");
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Person A's birthday" }));
+
+    const form = screen.getByRole("form", { name: "Edit date" });
+    expect(within(form).getByLabelText("Gift budget (₹, optional)")).toHaveValue("2000");
+    fireEvent.change(within(form).getByLabelText("Gift budget (₹, optional)"), { target: { value: "" } });
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith("Date updated."));
+    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/dates/d1")?.body).toMatchObject({
+      kind: "birthday",
+      month: 11,
+      day: 14,
+      year: 1966,
+      gift_budget_paise: null,
+    });
+  });
+
+  it("brings an archived person back into the circle", async () => {
+    const success = spyOn(toast, "success");
+    const archived: PersonDetail = { ...detail, person: { ...detail.person, archived: true } };
+    const calls = serve(routes((c) => (c.method === "GET" && c.url === "/api/people/p1" ? { json: archived } : undefined)));
+    renderWithRouter(ui, "/people/p1");
+    expect(await screen.findByText("This person is archived. Bring them back from the edit form below.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Bring back to circle" }));
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith("Person A is back in your circle."));
+    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")?.body).toEqual({ archived: false });
   });
 
   it("says so when the person can't be found", async () => {
     serve(routes((c) => (c.url === "/api/people/p1" ? NOT_FOUND : undefined)));
     renderWithRouter(ui, "/people/p1");
     expect(await screen.findByText("Couldn't load this person.", undefined, { timeout: 4000 })).toBeInTheDocument();
+  });
+
+  it("keeps a rhythm set in days when the edit doesn't touch it", async () => {
+    const success = spyOn(toast, "success");
+    const inDays: PersonDetail = { ...detail, person: { ...detail.person, every_days: 10 } };
+    const calls = serve(routes((c) => (c.method === "GET" && c.url === "/api/people/p1" ? { json: inDays } : undefined)));
+    renderWithRouter(ui, "/people/p1");
+    const edit = (await screen.findByRole("heading", { name: "Edit" })).closest("section") as HTMLElement;
+    expect(within(edit).getByLabelText("Catch up every (weeks, blank for none)")).toHaveValue(null);
+    expect(within(edit).getByText("Currently every 10 days. Enter weeks to change it.")).toBeInTheDocument();
+    fireEvent.change(within(edit).getByLabelText("Note"), { target: { value: "Likes tea" } });
+    fireEvent.submit(within(edit).getByRole("button", { name: "Save" }).closest("form") as HTMLFormElement);
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith("Saved."));
+    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")?.body).toMatchObject({ every_days: 10 });
   });
 });

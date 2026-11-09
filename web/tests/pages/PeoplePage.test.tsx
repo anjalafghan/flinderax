@@ -233,6 +233,60 @@ describe("PeoplePage", () => {
     await waitForCount(error.mock.calls, () => error.mock.calls.length > 0);
     expect(error).toHaveBeenCalledWith("Pick a day that has already come.");
   });
+
+  it("links to the plan when a goal exists even though the total is zero", async () => {
+    serve(standardRoutes((c) => (c.url === "/api/people/gift-plan" ? { json: plan({ total_paise: 0, monthly_paise: 0, goal_id: "g9" }) } : undefined)));
+    renderWithRouter(<PeoplePage />);
+    const card = await screen.findByRole("region", { name: "Gift plan" });
+    expect(await within(card).findByRole("link", { name: "Gifts goal set" })).toHaveAttribute("href", "/plan");
+  });
+
+  it("adds, edits and deletes a festival season, sending budgets in paise", async () => {
+    const success = spyOn(toast, "success");
+    const calls = serve(
+      standardRoutes((c) => {
+        if (c.method === "GET" && c.url === "/api/people/seasons") {
+          return { json: { seasons: [{ id: "s1", label: "Diwali", month: 10, budget_paise: 500_000 }] } };
+        }
+        if (c.method === "POST" && c.url === "/api/people/seasons") return { json: { id: "s2", ...(c.body as object) } };
+        if (c.method === "PATCH" && c.url === "/api/people/seasons/s1") return { json: { id: "s1", ...(c.body as object) } };
+        if (c.method === "DELETE" && c.url === "/api/people/seasons/s1") return { status: 204 };
+        return undefined;
+      }),
+    );
+    renderWithRouter(<PeoplePage />);
+    const card = await screen.findByRole("region", { name: "Gift plan" });
+    expect(await within(card).findByText("October · budget ₹5,000")).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Add a season" }));
+    const add = within(card).getByRole("form", { name: "Add a season" });
+    fireEvent.change(within(add).getByLabelText("Season"), { target: { value: "Eid" } });
+    fireEvent.change(within(add).getByLabelText("Month"), { target: { value: "3" } });
+    fireEvent.change(within(add).getByLabelText("Budget (₹)"), { target: { value: "2500.5" } });
+    fireEvent.submit(add);
+    await waitFor(() => expect(success).toHaveBeenCalledWith("Season added."));
+    expect(calls.find((c) => c.method === "POST" && c.url === "/api/people/seasons")?.body).toEqual({
+      label: "Eid",
+      month: 3,
+      budget_paise: 250_050,
+    });
+
+    fireEvent.click(within(card).getByRole("button", { name: "Edit Diwali" }));
+    const edit = within(card).getByRole("form", { name: "Edit Diwali" });
+    expect(within(edit).getByLabelText("Budget (₹)")).toHaveValue("5000");
+    fireEvent.change(within(edit).getByLabelText("Budget (₹)"), { target: { value: "7500.50" } });
+    fireEvent.submit(edit);
+    await waitFor(() => expect(success).toHaveBeenCalledWith("Season updated."));
+    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/seasons/s1")?.body).toEqual({
+      label: "Diwali",
+      month: 10,
+      budget_paise: 750_050,
+    });
+
+    fireEvent.click(within(card).getByRole("button", { name: "Delete Diwali" }));
+    await waitFor(() => expect(success).toHaveBeenCalledWith("Diwali removed."));
+    expect(calls.some((c) => c.method === "DELETE" && c.url === "/api/people/seasons/s1")).toBe(true);
+  });
 });
 
 async function waitForCall(calls: Call[], method: string, url: string) {

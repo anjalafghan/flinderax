@@ -26,7 +26,7 @@ export default function PersonPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="page max-w-3xl stack">
-        <Link to="/people" className={TEXT_LINK}>
+        <Link to="/people" className={`${TEXT_LINK} inline-flex min-h-11 items-center`}>
           Back to Circle
         </Link>
 

@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -11,6 +12,8 @@ import { NAME_MAX, NOTE, SHORT_NOTE_MAX, errorMessage } from "@/components/featu
 import {
   CIRCLES,
   deletePerson,
+  everyLabel,
+  personKey,
   updatePerson,
   usePeopleMutation,
   type Circle,
@@ -21,13 +24,18 @@ import {
 export function PersonEditForm({ person }: { person: PersonRow }) {
   const id = useId();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const save = usePeopleMutation((p: { id: string; patch: Parameters<typeof updatePerson>[1] }) =>
     updatePerson(p.id, p.patch),
   );
   const remove = usePeopleMutation(deletePerson);
   const [name, setName] = useState(person.name);
   const [circle, setCircle] = useState<Circle>(person.circle);
-  const [weeks, setWeeks] = useState(person.every_days !== null ? String(person.every_days / 7) : "");
+  // A rhythm in whole weeks prefills; one in days stays blank, with the current rhythm shown beside it.
+  const wholeWeeks = person.every_days !== null && person.every_days % 7 === 0;
+  const [weeks, setWeeks] = useState(wholeWeeks ? String(person.every_days! / 7) : "");
+  // Only a changed rhythm is sent, so a rhythm set in days (not a whole number of weeks) survives an unrelated save.
+  const [weeksChanged, setWeeksChanged] = useState(false);
   const [note, setNote] = useState(person.note);
   const [confirming, setConfirming] = useState(false);
 
@@ -37,7 +45,7 @@ export function PersonEditForm({ person }: { person: PersonRow }) {
       toast.error("Add a name first.");
       return;
     }
-    const every_days = weeks.trim() === "" ? null : Number(weeks) * 7;
+    const every_days = !weeksChanged ? person.every_days : weeks.trim() === "" ? null : Number(weeks) * 7;
     save.mutate(
       { id: person.id, patch: { name: name.trim(), circle, every_days, note: note.trim() } },
       {
@@ -60,6 +68,8 @@ export function PersonEditForm({ person }: { person: PersonRow }) {
     remove.mutate(person.id, {
       onSuccess: () => {
         toast.success("Removed.");
+        // The person's page is gone, so drop its query rather than let it refetch a 404.
+        qc.removeQueries({ queryKey: personKey(person.id) });
         navigate("/people");
       },
       onError: (err) => {
@@ -90,6 +100,9 @@ export function PersonEditForm({ person }: { person: PersonRow }) {
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${id}-weeks`}>Catch up every (weeks, blank for none)</Label>
+          {person.every_days !== null && !wholeWeeks && (
+            <span className="text-[13px] text-muted-foreground">{`Currently ${everyLabel(person.every_days)}. Enter weeks to change it.`}</span>
+          )}
           <Input
             id={`${id}-weeks`}
             type="number"
@@ -97,7 +110,10 @@ export function PersonEditForm({ person }: { person: PersonRow }) {
             min={1}
             max={52}
             value={weeks}
-            onChange={(e) => setWeeks(e.target.value)}
+            onChange={(e) => {
+              setWeeks(e.target.value);
+              setWeeksChanged(true);
+            }}
           />
         </div>
         <div className="flex flex-col gap-2">

@@ -20,9 +20,17 @@ import { formatDay } from "@/utils/dates";
 
 const STATUSES: GiftStatus[] = ["idea", "bought", "given"];
 
-function GiftRow({ gift, dates }: { gift: Gift; dates: PersonDate[] }) {
+function GiftRow({ gift, dates, personId }: { gift: Gift; dates: PersonDate[]; personId: string }) {
   const change = usePeopleMutation((s: GiftStatus) => updateGift(gift.id, { status: s }));
   const remove = usePeopleMutation(deleteGift);
+  const [editing, setEditing] = useState(false);
+  if (editing) {
+    return (
+      <li className="border-t border-border py-5 first:border-t-0 first:pt-1">
+        <GiftForm personId={personId} dates={dates} initial={gift} onDone={() => setEditing(false)} />
+      </li>
+    );
+  }
   const date = dates.find((d) => d.id === gift.date_id);
   const forDate = date ? ` for ${date.label.trim() || KIND_LABEL[date.kind]}` : "";
   const when = gift.on_day ? ` · ${formatDay(gift.on_day)}` : "";
@@ -54,6 +62,9 @@ function GiftRow({ gift, dates }: { gift: Gift; dates: PersonDate[] }) {
             </option>
           ))}
         </Select>
+        <Button variant="outline" className="min-h-11" onClick={() => setEditing(true)}>
+          {`Edit ${gift.title}`}
+        </Button>
         <Button
           variant="ghost"
           className="min-h-11"
@@ -90,7 +101,7 @@ export function PersonGifts({ personId, gifts, dates }: { personId: string; gift
       {gifts.length > 0 ? (
         <ul className="m-0 list-none p-0">
           {gifts.map((g) => (
-            <GiftRow key={g.id} gift={g} dates={dates} />
+            <GiftRow key={g.id} gift={g} dates={dates} personId={personId} />
           ))}
         </ul>
       ) : (

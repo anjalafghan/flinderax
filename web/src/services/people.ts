@@ -252,7 +252,10 @@ export function usePeopleMutation<TInput, TOut>(fn: (input: TInput) => Promise<T
   const qc = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => qc.invalidateQueries({ queryKey: peopleKey }),
+    // Not returned: the caller's toast and navigation shouldn't wait for every refetch to finish.
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: peopleKey });
+    },
   });
 }
 

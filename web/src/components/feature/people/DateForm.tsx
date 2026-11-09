@@ -8,7 +8,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
 import { MONTH_NAMES, errorMessage } from "@/components/feature/people/ui";
 import { addDate, localDay, updateDate, usePeopleMutation, KIND_LABEL, type DateKind, type PersonDate } from "@/services/people";
-import { toPaise } from "@/utils/money";
+import { paiseToInput, toPaise } from "@/utils/money";
 
 const KINDS: DateKind[] = ["birthday", "anniversary", "remembrance", "other"];
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -34,7 +34,7 @@ export function DateForm({
   const [day, setDay] = useState(initial?.day ?? Number(today[2]));
   const [year, setYear] = useState(initial?.year ? String(initial.year) : "");
   const [remind, setRemind] = useState(String(initial?.remind_days ?? 7));
-  const [budget, setBudget] = useState(initial?.gift_budget_paise != null ? String(initial.gift_budget_paise / 100) : "");
+  const [budget, setBudget] = useState(initial?.gift_budget_paise != null ? paiseToInput(initial.gift_budget_paise) : "");
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

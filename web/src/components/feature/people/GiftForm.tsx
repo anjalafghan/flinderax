@@ -7,24 +7,57 @@ import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
 import { errorMessage } from "@/components/feature/people/ui";
-import { GIFT_LABEL, KIND_LABEL, addGift, localDay, usePeopleMutation, type GiftStatus, type PersonDate } from "@/services/people";
+import {
+  GIFT_LABEL,
+  KIND_LABEL,
+  addGift,
+  localDay,
+  updateGift,
+  usePeopleMutation,
+  type Gift,
+  type GiftInput,
+  type GiftPatch,
+  type GiftStatus,
+  type PersonDate,
+} from "@/services/people";
 import { formatDay } from "@/utils/dates";
-import { toPaise } from "@/utils/money";
+import { paiseToInput, toPaise } from "@/utils/money";
 
 const STATUSES: GiftStatus[] = ["idea", "bought", "given"];
 
+/** The shared success path: say so, then close the form. */
+const saved = (onDone: () => void, message: string) => ({
+  onSuccess: () => {
+    toast.success(message);
+    onDone();
+  },
+  onError: (err: unknown) => toast.error(errorMessage(err)),
+});
+
 /**
- * Add a gift. Picking a date links the gift to that date and its year, which is what clears the
- * "gift for this date" reminder.
+ * Add a gift, or edit one. Picking a date links a new gift to that date and its year, which is what
+ * clears the "gift for this date" reminder. A date can't be changed on an existing gift.
  */
-export function GiftForm({ personId, dates, onDone }: { personId: string; dates: PersonDate[]; onDone: () => void }) {
+export function GiftForm({
+  personId,
+  dates,
+  initial,
+  onDone,
+}: {
+  personId: string;
+  dates: PersonDate[];
+  initial?: Gift;
+  onDone: () => void;
+}) {
   const id = useId();
-  const add = usePeopleMutation(addGift);
-  const [title, setTitle] = useState("");
+  const save = usePeopleMutation((v: { giftId?: string; body: GiftInput | GiftPatch }) =>
+    v.giftId ? updateGift(v.giftId, v.body as GiftPatch) : addGift(v.body as GiftInput),
+  );
+  const [title, setTitle] = useState(initial?.title ?? "");
   const [dateId, setDateId] = useState("");
-  const [status, setStatus] = useState<GiftStatus>("idea");
-  const [amount, setAmount] = useState("");
-  const [onDay, setOnDay] = useState("");
+  const [status, setStatus] = useState<GiftStatus>(initial?.status ?? "idea");
+  const [amount, setAmount] = useState(initial?.amount_paise != null ? paiseToInput(initial.amount_paise) : "");
+  const [onDay, setOnDay] = useState(initial?.on_day ?? "");
   const [error, setError] = useState<string | null>(null);
 
   const submit = (e: FormEvent) => {
@@ -33,7 +66,30 @@ export function GiftForm({ personId, dates, onDone }: { personId: string; dates:
       setError("Name the gift first.");
       return;
     }
-    const input: Parameters<typeof addGift>[0] = { person_id: personId, title: title.trim(), status };
+    let amountPaise: number | null = null;
+    if (amount.trim() !== "") {
+      const paise = toPaise(amount);
+      if (paise === null || paise <= 0) {
+        setError("Enter the amount as rupees, like 1500.");
+        return;
+      }
+      amountPaise = paise;
+    }
+    setError(null);
+
+    if (initial) {
+      // Editing: an empty amount or day is sent as null, so a cleared value really clears.
+      const patch: GiftPatch = {
+        title: title.trim(),
+        status,
+        amount_paise: amountPaise,
+        on_day: onDay || null,
+      };
+      save.mutate({ giftId: initial.id, body: patch }, saved(onDone, "Gift saved."));
+      return;
+    }
+
+    const input: GiftInput = { person_id: personId, title: title.trim(), status };
     if (dateId) {
       const date = dates.find((d) => d.id === dateId);
       if (date) {
@@ -41,42 +97,40 @@ export function GiftForm({ personId, dates, onDone }: { personId: string; dates:
         input.for_year = Number(date.next_on.slice(0, 4));
       }
     }
-    if (amount.trim() !== "") {
-      const paise = toPaise(amount);
-      if (paise === null || paise <= 0) {
-        setError("Enter the amount as rupees, like 1500.");
-        return;
-      }
-      input.amount_paise = paise;
-    }
+    if (amountPaise !== null) input.amount_paise = amountPaise;
     if (onDay) input.on_day = onDay;
-    setError(null);
-    add.mutate(input, {
-      onSuccess: () => {
-        toast.success("Gift added.");
-        onDone();
-      },
-      onError: (err) => toast.error(errorMessage(err)),
-    });
+    save.mutate({ body: input }, saved(onDone, "Gift added."));
   };
 
   return (
-    <form onSubmit={submit} aria-label="Add a gift" className="grid gap-4 sm:grid-cols-2">
+    <form
+      onSubmit={submit}
+      aria-label={initial ? "Edit gift" : "Add a gift"}
+      className="grid gap-4 sm:grid-cols-2"
+    >
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-title`}>What is the gift?</Label>
-        <Input id={`${id}-title`} maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="A book they mentioned" />
+        <Input
+          id={`${id}-title`}
+          maxLength={80}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="A book they mentioned"
+        />
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${id}-date`}>For which date? (optional)</Label>
-        <Select id={`${id}-date`} value={dateId} onChange={(e) => setDateId(e.target.value)}>
-          <option value="">No date</option>
-          {dates.map((d) => (
-            <option key={d.id} value={d.id}>
-              {`${d.label.trim() || KIND_LABEL[d.kind]} · ${formatDay(d.next_on)}`}
-            </option>
-          ))}
-        </Select>
-      </div>
+      {!initial && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${id}-date`}>For which date? (optional)</Label>
+          <Select id={`${id}-date`} value={dateId} onChange={(e) => setDateId(e.target.value)}>
+            <option value="">No date</option>
+            {dates.map((d) => (
+              <option key={d.id} value={d.id}>
+                {`${d.label.trim() || KIND_LABEL[d.kind]} · ${formatDay(d.next_on)}`}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-status`}>Status</Label>
         <Select id={`${id}-status`} value={status} onChange={(e) => setStatus(e.target.value as GiftStatus)}>
@@ -105,10 +159,15 @@ export function GiftForm({ personId, dates, onDone }: { personId: string; dates:
           {error}
         </p>
       )}
-      <div className="sm:col-span-2">
-        <Button type="submit" disabled={add.isPending}>
-          Add gift
+      <div className="flex flex-wrap gap-2 sm:col-span-2">
+        <Button type="submit" disabled={save.isPending}>
+          {initial ? "Save gift" : "Add gift"}
         </Button>
+        {initial && (
+          <Button type="button" variant="ghost" onClick={onDone}>
+            Cancel
+          </Button>
+        )}
       </div>
     </form>
   );
