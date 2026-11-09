@@ -17,6 +17,9 @@ export interface Basis {
   entered_income_paise: number;
   /** e.g. when statements and the plan differ by more than 10%. */
   note: string | null;
+  /** Share of the surplus assumed to reach the goals, after the last check-in; null means all. */
+  follow_through_bps?: number | null;
+  calibration_note?: string | null;
 }
 
 export interface Lever {

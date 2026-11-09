@@ -16,6 +16,7 @@ pub mod afford;
 pub mod analytics;
 pub mod autopost;
 pub mod bills;
+pub mod calibration;
 pub mod checkin;
 pub mod cycle;
 pub mod forecast;

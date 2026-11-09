@@ -170,6 +170,34 @@ describe("CheckInPage", () => {
     expect(quarter).toHaveTextContent("Upload your HDFC statement");
   });
 
+  it("sets the last check-in's forecast against what happened, when there is one", () => {
+    renderPage({
+      status,
+      report: {
+        ...report,
+        calibration: {
+          since: "2026-08-10",
+          months: 3,
+          expected_surplus_paise: 4_000_000,
+          actual_surplus_paise: 3_000_000,
+          goals: [],
+          follow_through_bps: 5_000,
+          next_follow_through_bps: 5_000,
+          lines: ["You kept ₹30,000 a month, less than the ₹40,000 the forecast expected.", "Your emergency fund goal gained ₹30,000 of the ₹60,000 expected."],
+        },
+      },
+    });
+    const quarter = screen.getByRole("region", { name: "Read your quarter" });
+    expect(within(quarter).getByRole("heading", { name: "How the last forecast did" })).toBeInTheDocument();
+    expect(quarter).toHaveTextContent("Since your check-in on 10 Aug, about 3 months ago.");
+    expect(quarter).toHaveTextContent("Your emergency fund goal gained ₹30,000 of the ₹60,000 expected.");
+  });
+
+  it("leaves the forecast section out when there is nothing to compare", () => {
+    renderPage({ status });
+    expect(screen.queryByRole("heading", { name: "How the last forecast did" })).toBeNull();
+  });
+
   it("shows the finished state once the check-in is saved, with no finish button and the quarter still readable", () => {
     const saved: CheckinStatus = {
       ...status,

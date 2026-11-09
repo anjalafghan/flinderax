@@ -2,6 +2,7 @@ pub mod account;
 pub mod analytics;
 pub mod autopost;
 pub mod bills;
+pub mod calibration;
 pub mod card;
 pub mod card_cycle;
 pub mod checkin;
