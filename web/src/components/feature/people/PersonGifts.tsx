@@ -39,12 +39,14 @@ function GiftRow({ gift, dates }: { gift: Gift; dates: PersonDate[] }) {
           className="h-11 w-auto min-w-36"
           value={gift.status}
           disabled={change.isPending}
-          onChange={(e) =>
-            change.mutate(e.target.value as GiftStatus, {
-              onSuccess: () => toast.success(`${gift.title} is now ${GIFT_LABEL[e.target.value as GiftStatus].toLowerCase()}.`),
+          onChange={(e) => {
+            // Read the value now: the select is controlled, so React may reset it before the save returns.
+            const next = e.target.value as GiftStatus;
+            change.mutate(next, {
+              onSuccess: () => toast.success(`${gift.title} is now ${GIFT_LABEL[next].toLowerCase()}.`),
               onError: (err) => toast.error(errorMessage(err)),
-            })
-          }
+            });
+          }}
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>
