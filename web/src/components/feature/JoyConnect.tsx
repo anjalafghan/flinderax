@@ -35,10 +35,10 @@ function ConnectForm() {
   };
 
   return (
-    <div className="space-y-4">
-      <p className="text-muted-foreground">Link Joy so your date budget and your share show here; Joy never sees your finances.</p>
-      <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1 sm:col-span-2">
+    <div className="space-y-6">
+      <p className="max-w-prose text-muted-foreground">Link Joy so your date budget and your share show here; Joy never sees your finances.</p>
+      <form onSubmit={submit} className="form-grid">
+        <div className="field col-span-full">
           <Label htmlFor="joy-url">Joy address</Label>
           <Input
             id="joy-url"
@@ -50,7 +50,7 @@ function ConnectForm() {
             onChange={(e) => setUrl(e.target.value)}
           />
         </div>
-        <div className="space-y-1 sm:col-span-2">
+        <div className="field col-span-full">
           <Label htmlFor="joy-token">API token</Label>
           <Input
             id="joy-token"
@@ -60,16 +60,16 @@ function ConnectForm() {
             onChange={(e) => setToken(e.target.value)}
           />
         </div>
-        <div className="space-y-1">
+        <div className="field">
           <Label htmlFor="joy-partner">Partner covers each month</Label>
           <MoneyInput id="joy-partner" value={partner} onChange={(e) => setPartner(e.target.value)} />
         </div>
         {error && (
-          <p role="alert" className="text-sm text-destructive sm:col-span-2">
+          <p role="alert" className="col-span-full text-sm text-destructive">
             {error}
           </p>
         )}
-        <div className="sm:col-span-2">
+        <div className="form-actions">
           <Button type="submit" disabled={connect.isPending}>
             {connect.isPending ? "Connecting..." : "Connect"}
           </Button>
@@ -94,7 +94,7 @@ function ConnectedView({ summary }: { summary: JoySummary }) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <dl className="grid gap-3 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-6">
         <dt className="text-muted-foreground">Joy address</dt>
         <dd className="min-w-0 break-all font-mono text-xs sm:text-sm">{summary.url}</dd>
@@ -111,22 +111,22 @@ function ConnectedView({ summary }: { summary: JoySummary }) {
       </dl>
 
       <form
-        className="space-y-3"
+        className="form-grid"
         onSubmit={(e) => {
           e.preventDefault();
           if (!unchanged) save();
         }}
       >
-        <div className="space-y-1 sm:max-w-xs">
+        <div className="field">
           <Label htmlFor="joy-partner-edit">Partner covers each month</Label>
           <MoneyInput id="joy-partner-edit" value={partner} onChange={(e) => setPartner(e.target.value)} />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button type="submit" size="sm" disabled={unchanged || setPartnerMutation.isPending}>
-            {setPartnerMutation.isPending ? "Saving..." : "Save"}
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => setConfirmDisconnect(true)}>
+        <div className="form-actions">
+          <Button type="button" variant="outline" onClick={() => setConfirmDisconnect(true)}>
             Disconnect
+          </Button>
+          <Button type="submit" disabled={unchanged || setPartnerMutation.isPending}>
+            {setPartnerMutation.isPending ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

@@ -50,7 +50,7 @@ function TransactionRow({
   };
 
   return (
-    <li className="space-y-2 p-3">
+    <li className="space-y-3 border-t border-border py-4 first:border-t-0 first:pt-1">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{name}</p>
@@ -67,7 +67,7 @@ function TransactionRow({
           >
             {signedAmount(txn)}
           </p>
-          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Delete ${name}`} onClick={onDelete}>
+          <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={`Delete ${name}`} onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -192,13 +192,13 @@ export function TransactionList({
 
       {txns && (
         shown.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
+          <p className="empty-note">
             {uncategorizedOnly
               ? "Nothing to categorize here."
               : `No transactions in ${monthTitle(month)}. Alerts from your bank show up here automatically.`}
           </p>
         ) : (
-          <ul className="divide-y glass rounded-3xl">
+          <ul className="ledger">
             {shown.map((t) => (
               <TransactionRow
                 key={t.txn_id}

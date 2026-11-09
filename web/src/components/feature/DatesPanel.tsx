@@ -15,7 +15,7 @@ export function DatesPanel() {
   const recent = data.recent.slice(0, 4);
 
   return (
-    <section aria-label="Dates this month" className="space-y-4 glass rounded-3xl p-4 md:p-6">
+    <section aria-label="Dates this month" className="space-y-6 glass rounded-3xl p-4 md:p-6">
       <div>
         <h2 className="font-display text-[32px] leading-none tracking-tight">Dates</h2>
         <DatesNudge budget_paise={m.budget_paise} spent_paise={m.spent_paise} />
@@ -52,9 +52,9 @@ export function DatesPanel() {
       </div>
 
       {recent.length > 0 && (
-        <ul className="divide-y border-t text-sm">
+        <ul className="ledger text-sm">
           {recent.map((r, i) => (
-            <li key={`${r.day}-${i}`} className="flex items-baseline justify-between gap-3 py-2">
+            <li key={`${r.day}-${i}`} className="ledger-row items-baseline">
               <span className="shrink-0 text-xs text-muted-foreground">{dayLabel(r.day)}</span>
               <span className="min-w-0 flex-1 truncate">{r.title}</span>
               <span className="shrink-0 text-right tabular-nums">
@@ -67,7 +67,7 @@ export function DatesPanel() {
       )}
 
       {data.stale && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Joy couldn't be reached — showing figures from {syncedLabel(data.synced_at)}.
         </p>
       )}

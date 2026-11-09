@@ -7,16 +7,16 @@ import { cn } from "@/utils/cn";
 export function AutoPostings({ items, enabled }: { items: HistoryAutoPosting[]; enabled: boolean }) {
   if (!enabled || items.length === 0) return null;
   return (
-    <section aria-label="Auto-updated balances" className="space-y-3">
+    <section aria-label="Auto-updated balances" className="space-y-4">
       <div className="space-y-1">
         <h2 className="font-display text-[32px] leading-none tracking-tight">Auto-updated balances</h2>
         <p className="text-sm text-muted-foreground">
           Salary and fixed payments are added to your balances on their dates. Turn this off in Plan settings.
         </p>
       </div>
-      <ul className="divide-y glass rounded-3xl">
+      <ul className="ledger glass rounded-3xl px-5 md:px-6">
         {items.map((p, i) => (
-          <li key={`${p.occurs_on}-${p.label}-${i}`} className="flex items-center justify-between gap-3 p-3 text-sm">
+          <li key={`${p.occurs_on}-${p.label}-${i}`} className="ledger-row text-sm">
             <div className="min-w-0">
               <p className="truncate font-medium">{p.label}</p>
               <p className="text-xs text-muted-foreground">

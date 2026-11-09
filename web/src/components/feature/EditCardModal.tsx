@@ -147,8 +147,8 @@ export function EditCardModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 p-4">
       <Card className="w-full max-w-md animate-in fade-in zoom-in duration-200">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-3xl">Edit Card</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-[24px]">Edit Card</CardTitle>
           <Button
             variant="ghost"
             size="icon"
@@ -158,124 +158,122 @@ export function EditCardModal({
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
-        <CardContent className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label>Card Name / Nickname</Label>
-            <Input
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Travel Rewards"
-            />
-          </div>
+        <CardContent>
+          <div className="form-grid">
+            <div className="field col-span-full">
+              <Label>Card Name / Nickname</Label>
+              <Input
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="e.g. Travel Rewards"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>Bank Name</Label>
-            <Input
-              value={bank}
-              onChange={(e) => handleBankChange(e.target.value)}
-              placeholder="e.g. Chase"
-            />
-          </div>
+            <div className="field col-span-full">
+              <Label>Bank Name</Label>
+              <Input
+                value={bank}
+                onChange={(e) => handleBankChange(e.target.value)}
+                placeholder="e.g. Chase"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>Last 4 Digits</Label>
-            <Input
-              value={last4Digits}
-              onChange={(e) => handleLast4DigitsChange(e.target.value)}
-              placeholder="e.g. 1234"
-              maxLength={4}
-              pattern="[0-9]{0,4}"
-            />
-          </div>
+            <div className="field col-span-full">
+              <Label>Last 4 Digits</Label>
+              <Input
+                value={last4Digits}
+                onChange={(e) => handleLast4DigitsChange(e.target.value)}
+                placeholder="e.g. 1234"
+                maxLength={4}
+                pattern="[0-9]{0,4}"
+              />
+            </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-2">
+            <div className="field">
               <Label htmlFor="edit-statement-day">Statement day</Label>
               <Input id="edit-statement-day" inputMode="numeric" maxLength={2} value={statementDay} onChange={(e) => setStatementDay(e.target.value)} />
             </div>
-            <div className="space-y-2">
+            <div className="field">
               <Label htmlFor="edit-due-day">Due day</Label>
               <Input id="edit-due-day" inputMode="numeric" maxLength={2} value={dueDay} onChange={(e) => setDueDay(e.target.value)} />
             </div>
-            <div className="space-y-2">
+            <div className="field col-span-full">
               <Label htmlFor="edit-limit">Limit</Label>
               <MoneyInput id="edit-limit" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-pay-from">Bill is paid from</Label>
-            <Select id="edit-pay-from" value={payFrom} onChange={(e) => setPayFrom(e.target.value)}>
-              <option value="">Reserve account</option>
-              {accounts?.filter((a) => !a.locked).map((a) => (
-                <option key={a.account_id} value={a.account_id}>{a.name}</option>
-              ))}
-            </Select>
-          </div>
+            <div className="field col-span-full">
+              <Label htmlFor="edit-pay-from">Bill is paid from</Label>
+              <Select id="edit-pay-from" value={payFrom} onChange={(e) => setPayFrom(e.target.value)}>
+                <option value="">Reserve account</option>
+                {accounts?.filter((a) => !a.locked).map((a) => (
+                  <option key={a.account_id} value={a.account_id}>{a.name}</option>
+                ))}
+              </Select>
+            </div>
 
-          <div className="glass rounded-3xl p-6">
-            <Label className="mb-2 text-sm font-medium">Preview</Label>
-            <CreditCard
-              id="preview"
-              name={name || "CARD NAME"}
-              bank={bank || "BANK"}
-              balance={0}
-              lastDelta={0}
-              primaryColor={primaryColorRgb}
-              secondaryColor={secondaryColorRgb}
-              last4Digits={previewLast4Digits}
-            />
-          </div>
+            <div className="glass rounded-3xl p-6 col-span-full">
+              <Label className="mb-2 text-sm font-medium">Preview</Label>
+              <CreditCard
+                id="preview"
+                name={name || "CARD NAME"}
+                bank={bank || "BANK"}
+                balance={0}
+                lastDelta={0}
+                primaryColor={primaryColorRgb}
+                secondaryColor={secondaryColorRgb}
+                last4Digits={previewLast4Digits}
+              />
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="field">
               <Label>Primary Color</Label>
               <div className="flex gap-2">
                 <Input
                   type="color"
                   value={primaryColor}
                   onChange={(e) => handlePrimaryColorChange(e.target.value)}
-                  className="h-10 w-20 p-1 cursor-pointer"
+                  className="h-10 w-20 shrink-0 p-1 cursor-pointer"
                 />
                 <Input
                   value={primaryColor}
                   onChange={(e) => handlePrimaryColorChange(e.target.value)}
-                  className="uppercase"
+                  className="min-w-0 flex-1 uppercase"
                   maxLength={7}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="field">
               <Label>Secondary Color</Label>
               <div className="flex gap-2">
                 <Input
                   type="color"
                   value={secondaryColor}
                   onChange={(e) => handleSecondaryColorChange(e.target.value)}
-                  className="h-10 w-20 p-1 cursor-pointer"
+                  className="h-10 w-20 shrink-0 p-1 cursor-pointer"
                 />
                 <Input
                   value={secondaryColor}
                   onChange={(e) => handleSecondaryColorChange(e.target.value)}
-                  className="uppercase"
+                  className="min-w-0 flex-1 uppercase"
                   maxLength={7}
                 />
               </div>
             </div>
-          </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={() => updateMutation.mutate()}
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
+            <div className="col-span-full flex gap-2 pt-1 sm:justify-end">
+              <Button variant="outline" className="flex-1 sm:flex-none" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 sm:flex-none"
+                onClick={() => updateMutation.mutate()}
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

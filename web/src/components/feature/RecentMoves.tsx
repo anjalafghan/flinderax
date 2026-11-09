@@ -12,16 +12,16 @@ export function RecentMoves() {
   const undo = usePlannerMutation(movesApi.undo, [keys.moves, keys.accounts], { success: "Undone" });
   if (!data || data.length === 0) return null;
   return (
-    <section aria-label="Recent moves" className="space-y-3">
+    <section aria-label="Recent moves" className="space-y-4">
       <h2 className="font-display text-[32px] leading-none tracking-tight">What you've recorded</h2>
-      <ul className="divide-y glass rounded-3xl">
+      <ul className="ledger glass rounded-3xl px-5 py-2 md:px-6">
         {data.slice(0, 8).map((m) => (
-          <li key={m.move_id} className="flex items-center justify-between gap-3 p-3 text-sm">
+          <li key={m.move_id} className="ledger-row text-sm">
             <div className="min-w-0">
               <p className="font-medium">
                 {LABEL[m.mode]} {formatINR(m.amount_paise)}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 {m.kind === "allocation" ? "Savings top-up" : "Card bill"} · {m.created_at.slice(0, 10)}
               </p>
             </div>

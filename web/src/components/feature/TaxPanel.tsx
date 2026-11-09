@@ -40,7 +40,7 @@ function RegimeBox({ name, tax, better }: { name: string; tax: number; better: b
   return (
     <div
       className={cn(
-        "min-w-0 flex-1 glass rounded-2xl p-3",
+        "min-w-0 flex-1 glass rounded-2xl p-4",
         better && "border-good/40 bg-good-tint",
       )}
     >
@@ -71,14 +71,14 @@ function breakEvenCopy(regime: TaxRegime): string {
 function RegimeCard({ regime }: { regime: TaxRegime }) {
   return (
     <Card>
-      <CardContent className="space-y-3 p-4">
+      <CardContent className="space-y-4 p-5 md:p-6">
         <p className="text-xl font-bold leading-snug sm:text-2xl">{regimeHeadline(regime)}</p>
         <div className="flex gap-3">
           <RegimeBox name="Old regime" tax={regime.old_tax_paise} better={regime.better === "old"} />
           <RegimeBox name="New regime" tax={regime.new_tax_paise} better={regime.better === "new"} />
         </div>
-        <p className="text-sm">{breakEvenCopy(regime)}</p>
-        <p className="text-xs text-muted-foreground">{regime.note}</p>
+        <p className="text-sm leading-snug">{breakEvenCopy(regime)}</p>
+        <p className="text-xs leading-snug text-muted-foreground">{regime.note}</p>
       </CardContent>
     </Card>
   );
@@ -90,15 +90,15 @@ function LtcgCard({ ltcg }: { ltcg: TaxLtcg }) {
   const usedPct = ltcg.exemption_paise > 0 ? Math.min(100, (ltcg.used_paise / ltcg.exemption_paise) * 100) : 0;
   return (
     <Card>
-      <CardContent className="space-y-2 p-4 text-sm">
-        <div className="flex items-baseline justify-between gap-2">
+      <CardContent className="space-y-3 p-5 md:p-6 text-sm">
+        <div className="flex items-baseline justify-between gap-4">
           <p className="font-semibold">Tax-free equity gains</p>
           <p className="shrink-0 font-semibold tabular-nums">{formatINR(ltcg.left_paise)} left</p>
         </div>
         <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
           <div className="h-full bg-primary" style={{ width: `${usedPct}%` }} />
         </div>
-        <p className="text-xs text-muted-foreground">{ltcg.note}</p>
+        <p className="text-xs leading-snug text-muted-foreground">{ltcg.note}</p>
       </CardContent>
     </Card>
   );
@@ -109,8 +109,8 @@ function LtcgCard({ ltcg }: { ltcg: TaxLtcg }) {
 function SectionRow({ row }: { row: TaxSectionRow }) {
   const bar = stackedWidths(row.claimed_paise, row.projected_paise, row.limit_paise);
   return (
-    <li className="space-y-1.5 py-2.5 text-sm">
-      <div className="flex items-baseline justify-between gap-2">
+    <li className="space-y-2 border-t border-border py-4 text-sm first:border-t-0 first:pt-1">
+      <div className="flex items-baseline justify-between gap-4">
         <span className="min-w-0 truncate font-medium">{sectionLabel(row.section)}</span>
         <span className="shrink-0 tabular-nums">
           <span className="font-semibold">{formatINR(row.claimed_paise)}</span>
@@ -125,13 +125,13 @@ function SectionRow({ row }: { row: TaxSectionRow }) {
             <div className="h-full bg-primary" style={{ width: `${bar.claimed}%` }} />
             <div className="h-full bg-primary/30" style={{ width: `${bar.projected}%` }} />
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs leading-snug text-muted-foreground">
             {row.left_paise !== null && row.left_paise > 0 ? `${formatINR(row.left_paise)} left` : "Limit used up"}
             {row.projected_paise > 0 && ` · ${formatINR(row.projected_paise)} more to come`}
           </p>
         </>
       )}
-      {row.note && <p className="text-xs text-muted-foreground">{row.note}</p>}
+      {row.note && <p className="text-xs leading-snug text-muted-foreground">{row.note}</p>}
     </li>
   );
 }
@@ -142,7 +142,7 @@ function CommitmentRow({ c }: { c: TaxCommitment }) {
   const setSection = useSetCommitmentTaxSection();
   const total = c.paid_paise + c.projected_paise;
   return (
-    <li className="flex flex-col gap-2 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+    <li className="flex flex-col gap-3 border-t border-border py-4 text-sm first:border-t-0 first:pt-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <p className="truncate font-medium">{c.label}</p>
         <p className="text-xs text-muted-foreground tabular-nums">{formatINR(total)} this year</p>
@@ -196,8 +196,8 @@ function AddDeductionForm() {
   };
 
   return (
-    <form onSubmit={submit} className="grid grid-cols-2 gap-2 glass rounded-2xl p-3" noValidate>
-      <div className="col-span-2 space-y-1 sm:col-span-1">
+    <form onSubmit={submit} className="form-grid" noValidate>
+      <div className="field">
         <Label htmlFor="tax-section">Section</Label>
         <Select id="tax-section" value={section} onChange={(e) => setSection(e.target.value as TaxSectionId)}>
           {TAX_SECTION_IDS.map((id) => (
@@ -207,11 +207,11 @@ function AddDeductionForm() {
           ))}
         </Select>
       </div>
-      <div className="space-y-1">
+      <div className="field">
         <Label htmlFor="tax-amount">Amount</Label>
         <MoneyInput id="tax-amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
       </div>
-      <div className="col-span-2 space-y-1">
+      <div className="field col-span-full">
         <Label htmlFor="tax-label">What is it</Label>
         <Input
           id="tax-label"
@@ -220,9 +220,9 @@ function AddDeductionForm() {
           placeholder="e.g. PPF deposit"
         />
       </div>
-      {error && <p role="alert" className="col-span-2 text-sm text-destructive">{error}</p>}
-      <div className="col-span-2">
-        <Button type="submit" size="sm" disabled={add.isPending}>
+      {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+      <div className="form-actions">
+        <Button type="submit" disabled={add.isPending}>
           Add deduction
         </Button>
       </div>
@@ -232,21 +232,21 @@ function AddDeductionForm() {
 
 function DeductionList({ entries }: { entries: TaxEntry[] }) {
   const del = useDeleteTaxEntry();
-  if (entries.length === 0) return <p className="text-sm text-muted-foreground">No deductions added yet.</p>;
+  if (entries.length === 0) return <p className="empty-note">No deductions added yet.</p>;
   return (
-    <ul className="divide-y">
+    <ul className="ledger">
       {entries.map((e) => (
-        <li key={e.entry_id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+        <li key={e.entry_id} className="ledger-row text-sm">
           <div className="min-w-0">
-            <p className="truncate font-medium">{e.label}</p>
-            <p className="text-xs text-muted-foreground">{sectionLabel(e.section)}</p>
+            <p className="truncate font-medium" title={e.label}>{e.label}</p>
+            <p className="text-[13px] text-muted-foreground">{sectionLabel(e.section)}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <p className="font-semibold tabular-nums">{formatINR(e.amount_paise)}</p>
+            <p className="font-display text-lg tabular-nums">{formatINR(e.amount_paise)}</p>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9"
               aria-label={`Delete ${e.label}`}
               disabled={del.isPending}
               onClick={() => {
@@ -269,8 +269,8 @@ export function TaxPanel() {
   const reminder = tax ? nextReminder(tax.reminders) : null;
 
   return (
-    <section aria-label="Tax" className="space-y-4 glass rounded-3xl p-4 md:p-6">
-      <div>
+    <section aria-label="Tax" className="stack glass rounded-[1.75rem] p-6 md:p-8">
+      <div className="space-y-2">
         <h2 className="font-display text-[32px] leading-none">Tax (India)</h2>
         <p className="text-sm text-muted-foreground">
           {tax ? `${fyLabel(tax.fy)} · April to March` : "Deductions and the regime comparison for this year."}
@@ -292,7 +292,7 @@ export function TaxPanel() {
 
           {reminder && (
             <Card>
-              <CardContent className="flex items-center justify-between gap-3 p-4 text-sm">
+              <CardContent className="flex items-center justify-between gap-4 p-5 md:p-6 text-sm">
                 <div className="min-w-0">
                   <p className="font-semibold">{reminder.text}</p>
                   <p className="text-xs text-muted-foreground">{reminder.date}</p>
@@ -302,9 +302,9 @@ export function TaxPanel() {
             </Card>
           )}
 
-          <div>
-            <h3 className="mb-1 font-semibold">Deductions so far</h3>
-            <ul className="divide-y">
+          <div className="space-y-2">
+            <h3 className="font-semibold">Deductions so far</h3>
+            <ul className="ledger">
               {tax.sections.map((row) => (
                 <SectionRow key={row.section} row={row} />
               ))}
@@ -314,9 +314,9 @@ export function TaxPanel() {
           <div className="space-y-2">
             <h3 className="font-semibold">Fixed payments that save tax</h3>
             {tax.commitments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No fixed payments yet.</p>
+              <p className="empty-note">No fixed payments yet.</p>
             ) : (
-              <ul className="divide-y">
+              <ul className="ledger">
                 {tax.commitments.map((c) => (
                   <CommitmentRow key={c.commitment_id} c={c} />
                 ))}
@@ -324,7 +324,7 @@ export function TaxPanel() {
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             <h3 className="font-semibold">Add a deduction</h3>
             <AddDeductionForm />
             <DeductionList entries={tax.entries} />

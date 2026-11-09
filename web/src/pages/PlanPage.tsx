@@ -58,23 +58,24 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-3xl">Income</CardTitle>
-        <p className="text-sm text-muted-foreground">Your next payday sets the "until" date for Safe to Spend.</p>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[32px]">Income</CardTitle>
+        <p className="max-w-prose text-sm text-muted-foreground">Your next payday sets the "until" date for Safe to Spend.</p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <ul className="space-y-2">
+      <CardContent className="space-y-6">
+        <ul className="ledger">
           {incomes?.map((i: Income) => (
-            <li key={i.income_id} className="flex items-center justify-between gap-2 glass rounded-2xl p-3 text-sm">
+            <li key={i.income_id} className="ledger-row">
               <div className="min-w-0">
-                <p className="truncate font-medium">{i.label}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="truncate text-[15px] font-medium" title={i.label}>{i.label}</p>
+                <p className="text-[13px] leading-snug text-muted-foreground">
                   {formatINR(i.amount_paise)} on the {ordinal(i.day_of_month)}, into {accountName(accounts, i.account_id)}
                 </p>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
+                className="h-9 w-9 shrink-0"
                 aria-label={`Remove ${i.label}`}
                 onClick={() => window.confirm(`Remove "${i.label}"?`) && remove.mutate(i.income_id)}
               >
@@ -82,29 +83,31 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
               </Button>
             </li>
           ))}
-          {incomes?.length === 0 && <p className="text-sm text-muted-foreground">No income yet. Add your salary.</p>}
         </ul>
-        <form onSubmit={submit} className="grid grid-cols-2 gap-2 border-t pt-4" noValidate>
-          <div className="space-y-1">
+        {incomes?.length === 0 && <p className="empty-note">No income yet. Add your salary below.</p>}
+        <form onSubmit={submit} className="form-grid border-t border-border pt-6" noValidate>
+          <div className="field">
             <Label htmlFor="inc-label">Name</Label>
             <Input id="inc-label" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} placeholder="Salary" />
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="inc-amount">Amount</Label>
             <MoneyInput id="inc-amount" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="inc-day">Day of month</Label>
             <Input id="inc-day" inputMode="numeric" maxLength={2} value={f.day} onChange={(e) => setF({ ...f, day: e.target.value })} placeholder="30" />
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="inc-account">Credited to</Label>
             <AccountSelect id="inc-account" accounts={accounts} value={f.account} onChange={(v) => setF({ ...f, account: v })} />
           </div>
-          {error && <p role="alert" className="col-span-2 text-sm text-destructive">{error}</p>}
-          <Button type="submit" variant="outline" className="col-span-2" disabled={create.isPending}>
-            Add income
-          </Button>
+          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          <div className="form-actions">
+            <Button type="submit" disabled={create.isPending}>
+              Add income
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
@@ -122,10 +125,10 @@ function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) 
       ? `yearly${c.due_month ? ` in ${MONTHS[c.due_month - 1]}` : ", month not set"} on the ${ordinal(c.day_of_month)}`
       : `on the ${ordinal(c.day_of_month)}`;
   return (
-    <li className={cn("flex items-center justify-between gap-2 glass rounded-2xl p-3 text-sm", !c.active && "opacity-60")}>
+    <li className={cn("ledger-row flex-wrap text-sm", !c.active && "opacity-60")}>
       <div className="min-w-0">
-        <p className="truncate font-medium">{c.label}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="truncate text-[15px] font-medium" title={c.label}>{c.label}</p>
+        <p className="text-[13px] leading-snug text-muted-foreground">
           {formatINR(c.amount_paise)} {when} · {accountName(accounts, c.account_id)}
           {c.to_account_id && ` → ${accountName(accounts, c.to_account_id)}`} · {BUCKET_LABEL[c.bucket]}
           {c.frequency === "yearly" && ` · ${formatINR(Math.floor(c.amount_paise / 12))}/month set aside`}
@@ -133,7 +136,7 @@ function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) 
           {c.end_month && ` · until ${c.end_month}`}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 flex-wrap items-center gap-1">
         <Select
           aria-label={`Bucket for ${c.label}`}
           className="h-9 w-auto px-2 text-xs"
@@ -148,6 +151,7 @@ function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) 
         <Button
           variant="ghost"
           size="icon"
+          className="h-9 w-9"
           aria-label={`Remove ${c.label}`}
           onClick={() => window.confirm(`Remove "${c.label}"?`) && remove.mutate(c.commitment_id)}
         >
@@ -197,41 +201,46 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-3xl">Fixed payments</CardTitle>
-        <p className="text-sm text-muted-foreground">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[32px]">Fixed payments</CardTitle>
+        <p className="max-w-prose text-sm text-muted-foreground">
           Anything paid on a fixed day: SIPs, house, phone and internet, gym, subscriptions, an RD instalment. Yearly bills
           are set aside a twelfth a month. Each counts toward Needs, Savings or Spending.
         </p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <ul className="space-y-2">
+      <CardContent className="space-y-6">
+        <ul className="ledger">
           {commitments?.map((c) => <CommitmentRow key={c.commitment_id} c={c} accounts={accounts} />)}
-          {commitments?.length === 0 && <p className="text-sm text-muted-foreground">Nothing yet.</p>}
         </ul>
-        <form onSubmit={submit} className="grid grid-cols-2 gap-2 border-t pt-4" noValidate>
-          <div className="space-y-1">
+        {commitments?.length === 0 && <p className="empty-note">Nothing yet.</p>}
+        <form onSubmit={submit} className="form-grid border-t border-border pt-6" noValidate>
+          <div className="field">
             <Label htmlFor="cm-label">Name</Label>
             <Input id="cm-label" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} placeholder="e.g. Phone bill" />
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="cm-amount">{f.yearly ? "Amount per year" : "Amount"}</Label>
             <MoneyInput id="cm-amount" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="cm-day">Day of month</Label>
             <Input id="cm-day" inputMode="numeric" maxLength={2} value={f.day} onChange={(e) => setF({ ...f, day: e.target.value })} placeholder="10" />
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="cm-account">Paid from</Label>
             <AccountSelect id="cm-account" accounts={accounts} value={f.account} onChange={(v) => setF({ ...f, account: v })} />
           </div>
-          <label className="col-span-2 flex items-center gap-2 text-sm">
-            <input type="checkbox" className="h-4 w-4" checked={f.yearly} onChange={(e) => setF({ ...f, yearly: e.target.checked })} />
-            Yearly bill (set aside monthly, due once a year)
+          <label className="col-span-full flex items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-foreground"
+              checked={f.yearly}
+              onChange={(e) => setF({ ...f, yearly: e.target.checked })}
+            />
+            <span>Yearly bill (set aside monthly, due once a year)</span>
           </label>
           {f.yearly && (
-            <div className="col-span-2 space-y-1">
+            <div className="field col-span-full">
               <Label htmlFor="cm-due-month">Due month (leave empty if you don't remember)</Label>
               <Select id="cm-due-month" value={f.dueMonth} onChange={(e) => setF({ ...f, dueMonth: e.target.value })}>
                 <option value="">Not sure yet</option>
@@ -239,7 +248,7 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
               </Select>
             </div>
           )}
-          <div className="space-y-1">
+          <div className="field">
             <Label htmlFor="cm-category">Category</Label>
             <Select
               id="cm-category"
@@ -249,7 +258,7 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </Select>
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="cm-bucket">Counts toward</Label>
               <InfoTip text={BUCKET_HELP[f.bucket]} />
@@ -258,27 +267,29 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
               {BUCKETS.map((b) => <option key={b} value={b}>{BUCKET_LABEL[b]}</option>)}
             </Select>
           </div>
-          <div className="col-span-2 space-y-1">
+          <div className="field col-span-full">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="cm-to">Goes into (optional)</Label>
               <InfoTip text="For an RD or FD top-up: the account the money ends up in, so the projection grows it. Leave empty if the money just leaves (a SIP, a bill)." />
             </div>
             <AccountSelect id="cm-to" accounts={accounts} value={f.to} onChange={(v) => setF({ ...f, to: v })} />
           </div>
-          <div className="grid grid-cols-2 gap-2 col-span-2">
-            <div className="space-y-1">
-              <Label htmlFor="cm-start" className="text-xs">First month</Label>
+          <div className="form-grid col-span-full">
+            <div className="field">
+              <Label htmlFor="cm-start">First month</Label>
               <Input id="cm-start" type="month" value={f.start} onChange={(e) => setF({ ...f, start: e.target.value })} />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="cm-end" className="text-xs">Last month</Label>
+            <div className="field">
+              <Label htmlFor="cm-end">Last month</Label>
               <Input id="cm-end" type="month" value={f.end} onChange={(e) => setF({ ...f, end: e.target.value })} />
             </div>
           </div>
-          {error && <p role="alert" className="col-span-2 text-sm text-destructive">{error}</p>}
-          <Button type="submit" variant="outline" className="col-span-2" disabled={create.isPending}>
-            Add fixed payment
-          </Button>
+          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          <div className="form-actions">
+            <Button type="submit" disabled={create.isPending}>
+              Add fixed payment
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
@@ -359,15 +370,15 @@ function SettingsSection() {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-3xl">Budget</CardTitle>
-        <p className="text-sm text-muted-foreground">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[32px]">Budget</CardTitle>
+        <p className="max-w-prose text-sm text-muted-foreground">
           Needs are your listed bills. You set how much to spend each month; everything left over is savings.
         </p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2" noValidate>
-          <div className="space-y-1">
+        <form onSubmit={submit} className="form-grid" noValidate>
+          <div className="field">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="spending">Spending per month</Label>
               <InfoTip text="Food, other travel and fun: the pot you can swipe against. Type an amount (18875) or a percentage of your income (25%). Empty = 20% of your income." />
@@ -381,34 +392,37 @@ function SettingsSection() {
               aria-invalid={spendParsed.kind === "invalid"}
             />
             {spendParsed.kind === "invalid" && (
-              <p className="text-xs text-destructive">Use an amount like 18875 or a percentage like 25%.</p>
+              <p className="text-xs leading-snug text-destructive">Use an amount like 18875 or a percentage like 25%.</p>
             )}
             {spendParsed.kind === "percent" && spendPaise !== null && income > 0 && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs leading-snug text-muted-foreground">
                 {formatPercent(spendParsed.bps)} of {formatINR(income)} = {formatINR(spendPaise)} a month, and it follows your income.
               </p>
             )}
-            {rest !== null && <p className="text-xs text-muted-foreground">That leaves {formatINR(rest)} a month for savings.</p>}
+            {rest !== null && <p className="text-xs leading-snug text-muted-foreground">That leaves {formatINR(rest)} a month for savings.</p>}
           </div>
-          <div className="space-y-1">
+          <div className="field">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="alloc-day">Savings move by day</Label>
               <InfoTip text="The day of the month your needs money and the rest of your savings should have moved to the reserve account." />
             </div>
             <Input id="alloc-day" inputMode="numeric" maxLength={2} value={allocDay} onChange={(e) => setAllocDay(e.target.value)} />
           </div>
-          <div className="space-y-1 sm:col-span-2">
+          <div className="field col-span-full">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="floor">Savings floor in the reserve</Label>
               <InfoTip text="Savings in the reserve account that card bills must never eat. You'll be warned if it drops below this." />
             </div>
-            <div className="flex gap-2">
-              <MoneyInput id="floor" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="No floor" />
+            <div className="flex flex-wrap gap-2">
+              <div className="min-w-0 flex-1">
+                <MoneyInput id="floor" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="No floor" />
+              </div>
               {summary && summary.pots.reserve.account_name && (
                 <Button
                   type="button"
                   variant="outline"
-                  className="shrink-0"
+                  size="sm"
+                  className="h-10 shrink-0"
                   onClick={() => setFloor(paiseToInput(Math.max(0, summary.pots.reserve.free_savings_paise)))}
                 >
                   Use today's free savings
@@ -416,32 +430,34 @@ function SettingsSection() {
               )}
             </div>
           </div>
-          <div className="space-y-1 sm:col-span-2">
+          <div className="field col-span-full">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="months">Pay an overspend back over (months)</Label>
               <InfoTip text="If you spend more than planned, the working page shows how much to rebuild each month for this many months so no FD is touched." />
             </div>
             <Input id="months" inputMode="numeric" maxLength={2} value={months} onChange={(e) => setMonths(e.target.value)} />
           </div>
-          <div className="flex items-start gap-3 sm:col-span-2">
+          <label className="col-span-full flex items-start gap-3 text-sm">
             <input
               id="auto-post"
               type="checkbox"
-              className="mt-0.5 h-4 w-4"
+              className="mt-0.5 h-4 w-4 accent-foreground"
               checked={autoPost}
               onChange={(e) => setAutoPost(e.target.checked)}
             />
-            <div className="space-y-1">
-              <Label htmlFor="auto-post">Update balances automatically on payday and bill dates</Label>
-              <p className="text-xs text-muted-foreground">
+            <span className="field">
+              <span className="font-medium">Update balances automatically on payday and bill dates</span>
+              <span className="text-xs leading-snug text-muted-foreground">
                 Salary is added and fixed payments are taken off your account balances on their dates. You only re-type a balance when it drifts.
-              </p>
-            </div>
+              </span>
+            </span>
+          </label>
+          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          <div className="form-actions">
+            <Button type="submit" disabled={save.isPending || !data}>
+              Save budget
+            </Button>
           </div>
-          {error && <p role="alert" className="text-sm text-destructive sm:col-span-2">{error}</p>}
-          <Button type="submit" className="sm:col-span-2" disabled={save.isPending || !data}>
-            Save budget
-          </Button>
         </form>
       </CardContent>
     </Card>
@@ -461,36 +477,38 @@ export default function PlanPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl space-y-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <main className="page max-w-3xl">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3 md:mb-8">
           <div>
             <h1 className="page-title">Plan</h1>
             <p className="page-sub">What's coming, what you're saving for, and what you can afford.</p>
           </div>
           <Link
             to="/what-if"
-            className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors hover:bg-accent"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium"
           >
             <LineChart className="h-4 w-4" aria-hidden />
             What if...
           </Link>
         </div>
-        <Link
-          to="/life"
-          className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] border border-border bg-card px-6 py-5 text-foreground no-underline sm:px-8"
-        >
-          <span className="flex min-w-0 flex-col gap-1">
-            <span className="font-display text-[26px] leading-none">Life plan</span>
-            <span className="text-[13px] text-muted-foreground">Your wedding, your child, and retirement, and what each needs a month.</span>
-          </span>
-          <span className="text-sm font-medium">Open →</span>
-        </Link>
-        <AffordPanel />
-        <BillsPanel />
-        <GoalsPanel />
-        <IncomeSection accounts={accounts} />
-        <CommitmentsSection accounts={accounts} />
-        <SettingsSection />
+        <div className="stack">
+          <Link
+            to="/life"
+            className="glass flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] px-6 py-5 text-foreground no-underline sm:px-8"
+          >
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className="font-display text-[26px] leading-none">Life plan</span>
+              <span className="text-[13px] text-muted-foreground">Your wedding, your child, and retirement, and what each needs a month.</span>
+            </span>
+            <span className="text-sm font-medium">Open →</span>
+          </Link>
+          <AffordPanel />
+          <BillsPanel />
+          <GoalsPanel />
+          <IncomeSection accounts={accounts} />
+          <CommitmentsSection accounts={accounts} />
+          <SettingsSection />
+        </div>
       </main>
     </div>
   );

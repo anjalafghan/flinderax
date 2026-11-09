@@ -136,92 +136,94 @@ export default function WhatIfPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-4xl space-y-8">
-        <div>
+      <main className="page max-w-4xl">
+        <div className="mb-6 md:mb-8">
           <h1 className="page-title">What if...</h1>
-          <p className="text-muted-foreground">
+          <p className="page-sub max-w-prose">
             Try an RD, an FD or a big purchase and see what it does to your savings, your spending and your balances
             over the coming months. Nothing here changes your real data.
           </p>
         </div>
 
-        <section className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => add("rd")}><Plus className="mr-1 h-4 w-4" /> Recurring deposit</Button>
-            <Button size="sm" variant="outline" onClick={() => add("fd")}><Plus className="mr-1 h-4 w-4" /> Fixed deposit</Button>
-            <Button size="sm" variant="outline" onClick={() => add("one_off")}><Plus className="mr-1 h-4 w-4" /> One-off spend</Button>
-          </div>
-          {drafts.map((d, i) => (
-            <ScenarioItemForm
-              key={d.id}
-              draft={d}
-              accounts={accounts}
-              invalid={items[i] === null}
-              onChange={(nd) => setDrafts((all) => all.map((x) => (x.id === nd.id ? nd : x)))}
-              onRemove={() => setDrafts((all) => all.filter((x) => x.id !== d.id))}
-            />
-          ))}
-          {drafts.length === 0 && (
-            <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
-              Nothing to try yet. Add the wedding RD to start, or just look at where you're heading below.
-            </p>
-          )}
-        </section>
-
-        <section className="space-y-3">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label htmlFor="months">Look ahead: {months} months</Label>
-              <input id="months" type="range" min={6} max={60} step={6} value={months} onChange={(e) => setMonths(Number(e.target.value))} className="w-full" />
+        <div className="stack">
+          <section className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => add("rd")}><Plus className="mr-1 h-4 w-4" /> Recurring deposit</Button>
+              <Button size="sm" variant="outline" onClick={() => add("fd")}><Plus className="mr-1 h-4 w-4" /> Fixed deposit</Button>
+              <Button size="sm" variant="outline" onClick={() => add("one_off")}><Plus className="mr-1 h-4 w-4" /> One-off spend</Button>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="spend-pct">You spend {spendPct}% of your spending allowance</Label>
-              <input id="spend-pct" type="range" min={0} max={150} step={5} value={spendPct} onChange={(e) => setSpendPct(Number(e.target.value))} className="w-full" />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="What to chart">
-            {METRICS.map((m) => (
-              <Button key={m.id} size="sm" variant={metric === m.id ? "default" : "outline"} role="tab" aria-selected={metric === m.id} onClick={() => setMetric(m.id)}>
-                {m.label}
-              </Button>
+            {drafts.map((d, i) => (
+              <ScenarioItemForm
+                key={d.id}
+                draft={d}
+                accounts={accounts}
+                invalid={items[i] === null}
+                onChange={(nd) => setDrafts((all) => all.map((x) => (x.id === nd.id ? nd : x)))}
+                onRemove={() => setDrafts((all) => all.filter((x) => x.id !== d.id))}
+              />
             ))}
-          </div>
-
-          <div className={cn("glass rounded-3xl p-3 transition-opacity", isFetching && "opacity-70")}>
-            {isError && <p className="text-sm text-destructive">Couldn't compute the projection.</p>}
-            {chart && <LineChart labels={chart.labels} series={chart.series} markers={markers} />}
-            {!chart && !isError && <div className="h-64 animate-pulse rounded-lg bg-muted/40" />}
-          </div>
-
-          {chart && (
-            <div className="space-y-1 text-sm text-muted-foreground">
-              {stressSummary.length === 0 ? (
-                <p>No month falls short in this window.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {stressSummary.map((e) => (
-                    <li key={e.kind}>
-                      <span className="font-medium text-foreground">Your {KIND_NAME[e.kind]}</span> in {e.months} of{" "}
-                      {e.total} months, by up to {formatINR(e.max)}. First: {monthLong(e.first)}.
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p>
-                Assumes salary and fixed payments continue, you spend {spendPct}% of your allowance, the SIP is not valued
-                (contributions only), and deposits compound quarterly.
+            {drafts.length === 0 && (
+              <p className="empty-note">
+                Nothing to try yet. Add the wedding RD to start, or just look at where you're heading below.
               </p>
-            </div>
-          )}
-        </section>
-
-        {data && data.impacts.length > 0 && (
-          <section className="space-y-4">
-            <h2 className="font-display text-3xl leading-none tracking-tight">What each change does</h2>
-            {data.impacts.map((imp, i) => <ImpactCard key={`${imp.name}-${i}`} impact={imp} />)}
+            )}
           </section>
-        )}
+
+          <section className="space-y-3">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="field">
+                <Label htmlFor="months">Look ahead: {months} months</Label>
+                <input id="months" type="range" min={6} max={60} step={6} value={months} onChange={(e) => setMonths(Number(e.target.value))} className="w-full" />
+              </div>
+              <div className="field">
+                <Label htmlFor="spend-pct">You spend {spendPct}% of your spending allowance</Label>
+                <input id="spend-pct" type="range" min={0} max={150} step={5} value={spendPct} onChange={(e) => setSpendPct(Number(e.target.value))} className="w-full" />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2" role="tablist" aria-label="What to chart">
+              {METRICS.map((m) => (
+                <Button key={m.id} size="sm" variant={metric === m.id ? "default" : "outline"} role="tab" aria-selected={metric === m.id} onClick={() => setMetric(m.id)}>
+                  {m.label}
+                </Button>
+              ))}
+            </div>
+
+            <div className={cn("glass rounded-3xl p-3 transition-opacity", isFetching && "opacity-70")}>
+              {isError && <p className="text-sm text-destructive">Couldn't compute the projection.</p>}
+              {chart && <LineChart labels={chart.labels} series={chart.series} markers={markers} />}
+              {!chart && !isError && <div className="h-64 animate-pulse rounded-lg bg-muted/40" />}
+            </div>
+
+            {chart && (
+              <div className="space-y-2 text-sm leading-snug text-muted-foreground">
+                {stressSummary.length === 0 ? (
+                  <p>No month falls short in this window.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {stressSummary.map((e) => (
+                      <li key={e.kind}>
+                        <span className="font-medium text-foreground">Your {KIND_NAME[e.kind]}</span> in {e.months} of{" "}
+                        {e.total} months, by up to {formatINR(e.max)}. First: {monthLong(e.first)}.
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p>
+                  Assumes salary and fixed payments continue, you spend {spendPct}% of your allowance, the SIP is not valued
+                  (contributions only), and deposits compound quarterly.
+                </p>
+              </div>
+            )}
+          </section>
+
+          {data && data.impacts.length > 0 && (
+            <section className="space-y-4">
+              <h2 className="font-display text-[32px] leading-none tracking-tight">What each change does</h2>
+              {data.impacts.map((imp, i) => <ImpactCard key={`${imp.name}-${i}`} impact={imp} />)}
+            </section>
+          )}
+        </div>
       </main>
     </div>
   );

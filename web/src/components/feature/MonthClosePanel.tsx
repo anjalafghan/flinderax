@@ -13,7 +13,7 @@ import { lastCompleteMonth, ratioPercent, signedINR, stepMonth } from "@/utils/r
 function Tile({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
     <Card className={cn("min-w-0", className)}>
-      <CardContent className="space-y-2 p-4">
+      <CardContent className="space-y-3 p-5 md:p-6">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
         {children}
       </CardContent>
@@ -100,15 +100,15 @@ function TopCategoriesTile({ review }: { review: MonthReview }) {
   const top = review.top_categories.slice(0, 3);
   const max = top[0]?.amount_paise ?? 0;
   return (
-    <Tile title="Top categories" className="col-span-2">
+    <Tile title="Top categories" className="sm:col-span-2">
       {top.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nothing spent this month</p>
       ) : (
-        <ul className="space-y-2.5">
+        <ul className="space-y-3">
           {top.map((c) => (
-            <li key={c.category} className="space-y-1 text-sm">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate">{categoryLabel(c.category)}</span>
+            <li key={c.category} className="space-y-1.5 text-sm">
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="min-w-0 truncate">{categoryLabel(c.category)}</span>
                 <span className="shrink-0 font-semibold tabular-nums">{formatINR(c.amount_paise)}</span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -134,9 +134,9 @@ export function MonthClosePanel() {
   const { data: review, isLoading, isError, error } = useReviewMonth(month);
 
   return (
-    <section aria-label="Month close" className="space-y-4 glass rounded-3xl p-4 md:p-6">
-      <div className="flex items-center justify-between gap-2">
-        <div>
+    <section aria-label="Month close" className="stack glass rounded-[1.75rem] p-6 md:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
           <h2 className="font-display text-[32px] leading-none">Month close</h2>
           <p className="text-sm text-muted-foreground">How the month went, in plain words.</p>
         </div>
@@ -175,7 +175,7 @@ export function MonthClosePanel() {
       {review && (
         <>
           {review.sentences.length > 0 && (
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {review.sentences.map((s, i) => (
                 <li key={i} className="text-lg leading-relaxed sm:text-xl">
                   {s}
@@ -183,7 +183,7 @@ export function MonthClosePanel() {
               ))}
             </ul>
           )}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SpentTile review={review} />
             <SavingsTile review={review} />
             <NetWorthTile review={review} />

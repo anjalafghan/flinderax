@@ -30,7 +30,7 @@ function LedgerButtons({ ledger }: { ledger: LedgerAction }) {
   const busy = record.isPending;
   const isCard = ledger.kind === "card_bill";
   return (
-    <div className="mt-2 flex flex-wrap gap-2">
+    <div className="mt-3 flex flex-wrap gap-2 pl-[26px]">
       {ledger.amount_paise > 0 && (
         <Button size="sm" disabled={busy} onClick={() => send("moved", ledger.amount_paise)}>
           I moved {formatINR(ledger.amount_paise)}
@@ -62,17 +62,17 @@ function LedgerButtons({ ledger }: { ledger: LedgerAction }) {
 
 export function ActionList({ actions }: { actions: DashboardSummary["actions"] }) {
   return (
-    <section aria-label="Do this" className="space-y-3">
-      <div className="flex items-baseline justify-between gap-4">
+    <section aria-label="Do this" className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <h2 className="font-display text-[32px] leading-none">Do this</h2>
         <span className="eyebrow">{actions.length > 1 ? `${actions.length} things, now` : "one thing, now"}</span>
       </div>
       {actions.length === 0 ? (
-        <p className="flex items-center gap-2 rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">
-          <CheckCircle2 className="h-4 w-4 text-primary" /> Nothing to move. You're sorted.
+        <p className="empty-note flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" aria-hidden /> Nothing to move. You're sorted.
         </p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {actions.map((a) => (
             <li
               key={a.text}

@@ -36,7 +36,7 @@ function Field({
   optional?: boolean;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="field">
       <div className="flex items-center gap-1.5">
         <Label htmlFor={id}>{label}</Label>
         {optional && <span className="text-xs text-muted-foreground">(optional)</span>}
@@ -96,20 +96,18 @@ export function CardSnapshotForm({ cardId, isFirst }: { cardId: string; isFirst:
 
   return (
     <Card id="snapshot-form">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-3xl">Update from bank app</CardTitle>
-        <p className="text-sm text-muted-foreground">Copy the numbers exactly as your bank app shows them.</p>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[32px]">Update from bank app</CardTitle>
+        <p className="max-w-prose text-sm text-muted-foreground">Copy the numbers exactly as your bank app shows them.</p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="total-due" label="Total due" help={HELP.total_due} value={totalDue} onChange={setTotalDue} />
-            <Field id="outstanding" label="Outstanding" help={HELP.outstanding} value={outstanding} onChange={setOutstanding} />
-            <Field id="unbilled-spent" label="Unbilled spent" help={HELP.unbilled_spent} value={unbilledSpent} onChange={setUnbilledSpent} optional />
-            <Field id="unbilled-credit" label="Unbilled credit" help={HELP.unbilled_credit} value={unbilledCredit} onChange={setUnbilledCredit} optional />
-          </div>
+        <form onSubmit={submit} className="form-grid" noValidate>
+          <Field id="total-due" label="Total due" help={HELP.total_due} value={totalDue} onChange={setTotalDue} />
+          <Field id="outstanding" label="Outstanding" help={HELP.outstanding} value={outstanding} onChange={setOutstanding} />
+          <Field id="unbilled-spent" label="Unbilled spent" help={HELP.unbilled_spent} value={unbilledSpent} onChange={setUnbilledSpent} optional />
+          <Field id="unbilled-credit" label="Unbilled credit" help={HELP.unbilled_credit} value={unbilledCredit} onChange={setUnbilledCredit} optional />
           {isFirst && (
-            <fieldset className="space-y-2 glass rounded-2xl p-3 text-sm">
+            <fieldset className="col-span-full space-y-3 text-sm">
               <legend className="px-1 font-medium">What are these numbers?</legend>
               <label className="flex items-start gap-2">
                 <input type="radio" name="first-kind" className="mt-1" checked={starting} onChange={() => setStarting(true)} />
@@ -127,10 +125,12 @@ export function CardSnapshotForm({ cardId, isFirst }: { cardId: string; isFirst:
               </label>
             </fieldset>
           )}
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={save.isPending}>
-            {save.isPending ? "Saving..." : "Save snapshot"}
-          </Button>
+          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          <div className="form-actions">
+            <Button type="submit" disabled={save.isPending}>
+              {save.isPending ? "Saving..." : "Save snapshot"}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

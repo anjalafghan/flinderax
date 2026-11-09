@@ -60,7 +60,7 @@ export function PasteAlert() {
         placeholder="Paste a bank alert SMS or email here"
         className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end">
         <Button onClick={submit} disabled={parse.isPending || !text.trim()}>
           {parse.isPending ? "Reading..." : "Add alert"}
         </Button>

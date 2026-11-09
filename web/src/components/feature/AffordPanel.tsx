@@ -34,7 +34,7 @@ const ANSWER: Record<AffordAnswer, { label: string; box: string }> = {
 function Result({ r }: { r: AffordResult }) {
   const tone = ANSWER[r.answer];
   return (
-    <section aria-label="Answer" data-answer={r.answer} className={cn("space-y-3 glass rounded-3xl p-5", tone.box)}>
+    <section aria-label="Answer" data-answer={r.answer} className={cn("space-y-3 glass rounded-3xl p-5 md:p-6", tone.box)}>
       <p className="text-sm font-semibold uppercase tracking-wide opacity-80">{tone.label}</p>
       <p className="text-xl font-bold leading-snug">{r.headline}</p>
       {r.reasons.length > 0 && (
@@ -86,19 +86,19 @@ export function AffordPanel() {
 
   return (
     <Card id="afford" className="scroll-mt-24">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-3xl">Can I afford it?</CardTitle>
-        <p className="text-sm text-muted-foreground">Check a purchase against your budget before you buy.</p>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[32px]">Can I afford it?</CardTitle>
+        <p className="text-sm text-muted-foreground max-w-prose">Check a purchase against your budget before you buy.</p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          <div className="space-y-1">
+      <CardContent className="space-y-6">
+        <form onSubmit={submit} className="form-grid" noValidate>
+          <div className="field col-span-full">
             <Label htmlFor="afford-amount">What does it cost?</Label>
             <MoneyInput id="afford-amount" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="45000" />
           </div>
 
-          <fieldset className="space-y-2">
-            <legend className="mb-1 text-sm font-medium">How will you pay?</legend>
+          <fieldset className="field col-span-full">
+            <legend className="text-sm font-medium">How will you pay?</legend>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" aria-pressed={mode === "now"} className={seg(mode === "now")} onClick={() => setMode("now")}>
                 Pay now
@@ -110,8 +110,8 @@ export function AffordPanel() {
           </fieldset>
 
           {mode === "emi" && (
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
+            <>
+              <div className="field">
                 <Label htmlFor="afford-months">Months</Label>
                 <Input
                   id="afford-months"
@@ -121,7 +121,7 @@ export function AffordPanel() {
                   onChange={(e) => setEmi({ ...emi, months: e.target.value })}
                 />
               </div>
-              <div className="space-y-1">
+              <div className="field">
                 <Label htmlFor="afford-rate">Interest % a year</Label>
                 <Input
                   id="afford-rate"
@@ -131,17 +131,19 @@ export function AffordPanel() {
                   placeholder="0"
                 />
               </div>
-              <div className="col-span-2 space-y-1">
+              <div className="field col-span-full">
                 <Label htmlFor="afford-fee">Processing fee (optional)</Label>
                 <MoneyInput id="afford-fee" value={emi.fee} onChange={(e) => setEmi({ ...emi, fee: e.target.value })} />
               </div>
-            </div>
+            </>
           )}
 
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={check.isPending}>
-            {check.isPending ? "Checking..." : "Check"}
-          </Button>
+          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          <div className="form-actions">
+            <Button type="submit" disabled={check.isPending}>
+              {check.isPending ? "Checking..." : "Check"}
+            </Button>
+          </div>
         </form>
 
         {check.data && <Result r={check.data} />}

@@ -72,7 +72,7 @@ export function IngestSetup() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-[32px] leading-none tracking-tight">Automatic import setup</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="max-w-prose text-sm text-muted-foreground">
               {isError
                 ? "Couldn't check the import key."
                 : hasKey

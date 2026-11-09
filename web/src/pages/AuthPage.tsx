@@ -128,31 +128,29 @@ export default function AuthPage() {
 
             <TabsContent value="login" className="mt-0">
               <Card className="border-0 bg-transparent shadow-none backdrop-blur-none">
-                <CardHeader>
-                  <CardTitle>Welcome Back</CardTitle>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-[24px]">Welcome Back</CardTitle>
                   <CardDescription>
                     Enter your credentials to access your wallet.
                   </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleLogin}>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
+                  <CardContent className="space-y-5 pt-0 md:pt-0">
+                    <div className="field">
                       <Label htmlFor="username">Username</Label>
                       <Input
                         id="username"
                         placeholder="e.g. johndoe"
-                        className="h-12"
                         value={loginUser}
                         onChange={(e) => setLoginUser(e.target.value)}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="field">
                       <Label htmlFor="password">Password</Label>
                       <Input
                         id="password"
                         type="password"
                         placeholder="••••••••"
-                        className="h-12"
                         value={loginPass}
                         onChange={(e) => setLoginPass(e.target.value)}
                       />
@@ -173,31 +171,29 @@ export default function AuthPage() {
 
             <TabsContent value="register" className="mt-0">
               <Card className="border-0 bg-transparent shadow-none backdrop-blur-none">
-                <CardHeader>
-                  <CardTitle>Create Account</CardTitle>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-[24px]">Create Account</CardTitle>
                   <CardDescription>
                     Start your financial journey today.
                   </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleRegister}>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
+                  <CardContent className="space-y-5 pt-0 md:pt-0">
+                    <div className="field">
                       <Label htmlFor="reg-username">Username</Label>
                       <Input
                         id="reg-username"
                         placeholder="Choose a username"
-                        className="h-12"
                         value={regUser}
                         onChange={(e) => setRegUser(e.target.value)}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="field">
                       <Label htmlFor="reg-password">Password</Label>
                       <Input
                         id="reg-password"
                         type="password"
                         placeholder="Create a password"
-                        className="h-12"
                         value={regPass}
                         onChange={(e) => setRegPass(e.target.value)}
                       />

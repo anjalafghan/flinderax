@@ -82,7 +82,7 @@ export function SpendingOverview({
         <div className="min-w-0 space-y-3">
           <h3 className="text-sm font-semibold">By category</h3>
           {rows.length === 0 ? (
-            <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">No spending yet this month.</p>
+            <p className="empty-note">No spending yet this month.</p>
           ) : (
             <CategoryBars rows={rows} total={spent} />
           )}
@@ -90,7 +90,7 @@ export function SpendingOverview({
         <div className="min-w-0 space-y-3">
           <h3 className="text-sm font-semibold">Last 6 months</h3>
           {summary.months.length === 0 ? (
-            <p className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-4 text-sm text-muted-foreground">Nothing tracked yet.</p>
+            <p className="empty-note">Nothing tracked yet.</p>
           ) : (
             <MonthBars months={summary.months} />
           )}
@@ -98,11 +98,11 @@ export function SpendingOverview({
       </div>
 
       {summary.top_merchants.length > 0 && (
-        <div className="space-y-3 border-t pt-4">
+        <div className="space-y-3 border-t border-border pt-6">
           <h3 className="text-sm font-semibold">Top merchants</h3>
-          <ol className="divide-y">
+          <ol className="ledger">
             {summary.top_merchants.map((m) => (
-              <li key={m.merchant} className="flex items-center justify-between gap-3 py-2 text-sm">
+              <li key={m.merchant} className="ledger-row text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{m.merchant}</p>
                   <p className="text-xs text-muted-foreground">{plural(m.count, "payment", "payments")}</p>

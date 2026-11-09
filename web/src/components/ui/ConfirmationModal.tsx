@@ -35,29 +35,29 @@ export function ConfirmationModal({
                     "h-1.5 w-full",
                     variant === "destructive" ? "bg-destructive" : "bg-primary"
                 )} />
-                <CardHeader className="flex flex-row items-start justify-between pb-2">
-                    <div className="flex items-center gap-3">
+                <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
+                    <div className="flex min-w-0 items-center gap-3">
                         <div className={cn(
-                            "p-2 rounded-full",
+                            "shrink-0 p-2 rounded-full",
                             variant === "destructive" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
                         )}>
                             <AlertTriangle className="h-5 w-5" />
                         </div>
-                        <CardTitle className="text-3xl">{title}</CardTitle>
+                        <CardTitle className="min-w-0 text-[24px]">{title}</CardTitle>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full -mt-1 -mr-1" disabled={isPending}>
+                    <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 shrink-0 rounded-full -mt-1 -mr-1" disabled={isPending}>
                         <X className="h-4 w-4" />
                     </Button>
                 </CardHeader>
-                <CardContent className="space-y-6 pt-2">
+                <CardContent className="space-y-6">
                     <p className="text-muted-foreground leading-relaxed">
                         {description}
                     </p>
 
-                    <div className="flex gap-3 pt-2">
+                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                         <Button
                             variant="outline"
-                            className="flex-1 h-11 rounded-xl"
+                            className="h-11 w-full rounded-xl sm:w-auto sm:min-w-28"
                             onClick={onClose}
                             disabled={isPending}
                         >
@@ -65,7 +65,7 @@ export function ConfirmationModal({
                         </Button>
                         <Button
                             variant={variant === "destructive" ? "destructive" : "default"}
-                            className="flex-1 h-11 rounded-xl font-semibold"
+                            className="h-11 w-full rounded-xl font-semibold sm:w-auto sm:min-w-28"
                             onClick={onConfirm}
                             disabled={isPending}
                         >

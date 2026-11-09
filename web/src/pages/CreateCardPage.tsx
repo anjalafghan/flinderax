@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 
 import api from "@/services/api";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -78,8 +79,8 @@ export default function CreateCardPage() {
   });
 
   return (
-    <div className="min-h-screen p-6 md:p-10">
-      <div className="mx-auto max-w-2xl space-y-8">
+    <div className="min-h-screen">
+      <div className="page stack max-w-2xl">
         <div>
           <Button
             variant="ghost"
@@ -94,118 +95,15 @@ export default function CreateCardPage() {
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2">
-          {/* Form */}
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label>Card Name / Nickname</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Travel Rewards"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Bank Name</Label>
-              <Input
-                value={bank}
-                onChange={(e) => setBank(e.target.value)}
-                placeholder="e.g. Chase"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Last 4 Digits (Optional)</Label>
-              <Input
-                value={last4Digits}
-                onChange={(e) => setLast4Digits(e.target.value)}
-                placeholder="e.g. 1234"
-                maxLength={4}
-              />
-            </div>
-
-            <div className="space-y-3 glass rounded-3xl p-4">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-medium">Billing cycle (optional)</p>
-                <InfoTip text="Used to work out when each bill is due. Find the statement date and due date on your card's bank page." />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="statement-day">Statement day</Label>
-                  <Input id="statement-day" inputMode="numeric" maxLength={2} placeholder="e.g. 23" value={statementDay} onChange={(e) => setStatementDay(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="due-day">Due day</Label>
-                  <Input id="due-day" inputMode="numeric" maxLength={2} placeholder="e.g. 13" value={dueDay} onChange={(e) => setDueDay(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="credit-limit">Credit limit</Label>
-                <MoneyInput id="credit-limit" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pay-from">Bill is paid from</Label>
-                <Select id="pay-from" value={payFrom} onChange={(e) => setPayFrom(e.target.value)}>
-                  <option value="">Reserve account</option>
-                  {accounts?.filter((a) => !a.locked).map((a) => (
-                    <option key={a.account_id} value={a.account_id}>{a.name}</option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Primary Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="h-10 w-20 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="uppercase"
-                    maxLength={7}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Secondary Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="h-10 w-20 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="uppercase"
-                    maxLength={7}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={() => createCardMutation.mutate()}
-              disabled={createCardMutation.isPending}
-            >
-              {createCardMutation.isPending ? "Creating..." : "Create Card"}
-            </Button>
-          </div>
-
-          {/* Preview */}
-          <div className="flex flex-col gap-4">
-            <Label>Preview</Label>
+        {/* Preview */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-[24px]">Preview</CardTitle>
+            <CardDescription className="max-w-prose leading-snug">
+              This is how your card will appear on the dashboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="flex items-center justify-center rounded-xl bg-chip p-8">
               <CreditCard
                 id="preview"
@@ -218,11 +116,124 @@ export default function CreateCardPage() {
                 last4Digits={last4Digits || "1234"}
               />
             </div>
-            <p className="text-center text-xs text-muted-foreground">
-              This is how your card will appear on the dashboard.
-            </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* Form */}
+        <Card>
+          <CardContent>
+            <div className="form-grid">
+              <div className="field">
+                <Label htmlFor="card-name">Card Name / Nickname</Label>
+                <Input
+                  id="card-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Travel Rewards"
+                />
+              </div>
+
+              <div className="field">
+                <Label htmlFor="card-bank">Bank Name</Label>
+                <Input
+                  id="card-bank"
+                  value={bank}
+                  onChange={(e) => setBank(e.target.value)}
+                  placeholder="e.g. Chase"
+                />
+              </div>
+
+              <div className="field">
+                <Label htmlFor="card-last4">Last 4 Digits (Optional)</Label>
+                <Input
+                  id="card-last4"
+                  inputMode="numeric"
+                  value={last4Digits}
+                  onChange={(e) => setLast4Digits(e.target.value)}
+                  placeholder="e.g. 1234"
+                  maxLength={4}
+                />
+              </div>
+
+              <div className="form-grid col-span-full border-t border-border pt-6">
+                <div className="col-span-full flex items-center gap-1.5">
+                  <p className="text-sm font-medium">Billing cycle (optional)</p>
+                  <InfoTip text="Used to work out when each bill is due. Find the statement date and due date on your card's bank page." />
+                </div>
+                <div className="field">
+                  <Label htmlFor="statement-day">Statement day</Label>
+                  <Input id="statement-day" inputMode="numeric" maxLength={2} placeholder="e.g. 23" value={statementDay} onChange={(e) => setStatementDay(e.target.value)} />
+                </div>
+                <div className="field">
+                  <Label htmlFor="due-day">Due day</Label>
+                  <Input id="due-day" inputMode="numeric" maxLength={2} placeholder="e.g. 13" value={dueDay} onChange={(e) => setDueDay(e.target.value)} />
+                </div>
+                <div className="field">
+                  <Label htmlFor="credit-limit">Credit limit</Label>
+                  <MoneyInput id="credit-limit" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
+                </div>
+                <div className="field">
+                  <Label htmlFor="pay-from">Bill is paid from</Label>
+                  <Select id="pay-from" value={payFrom} onChange={(e) => setPayFrom(e.target.value)}>
+                    <option value="">Reserve account</option>
+                    {accounts?.filter((a) => !a.locked).map((a) => (
+                      <option key={a.account_id} value={a.account_id}>{a.name}</option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              <div className="field">
+                <Label htmlFor="primary-color">Primary Color</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="primary-color"
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="h-10 w-20 shrink-0 cursor-pointer p-1"
+                  />
+                  <Input
+                    aria-label="Primary color hex"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="min-w-0 flex-1 uppercase"
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+
+              <div className="field">
+                <Label htmlFor="secondary-color">Secondary Color</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="secondary-color"
+                    type="color"
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="h-10 w-20 shrink-0 cursor-pointer p-1"
+                  />
+                  <Input
+                    aria-label="Secondary color hex"
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="min-w-0 flex-1 uppercase"
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <Button
+                  onClick={() => createCardMutation.mutate()}
+                  disabled={createCardMutation.isPending}
+                >
+                  {createCardMutation.isPending ? "Creating..." : "Create Card"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

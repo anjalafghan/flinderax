@@ -73,6 +73,14 @@
         <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
         <link rel="apple-touch-icon" href="./public/favicon.svg" />
 
+        <!-- Apply the saved theme before first paint, so dark mode doesn't flash light on every load. -->
+        <script>
+            try {
+                var t = localStorage.getItem("vite-ui-theme");
+                document.documentElement.classList.add(t === "light" ? "light" : "dark"); // ThemeProvider defaults to dark
+            } catch (e) {}
+        </script>
+
         <!-- Fonts: Newsreader (display, numbers) and Figtree (UI) -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -13,7 +13,7 @@ function barTone(bps: number): string {
 export function CardUtilization({ cards }: { cards: HistoryCard[] }) {
   if (cards.length === 0) return null;
   return (
-    <section aria-label="Card utilization" className="space-y-3 glass rounded-3xl p-4 md:p-6">
+    <section aria-label="Card utilization" className="space-y-6 glass rounded-3xl p-4 md:p-6">
       <h2 className="font-display text-[32px] leading-none tracking-tight">Card usage</h2>
       <ul className="space-y-4">
         {cards.map((c) => {
