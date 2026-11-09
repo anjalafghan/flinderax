@@ -58,6 +58,17 @@ pub struct Joy {
     pub ctx: Ctx,
 }
 
+/// 404 when `id` is a surprise still sealed from `who` (the partner it is being planned for): a
+/// slip like that can't be opened, drawn, kept, saved for or even confirmed to exist. (A 403 would
+/// give the surprise away.) Every handler that looks a slip up by a client-sent id calls this, or
+/// `db::visible_get`; every list of a couple's slips uses `db::visible_list`.
+pub async fn unsealed(db: &SqlitePool, couple: &str, who: usize, id: i64) -> Result<(), AppError> {
+    if crate::joy::db::sealed_from(db, couple, who).await?.contains(&id) {
+        return Err(crate::handlers::common::not_found("No such slip"));
+    }
+    Ok(())
+}
+
 /// The caller's couple, slot and settings. A 403 for someone who hasn't started or joined one.
 pub async fn joy(state: &AppState, user_id: &str) -> Result<Joy, AppError> {
     let (couple, who) = require_couple(&state.db, user_id).await?;

@@ -160,7 +160,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
         .map(|r| Memory { title: ctx.personalize(&r.title), when: format!("{} {}", r.day_label(), r.day.get(..4).unwrap_or("")) });
     let nudge = nudge(db, couple, ctx, who).await?;
     let middle = middle::view(db, couple, ctx, who, &me.partner).await?;
-    let jar = jar_data(db, couple, ctx, None).await?;
+    let jar = jar_data(db, couple, ctx, j.who, None).await?;
     let acts = &jar.acts;
     // Every day this week, so a holiday Monday or an office Saturday can be planned too. The
     // next date we usually meet is picked to start with.
@@ -406,9 +406,9 @@ pub struct JarData {
     pub slot: Option<Slot>,
 }
 
-pub async fn jar_data(db: &SqlitePool, couple: &str, _ctx: &Ctx, slot: Option<Slot>) -> Result<JarData, AppError> {
+pub async fn jar_data(db: &SqlitePool, couple: &str, _ctx: &Ctx, who: usize, slot: Option<Slot>) -> Result<JarData, AppError> {
     let vetoed: Vec<i64> = db::vetoes(db, couple).await?.into_iter().map(|(a, _)| a).collect();
-    let acts = db::list(db, couple, false).await?.into_iter().filter(|a| !vetoed.contains(&a.id)).collect();
+    let acts = db::visible_list(db, couple, Some(who)).await?.into_iter().filter(|a| !vetoed.contains(&a.id)).collect();
     // Closed days and seasons are about the day we're drawing for, not necessarily today.
     let today = match &slot {
         Some(sl) => Today { weekday: sl.weekday(), month: sl.month() },
@@ -466,7 +466,7 @@ pub async fn matching(
     let f = body.map(|j| j.0).unwrap_or_default();
     let j = joy(&s, &user_id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
-    let jar = jar_data(db, couple, ctx, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
+    let jar = jar_data(db, couple, ctx, j.who, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
     let cands = jar.candidates(ctx, &f);
     let filters = jar.filters(&f, rain(ctx).await.is_some());
     let ids: Vec<i64> = cands.iter().filter(|c| picker::matches(c, &filters)).map(|c| c.id).collect();
@@ -621,11 +621,13 @@ pub async fn pick(
     // isn't ours does nothing (the veto is scoped to the couple).
     if f.veto == "1" {
         if let Ok(cur) = f.current.parse::<i64>() {
+            super::unsealed(db, couple, j.who, cur).await?;
             db::veto(db, couple, cur, j.who).await?;
             excluded.push(cur);
         }
     } else if f.reroll == "1" {
         if let Ok(cur) = f.current.parse::<i64>() {
+            super::unsealed(db, couple, j.who, cur).await?;
             let current = db::get(db, couple, cur).await?;
             match picker::put_back(used, current.as_ref().is_some_and(|a| a.generated), d.max) {
                 Some(next) => {
@@ -645,7 +647,7 @@ pub async fn pick(
         }
     }
 
-    let jar = jar_data(db, couple, ctx, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
+    let jar = jar_data(db, couple, ctx, j.who, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
     let mut cands = jar.candidates(ctx, &f);
     if let Some(m) = &middle {
         cands.retain(|c| m.allows(&c.energy, &c.tags));
@@ -705,7 +707,7 @@ async fn card(
     slot: Option<Slot>,
 ) -> Result<PickCard, AppError> {
     let pairs = match a {
-        Some(a) => pair_offers(db, couple, ctx, f, a, learned).await?,
+        Some(a) => pair_offers(db, couple, ctx, d.me.who, f, a, learned).await?,
         None => vec![],
     };
     let mut view = a.map(|a| ActivityView::new(ctx, a, learned));
@@ -790,12 +792,17 @@ fn plan_line(ctx: &Ctx, slot: &Slot, fit: &schedule::Fit) -> String {
 }
 
 /// Up to two partners for the drawn slip, with the combined cost against tonight's budget.
-async fn pair_offers(db: &SqlitePool, couple: &str, ctx: &Ctx, f: &PickForm, a: &db::Activity, learned: &Learned) -> Result<Vec<PairOffer>, AppError> {
+async fn pair_offers(db: &SqlitePool, couple: &str, ctx: &Ctx, who: Option<usize>, f: &PickForm, a: &db::Activity, learned: &Learned) -> Result<Vec<PairOffer>, AppError> {
     let budget = f.filters().budget;
     let vetoed: Vec<i64> = db::vetoes(db, couple).await?.into_iter().map(|(a, _)| a).collect();
+    let sealed = match who {
+        Some(w) => db::sealed_from(db, couple, w).await?,
+        None => db::sealed_any(db, couple).await?,
+    };
     Ok(db::partners(db, couple, a.id)
         .await?
         .iter()
+        .filter(|p| !sealed.contains(&p.id))
         .filter(|p| !vetoed.contains(&p.id))
         .take(2)
         .map(|p| {
@@ -940,14 +947,14 @@ pub async fn accept(
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
     let who = Some(j.who);
     // A slip that isn't ours isn't here.
-    let Some(a) = db::get(db, couple, id).await? else { return Err(not_found("No such slip")) };
+    let Some(a) = db::visible_get(db, couple, j.who, id).await? else { return Err(not_found("No such slip")) };
     let surprise = q.surprise == "1";
     let learned = learned(db, couple).await?;
     let mut ids = vec![db::accept(db, couple, id, who, surprise).await?];
     let mut paired = None;
     if let Ok(with) = q.with.trim().parse::<i64>() {
         // Only a real partner of this slip can ride along.
-        if let Some(p) = db::partners(db, couple, id).await?.into_iter().find(|p| p.id == with) {
+        if let Some(p) = db::visible_partners(db, couple, j.who, id).await?.into_iter().find(|p| p.id == with) {
             ids.push(db::accept(db, couple, p.id, who, surprise).await?);
             paired = Some(ActivityView::new(ctx, &p, &learned));
         }

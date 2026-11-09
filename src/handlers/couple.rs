@@ -180,6 +180,8 @@ pub async fn join(
     .fetch_one(&mut *tx)
     .await?
     .ok_or_else(|| bad_request("That Dates already has two people"))?;
+    // Surprises left behind in this slot (from before this change, or from a leaver) stay sealed.
+    crate::joy::db::orphan_surprises(&mut tx, &couple, slot).await?;
     if slot == 1 {
         sqlx::query!("UPDATE couples SET user_1 = ? WHERE couple_id = ?", user_id, couple).execute(&mut *tx).await?;
     } else {
@@ -206,6 +208,9 @@ pub async fn join(
 pub async fn leave(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Done>, AppError> {
     let (couple, me) = couple_of(&state.db, &user_id).await?.ok_or_else(|| not_found("You're not in Dates"))?;
     let mut tx = state.db.begin().await?;
+    // What the leaver was still planning in secret stays sealed from everyone, so whoever takes
+    // the empty slot next can't become its planner.
+    crate::joy::db::orphan_surprises(&mut tx, &couple, me as i64).await?;
     if me == 0 {
         sqlx::query!("UPDATE couples SET user_0 = NULL WHERE couple_id = ?", couple).execute(&mut *tx).await?;
     } else {
