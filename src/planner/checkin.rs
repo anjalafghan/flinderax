@@ -2,6 +2,7 @@
 //! estimated balances between check-ins. No DB, no clock: the handler loads the rows and passes
 //! `today`. Money is paise. Dates are `Date` here and 'YYYY-MM-DD' strings in the JSON.
 
+use crate::planner::calibration::Calibration;
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -252,6 +253,8 @@ pub struct QuarterReport {
     pub wins: Vec<String>,
     pub watch: Vec<String>,
     pub habits: Vec<Habit>,
+    /// The forecast kept with the last check-in, set against what happened since.
+    pub calibration: Option<Calibration>,
 }
 
 /// The status: what is due, the four steps, and the estimated balances.
@@ -523,6 +526,7 @@ pub fn quarter_report(txns: &[TxnIn], period: Period, habits: Vec<Habit>) -> Qua
         wins,
         watch,
         habits: habits.into_iter().take(MAX_HABITS).collect(),
+        calibration: None,
     }
 }
 

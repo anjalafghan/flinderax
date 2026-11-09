@@ -245,6 +245,20 @@ function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
           </div>
         </div>
 
+        {data.calibration && data.calibration.lines.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <h3 className="m-0 text-[15px] font-medium">How the last forecast did</h3>
+            <p className="m-0 text-sm text-muted-foreground">
+              Since your check-in on {formatDay(data.calibration.since)}, about {data.calibration.months} months ago.
+            </p>
+            <ul className="m-0 flex list-none flex-col gap-2 p-0 text-[15px]">
+              {data.calibration.lines.map((l) => (
+                <li key={l}>{l}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {data.habits.length > 0 && (
           <div className="flex flex-col gap-3">
             <h3 className="m-0 text-[15px] font-medium">Next up</h3>

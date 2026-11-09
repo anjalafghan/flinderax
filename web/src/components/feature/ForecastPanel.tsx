@@ -54,6 +54,7 @@ function BasisLine({ basis }: { basis: Basis }) {
     <div className="flex flex-col gap-2 text-sm text-muted-foreground">
       <p className="m-0">{text}</p>
       {basis.note && <p className="m-0 text-[13px] leading-snug">{basis.note}</p>}
+      {basis.calibration_note && <p className="m-0 text-[13px] leading-snug">{basis.calibration_note}</p>}
     </div>
   );
 }

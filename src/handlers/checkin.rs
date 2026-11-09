@@ -13,6 +13,7 @@ use time::{macros::format_description, Date};
 
 use crate::{
     handlers::{
+        calibration,
         common::{bad_request, today_local, AppError},
         habits,
     },
@@ -136,7 +137,9 @@ pub async fn report_on(
     }
     let period = Period { start, end };
     let habits = habits::compute(state, user_id, today).await?;
-    Ok(checkin::quarter_report(&input.txns, period, habits))
+    let mut report = checkin::quarter_report(&input.txns, period, habits);
+    report.calibration = calibration::latest(state, user_id, today).await?;
+    Ok(report)
 }
 
 /// Saves today's check-in with the report for its period, replacing any saved today, then returns
@@ -160,8 +163,12 @@ pub async fn complete_on(
 
     let txns = load_txns(db, user_id).await?;
     let habits = habits::compute(state, user_id, today).await?;
-    let report = checkin::quarter_report(&txns, period, habits);
+    let mut report = checkin::quarter_report(&txns, period, habits);
+    report.calibration = calibration::latest(state, user_id, today).await?;
     let summary = serde_json::to_string(&report).map_err(stored_error)?;
+    // The forecast as it stands now, for the next check-in to compare with.
+    let snap = calibration::snapshot(state, user_id, today).await?;
+    let forecast_json = serde_json::to_string(&snap).map_err(stored_error)?;
 
     let mut tx = db.begin().await?;
     sqlx::query("DELETE FROM checkins WHERE user_id = ? AND done_on = ?")
@@ -170,8 +177,8 @@ pub async fn complete_on(
         .execute(&mut *tx)
         .await?;
     sqlx::query(
-        "INSERT INTO checkins (checkin_id, user_id, done_on, period_start, period_end, summary_json)
-         VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO checkins (checkin_id, user_id, done_on, period_start, period_end, summary_json, forecast_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(new_id())
     .bind(user_id)
@@ -179,6 +186,7 @@ pub async fn complete_on(
     .bind(period.start.to_string())
     .bind(period.end.to_string())
     .bind(summary)
+    .bind(forecast_json)
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
@@ -266,7 +274,7 @@ async fn load_status_input(
 }
 
 /// Every transaction the user has, as the check-in reads them.
-async fn load_txns(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<TxnIn>, AppError> {
+pub(crate) async fn load_txns(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<TxnIn>, AppError> {
     /// date, direction, paise, merchant, category, account
     type TxnRow = (String, String, i64, Option<String>, String, Option<String>);
     let rows: Vec<TxnRow> = sqlx::query_as(
@@ -480,6 +488,71 @@ mod tests {
         // The rent of 20 Jul is before the period.
         assert_eq!(rows[0].totals.income_paise, 90_000_000);
         assert_eq!(rows[0].totals.spend_paise, 6_000_000 + 500_000);
+    }
+
+    /// A plan for `u` with take-home and the emergency fund's saved amount, in rupees.
+    async fn save_plan(state: &AppState, emergency_saved_rupees: i64) {
+        let json = format!(r#"{{"my_take_home_paise": 10000000, "monthly_expenses_paise": 5000000, "emergency_saved_paise": {}}}"#, emergency_saved_rupees * 100);
+        sqlx::query("INSERT INTO life_profiles (user_id, profile_json) VALUES ('u', ?) ON CONFLICT(user_id) DO UPDATE SET profile_json = excluded.profile_json")
+            .bind(json)
+            .execute(&state.db)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn the_next_check_in_sets_the_kept_forecast_against_what_happened() {
+        let state = test_state().await;
+        save_plan(&state, 10_000).await;
+        // First check-in: keeps the forecast as it stands.
+        ok(complete_on(&state, "u", day(2026, 8, 10)).await);
+        let kept: Option<String> = sqlx::query_scalar("SELECT forecast_json FROM checkins WHERE user_id = 'u'").fetch_one(&state.db).await.unwrap();
+        let snap: crate::planner::calibration::Snapshot = serde_json::from_str(&kept.unwrap()).unwrap();
+        assert_eq!(snap.made_on, "2026-08-10");
+        let funded = snap.goals.iter().find(|g| g.key == "emergency").unwrap().funded_monthly_paise;
+        assert!(funded > 0, "{snap:?}");
+        // Nothing to compare with on the same day.
+        assert!(ok(report_on(&state, "u", day(2026, 8, 10), ReportQuery { start: None, end: None }).await).calibration.is_none());
+
+        // A quarter on, the emergency fund gained only ₹1,000.
+        save_plan(&state, 11_000).await;
+        let today = day(2026, 11, 9);
+        let r = ok(report_on(&state, "u", today, ReportQuery { start: None, end: None }).await);
+        let c = r.calibration.expect("a calibration");
+        assert_eq!(c.since, "2026-08-10");
+        let e = c.goals.iter().find(|g| g.key == "emergency").unwrap();
+        assert_eq!(e.actual_paise, 100_000);
+        assert!(!e.on_pace && e.expected_paise > 100_000, "{e:?}");
+        let ft = c.next_follow_through_bps.unwrap();
+        assert!(ft < 10_000, "{ft}");
+
+        // The forecast now assumes only that share reaches the goals, and says so.
+        let f = ok(crate::handlers::forecast::compute(&state, "u", today).await);
+        assert_eq!(f.basis.follow_through_bps, Some(ft));
+        assert!(f.basis.calibration_note.as_deref().unwrap().starts_with("Since your check-in on 10 Aug 2026, about "), "{:?}", f.basis.calibration_note);
+
+        // Finishing this check-in keeps the comparison in the saved report, and a forecast that
+        // remembers the share it assumed.
+        ok(complete_on(&state, "u", today).await);
+        let (summary, kept): (String, String) =
+            sqlx::query_as("SELECT summary_json, forecast_json FROM checkins WHERE done_on = '2026-11-09'").fetch_one(&state.db).await.unwrap();
+        assert!(summary.contains("\"calibration\":{"), "{summary}");
+        let snap: crate::planner::calibration::Snapshot = serde_json::from_str(&kept).unwrap();
+        assert_eq!(snap.applied_follow_through_bps, ft);
+    }
+
+    #[tokio::test]
+    async fn another_users_kept_forecast_is_never_read() {
+        let state = test_state().await;
+        save_plan(&state, 10_000).await;
+        seed(
+            &state,
+            &[r#"INSERT INTO checkins (checkin_id, user_id, done_on, period_start, period_end, summary_json, forecast_json)
+                 VALUES ('x', 'other', '2026-08-10', '2026-05-12', '2026-08-10', '{}', '{"made_on":"2026-08-10","source":"profile","surplus_paise":1,"goals":[{"key":"emergency","label":"Emergency fund","saved_paise":0,"funded_monthly_paise":5000000,"likelihood_bps":0}]}')"#],
+        )
+        .await;
+        let r = ok(report_on(&state, "u", day(2026, 11, 9), ReportQuery { start: None, end: None }).await);
+        assert!(r.calibration.is_none());
     }
 
     #[tokio::test]

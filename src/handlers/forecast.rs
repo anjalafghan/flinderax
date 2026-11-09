@@ -8,13 +8,14 @@ use time::{macros::format_description, Date, Month};
 
 use crate::{
     handlers::{
-        analytics,
+        analytics, calibration,
         common::{today_local, AppError},
         life,
     },
     models::AppState,
     planner::{
         analytics::AnalyticsOut,
+        calibration::{tempered_note, tempered_surplus},
         cycle::add_months,
         forecast::{self, Basis, Forecast, ForecastInput, GoalIn, Lever, LeverKind},
         life::{inr, parse_date, plan, LifePlan, LifeProfile},
@@ -56,12 +57,19 @@ pub async fn compute(state: &AppState, user_id: &str, today: Date) -> Result<For
     let profile: LifeProfile = saved.as_deref().and_then(|j| serde_json::from_str(j).ok()).unwrap_or_default();
     let expenses = life::resolve_expenses(db, user_id, today, &profile).await?;
     let analytics = analytics::compute(db, user_id, today).await?;
-    let basis = basis_for(&analytics, &profile, expenses, today);
+    let mut basis = basis_for(&analytics, &profile, expenses, today);
+    // The last check-in may have shown that only part of the surplus reaches the goals.
+    if let Some(c) = calibration::latest(state, user_id, today).await?
+        && let Some(ft) = c.next_follow_through_bps.filter(|f| *f < 10_000)
+    {
+        basis.follow_through_bps = Some(ft);
+        basis.calibration_note = Some(tempered_note(ft, &calibration::day_label(&c.since)));
+    }
     // resolve_expenses already prefers the statements' spend over the budget estimate.
     let life_plan = plan(&profile, expenses, today);
     let input = ForecastInput {
         today,
-        surplus_paise: basis.surplus_paise,
+        surplus_paise: tempered_surplus(basis.surplus_paise, basis.follow_through_bps),
         surplus_sd_paise: basis.surplus_sd_paise,
         goals: goals_in(&life_plan, today),
         paths: forecast::DEFAULT_PATHS,
@@ -130,6 +138,8 @@ fn basis_for(analytics: &AnalyticsOut, profile: &LifeProfile, expenses: i64, tod
             surplus_sd_paise: f.surplus_sd,
             entered_income_paise: entered,
             note,
+            follow_through_bps: None,
+            calibration_note: None,
         };
     }
     let surplus = entered.saturating_sub(expenses);
@@ -143,6 +153,8 @@ fn basis_for(analytics: &AnalyticsOut, profile: &LifeProfile, expenses: i64, tod
         surplus_sd_paise: surplus.max(0) * PROFILE_SD_PCT / 100,
         entered_income_paise: entered,
         note: None,
+        follow_through_bps: None,
+        calibration_note: None,
     }
 }
 

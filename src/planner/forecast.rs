@@ -112,6 +112,11 @@ pub struct Basis {
     pub surplus_sd_paise: i64,
     pub entered_income_paise: i64,
     pub note: Option<String>,
+    /// The share of the surplus assumed to reach the goals, when the last check-in showed less
+    /// than all of it arrives. `None` means all of it.
+    pub follow_through_bps: Option<i64>,
+    /// Says how the last check-in tempered this forecast.
+    pub calibration_note: Option<String>,
 }
 
 /// The whole forecast, as the API returns it.

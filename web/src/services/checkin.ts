@@ -69,6 +69,27 @@ export interface QuarterReport {
   wins: string[];
   watch: string[];
   habits: Habit[];
+  /** The forecast kept with the last check-in, set against what happened since. */
+  calibration?: Calibration | null;
+}
+
+export interface GoalCheck {
+  key: string;
+  label: string;
+  expected_paise: number;
+  actual_paise: number;
+  on_pace: boolean;
+}
+
+export interface Calibration {
+  since: string;
+  months: number;
+  expected_surplus_paise: number;
+  actual_surplus_paise: number | null;
+  goals: GoalCheck[];
+  follow_through_bps: number | null;
+  next_follow_through_bps: number | null;
+  lines: string[];
 }
 
 export interface CheckinHistoryItem {

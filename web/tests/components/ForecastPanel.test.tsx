@@ -110,6 +110,12 @@ describe("ForecastPanel", () => {
     expect(screen.getByText("Your statements show ₹1,40,000 a month coming in; your plan says ₹1,55,000.")).toBeInTheDocument();
   });
 
+  it("says when the last check-in tempered the forecast", () => {
+    const line = "Since your check-in on 10 Aug 2026, about 50% of the money you had left each month reached your goals. This forecast assumes the same.";
+    withData({ ...fixture, basis: { ...fixture.basis, follow_through_bps: 5_000, calibration_note: line } });
+    expect(screen.getByText(line)).toBeInTheDocument();
+  });
+
   it("gives each goal a meter with its whole-number likelihood", () => {
     withData(fixture);
     const wedding = screen.getByRole("meter", { name: "Chance of reaching Wedding on time" });
