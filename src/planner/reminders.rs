@@ -5,6 +5,7 @@ use time::{format_description::FormatItem, macros::format_description, Date, Off
 
 use crate::joy::ics::{escape, fold};
 use crate::planner::habits::Habit;
+use crate::planner::people::{day_events, DateIn, SeasonIn};
 
 const DATE: &[FormatItem<'static>] = format_description!("[year][month][day]");
 const STAMP: &[FormatItem<'static>] = format_description!("[year][month][day]T[hour][minute][second]Z");
@@ -45,6 +46,34 @@ pub fn from_habits(habits: &[Habit], today: Date, public_url: &str) -> Vec<Remin
             })
         })
         .collect()
+}
+
+/// How far ahead person dates and gift seasons appear in the calendar.
+const DATES_AHEAD_DAYS: i64 = 90;
+
+/// All-day events for the person dates and festival seasons in the next 90 days. Titles leave names out
+/// unless `feed_names` is on.
+pub fn from_dates(dates: &[DateIn], seasons: &[SeasonIn], today: Date, feed_names: bool, public_url: &str) -> Vec<Reminder> {
+    day_events(dates, seasons, today, DATES_AHEAD_DAYS, feed_names)
+        .into_iter()
+        .map(|e| Reminder {
+            uid: e.uid,
+            on: e.on,
+            summary: e.summary,
+            description: format!("{}\n{public_url}/people", e.description),
+        })
+        .collect()
+}
+
+/// Swaps the names in people habit titles for plain words, for a feed that keeps names out.
+pub fn hide_names(habits: &mut [Habit]) {
+    for h in habits {
+        if h.key.starts_with("catch_up:") {
+            h.title = "Catch up with someone".into();
+        } else if h.key.starts_with("gift:") {
+            h.title = "Gift for an upcoming date".into();
+        }
+    }
 }
 
 /// The whole calendar file. `now_unix` is the DTSTAMP of every event.
@@ -210,5 +239,95 @@ mod tests {
         assert_eq!(token_from_file(&good), None, "the .ics suffix is required");
         assert_eq!(token_from_file(&format!("{good}.json")), None);
         assert_eq!(token_from_file("../etc/passwd.ics"), None);
+    }
+
+    fn pdate(id: &str, name: &str, kind: crate::planner::people::DateKind, month: u8, day: u8) -> DateIn {
+        DateIn {
+            date_id: id.into(),
+            person_id: "p1".into(),
+            name: name.into(),
+            circle: crate::planner::people::Circle::Close,
+            kind,
+            label: String::new(),
+            month,
+            day,
+            year: Some(1990),
+            remind_days: 7,
+            gift_budget_paise: None,
+            settled_years: vec![],
+        }
+    }
+
+    #[test]
+    fn dates_are_events_without_names_by_default() {
+        use crate::planner::people::DateKind;
+        let dates = [
+            pdate("d1", "Person A", DateKind::Birthday, 12, 14),
+            pdate("d2", "Person B", DateKind::Anniversary, 3, 1),
+            pdate("d3", "Person C", DateKind::Birthday, 11, 9),
+        ];
+        let got = from_dates(&dates, &[], date!(2026 - 11 - 09), false, "https://joy.example");
+        let uids: Vec<&str> = got.iter().map(|r| r.uid.as_str()).collect();
+        assert_eq!(uids, vec!["joy-pdate-d3-2026@joy", "joy-pdate-d1-2026@joy"], "1 Mar is more than 90 days away");
+        assert_eq!(got[1].summary, "Birthday (close friend)");
+        assert_eq!(got[1].on, date!(2026 - 12 - 14));
+        assert!(got.iter().all(|r| !r.summary.contains("Person") && !r.description.contains("Person")));
+        assert!(got[1].description.ends_with("https://joy.example/people"));
+    }
+
+    #[test]
+    fn names_show_only_when_asked() {
+        use crate::planner::people::DateKind;
+        let dates = [pdate("d1", "Person A", DateKind::Birthday, 12, 14)];
+        let got = from_dates(&dates, &[], date!(2026 - 11 - 09), true, "https://x");
+        assert_eq!(got[0].summary, "Person A's birthday");
+        assert!(got[0].description.contains("Turns 36."));
+    }
+
+    #[test]
+    fn a_date_ninety_days_out_is_in_and_ninety_one_is_out() {
+        use crate::planner::people::DateKind;
+        // 9 Nov + 90 days = 7 Feb 2027.
+        let dates = [pdate("a", "x", DateKind::Birthday, 2, 7), pdate("b", "x", DateKind::Birthday, 2, 8)];
+        let got = from_dates(&dates, &[], date!(2026 - 11 - 09), false, "https://x");
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].uid, "joy-pdate-a-2027@joy");
+    }
+
+    #[test]
+    fn year_wraps_from_december_to_january() {
+        use crate::planner::people::DateKind;
+        let dates = [pdate("d1", "x", DateKind::Birthday, 1, 5)];
+        let got = from_dates(&dates, &[], date!(2026 - 12 - 20), false, "https://x");
+        assert_eq!(got[0].on, date!(2027 - 01 - 05));
+        assert_eq!(got[0].uid, "joy-pdate-d1-2027@joy");
+    }
+
+    #[test]
+    fn seasons_are_events_on_the_first_with_their_label() {
+        let seasons = [
+            SeasonIn { id: "s1".into(), label: "Diwali".into(), month: 12, budget_paise: 500_000 },
+            SeasonIn { id: "s2".into(), label: "Rakhi".into(), month: 8, budget_paise: 100_000 },
+        ];
+        let got = from_dates(&[], &seasons, date!(2026 - 11 - 09), false, "https://x");
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].summary, "Gift season: Diwali");
+        assert_eq!(got[0].on, date!(2026 - 12 - 01));
+        assert_eq!(got[0].uid, "joy-gseason-s1-2026@joy");
+        let today_first = from_dates(&[], &seasons, date!(2026 - 12 - 01), false, "https://x");
+        assert_eq!(today_first[0].on, date!(2026 - 12 - 01), "the 1st itself counts");
+    }
+
+    #[test]
+    fn hiding_names_rewrites_only_people_habits() {
+        let mut habits = vec![
+            habit("catch_up:p1", "Catch up with Person A", Some("2026-11-20"), None),
+            habit("gift:d1:2026", "Gift for Person A's birthday on 14 Dec, about Rs 2,000.", Some("2026-12-01"), None),
+            habit("bank_statement:acctB", "Upload your Asha bank statement", Some("2026-11-20"), None),
+        ];
+        hide_names(&mut habits);
+        assert_eq!(habits[0].title, "Catch up with someone");
+        assert_eq!(habits[1].title, "Gift for an upcoming date");
+        assert_eq!(habits[2].title, "Upload your Asha bank statement");
     }
 }
