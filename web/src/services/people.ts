@@ -173,27 +173,10 @@ export interface SeasonInput {
 
 // ---------- transport ----------
 
-/**
- * PATCH, PUT and DELETE. `api` only speaks GET and POST, so this mirrors its auth header and error text.
- * A 204 has no body, so it resolves without parsing one.
- */
-async function request<T>(method: "PATCH" | "PUT" | "DELETE", url: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
-  const token = localStorage.getItem("token");
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(text || `Request failed with status ${response.status}`);
-  }
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+/** PATCH, PUT and DELETE through the shared client, so a lapsed session goes back to sign-in. */
+function request<T>(method: "PATCH" | "PUT" | "DELETE", url: string, body?: unknown): Promise<T> {
+  const call = method === "PUT" ? api.put<T>(url, body) : method === "PATCH" ? api.patch<T>(url, body) : api.del<T>(url);
+  return call.then((r) => r.data);
 }
 
 // ---------- fetchers ----------

@@ -26,6 +26,8 @@ const KIND_LABEL: Record<MarkKind, string> = { weight: "Weight", waist: "Waist",
 
 /** "12 Oct 2027" from "2027-10-12". */
 const dayYear = (iso: string) => `${formatDay(iso)} ${iso.slice(0, 4)}`;
+/** "1 Nov" this year, "1 Dec 2025" for an earlier year. */
+const dayMaybeYear = (iso: string) => (iso.slice(0, 4) === String(new Date().getFullYear()) ? formatDay(iso) : dayYear(iso));
 
 /** The recent readings across all three kinds, newest first, each with a delete. */
 function MarkList() {
@@ -55,12 +57,12 @@ function MarkList() {
         <li key={m.id} className="ledger-row">
           <span className="flex min-w-0 flex-col gap-1">
             <span className="text-[15px] font-medium">{valueText(m)}</span>
-            <span className="text-[13px] text-muted-foreground">{`${KIND_LABEL[m.kind]} on ${formatDay(m.measured_on)}`}</span>
+            <span className="text-[13px] text-muted-foreground">{`${KIND_LABEL[m.kind]} on ${dayMaybeYear(m.measured_on)}`}</span>
           </span>
           <Button
             variant="ghost"
             className="h-11 px-3"
-            aria-label={`Delete ${KIND_LABEL[m.kind].toLowerCase()} from ${formatDay(m.measured_on)}`}
+            aria-label={`Delete ${KIND_LABEL[m.kind].toLowerCase()} from ${dayMaybeYear(m.measured_on)}`}
             onClick={() =>
               remove.mutate(m.id, {
                 onSuccess: () => toast.success("Reading deleted."),
