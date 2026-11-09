@@ -50,12 +50,12 @@ pub fn minutes_for(duration_key: &str) -> i64 {
     }
 }
 
-fn escape(s: &str) -> String {
+pub(crate) fn escape(s: &str) -> String {
     s.replace('\\', "\\\\").replace(';', "\\;").replace(',', "\\,").replace('\r', "").replace('\n', "\\n")
 }
 
 /// Lines over 75 octets continue on the next line after a space.
-fn fold(line: &str) -> String {
+pub(crate) fn fold(line: &str) -> String {
     let mut out = String::new();
     let mut len = 0;
     for ch in line.chars() {

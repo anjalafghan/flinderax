@@ -20,6 +20,7 @@ const DatesApp = lazy(() => import('./joy/DatesApp'))
 const EnvelopePage = lazy(() => import('./joy/pages/EnvelopePage'))
 const ReviewPage = lazy(() => import('./pages/ReviewPage'))
 const LifePage = lazy(() => import('./pages/LifePage'))
+const CheckInPage = lazy(() => import('./pages/CheckInPage'))
 // Toasts are rare and sonner is ~35 KB, so its Toaster is a lazy chunk, not part of the shell.
 const Toaster = lazy(() => import('sonner').then((m) => ({ default: m.Toaster })))
 
@@ -148,6 +149,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <LifePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkin"
+            element={
+              <ProtectedRoute>
+                <CheckInPage />
               </ProtectedRoute>
             }
           />
