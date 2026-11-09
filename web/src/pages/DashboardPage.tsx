@@ -18,6 +18,7 @@ import { SpendingPanel } from "@/components/feature/SpendingPanel";
 import { DatesPanel } from "@/components/feature/DatesPanel";
 import { DueSoonCard } from "@/components/feature/BillsPanel";
 import { InsightsNudge } from "@/components/feature/InsightsPanel";
+import { HabitsCard } from "@/components/feature/HabitsCard";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 
 const QUICK_ACTIONS: { to: string; label: string; hint: string; icon: LucideIcon }[] = [
@@ -216,6 +217,7 @@ export default function DashboardPage() {
         <div className="mb-6 w-full">
           <PlannerSummary />
           <InsightsNudge />
+          <HabitsCard />
         </div>
 
         <nav aria-label="Quick actions" className="mb-12 grid w-full grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">

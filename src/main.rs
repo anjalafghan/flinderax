@@ -57,6 +57,14 @@ async fn shutdown_signal() {
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
+    // `joy gen-backup-key` and `joy restore-backup`: no server, no database, and no logging, so
+    // stdout carries only their output (the key can be captured with `$(joy gen-backup-key)`).
+    let cli_args: Vec<String> = env::args().collect();
+    if matches!(cli_args.get(1).map(String::as_str), Some("gen-backup-key" | "restore-backup")) {
+        dotenvy::dotenv().ok();
+        std::process::exit(joy::backup::cli(&cli_args).await);
+    }
+
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
