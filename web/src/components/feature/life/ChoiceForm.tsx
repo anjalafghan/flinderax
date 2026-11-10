@@ -31,7 +31,7 @@ const nextMonth = (() => {
 })();
 
 /** Every kind of choice: what to call it and which fields it needs. The field keys are the API's. */
-export const CHOICE_SPECS: Record<ChoiceKind, { title: string; fields: FieldSpec[] }> = {
+const CHOICE_SPECS: Record<ChoiceKind, { title: string; fields: FieldSpec[] }> = {
   job_switch: {
     title: "Switch jobs",
     fields: [

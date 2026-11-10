@@ -6,7 +6,7 @@ import { CatchUpSection } from "@/components/feature/people/CatchUpSection";
 import { useSummary } from "@/hooks/usePlanner";
 import { useDiet } from "@/services/diet";
 import { usePeople } from "@/services/people";
-import { useWork, type Lead } from "@/services/work";
+import { daysUntil, stepsThisWeek, useWork } from "@/services/work";
 import { formatDay } from "@/utils/dates";
 import { formatINR } from "@/utils/money";
 
@@ -14,23 +14,6 @@ const PANEL = "flex flex-col gap-6 rounded-[28px] border border-border bg-card p
 const TITLE = "m-0 font-display text-[32px] leading-none";
 const NOTE = "m-0 text-sm text-muted-foreground";
 const TEXT_LINK = "self-start text-sm font-medium text-primary";
-/** A next step this many days away, or already late, belongs on this week's list. */
-const SOON_DAYS = 7;
-
-function daysUntil(day: string): number {
-  const [y, m, d] = day.split("-").map(Number);
-  const today = new Date();
-  const from = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.round((Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1) - from) / 86_400_000);
-}
-
-/** Open leads whose next step is late or falls within the week, soonest first. */
-export function stepsThisWeek(leads: Lead[]): Lead[] {
-  return leads
-    .filter((l) => l.stage !== "closed" && l.next_on !== null && daysUntil(l.next_on) <= SOON_DAYS)
-    .sort((a, b) => (a.next_on ?? "").localeCompare(b.next_on ?? ""));
-}
-
 function WorkSteps() {
   const work = useWork();
   if (!work.data) return null;

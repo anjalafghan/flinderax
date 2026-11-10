@@ -2,9 +2,8 @@ import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 
 import WorkPage from "@/pages/WorkPage";
-import { stepsThisWeek } from "@/pages/WeekPage";
 import api from "@/services/api";
-import type { Lead } from "@/services/work";
+import { stepsThisWeek, type Lead } from "@/services/work";
 import { renderWithProviders, respond } from "../components/health/fixture";
 
 // Synthetic data only: Company A, Company B.

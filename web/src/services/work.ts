@@ -58,3 +58,20 @@ function useWorkWrite<V, T>(fn: (v: V) => Promise<T>) {
 export const useAddLead = () => useWorkWrite(addLead);
 export const useSaveLead = () => useWorkWrite((v: { id: string; lead: LeadInput }) => saveLead(v.id, v.lead));
 export const useRemoveLead = () => useWorkWrite(removeLead);
+
+/** A next step this many days away, or already late, belongs on this week's list. */
+const SOON_DAYS = 7;
+
+export function daysUntil(day: string): number {
+  const [y, m, d] = day.split("-").map(Number);
+  const today = new Date();
+  const from = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1) - from) / 86_400_000);
+}
+
+/** Open leads whose next step is late or falls within the week, soonest first. */
+export function stepsThisWeek(leads: Lead[]): Lead[] {
+  return leads
+    .filter((l) => l.stage !== "closed" && l.next_on !== null && daysUntil(l.next_on) <= SOON_DAYS)
+    .sort((a, b) => (a.next_on ?? "").localeCompare(b.next_on ?? ""));
+}
