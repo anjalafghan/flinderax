@@ -20,7 +20,7 @@ use crate::{
     planner::reminders::{from_dates, from_habits, hide_names, render, token_from_file, Reminder},
 };
 
-const DEFAULT_PUBLIC_URL: &str = "https://joy-jar.fly.dev";
+const DEFAULT_PUBLIC_URL: &str = "https://joy.fly.dev";
 
 #[derive(Serialize)]
 pub struct LinkOut {
