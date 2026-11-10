@@ -1,6 +1,6 @@
 // What #pick shows: the drawn slip (Joy's pick_card.html), the stamped "it's a date" card, and the
 // handwritten note for "nothing fits". Pure rendering: JarPage owns the requests and the motion.
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { animated, type SpringValue } from "@react-spring/web";
 import type { ActivityView, PickCard } from "./api";
@@ -16,7 +16,18 @@ export interface CardActions {
   relax: () => void;
   back: () => void;
   planSwapped: () => void;
+  /** Open the day picker for the date that was just stamped. */
+  pickDay: () => void;
 }
+
+const HINT_SEEN = "joy.swipe-hint";
+const hintSeen = () => {
+  try {
+    return localStorage.getItem(HINT_SEEN) === "1";
+  } catch {
+    return true; // can't remember it, so don't nag every card
+  }
+};
 
 const I = ({ d, cls = "ico" }: { d: string[]; cls?: string }) => (
   <svg className={cls} viewBox="0 0 24 24" aria-hidden="true">
@@ -183,17 +194,30 @@ interface SlipProps {
   actions: CardActions;
   /** The slip is still unfolding: blank paper over the text, no taps. */
   arriving: boolean;
-  /** Index of the peek the put-back just spent (shown full, then empties). */
+  /** Index of the try the put-back just spent (shown full, then empties). */
   spent: number;
+  /** "Sat 9 Nov, 7:00 pm" once a day has been picked for the stamped date. */
+  planned?: string;
 }
 
-export function SlipView({ card, busy, actions, arriving, spent }: SlipProps) {
+export function SlipView({ card, busy, actions, arriving, spent, planned }: SlipProps) {
   const a = card.activity!;
   const done = card.done;
   const [el, setEl] = useState<HTMLElement | null>(null);
   const peeks = peekView(card);
   const canYes = !done;
   const canBack = !done && peeks.canPutBack;
+  // A one-time line under the card about swiping. Shown on the first card only, then remembered.
+  const [hint] = useState(() => !hintSeen());
+  const showHint = hint && !done;
+  useEffect(() => {
+    if (!showHint) return;
+    try {
+      localStorage.setItem(HINT_SEEN, "1");
+    } catch {
+      /* fine */
+    }
+  }, [showHint]);
 
   return (
     <article
@@ -311,14 +335,31 @@ export function SlipView({ card, busy, actions, arriving, spent }: SlipProps) {
           ) : (
             <p className="kept-line">In the keepsake box. Rate it after you go.</p>
           )}
-          {card.share_text && (
-            <p className="share-row">
-              <ShareLink card={card} busy={busy}>
-                <I d={ENVELOPE} />
-                <span>{card.surprise ? `Send ${card.partner} the sealed envelope` : `Send ${card.partner} the envelope`}</span>
-                <span className="visually-hidden"> (opens WhatsApp)</span>
-              </ShareLink>
+          {planned ? (
+            <p className="planned-line" role="status">
+              <I d={CAL} />
+              <span>Planned for {planned}</span>
             </p>
+          ) : (
+            !card.plan && (
+              <p className="pick-day">
+                <button className="btn btn-ink" type="button" disabled={busy} onClick={actions.pickDay}>
+                  <I d={CAL} />
+                  Pick a day
+                </button>
+              </p>
+            )
+          )}
+          {card.share_text && (
+            <>
+              <p className="share-row">
+                <ShareLink card={card} busy={busy}>
+                  <I d={SEND} />
+                  <span>{card.surprise ? `Send ${card.partner} the sealed plan on WhatsApp` : `Send ${card.partner} the plan on WhatsApp`}</span>
+                </ShareLink>
+              </p>
+              <p className="share-note">The plan goes as an envelope: a link that opens like a card.</p>
+            </>
           )}
           {card.plan && <DayPlanView plan={card.plan} onSwapped={actions.planSwapped} />}
           <div className="slip-actions">
@@ -369,6 +410,9 @@ export function SlipView({ card, busy, actions, arriving, spent }: SlipProps) {
             )}
           </div>
           <Peeks card={card} spent={spent} />
+          {showHint && (
+            <p className="swipe-hint">{canBack ? "Swipe right to say yes, left to put it back." : "Swipe right to say yes."}</p>
+          )}
           {(card.can_surprise || card.can_veto || card.share_text) && (
             <div className="slip-more">
               {card.can_surprise && (
@@ -382,17 +426,19 @@ export function SlipView({ card, busy, actions, arriving, spent }: SlipProps) {
               {card.share_text && (
                 <ShareLink card={card} busy={busy}>
                   <I d={SEND} />
-                  <span>Send to {card.partner}</span>
-                  <span className="visually-hidden"> (opens WhatsApp)</span>
+                  <span>Ask {card.partner} what they think (WhatsApp)</span>
                 </ShareLink>
               )}
               {card.can_veto && (
                 <button className="share f-veto" type="button" disabled={busy} onClick={actions.veto}>
                   <I d={NOPE} />
                   <span>
-                    Not for me<span className="visually-hidden">: take “{a.title}” out of the draw</span>
+                    Never suggest this<span className="visually-hidden">: take “{a.title}” out of the jar for good</span>
                   </span>
                 </button>
+              )}
+              {card.can_veto && (
+                <p className="veto-note">{card.partner} will see it was skipped.</p>
               )}
             </div>
           )}

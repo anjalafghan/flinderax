@@ -106,6 +106,7 @@ function Month({ v }: { v: MonthView }) {
           <div className="m-empty">
             <p className="m-scribble">nothing kept in {name} {v.to_come > 0 && "yet"} ♡</p>
             <p className="m-empty-p">This page fills up with every date we keep in {name}: a print or a ticket for each, and the receipts.</p>
+            <p className="m-empty-p"><Link to="/joy/kept#add">Add a date we had</Link></p>
           </div>
         ) : (
           <div className="m-collage">

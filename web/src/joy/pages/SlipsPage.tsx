@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { archiveSlip, deleteSlip, getSlips, keys, restoreSlip, unvetoSlip, type ActivityView } from "../api";
 import { filterGroups, slipsWord } from "../slips";
 import { createUndoTimer } from "../undo";
+import { ErrorState } from "../components/ErrorState";
 import { errText, useBusy } from "../components/useBusy";
 import { PlanDialog } from "../components/PlanDialog";
 
@@ -34,7 +35,6 @@ export default function SlipsPage() {
   const [planFor, setPlanFor] = useState<ActivityView | null>(null);
   const [fab, setFab] = useState(false);
   const toastEl = useRef<HTMLDivElement>(null);
-  const undoBtn = useRef<HTMLButtonElement>(null);
   const searchEl = useRef<HTMLInputElement>(null);
   const writeBtn = useRef<HTMLAnchorElement>(null);
   const focusAfter = useRef<{ id: number; kind: "slip" } | null>(null);
@@ -62,9 +62,8 @@ export default function SlipsPage() {
     return () => t.cancel();
   }, [toast]);
 
-  useEffect(() => {
-    if (toast?.undo) undoBtn.current?.focus({ preventScroll: true });
-  }, [toast]);
+  // The toast is a polite live region: it is announced, never focused. Undo stays a normal
+  // tab stop, and the clock above pauses while focus is inside it.
 
   // After a list change, put focus back on the slip that returned.
   useEffect(() => {
@@ -145,8 +144,7 @@ export default function SlipsPage() {
   if (q.isError) {
     return (
       <div className="slips-page">
-        <p className="kind-error" role="alert">{errText(q.error)}</p>
-        <button type="button" className="btn" onClick={() => void q.refetch()}>Try again</button>
+        <ErrorState message={errText(q.error)} onRetry={() => void q.refetch()} />
       </div>
     );
   }
@@ -374,13 +372,12 @@ export default function SlipsPage() {
         </Link>
       )}
 
-      <div className="toast-region" aria-live="polite" id="toast">
+      <div className="toast-region" role="status" aria-live="polite" id="toast">
         {toast && (
           <div className="toast" ref={toastEl} key={toast.id}>
             <span className="toast-msg">{toast.msg}</span>
             {toast.undo && (
               <button
-                ref={undoBtn}
                 type="button"
                 disabled={busy}
                 onClick={() => {

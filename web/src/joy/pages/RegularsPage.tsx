@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getCouple, keys } from "../api";
 import { createRegular, getRegulars, regKeys, type DayBox } from "../regulars/api";
 import { apiMessage, newRegularBody, nightsWord } from "../regulars/days";
 import { mapGoTo } from "../paths";
+import { ErrorState } from "../components/ErrorState";
 import { errText, useBusy } from "../components/useBusy";
 import "../regulars/regulars.css";
 
@@ -12,10 +14,7 @@ export default function RegularsPage() {
   if (q.isPending) return <p className="loading" role="status">Opening our regular nights…</p>;
   if (q.isError) {
     return (
-      <div>
-        <p className="kind-error" role="alert">{errText(q.error)}</p>
-        <button type="button" className="btn" onClick={() => void q.refetch()}>Try again</button>
-      </div>
+      <ErrorState message={errText(q.error)} onRetry={() => void q.refetch()} />
     );
   }
   const { items, days } = q.data;
@@ -59,9 +58,10 @@ function AddForm({ days }: { days: DayBox[] }) {
   const [place, setPlace] = useState("");
   const [maps, setMaps] = useState("");
   const [picked, setPicked] = useState<number[]>(() => days.filter((d) => d.checked).map((d) => d.value));
-  const [cost, setCost] = useState("300");
+  const [cost, setCost] = useState("");
   const [since, setSince] = useState("");
   const [error, setError] = useState("");
+  const currency = useQuery({ queryKey: keys.couple, queryFn: getCouple }).data?.currency ?? "";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,8 +114,9 @@ function AddForm({ days }: { days: DayBox[] }) {
         ))}
       </fieldset>
       <label>
-        Usual spend a night
-        <input name="cost" type="text" inputMode="numeric" autoComplete="off" value={cost} onChange={(e) => setCost(e.target.value)} />
+        Usual spend a night {currency && <span className="opt">in {currency}</span>}
+        <input name="cost" type="text" inputMode="numeric" autoComplete="off" placeholder="e.g. 300" value={cost} onChange={(e) => setCost(e.target.value)} />
+        <small>Optional. It fills in when you tap Went.</small>
       </label>
       <label>
         Counting from

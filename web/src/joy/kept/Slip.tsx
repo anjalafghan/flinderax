@@ -166,7 +166,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
         await rate(h.id, b.rating, b.note);
         saved.current = b;
       }
-      say("kept ♥", "ok");
+      say("Saved", "ok");
     } catch (e) {
       queued.current = null;
       say(e instanceof TypeError ? "offline? didn’t save" : "didn’t save, try again", "err");
@@ -427,6 +427,10 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
                 {h.day_label}
               </figcaption>
             </figure>
+            <p className="k-photo-tip">
+              {pics.length > 1 ? "Tap a photo to see them all." : "Tap the photo to see it bigger."}{" "}
+              <Link to="/joy/year#wall">See all our photos</Link>
+            </p>
             {(pics.length > 1 || developing) && (
               <ul className="k-photo-strip" aria-label={`More photos from ${h.title}`}>
                 {pics.slice(1).map((p, i) => (
@@ -499,8 +503,8 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
           </fieldset>
 
           <div className="k-note">
-            <label className="visually-hidden" htmlFor={`n${h.id}`}>
-              A line to remember {h.title} by
+            <label className="k-field-cap" htmlFor={`n${h.id}`}>
+              Our note<span className="visually-hidden"> about {h.title}</span> <span className="k-opt">saved as you go</span>
             </label>
             <textarea
               ref={noteEl}
@@ -530,7 +534,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
 
         <section className="k-lines" aria-labelledby={`kl${h.id}`}>
           <h4 className="k-lines-h hand" id={`kl${h.id}`}>
-            two lines
+            our lines
           </h4>
           {h.lines.theirs && (
             <blockquote ref={theirsEl} className="k-line k-line-theirs">
@@ -540,8 +544,9 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
           )}
           {h.lines.can_write ? (
             <form className="k-line-form" onSubmit={sealLine}>
-              <label className="visually-hidden" htmlFor={`l${h.id}`}>
-                Your line about {h.title}
+              <label className="k-field-cap" htmlFor={`l${h.id}`}>
+                My private line<span className="visually-hidden"> about {h.title}</span>{" "}
+                <span className="k-opt">you’ll both see them once you’ve each written one</span>
               </label>
               <textarea
                 ref={lineEl}
@@ -550,7 +555,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
                 name="line"
                 rows={1}
                 maxLength={280}
-                placeholder="Your line, only yours…"
+                placeholder="Only yours until they write theirs…"
                 value={line}
                 onChange={(e) => setLine_(e.target.value)}
                 onKeyDown={(e) => {
@@ -577,9 +582,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
               <Err text={lineAct.err} />
             </form>
           ) : (
-            <p className="k-hint">
-              <Link to="/joy/settings">Say who’s holding the phone</Link> to write your line.
-            </p>
+            <p className="k-hint">Sign in again to write your line.</p>
           )}
         </section>
 
@@ -600,6 +603,8 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
             </span>
             {photoAct.err && <span className="k-photo-status" data-tone="err">{photoAct.err}</span>}
           </form>
+          <details className="k-more">
+            <summary className="k-tool k-tool-quiet">More</summary>
           <details className="k-when-edit" {...whenFold.props}>
             <summary ref={whenSummary} className="k-tool">
               <Icon id="k-clock" size={18} />
@@ -715,7 +720,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
           )}
           <details className="k-photo-del k-date-del" {...dateFold.props}>
             <summary className="k-tool k-tool-quiet">
-              Delete this date<span className="visually-hidden">: {h.title}</span>
+              Remove from Kept<span className="visually-hidden">: {h.title}</span>
             </summary>
             <form
               onSubmit={(e) => {
@@ -727,10 +732,11 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
                 Take “{h.title}” out of Kept? Its rating{hasPhoto ? `, note and ${pics.length > 1 ? "photos" : "photo"}` : " and note"} go too. The slip stays in the jar.
               </p>
               <button className="k-btn k-btn-stamp" type="submit" disabled={dateDel.busy}>
-                Yes, delete it
+                Yes, remove it
               </button>
               <Err text={dateDel.err} />
             </form>
+          </details>
           </details>
         </div>
       </article>

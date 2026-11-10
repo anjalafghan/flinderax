@@ -148,6 +148,8 @@ export interface CoupleStatus {
   me: number | null;
   partner_name: string | null;
   waiting: boolean;
+  /** The couple's money symbol. */
+  currency: string;
 }
 
 export interface Invite {

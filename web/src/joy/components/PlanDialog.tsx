@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { jarApi } from "../jar/api";
 import { planSlip, type ActivityView, type SlipPlanned } from "../api";
 import { mapGoTo } from "../paths";
 import { quickPick, toLocalInput, type WhenKey } from "../plan";
@@ -11,8 +12,28 @@ const QUICK: { key: WhenKey; label: string }[] = [
   { key: "saturday", label: "Saturday" },
 ];
 
-/** "Plan it for a day": pick a time, then send the envelope. Native <dialog>, so focus is trapped for free. */
-export function PlanDialog({ slip, onClose }: { slip: ActivityView | null; onClose: (planned: boolean) => void }) {
+/** A date that is already kept (just stamped "It's a date"): put a day on it instead of keeping the slip again. */
+export interface KeptDate {
+  /** Comma-separated history ids (two for a pair). */
+  ids: string;
+  partner: string;
+  wa_url: string;
+  share_text: string;
+}
+
+/** "Plan it for a day": pick a time, then send the plan on WhatsApp. Native <dialog>, so focus is trapped for free. */
+export function PlanDialog({
+  slip,
+  kept,
+  onPlanned,
+  onClose,
+}: {
+  slip: Pick<ActivityView, "id" | "title"> | null;
+  /** Given when the date is already kept: the day is set on it rather than creating a second date. */
+  kept?: KeptDate;
+  onPlanned?: (r: SlipPlanned) => void;
+  onClose: (planned: boolean) => void;
+}) {
   const dlg = useRef<HTMLDialogElement>(null);
   const at = useRef<HTMLInputElement>(null);
   const done = useRef<HTMLDivElement>(null);
@@ -65,7 +86,24 @@ export function PlanDialog({ slip, onClose }: { slip: ActivityView | null; onClo
     void run(async () => {
       setErr("");
       try {
-        setResult(await planSlip(slip.id, when));
+        let r: SlipPlanned;
+        if (kept) {
+          const w = await jarApi.when(kept.ids, when);
+          r = {
+            title: slip.title,
+            label: w.label,
+            ics_url: w.ics_url,
+            partner: kept.partner,
+            wa_url: kept.wa_url,
+            share_text: kept.share_text,
+            history_id: Number(kept.ids.split(",")[0]),
+            to: `/joy/kept#k${kept.ids.split(",")[0]}`,
+          };
+        } else {
+          r = await planSlip(slip.id, when);
+        }
+        setResult(r);
+        onPlanned?.(r);
       } catch (er) {
         setErr(errText(er, "That didn’t save. Try again."));
       }
@@ -113,7 +151,7 @@ export function PlanDialog({ slip, onClose }: { slip: ActivityView | null; onClo
                   <path d="M20.6 3.6 3.4 10.4c-.7.3-.6 1.2.1 1.4l6.3 1.9 1.9 6.3c.2.7 1.1.8 1.4.1z" />
                   <path d="M9.8 13.7 20.6 3.6" />
                 </svg>
-                Send to {result.partner}
+                Send {result.partner} the plan on WhatsApp
               </a>
               <a className="btn" href={result.ics_url} download>
                 Add to calendar

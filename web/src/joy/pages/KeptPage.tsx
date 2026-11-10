@@ -5,7 +5,8 @@ import type { Go } from "../api";
 import { errText } from "../components/useBusy";
 import { mapGoTo } from "../paths";
 import { getKept, keptKey } from "../kept/api";
-import { Budget } from "../kept/Budget";
+import { Budget, CustomDateFold } from "../kept/Budget";
+import { useFold } from "../kept/useFold";
 import { KeptContext, type FinishOptions, type KeptCtx } from "../kept/ctx";
 import { Defs } from "../kept/Defs";
 import { dateWord, flatIds, moveFor, sinceLabel, splitTo, stepIndex } from "../kept/helpers";
@@ -37,6 +38,15 @@ export default function KeptPage() {
   const [revealed, setRevealed] = useState<number | null>(null);
   const book = useRef<HTMLDivElement>(null);
   const handled = useRef("");
+  const addFold = useFold(false, () => requestAnimationFrame(() => document.getElementById("custom-title")?.focus()));
+  const { setOpen: setAddOpen } = addFold;
+  const openAdd = useCallback(() => {
+    setAddOpen(true);
+    requestAnimationFrame(() => {
+      document.getElementById("k-add")?.scrollIntoView({ block: "center", behavior: behavior() });
+      document.getElementById("custom-title")?.focus({ preventScroll: true });
+    });
+  }, [setAddOpen]);
 
   // Joy's "no script" rules key off .k-js; this page is script all the way.
   useEffect(() => {
@@ -82,9 +92,13 @@ export default function KeptPage() {
   useEffect(() => {
     if (!q.data || handled.current === hash) return;
     handled.current = hash;
+    if (hash === "#add") {
+      openAdd();
+      return;
+    }
     const sel = hashSelector(hash);
     if (sel && !/^#(k-)?budget$/.test(hash)) requestAnimationFrame(() => focusTo(sel, /^#k\d+$/.test(sel)));
-  }, [q.data, hash]);
+  }, [q.data, hash, openAdd]);
 
   // The book is a list of slips: j/k anywhere in it, arrows and Home/End once a slip has focus.
   const ids = useMemo(() => flatIds(months ?? []), [months]);
@@ -114,6 +128,7 @@ export default function KeptPage() {
 
   const v = q.data;
   const first = sinceLabel(v.months);
+  const showMoney = v.kept > 0 || !!v.budget.budget;
   return (
     <KeptContext.Provider value={ctx}>
       <div className={`k-page k-js${dealt ? " m-reveal" : ""}`}>
@@ -126,27 +141,35 @@ export default function KeptPage() {
               <h1 className="k-title" id="k-title" tabIndex={-1}>
                 <span className="k-count">{v.kept}</span> <span className="k-count-word">{dateWord(v.kept)} kept</span>
               </h1>
-              <p className="k-hint">
-                <Link to="/joy/regulars">Our regular nights</Link>
-              </p>
               {first && <p className="k-since">Together, since {first}.</p>}
               <p className="k-margin hand" aria-hidden="true">
                 {v.kept === 1 ? "and so it begins" : "look at us go"}
               </p>
             </>
           )}
-          {(v.kept > 0 || v.budget.budget) && (
-            <>
-              {v.kept > 0 && (
-                <p className="k-year">
-                  <Link to="/joy/year">
-                    Our year so far <span aria-hidden="true">→</span>
-                  </Link>
-                </p>
-              )}
-              <Budget v={v} hash={hash} />
-            </>
+          {v.months.length > 0 && (
+          <p className="k-add">
+            <button type="button" className="btn" onClick={openAdd}>
+              + Add a date we had
+            </button>
+          </p>
           )}
+          {v.kept > 0 && (
+            <p className="k-year">
+              <Link to="/joy/year">
+                Our year so far <span aria-hidden="true">→</span>
+              </Link>
+              {" · "}
+              <Link to="/joy/year#wall">See all our photos</Link>
+              {showMoney && (
+                <>
+                  {" · "}
+                  <a href="#k-budget">Budget and savings</a>
+                </>
+              )}
+            </p>
+          )}
+          <CustomDateFold fold={addFold} />
         </header>
 
         {v.months.length === 0 ? (
@@ -163,6 +186,10 @@ export default function KeptPage() {
               <Link className="btn btn-stamp" to="/joy">
                 Go to the jar
               </Link>
+              <p className="k-empty-p">Already had some great nights? Add one.</p>
+              <button type="button" className="btn" onClick={openAdd}>
+                Add a date we had
+              </button>
               <p className="k-empty-hand hand" aria-hidden="true">
                 first page, saved for you
               </p>
@@ -183,6 +210,9 @@ export default function KeptPage() {
                     <span className="k-month-n hand" aria-hidden="true">
                       {m.items.length} {dateWord(m.items.length)}
                     </span>
+                    <Link className="k-month-open" to={m.href} tabIndex={-1} aria-hidden="true">
+                      Open →
+                    </Link>
                   </h2>
                   <ol className="k-spread" role="list">
                     {m.items.map((h, i) => (h.sealed ? <SealedSlip key={h.id} h={h} index={i} /> : <Slip key={h.id} h={h} index={i} />))}
@@ -212,6 +242,13 @@ export default function KeptPage() {
               </ul>
             </details>
           </aside>
+        )}
+
+        {showMoney && (
+          <section className="k-money-sec" aria-labelledby="k-money-h">
+            <h2 id="k-money-h">Money</h2>
+            <Budget v={v} hash={hash} />
+          </section>
         )}
       </div>
     </KeptContext.Provider>
