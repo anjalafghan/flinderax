@@ -144,6 +144,10 @@
     .tonight .draw-row .btn-middle, .tonight .draw-row #draw { flex: 1 1 9rem; padding-inline: 14px; }
     .sentence { line-height: 1.7; }
   }
+  /* Phones also have the app's tab bar fixed at the bottom: sit just above it, not behind it. */
+  @media (max-width: 767px) {
+    .tonight .draw-row { bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px)); padding-bottom: 10px; }
+  }
 }
 @keyframes jar-loading-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
 @media (prefers-reduced-motion: reduce) {
