@@ -1557,7 +1557,7 @@ pub struct Visit {
 }
 
 pub async fn regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Option<Regular>> {
-    sqlx::query_as("SELECT * FROM joy_regulars WHERE couple_id = ? AND id = ?").bind(couple).bind(id).fetch_optional(db).await
+    sqlx::query_as("SELECT * FROM joy_regulars WHERE couple_id = ? AND id = ? AND active = 1").bind(couple).bind(id).fetch_optional(db).await
 }
 
 pub async fn regulars(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<Regular>> {
@@ -1748,6 +1748,30 @@ pub async fn add_regular(db: &SqlitePool, couple: &str, title: &str, place: &str
     .fetch_one(db)
     .await?;
     Ok(row.0)
+}
+
+/// Change a regular's details (the nights already stamped stay as they are). Scoped by couple.
+pub async fn update_regular(db: &SqlitePool, couple: &str, id: i64, title: &str, place: &str, maps_url: &str, weekdays: &str, usual_cost: i64) -> sqlx::Result<bool> {
+    let done = sqlx::query(
+        "UPDATE joy_regulars SET title = ?, place = ?, maps_url = ?, weekdays = ?, usual_cost = ?
+         WHERE couple_id = ? AND id = ? AND active = 1",
+    )
+    .bind(title)
+    .bind(place)
+    .bind(maps_url)
+    .bind(weekdays)
+    .bind(usual_cost)
+    .bind(couple)
+    .bind(id)
+    .execute(db)
+    .await?;
+    Ok(done.rows_affected() > 0)
+}
+
+/// Stop tracking a regular: archived (`active = 0`), never erased. False when it isn't ours.
+pub async fn archive_regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
+    let done = sqlx::query("UPDATE joy_regulars SET active = 0 WHERE couple_id = ? AND id = ? AND active = 1").bind(couple).bind(id).execute(db).await?;
+    Ok(done.rows_affected() > 0)
 }
 
 /// Fill a new couple's jar: copies every starter slip in `joy_seed_activities` into their

@@ -1,11 +1,17 @@
 import { useRef, useState } from "react";
 import type { Invite } from "../api";
 
-/** "Share this code with your partner: XXXX-XXXX (valid 7 days)" with a copy button. */
-export function CodeCard({ invite }: { invite: Invite }) {
+/** What to send: a line a partner can follow from a message alone. */
+function shareText(code: string): string {
+  return `Join our jar on joy: sign up, open People, then Us, tap Join with a code and enter ${code}`;
+}
+
+/** "Send this code to your partner: XXXX-XXXX (valid 7 days)" with Share and Copy buttons. */
+export function CodeCard({ invite, partner }: { invite: Invite; partner?: string | null }) {
   const [msg, setMsg] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const days = invite.expires_in_days;
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   const copy = async () => {
     try {
@@ -18,14 +24,29 @@ export function CodeCard({ invite }: { invite: Invite }) {
     }
   };
 
+  const share = async () => {
+    try {
+      await navigator.share({ title: "Join our jar", text: shareText(invite.code) });
+    } catch (e) {
+      // Closing the share sheet is not a failure; anything else falls back to copying.
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      await copy();
+    }
+  };
+
   return (
     <div className="set-card" role="group" aria-label="Invite code">
       <p>
-        Share this code with your partner: <strong className="code-big">{invite.code}</strong> (valid {days} {days === 1 ? "day" : "days"})
+        Send this code to {partner || "your partner"}: <strong className="code-big">{invite.code}</strong> (valid {days} {days === 1 ? "day" : "days"})
       </p>
       <input ref={input} className="visually-hidden" readOnly value={invite.code} aria-hidden="true" tabIndex={-1} />
       <div className="set-row">
-        <button type="button" className="btn" onClick={copy}>
+        {canShare && (
+          <button type="button" className="btn btn-stamp" onClick={() => void share()}>
+            Share
+          </button>
+        )}
+        <button type="button" className="btn" onClick={() => void copy()}>
           Copy code
         </button>
       </div>
