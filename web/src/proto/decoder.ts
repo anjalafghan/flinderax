@@ -1,49 +1,68 @@
-import type { Type } from 'protobufjs';
+// A minimal protobuf wire-format reader for the two messages the server sends (see src/proto/history.proto).
+// protobufjs builds its decoders with `new Function`, which the app's Content-Security-Policy (no 'unsafe-eval')
+// blocks, so the cards silently failed to load. This reader needs no eval.
 
-// Define the protobuf schema inline
-const historyProto = `
-syntax = "proto3";
-package joy_backend;
-
-message CardTransactionHistory {
-  string transaction_id = 1;
-  float total_due_input = 2;
-  int64 timestamp_seconds = 3;
-  int32 timestamp_nanos = 4;
-}
-
-message CardHistoryList {
-  repeated CardTransactionHistory histories = 1;
-}
-
-message Card {
-  string card_id = 1;
-  string card_name = 2;
-  string card_bank = 3;
-  int32 card_primary_color = 4;
-  int32 card_secondary_color = 5;
-  optional float last_total_due = 6;
-  optional float last_delta = 7;
-  optional string last_4_digits = 8;
-}
-
-message CardList {
-  repeated Card cards = 1;
-}
-`;
-
-let CardHistoryListType: Type | null = null;
-let CardListType: Type | null = null;
-
-// Initialize the protobuf type. protobufjs is loaded on first use, so it only ships with the card screens.
-async function initProto() {
-    if (CardHistoryListType && CardListType) return { CardHistoryListType, CardListType };
-
-    const protobuf = (await import('protobufjs')).default;
-    const root = protobuf.parse(historyProto).root;
-    CardHistoryListType = root.lookupType('joy_backend.CardHistoryList');
-    CardListType = root.lookupType('joy_backend.CardList');
-    return { CardHistoryListType, CardListType };
+class Reader {
+    private pos = 0;
+    private readonly view: DataView;
+    private readonly buf: Uint8Array;
+    constructor(buf: Uint8Array) {
+        this.buf = buf;
+        this.view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+    }
+    get done(): boolean {
+        return this.pos >= this.buf.length;
+    }
+    /** Reads a varint as a number (exact up to 2^53, plenty for ids, seconds and packed colours). */
+    varint(): number {
+        let result = 0;
+        let mul = 1;
+        for (;;) {
+            if (this.pos >= this.buf.length) throw new Error("Truncated protobuf message");
+            const b = this.buf[this.pos++];
+            result += (b & 0x7f) * mul;
+            if (!(b & 0x80)) return result;
+            mul *= 128;
+        }
+    }
+    /** int32/int64 are sent as two's-complement varints; a negative needs the 64-bit wrap undone. */
+    int(): number {
+        const start = this.pos;
+        const v = this.varint();
+        const len = this.pos - start;
+        return len === 10 ? v - 2 ** 64 : v;
+    }
+    float(): number {
+        const v = this.view.getFloat32(this.pos, true);
+        this.pos += 4;
+        return v;
+    }
+    bytes(): Uint8Array {
+        const len = this.varint();
+        const out = this.buf.subarray(this.pos, this.pos + len);
+        if (out.length < len) throw new Error("Truncated protobuf message");
+        this.pos += len;
+        return out;
+    }
+    string(): string {
+        return new TextDecoder().decode(this.bytes());
+    }
+    skip(wire: number): void {
+        if (wire === 0) this.varint();
+        else if (wire === 1) this.pos += 8;
+        else if (wire === 2) this.bytes();
+        else if (wire === 5) this.pos += 4;
+        else throw new Error(`Unsupported protobuf wire type ${wire}`);
+    }
+    /** Calls `onField` for each (field number, wire type); it returns true once it has consumed the value. */
+    fields(onField: (field: number, wire: number, r: Reader) => boolean): void {
+        while (!this.done) {
+            const tag = this.varint();
+            const field = Math.floor(tag / 8);
+            const wire = tag % 8;
+            if (!onField(field, wire, this)) this.skip(wire);
+        }
+    }
 }
 
 export interface CardTransactionHistory {
@@ -71,71 +90,67 @@ export interface CardList {
     cards: Card[];
 }
 
-type Raw = Record<string, unknown>;
-
-const isRaw = (v: unknown): v is Raw => typeof v === "object" && v !== null;
-const rawList = (v: unknown): Raw[] => (Array.isArray(v) ? v.filter(isRaw) : []);
-/** First truthy value among the keys (the `a || b` lookup), or undefined. */
-const firstTruthy = (o: Raw, ...keys: string[]): unknown => keys.map((k) => o[k]).find(Boolean);
-/** First non-null value among the keys (the `a ?? b` lookup), or undefined. */
-const firstDefined = (o: Raw, ...keys: string[]): unknown => keys.map((k) => o[k]).find((v) => v != null);
-const str = (v: unknown): string => (typeof v === "string" ? v : "");
-const num = (v: unknown): number => (typeof v === "number" ? v : 0);
-const strOrNull = (v: unknown): string | null => (typeof v === "string" ? v : null);
-const numOrNull = (v: unknown): number | null => (typeof v === "number" ? v : null);
-
-/**
- * Decode protobuf binary data into CardHistoryList
- */
-export async function decodeCardHistoryList(buffer: ArrayBuffer): Promise<CardHistoryList> {
-    const { CardHistoryListType } = await initProto();
-    const uint8Array = new Uint8Array(buffer);
-    const message = CardHistoryListType.decode(uint8Array);
-    const object: Raw = CardHistoryListType.toObject(message, {
-        longs: Number,
-        enums: String,
-        bytes: String,
+function decodeHistory(r: Reader): CardTransactionHistory {
+    let transaction_id = "";
+    let total_due_input = 0;
+    let seconds = 0;
+    let nanos = 0;
+    r.fields((f, w, rd) => {
+        if (f === 1 && w === 2) transaction_id = rd.string();
+        else if (f === 2 && w === 5) total_due_input = rd.float();
+        else if (f === 3 && w === 0) seconds = rd.int();
+        else if (f === 4 && w === 0) nanos = rd.int();
+        else return false;
+        return true;
     });
+    return { transaction_id, total_due_input, timestamp: convertTimestamp(seconds, nanos) };
+}
 
-    // Convert timestamp fields to ISO strings
-    // Note: protobufjs converts snake_case to camelCase by default
-    const histories = rawList(object.histories).map((h) => ({
-        transaction_id: str(firstTruthy(h, "transactionId", "transaction_id")),
-        total_due_input: num(firstTruthy(h, "totalDueInput", "total_due_input")),
-        timestamp: convertTimestamp(
-            num(firstTruthy(h, "timestampSeconds", "timestamp_seconds")),
-            num(firstTruthy(h, "timestampNanos", "timestamp_nanos")),
-        ),
-    }));
+function decodeCard(r: Reader): Card {
+    const card: Card = {
+        card_id: "",
+        card_name: "",
+        card_bank: "",
+        card_primary_color: 0,
+        card_secondary_color: 0,
+        last_total_due: null,
+        last_delta: null,
+        last_4_digits: null,
+    };
+    r.fields((f, w, rd) => {
+        if (f === 1 && w === 2) card.card_id = rd.string();
+        else if (f === 2 && w === 2) card.card_name = rd.string();
+        else if (f === 3 && w === 2) card.card_bank = rd.string();
+        else if (f === 4 && w === 0) card.card_primary_color = rd.int();
+        else if (f === 5 && w === 0) card.card_secondary_color = rd.int();
+        else if (f === 6 && w === 5) card.last_total_due = rd.float();
+        else if (f === 7 && w === 5) card.last_delta = rd.float();
+        else if (f === 8 && w === 2) card.last_4_digits = rd.string();
+        else return false;
+        return true;
+    });
+    return card;
+}
 
+/** Decode protobuf binary data into CardHistoryList. */
+export async function decodeCardHistoryList(buffer: ArrayBuffer): Promise<CardHistoryList> {
+    const histories: CardTransactionHistory[] = [];
+    new Reader(new Uint8Array(buffer)).fields((f, w, rd) => {
+        if (f !== 1 || w !== 2) return false;
+        histories.push(decodeHistory(new Reader(rd.bytes())));
+        return true;
+    });
     return { histories };
 }
 
-/**
- * Decode protobuf binary data into CardList
- */
+/** Decode protobuf binary data into CardList. */
 export async function decodeCardList(buffer: ArrayBuffer): Promise<CardList> {
-    const { CardListType } = await initProto();
-    const uint8Array = new Uint8Array(buffer);
-    const message = CardListType.decode(uint8Array);
-    const object: Raw = CardListType.toObject(message, {
-        longs: Number,
-        enums: String,
-        bytes: String,
-        defaults: false,
+    const cards: Card[] = [];
+    new Reader(new Uint8Array(buffer)).fields((f, w, rd) => {
+        if (f !== 1 || w !== 2) return false;
+        cards.push(decodeCard(new Reader(rd.bytes())));
+        return true;
     });
-
-    const cards = rawList(object.cards).map((c) => ({
-        card_id: str(firstTruthy(c, "cardId", "card_id")),
-        card_name: str(firstTruthy(c, "cardName", "card_name")),
-        card_bank: str(firstTruthy(c, "cardBank", "card_bank")),
-        card_primary_color: num(firstTruthy(c, "cardPrimaryColor", "card_primary_color")),
-        card_secondary_color: num(firstTruthy(c, "cardSecondaryColor", "card_secondary_color")),
-        last_total_due: numOrNull(firstDefined(c, "lastTotalDue", "last_total_due")),
-        last_delta: numOrNull(firstDefined(c, "lastDelta", "last_delta")),
-        last_4_digits: strOrNull(firstDefined(c, "last_4Digits", "last4Digits", "last_4_digits")),
-    }));
-
     return { cards };
 }
 
