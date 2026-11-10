@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import type { Invite } from "../api";
 
 /** What to send: a line a partner can follow from a message alone. */
-export function shareText(code: string): string {
+function shareText(code: string): string {
   return `Join our jar on joy: sign up, open People, then Us, tap Join with a code and enter ${code}`;
 }
 
