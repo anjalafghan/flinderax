@@ -22,6 +22,7 @@ import HeartLayer, { type HeartHandle } from "./HeartLayer";
 import JarCanvas, { type JarHandle } from "./JarCanvas";
 import { buzz, finish, pose, reduced, set, springs, to } from "./motion";
 import { NoteView, SlipView, type CardActions } from "./PickCard";
+import { PlanDialog } from "../components/PlanDialog";
 import { peekView, spentDot } from "./peeks";
 import Sentence from "./Sentence";
 import { magnitude, newShake, shakeStep } from "./shake";
@@ -60,6 +61,9 @@ export default function JarPage() {
   const [shakeOn, setShakeOn] = useState(false);
   const [shakeLabel, setShakeLabel] = useState("or shake your phone");
   const [shakeAvailable, setShakeAvailable] = useState(false);
+  const [planning, setPlanning] = useState(false);
+  /** The day picked for the stamped card, keyed to that card so a new card starts unplanned. */
+  const [planned, setPlanned] = useState<{ key: number; label: string } | null>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const pickRef = useRef<HTMLDivElement>(null);
@@ -114,7 +118,11 @@ export default function JarPage() {
       .then((fresh) => {
         if (!alive.current) return;
         setData((prev) => (prev ? { ...fresh, slips: prev.slips } : fresh));
-        setView((v) => (v.kind === "done" && fresh.next_plan && v.card.plan?.history_id === fresh.next_plan.history_id ? { ...v, card: { ...v.card, plan: fresh.next_plan } } : v));
+        setView((v) => {
+          if (v.kind !== "done" || !fresh.next_plan) return v;
+          const mine = v.card.history_ids.split(",").includes(String(fresh.next_plan.history_id));
+          return mine ? { ...v, card: { ...v.card, plan: fresh.next_plan } } : v;
+        });
       })
       .catch(() => undefined);
   }, []);
@@ -460,6 +468,7 @@ export default function JarPage() {
     },
     back: backToJar,
     planSwapped: reload,
+    pickDay: () => setPlanning(true),
   };
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
@@ -643,9 +652,13 @@ export default function JarPage() {
               </button>
             </div>
           ) : (
-            <p role="status" className="visually-hidden">
-              Opening the jar
-            </p>
+            <div className="jar-loading" role="status">
+              <svg viewBox="0 0 60 76" aria-hidden="true" focusable="false">
+                <rect x="14" y="3" width="32" height="9" rx="3" />
+                <path d="M18 12v6c-7 3-11 9-11 17v28c0 6 5 10 11 10h24c6 0 11-4 11-10V35c0-8-4-14-11-17v-6" />
+              </svg>
+              <p>Opening the jar…</p>
+            </div>
           )}
         </div>
       </div>
@@ -666,6 +679,7 @@ export default function JarPage() {
         actions={actions}
         arriving={arriving}
         spent={arriving ? spentDot(view.card.rerolls_left, view.putBack, view.card.free_putback) : -1}
+        planned={planned?.key === view.key ? planned.label : undefined}
       />
     ) : null;
 
@@ -757,6 +771,18 @@ export default function JarPage() {
           </aside>
         </div>
       </div>
+      <PlanDialog
+        slip={planning && view.kind === "done" ? view.card.activity : null}
+        kept={view.kind === "done" ? { ids: view.card.history_ids, partner: view.card.partner, wa_url: view.card.wa_url, share_text: view.card.share_text } : undefined}
+        onPlanned={(r) => {
+          setPlanned({ key: view.key, label: r.label });
+          reload();
+        }}
+        onClose={() => {
+          setPlanning(false);
+          rootRef.current?.querySelector<HTMLElement>(".j-slip-title")?.focus({ preventScroll: true });
+        }}
+      />
       {/* Things that fly or fold live inside the page, never on <body>, so they keep the .joy tokens. */}
       <div ref={ghosts} aria-hidden="true" />
       <HeartLayer handle={hearts} />

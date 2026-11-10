@@ -1,4 +1,4 @@
-// Peek counting, straight from the server's card. The server works out the cap, whose turn it is
+// Re-draw ("try") counting, straight from the server's card. The server works out the cap, whose turn it is
 // and the bonus peek; the page only draws what it says.
 
 export interface PeekInput {
@@ -25,8 +25,8 @@ export function peekView(c: PeekInput): PeekView {
   const label = c.free_putback
     ? "This one goes back for free."
     : left > 0
-      ? `${left} ${left === 1 ? "peek" : "peeks"} left`
-      : "No more peeking. This one's yours.";
+      ? `${left} more ${left === 1 ? "try" : "tries"}`
+      : "No more tries. This one's yours.";
   return {
     dots,
     label,

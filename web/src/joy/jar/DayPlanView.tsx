@@ -1,6 +1,6 @@
 // The next date's plan (Joy's dayplan.html): the day as a timeline, Plan B, and the little jobs.
-// Jobs are read-only here (the tick route isn't in the API yet). Swapping to Plan B posts to
-// /history/{id}/plan-b, which may not exist yet: any failure is shown as a quiet line, not a crash.
+// Your own jobs tick off (POST /tasks/{id}/done); your partner's are shown but can't be ticked from here.
+// Swapping to Plan B posts to /history/{id}/plan-b. A failure of either is a quiet line, not a crash.
 import { useRef, useState } from "react";
 import type { DayPlan, StepView } from "./api";
 import { jarApi } from "./api";
@@ -29,6 +29,8 @@ export default function DayPlanView({ plan, onSwapped }: { plan: DayPlan; onSwap
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [note, setNote] = useState("");
+  const [ticks, setTicks] = useState<Record<number, boolean>>({});
+  const [jobNote, setJobNote] = useState("");
   const id = `plan-${plan.history_id}`;
 
   const swap = async () => {
@@ -41,10 +43,22 @@ export default function DayPlanView({ plan, onSwapped }: { plan: DayPlan; onSwap
       setNote("Swapped. Plan B is on.");
       onSwapped?.();
     } catch {
-      setNote("Swapping to Plan B isn't possible just yet. The plan stays as it is.");
+      setNote("Couldn't swap to Plan B. Try again.");
     } finally {
       lock.current = false;
       setBusy(false);
+    }
+  };
+
+  const tick = async (taskId: number, done: boolean) => {
+    setJobNote("");
+    setTicks((t) => ({ ...t, [taskId]: done })); // show it at once; undone below if it didn't save
+    try {
+      await jarApi.taskDone(taskId, done);
+      onSwapped?.(); // the page refreshes the plan (and the "things for you to do" count)
+    } catch {
+      setTicks((t) => Object.fromEntries(Object.entries(t).filter(([k]) => Number(k) !== taskId)));
+      setJobNote("Couldn't tick that off. Try again.");
     }
   };
 
@@ -73,17 +87,28 @@ export default function DayPlanView({ plan, onSwapped }: { plan: DayPlan; onSwap
         <div className="dp-jobs">
           <p className="dp-hand">{plan.sealed ? "your part of the surprise" : "dealt to you two"}</p>
           <ul>
-            {plan.tasks.map((t) => (
-              <li key={t.id} className={`dp-job${t.done ? " is-done" : ""}${t.mine ? " is-mine" : ""}`}>
-                <p className="dp-theirs">
-                  <span className="dp-job-t">{t.task}</span>
-                  <span className="dp-due">
-                    {[t.mine ? "you" : t.whose, t.due, t.done ? "done" : ""].filter(Boolean).join(" · ")}
-                  </span>
-                </p>
-              </li>
-            ))}
+            {plan.tasks.map((t) => {
+              const done = ticks[t.id] ?? t.done;
+              return (
+                <li key={t.id} className={`dp-job${done ? " is-done" : ""}${t.mine ? " is-mine" : ""}`}>
+                  <label className="dp-theirs dp-tick" title={t.mine ? undefined : `That one is ${t.whose}'s`}>
+                    <input type="checkbox" checked={done} disabled={!t.mine} onChange={(e) => void tick(t.id, e.target.checked)} />
+                    <span className="dp-theirs-text">
+                      <span className="dp-job-t">{t.task}</span>
+                      <span className="dp-due">
+                        {[t.mine ? "you" : t.whose, t.due, done ? "done" : ""].filter(Boolean).join(" · ")}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
           </ul>
+          {jobNote && (
+            <p className="dp-note" role="status">
+              {jobNote}
+            </p>
+          )}
         </div>
       )}
 

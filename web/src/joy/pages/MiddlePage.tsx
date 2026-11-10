@@ -11,8 +11,8 @@ export default function MiddlePage() {
   if (!m.enabled) {
     return (
       <section className="middle grain" aria-labelledby="middle-h">
-        <h2 className="middle-h" id="middle-h">Meet in the middle</h2>
-        <p className="middle-p">Choose who’s holding this phone first, then check in.</p>
+        <h2 className="middle-h" id="middle-h">Check in together</h2>
+        <p className="middle-p">Check-ins aren’t available yet.</p>
       </section>
     );
   }
@@ -51,9 +51,9 @@ function Middle({ m }: { m: MiddleView }) {
         <circle cx="42" cy="14" r="11" />
         <path className="middle-lens" d="M32 5.6a11 11 0 0 1 0 16.8 11 11 0 0 1 0-16.8z" />
       </svg>
-      <h2 className="middle-h" id="middle-h">Meet in the middle</h2>
+      <h2 className="middle-h" id="middle-h">Check in together</h2>
       {m.both_in ? (
-        <p className="middle-p">You've both told the jar how tonight feels. It'll draw only from what fits you both. Neither of you sees the other's answers.</p>
+        <p className="middle-p">You've both told the jar how tonight feels. Use "Draw for both of us" on the Jar page and it picks only what fits you both. Neither of you sees the other's answers.</p>
       ) : m.mine ? (
         <>
           <p className="middle-p">You're checked in. Waiting for {m.partner}: when they open the jar, they'll see it's their turn. Your answers stay yours.</p>
