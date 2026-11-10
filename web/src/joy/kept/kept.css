@@ -37,4 +37,8 @@
 .joy .k-add .btn { min-height: 44px; }
 .joy .k-money-sec { margin: 40px 0 24px; padding-top: 16px; border-top: 1px dashed var(--ink-soft); }
 .joy .k-money-sec > h2 { margin: 0 0 8px; }
-.joy .k-month-open { display: inline-block; margin-left: 10px; min-height: 44px; line-height: 44px; font-size: var(--step--1); font-weight: 650; text-decoration: underline; }
+.joy .k-month-open { display: inline-block; white-space: nowrap; margin-left: 10px; min-height: 44px; line-height: 44px; font-size: var(--step--1); font-weight: 650; text-decoration: underline; }
+
+/* The header's "+ Add a date we had" button opens this fold, so its own summary line only shows
+   once it is open (to close it again). */
+.joy #k-add:not([open]) > summary { display: none; }

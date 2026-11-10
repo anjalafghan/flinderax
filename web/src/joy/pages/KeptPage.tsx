@@ -211,7 +211,7 @@ export default function KeptPage() {
                       {m.items.length} {dateWord(m.items.length)}
                     </span>
                     <Link className="k-month-open" to={m.href} tabIndex={-1} aria-hidden="true">
-                      Open {m.label.split(" ")[0]} →
+                      Open →
                     </Link>
                   </h2>
                   <ol className="k-spread" role="list">
