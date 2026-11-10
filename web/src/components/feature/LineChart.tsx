@@ -24,11 +24,14 @@ export function LineChart({
   series,
   markers = [],
   ariaLabel = "Projection chart",
+  markerLabel = "A month you'd fall short",
 }: {
   labels: string[];
   series: ChartSeries[];
   markers?: ChartMarker[];
   ariaLabel?: string;
+  /** What a marker dot means, for the legend. */
+  markerLabel?: string;
 }) {
   const all = series.flatMap((s) => s.values);
   if (labels.length < 2 || all.length === 0) return null;
@@ -91,7 +94,7 @@ export function LineChart({
         ))}
         {markers.length > 0 && (
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block h-2 w-2 rounded-full bg-over" /> A month you'd fall short
+            <span className="inline-block h-2 w-2 rounded-full bg-over" /> {markerLabel}
           </span>
         )}
       </figcaption>

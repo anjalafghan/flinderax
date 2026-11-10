@@ -28,6 +28,8 @@ export interface Week {
   week_start: string;
   feel: number | null;
   note: string;
+  /** Hours of job preparation that week, in tenths. Older responses lack it. */
+  prep_hours_x10?: number | null;
   entries: WeekEntry[];
 }
 
@@ -97,6 +99,7 @@ export interface HabitPatch {
 export interface WeekInput {
   feel?: number | null;
   note?: string;
+  prep_hours_x10?: number | null;
   entries: WeekEntry[];
 }
 

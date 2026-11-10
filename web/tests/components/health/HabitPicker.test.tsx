@@ -32,18 +32,18 @@ describe("HabitPicker", () => {
     });
   });
 
-  it("shows the server's message when a third habit would be over the limit", async () => {
-    spyOn(api, "post").mockImplementation(() => Promise.reject(new Error("You can track up to three at a time.")));
+  it("shows the server's message when one more habit would be over the limit", async () => {
+    spyOn(api, "post").mockImplementation(() => Promise.reject(new Error("You can track up to five at a time.")));
     const error = spyOn(toast, "error");
     renderWithProviders(<HabitPicker overview={overview} />);
     fireEvent.click(screen.getByRole("button", { name: "No sugary drinks, 6 days" }));
-    await waitFor(() => expect(error).toHaveBeenCalledWith("You can track up to three at a time."));
+    await waitFor(() => expect(error).toHaveBeenCalledWith("You can track up to five at a time."));
   });
 
-  it("replaces the add forms with the limit note when three are tracked", () => {
-    const third = { id: "h3", label: "Fruit or salad every day", preset_key: "fruit_veg", target_days: 5, active: true };
-    renderWithProviders(<HabitPicker overview={{ ...overview, habits: [homeDinner, walk, third] }} />);
-    expect(screen.getByText("You can track up to three at a time. Stop one to add another.")).toBeInTheDocument();
+  it("replaces the add forms with the limit note when five are tracked", () => {
+    const more = ["Fruit or salad every day", "Workout", "10,000 steps"].map((label, i) => ({ id: `h${i + 3}`, label, preset_key: null, target_days: 5, active: true }));
+    renderWithProviders(<HabitPicker overview={{ ...overview, habits: [homeDinner, walk, ...more] }} />);
+    expect(screen.getByText("You can track up to five at a time. Stop one to add another.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add habit" })).toBeNull();
   });
 

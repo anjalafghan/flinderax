@@ -263,6 +263,8 @@ pub struct QuarterReport {
     pub diet: Option<crate::planner::diet::DietReport>,
     /// Phase 5: catch-ups, gifts and money sent to people.
     pub people: Option<crate::planner::people::PeopleReport>,
+    /// Where the life line stands, and how it moved since the last check-in.
+    pub lifeline: Option<crate::planner::lifeline::LifelineNote>,
 }
 
 /// The status: what is due, the four steps, and the estimated balances.
@@ -558,6 +560,7 @@ pub fn quarter_report(txns: &[TxnIn], period: Period, habits: Vec<Habit>) -> Qua
         calibration: None,
         diet: None,
         people: None,
+        lifeline: None,
     }
 }
 

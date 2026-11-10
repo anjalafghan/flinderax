@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Baby, ChevronDown, GraduationCap, Heart, Shield, Sunset, type LucideIcon } from "lucide-react";
 
 import { ForecastPanel } from "@/components/feature/ForecastPanel";
+import { LifeLine } from "@/components/feature/life/LifeLine";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import {
   type LifeProfile,
 } from "@/services/life";
 import { forecastKey } from "@/services/forecast";
+import { lifelineKey } from "@/services/lifeline";
 import { formatDay } from "@/utils/dates";
 import { formatINR as formatExact, formatPercent, paiseToInput, toPaise } from "@/utils/money";
 
@@ -39,6 +41,7 @@ function useSaveLife() {
       qc.setQueryData(lifeKey, out);
       // The forecast reads the same profile, so it is stale as soon as the details change.
       void qc.invalidateQueries({ queryKey: forecastKey });
+      void qc.invalidateQueries({ queryKey: lifelineKey });
     },
   });
 }
@@ -213,43 +216,6 @@ function GoalsLedger({ goals }: { goals: LifeGoal[] }) {
   );
 }
 
-// ---------- 3. timeline ----------
-
-function Timeline({ rows }: { rows: LifePlan["timeline"] }) {
-  return (
-    <section aria-labelledby="life-timeline-title" className="flex w-full flex-col">
-      <div className="flex items-baseline justify-between gap-4 pb-6">
-        <h2 id="life-timeline-title" className="m-0 font-display text-[32px] leading-none">
-          Timeline
-        </h2>
-        <span className="text-[13px] text-muted-foreground">Today to retirement</span>
-      </div>
-      {rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nothing scheduled yet.</p>
-      ) : (
-        <ol className="m-0 ml-2 list-none border-l border-border p-0 pl-6">
-          {rows.map((r) => (
-            <li key={r.year} className="relative pb-7 last:pb-0">
-              <span aria-hidden className="absolute -left-[30px] top-2 h-2.5 w-2.5 rounded-full bg-foreground" />
-              <div className="flex items-baseline gap-5">
-                <span className="w-16 shrink-0 font-display text-2xl leading-none">{r.year}</span>
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="text-[13px] text-muted-foreground">Age {r.age}</span>
-                  {r.events.map((e) => (
-                    <span key={e} className="text-base">
-                      {e}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
-
 // ---------- 4. insurance ----------
 
 function CoverRow({ label, needed, have, gap }: { label: string; needed: number; have: number; gap: number }) {
@@ -357,6 +323,9 @@ type Draft = {
   term_cover: string;
   health_cover: string;
   loans: string;
+  raise: string;
+  partner_raise: string;
+  live_to_age: string;
 };
 
 const money = (p: number | null) => (p === null ? "" : paiseToInput(p));
@@ -380,6 +349,9 @@ function toDraft(p: LifeProfile): Draft {
     term_cover: money(p.term_cover_paise),
     health_cover: money(p.health_cover_paise),
     loans: money(p.loans_paise),
+    raise: String((p.raise_bps ?? 800) / 100),
+    partner_raise: String((p.partner_raise_bps ?? 800) / 100),
+    live_to_age: String(p.live_to_age ?? 90),
   };
 }
 
@@ -399,6 +371,13 @@ function whole(label: string, text: string, min: number, max: number): number {
   const n = Number(text.trim());
   if (!Number.isInteger(n) || n < min || n > max) throw new Error(`${label} must be a whole number from ${min} to ${max}.`);
   return n;
+}
+
+/** A percentage from 0 to 30, as basis points. */
+function percent(label: string, text: string): number {
+  const n = Number(text.trim());
+  if (text.trim() === "" || !Number.isFinite(n) || n < 0 || n > 30) throw new Error(`${label} must be between 0 and 30.`);
+  return Math.round(n * 100);
 }
 
 function buildProfile(d: Draft): LifeProfile {
@@ -425,6 +404,9 @@ function buildProfile(d: Draft): LifeProfile {
     term_cover_paise: rupees("Term life cover", d.term_cover) ?? 0,
     health_cover_paise: rupees("Health cover", d.health_cover) ?? 0,
     loans_paise: rupees("Outstanding loans", d.loans) ?? 0,
+    raise_bps: percent("Your yearly raise", d.raise),
+    partner_raise_bps: percent("Partner's yearly raise", d.partner_raise),
+    live_to_age: whole("Plan to age", d.live_to_age, retirementAge, 110),
   };
 }
 
@@ -545,6 +527,18 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
           {moneyField("retirement_saved", "retirement_saved", "Already saved for retirement (₹)", "EPF, PPF, NPS and earmarked mutual funds.")}
         </Group>
 
+        <Group title="The long run">
+          <Field id="raise" label="Your yearly raise (%)" hint="Inflation is taken as 6%, so 8 is a real raise of 2.">
+            <Input id="raise" inputMode="decimal" value={draft.raise} onChange={set("raise")} />
+          </Field>
+          <Field id="partner_raise" label="Partner's yearly raise (%)">
+            <Input id="partner_raise" inputMode="decimal" value={draft.partner_raise} onChange={set("partner_raise")} />
+          </Field>
+          <Field id="live_to_age" label="Plan to age" hint="The life line runs to this age.">
+            <Input id="live_to_age" type="number" inputMode="numeric" min={60} max={110} value={draft.live_to_age} onChange={set("live_to_age")} />
+          </Field>
+        </Group>
+
         <Group title="Safety net">
           {moneyField("emergency_saved", "emergency_saved", "Emergency savings (₹)")}
           {moneyField("loans", "loans", "Outstanding loans (₹)")}
@@ -577,8 +571,8 @@ export default function LifePage() {
       <Header />
       <main className="page max-w-3xl stack">
         <div>
-          <h1 className="page-title">Life plan</h1>
-          <p className="page-sub">Your wedding, your child, and the years after — in today's rupees and tomorrow's.</p>
+          <h1 className="page-title">Life line</h1>
+          <p className="page-sub">Your money from now to 90, and what each choice does to it.</p>
         </div>
 
         {isLoading && <div className="h-64 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading your life plan" />}
@@ -592,15 +586,20 @@ export default function LifePage() {
           </div>
         )}
 
+        <LifeLine />
+
         {data && (
           <>
+            <ProfileForm profile={data.profile} saved={data.saved} />
+            <div className="pt-4">
+              <h2 className="m-0 font-display text-[32px] leading-none">The goals inside it</h2>
+              <p className="page-sub">What each goal needs a month, and whether your surplus covers it.</p>
+            </div>
             <ForecastPanel />
             <PlanSummary plan={data.plan} profile={data.profile} />
             <GoalsLedger goals={data.plan.goals} />
-            <Timeline rows={data.plan.timeline} />
             <Insurance insurance={data.plan.insurance} />
             <Assumptions a={data.plan.assumptions} />
-            <ProfileForm profile={data.profile} saved={data.saved} />
           </>
         )}
       </main>

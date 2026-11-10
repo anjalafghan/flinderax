@@ -1,11 +1,25 @@
 # joy
 
-Your money and your dates, in one place. joy is a personal finance hub plus a shared date jar for two, in one app, one server, one Fly machine.
+Your life from now to 90, and what each choice does to it. joy is one app for one household: it draws your money year by year to the age you plan to, lets you switch a choice on (a new job, a home, a child, retiring earlier) and says in plain sentences what changes. Everything else in the app feeds that line or keeps it honest.
 
-- **Money.** A manual-entry planner whose home screen answers one question: **how much can I spend until my next salary without missing anything?** One big *Safe to Spend* number, a plain-English breakdown of each credit card, and a short "do this today" list (e.g. "Move ₹8,000 Kotak → HDFC before 10 Oct"). There is no bank integration: balances follow your salary and bills automatically, bank alerts your phone forwards become categorised transactions, and you correct a number only when it drifts.
-- **Dates.** Too many plans, one pick. A wishlist of things to do together; when you can't decide, tell it your budget, time, place and distance and it picks **one** thing.
+It works at four time scales:
 
-It was built by merging two apps, the old Flinderax (money) and Joy (the date jar, now the **Dates** tab, `src/joy/` and `web/src/joy/`). See [Moving from the old Joy and Flinderax apps](#moving-from-the-old-joy-and-flinderax-apps).
+| When | Where | What you do |
+|------|-------|-------------|
+| **Decades** | Life → Life line | See net worth by age, when work becomes optional and how long the money lasts. Try a choice, keep it in the plan or drop it. |
+| **Each quarter** | Review → check-in | Upload statements, confirm balances, read the report. It says how the life line moved since last time. |
+| **Each week** | Health → This week | Five minutes: habit days (food and exercise), who to call, the next step in the job search, what is safe to spend. |
+| **Each day** | Today | **Safe to Spend** until payday, card bills, the short do-this-today list. Bank alerts and statements come in on their own. |
+
+The parts:
+
+- **Life line** (`src/planner/lifeline.rs`). Money is computed. Later-life medical costs, the cost of raising a child and the effect of staying active are estimates, labelled as such and editable.
+- **Money.** A planner whose home screen answers one question: **how much can I spend until my next salary without missing anything?** There is no bank integration: balances follow your salary and bills, bank alerts your phone forwards become categorised transactions, and you correct a number only when it drifts.
+- **Work.** A short list of job leads, one next step each. A lead with a salary opens on the life line as a job switch.
+- **People.** Dates for the two of you (a jar of ideas that picks **one**), and a circle of people with their birthdays, catch-ups and gifts.
+- **Health.** Up to five weekly habits, food money from your statements, weight and the yearly check-up.
+
+It was built by merging two apps, the old Flinderax (money) and Joy (the date jar, now **People → Us**, `src/joy/` and `web/src/joy/`). See [Moving from the old Joy and Flinderax apps](#moving-from-the-old-joy-and-flinderax-apps).
 
 ## One server
 
@@ -47,11 +61,12 @@ Changed an SQL query? Run `cargo sqlx prepare -- --bin joy` and commit `.sqlx/` 
 
 | Tab | What it does |
 |-----|--------------|
-| **Today** | Safe to Spend, the do-this-today list, cards, bills due soon, the net-worth chart |
+| **Today** | Safe to Spend, the life line in one row, the do-this-today list, cards, bills due soon, the net-worth chart |
 | **Money** | Accounts, spending (bank-alert transactions, statements), goals |
-| **Plan** | Income, fixed payments, settings, **What-if** projections, **Working** (the step-by-step numbers), "can I afford it?" |
-| **Dates** | The jar, picking, meet in the middle, slips, Kept, regulars, the year (see below) |
-| **Review** | Month close, tax entries by financial year, export |
+| **Life** | **Life line** (to 90, with choices), **Budget** (income, fixed payments, settings), **What-if** (the next 12-60 months), **Work** (job leads) |
+| **People** | **Us** (the date jar, see below) and **Circle** (people, dates, catch-ups, gifts) |
+| **Health** | **This week** (the five-minute screen) and **Health** (habits, food money, body) |
+| **Review** | Quarterly check-in, month close, tax entries by financial year, export |
 
 ## Demo data
 
@@ -121,31 +136,6 @@ function forwardAlerts() {
 }
 ```
 
-## Tracking with almost no typing
-
-**Balances move on their own.** Salary is added and fixed payments are taken off the linked account on their dates (`src/planner/autopost.rs`, applied lazily whenever balances are read, never twice). Typing a balance resets the starting point. Turn it off in Plan settings. Every balance change is kept in `balance_history`, which feeds the net-worth chart on the dashboard (`GET /api/dashboard/history`).
-
-**Bank alerts become transactions.** Generate a key on the Spending page, then have your phone forward bank SMS/emails to `POST /api/hook/ingest` with header `X-Ingest-Key: <key>` and body `{"text": "<message>", "source": "sms"}`. `src/alerts.rs` reads the amount, direction, last digits, merchant, date and "Avl Bal"; OTPs, reminders and offers are ignored; the same alert is stored once. Set each bank account's last 4 digits (Accounts page) so alerts update its balance and auto-posting skips what an alert already recorded. Re-categorise a transaction with "Remember" ticked and every future one from that merchant follows.
-
-**Statements.** Spending page > *Upload a statement* takes a bank CSV export (`POST /api/ingest/statement` with `{csv, account_id?, card_id?}`, `src/statement.rs`). It finds the header row, handles separate Debit/Credit columns or one signed / Dr-Cr amount column, and dd/mm/yy, dd-Mon-yyyy and ISO dates. Re-importing, or overlapping files, never double-count, and rows a bank alert already recorded (same day, direction, amount) are matched instead of added. Picking an account sets its balance from the newest line unless a newer balance exists.
-
-- **iPhone:** Shortcuts → Automation → Message, sender contains your bank's ID (HDFCBK, KOTAKB...) → Run Immediately → *Get Contents of URL* (POST, header `X-Ingest-Key`, JSON body `text` = Shortcut Input, `source` = `sms`).
-- **Android:** any SMS-to-webhook forwarder with the same URL, header and body.
-- **Gmail:** filter bank alerts into a label `bank-alerts`, then in Google Apps Script (run every 15 minutes with a time trigger):
-
-```js
-const URL = "https://your-app.fly.dev/api/hook/ingest", KEY = "fx_...";
-function forwardAlerts() {
-  for (const t of GmailApp.search("label:bank-alerts is:unread", 0, 50)) {
-    for (const m of t.getMessages().filter((m) => m.isUnread())) {
-      UrlFetchApp.fetch(URL, { method: "post", contentType: "application/json",
-        headers: { "X-Ingest-Key": KEY }, payload: JSON.stringify({ text: m.getPlainBody().slice(0, 2000), source: "email" }) });
-      m.markRead();
-    }
-  }
-}
-```
-
 ## Dates
 
 Dates is a **date jar**: every idea is a slip, you draw one, you can put it back three times, and the one you keep is stamped *IT'S A DATE* and goes into the keepsake box (Kept). Two joy users form a **couple** (one starts it, the other joins with an invite), and everything in the `joy_*` tables belongs to that couple.
@@ -177,6 +167,8 @@ Everything is data, nothing is hard-coded: accounts (`bank`, `cash`, `fd`, `rd`)
 | Ledger | `/api/moves/{record,undo}`, `GET /api/moves/list` |
 | Projection | `POST /api/plan/project` (what-if items in, baseline + scenario out) |
 | Afford | `POST /api/plan/afford` ("can I afford this?") |
+| Life line | `GET /api/plan/lifeline`, `POST /api/plan/lifeline/try` (`{base, with}` choices in, both lines and the consequences out), `POST /api/plan/lifeline/choices`, `PATCH`/`DELETE /api/plan/lifeline/choices/{id}` |
+| Work | `GET`/`POST /api/work`, `PUT`/`DELETE /api/work/{id}` |
 | Bills | `GET /api/bills`, `GET /api/bills/suggestions`, `POST /api/bills/suggestions/dismiss` |
 | Goals | `GET /api/goals`, `POST /api/goals/{create,update,archive,contribute}` |
 | Review | `GET /api/review/month`, `GET /api/review/tax`, `POST /api/review/tax/{entry,entry/delete,commitment}` |

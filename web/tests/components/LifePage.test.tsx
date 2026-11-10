@@ -7,6 +7,25 @@ import { MemoryRouter } from "react-router-dom";
 import LifePage from "@/pages/LifePage";
 import { AuthContext } from "@/context/AuthContext";
 import { lifeKey, type LifeOut } from "@/services/life";
+import { lifelineKey, type Line, type LifelineOut } from "@/services/lifeline";
+
+const line: Line = {
+  rows: [
+    { year: 2026, age: 28, income_paise: 50_000_000, spend_paise: 18_000_000, short_paise: 0, net_worth_paise: 40_000_000, net_worth_today_paise: 40_000_000, events: [] },
+    { year: 2028, age: 30, income_paise: 300_000_000, spend_paise: 380_000_000, short_paise: 20_000_000, net_worth_paise: 0, net_worth_today_paise: 0, events: ["Wedding"] },
+    { year: 2058, age: 60, income_paise: 0, spend_paise: 500_000_000, short_paise: 0, net_worth_paise: 90_000_000_00, net_worth_today_paise: 15_000_000_00, events: ["Retire at 60"] },
+    { year: 2088, age: 90, income_paise: 0, spend_paise: 900_000_000, short_paise: 0, net_worth_paise: 30_000_000_00, net_worth_today_paise: 2_000_000_00, events: [] },
+  ],
+  marks: { free_at_age: 57, runs_out_at_age: null, retire_age: 60, end_age: 90, at_60_today_paise: 15_000_000_00, at_end_today_paise: 2_000_000_00, unfunded: ["Wedding in 2028"] },
+  notes: ["Both incomes stop when you retire.", "Estimate: medical costs of ₹1,00,000 a year in today's money from age 60."],
+};
+
+const lifeline: LifelineOut = {
+  saved_profile: true,
+  line,
+  choices: [{ id: "c1", label: "Retire at 55", in_plan: false, choice: { kind: "retire_at", age: 55 } }],
+  working: { accounts_paise: 40_000_000, plan_saved_paise: 0, loans_paise: 0, wealth_paise: 40_000_000, expenses_paise: 9_000_000, income_paise: 25_000_000, note: "Starts from your account balances, less loans." },
+};
 
 const profile = {
   my_age: 28,
@@ -125,6 +144,7 @@ const fixture: LifeOut = {
 function withData(data: LifeOut) {
   const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
   qc.setQueryData(lifeKey, data);
+  qc.setQueryData(lifelineKey, lifeline);
   // The forecast panel sits on this page; an empty forecast keeps it from calling the network.
   qc.setQueryData(forecastKey, {
     basis: { source: "profile", months_used: 0, income_paise: 0, spend_paise: 0, invested_paise: 0, surplus_paise: 0, surplus_sd_paise: 0, entered_income_paise: 0, note: null },
@@ -154,6 +174,21 @@ describe("LifePage", () => {
     expect(screen.getByText("On track")).toBeInTheDocument();
     expect(screen.getByText(/Short by ₹1,20,000 a month/)).toBeInTheDocument();
     expect(screen.getByText("You ₹80,000 · Partner ₹55,000 a month", { exact: false })).toBeInTheDocument();
+  });
+
+  it("leads with the life line: the marks, the years, what can't be paid, and the saved choices", () => {
+    withData(fixture);
+    expect(screen.getByRole("heading", { name: "Life line" })).toBeInTheDocument();
+    expect(screen.getByText("Your plan, from 28 to 90")).toBeInTheDocument();
+    expect(screen.getByText("At 57")).toBeInTheDocument();
+    expect(screen.getByText("Past 90")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Net worth by age, in today's money" })).toBeInTheDocument();
+    expect(screen.getByText("Savings can't fully pay for: Wedding in 2028.")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "The years ahead" })).toHaveTextContent("Retire at 60");
+    expect(screen.getByRole("switch", { name: "Retire at 55: in my plan" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "See what changes" })).toBeInTheDocument();
+    // An estimate is labelled as one.
+    expect(screen.getByText("Estimate")).toBeInTheDocument();
   });
 
   it("collapses the profile form once the details are saved", () => {

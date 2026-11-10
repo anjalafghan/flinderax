@@ -77,6 +77,8 @@ export interface QuarterReport {
   diet?: DietReport | null;
   /** Phase 5: catch-ups, gifts and money sent to people. No names. */
   people?: PeopleReport | null;
+  /** Where the life line stands, and how it moved since the last check-in. */
+  lifeline?: { free_at_age: number | null; runs_out_at_age: number | null; end_age: number; line: string } | null;
 }
 
 export interface DietHabitRate {

@@ -9,17 +9,19 @@ use crate::planner::{
 };
 
 /// Ready-made weekly habits: (key, label, target days a week).
-pub const PRESETS: [(&str, &str, i64); 6] = [
+pub const PRESETS: [(&str, &str, i64); 8] = [
     ("home_dinner", "Home-cooked dinner", 5),
     ("no_sugary", "No sugary drinks", 6),
     ("fruit_veg", "Fruit or salad every day", 5),
     ("walk", "Walk 30 minutes", 4),
+    ("workout", "Workout", 3),
+    ("steps", "10,000 steps", 5),
     ("early_dinner", "Dinner before 9 pm", 5),
     ("water", "Eight glasses of water", 5),
 ];
 
 /// Most habits tracked at once.
-pub const MAX_ACTIVE: i64 = 3;
+pub const MAX_ACTIVE: i64 = 5;
 
 /// Merchants (lowercase fragments) that mean a delivery order when the payment is tagged food.
 const DELIVERY_MERCHANTS: [&str; 6] = ["swiggy", "zomato", "eatsure", "box8", "dominos", "faasos"];
@@ -166,9 +168,9 @@ pub fn habits(input: &DietIn, today: Date) -> Vec<Habit> {
         out.push(Habit {
             key: "diet_week".to_string(),
             area: Area::Food,
-            title: "Log this week's eating".to_string(),
+            title: "Do this week's 5 minutes".to_string(),
             why,
-            action: link("Log week", "/health"),
+            action: link("Log week", "/week"),
             cadence: Cadence::Weekly,
             due_on: end.map(|d| d.to_string()),
             status: if due_soon { Status::DueSoon } else { Status::Ok },

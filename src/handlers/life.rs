@@ -31,15 +31,21 @@ pub struct LifeOut {
 
 pub async fn get(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<LifeOut>, AppError> {
     let today = today_local();
+    let (profile, saved) = load_profile(&state.db, &user_id).await?;
+    Ok(Json(respond(&state.db, &user_id, today, profile, saved).await?))
+}
+
+/// The saved profile, or the defaults, and whether one was saved.
+pub(crate) async fn load_profile(db: &SqlitePool, user_id: &str) -> Result<(LifeProfile, bool), AppError> {
     let saved: Option<String> = sqlx::query_scalar::<_, String>("SELECT profile_json FROM life_profiles WHERE user_id = ?")
-        .bind(&user_id)
-        .fetch_optional(&state.db)
+        .bind(user_id)
+        .fetch_optional(db)
         .await?;
     let profile = match &saved {
         Some(json) => serde_json::from_str(json).unwrap_or_default(),
         None => LifeProfile::default(),
     };
-    Ok(Json(respond(&state.db, &user_id, today, profile, saved.is_some()).await?))
+    Ok((profile, saved.is_some()))
 }
 
 pub async fn save(
@@ -115,6 +121,14 @@ fn validate_profile(p: &LifeProfile, today: Date) -> Result<(), AppError> {
     }
     if p.retirement_age <= p.my_age {
         return Err(bad_request("Retirement age must be more than your age."));
+    }
+    for (label, bps) in [("Your yearly raise", p.raise_bps), ("Partner's yearly raise", p.partner_raise_bps)] {
+        if !(0..=3000).contains(&bps) {
+            return Err(bad_request(format!("{label} must be between 0% and 30%.")));
+        }
+    }
+    if !(p.retirement_age..=110).contains(&p.live_to_age) {
+        return Err(bad_request("Plan-to age must be between your retirement age and 110."));
     }
     money("Your take-home", p.my_take_home_paise, validate::non_negative_amount)?;
     money("Partner's take-home", p.partner_take_home_paise, validate::non_negative_amount)?;

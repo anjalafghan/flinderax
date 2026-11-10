@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { rate } from "@/services/checkin";
 import { useDietWeek, useSaveDietWeek, type DietHabit, type DietOverview, type Week, type WeekInput } from "@/services/diet";
@@ -67,6 +68,10 @@ interface FormProps {
 function WeekForm({ habits, week, saving, onSave }: FormProps) {
   const [days, setDays] = useState<Record<string, number>>({});
   const [feel, setFeel] = useState<number | null | undefined>(undefined);
+  const [prep, setPrep] = useState<string | undefined>(undefined);
+  const prepText = prep ?? (week.prep_hours_x10 == null ? "" : String(week.prep_hours_x10 / 10));
+  const prepHours = prepText.trim() === "" ? null : Number(prepText);
+  const prepBad = prepHours !== null && !(Number.isFinite(prepHours) && prepHours >= 0 && prepHours <= 168);
 
   const valueOf = (habit: DietHabit) =>
     days[habit.id] ?? week.entries.find((e) => e.habit_id === habit.id)?.days_hit ?? 0;
@@ -76,6 +81,7 @@ function WeekForm({ habits, week, saving, onSave }: FormProps) {
     onSave({
       feel: feelValue ?? null,
       note: week.note,
+      prep_hours_x10: prepHours === null ? null : Math.round(prepHours * 10),
       entries: habits.map((h) => ({ habit_id: h.id, days_hit: valueOf(h) })),
     });
   };
@@ -121,11 +127,29 @@ function WeekForm({ habits, week, saving, onSave }: FormProps) {
         </div>
       </fieldset>
 
+      <div className="flex flex-col gap-2">
+        <label htmlFor="week-prep-hours" className="text-[15px] font-medium">
+          Hours on your job search or learning
+        </label>
+        <Input
+          id="week-prep-hours"
+          inputMode="decimal"
+          placeholder="0"
+          value={prepText}
+          onChange={(e) => setPrep(e.target.value)}
+          aria-invalid={prepBad}
+          className="sm:max-w-[10rem]"
+        />
+        <p className={cn("m-0 text-[13px]", prepBad ? "text-destructive" : "text-muted-foreground")}>
+          {prepBad ? "Enter hours as a number, like 3 or 4.5." : "Leave blank if you are not looking."}
+        </p>
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p role="status" aria-live="polite" className="m-0 text-sm text-muted-foreground">
           {saving ? "Saving..." : ""}
         </p>
-        <Button onClick={submit} disabled={saving} className="self-start sm:self-auto">
+        <Button onClick={submit} disabled={saving || prepBad} className="self-start sm:self-auto">
           Save week
         </Button>
       </div>
@@ -183,7 +207,7 @@ export function WeekCard({ overview }: { overview: DietOverview }) {
         <h2 id="health-week-title" className="m-0 font-display text-[32px] leading-none">
           This week
         </h2>
-        <p className="m-0 text-sm text-muted-foreground">How many days you hit each habit. A rough count is fine.</p>
+        <p className="m-0 text-sm text-muted-foreground">How many days you hit each habit, food and exercise. A rough count is fine.</p>
       </div>
 
       {active.length > 0 ? (
@@ -202,7 +226,7 @@ export function WeekCard({ overview }: { overview: DietOverview }) {
           />
         </>
       ) : (
-        <p className="empty-note m-0">Pick up to three habits to track each week.</p>
+        <p className="empty-note m-0">Pick up to five habits to track each week.</p>
       )}
 
       <div className="flex flex-col gap-3">

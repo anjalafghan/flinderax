@@ -29,7 +29,8 @@ const inr = (paise: number) => "₹" + (paise / 100).toLocaleString("en-IN");
 
 // ---- account ----
 try {
-  await call("/api/common/register", { user_name: USER, user_password: PASS, user_role: "user" });
+  // Sign-ups need the server's code: pass the same value in SIGNUP_CODE.
+  await call("/api/common/register", { user_name: USER, user_password: PASS, user_role: "user", signup_code: process.env.SIGNUP_CODE ?? "" });
 } catch (e) {
   if (!String(e).includes("500")) throw e; // 500 = user name already taken
 }

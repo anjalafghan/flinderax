@@ -20,6 +20,7 @@ import { DueSoonCard } from "@/components/feature/BillsPanel";
 import { InsightsNudge } from "@/components/feature/InsightsPanel";
 import { HabitsCard } from "@/components/feature/HabitsCard";
 import { CheckInCard } from "@/components/feature/CheckInCard";
+import { LifeLineCard } from "@/components/feature/life/LifeLineCard";
 import { UpcomingDatesCard } from "@/components/feature/people/UpcomingDatesCard";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 
@@ -218,6 +219,7 @@ export default function DashboardPage() {
       <main className={`page flex-1 ${hasPendingDeferred ? "pb-32" : ""}`}>
         <div className="mb-6 w-full">
           <PlannerSummary />
+          <LifeLineCard />
           <InsightsNudge />
           <HabitsCard />
           <CheckInCard />

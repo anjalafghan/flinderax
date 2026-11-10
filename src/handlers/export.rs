@@ -70,6 +70,7 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         ("statement_profiles", "SELECT * FROM statement_profiles WHERE user_id = ?"),
         ("tax_entries", "SELECT * FROM tax_entries WHERE user_id = ?"),
         ("life_profiles", "SELECT * FROM life_profiles WHERE user_id = ?"),
+        ("life_choices", "SELECT * FROM life_choices WHERE user_id = ?"),
         // Everything, the original alert text (`raw_text`) included.
         ("transactions", "SELECT * FROM transactions WHERE user_id = ?"),
         ("merchant_rules", "SELECT * FROM merchant_rules WHERE user_id = ?"),
@@ -86,6 +87,7 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         ("touches", "SELECT * FROM touches WHERE user_id = ?"),
         ("gifts", "SELECT * FROM gifts WHERE user_id = ?"),
         ("gift_seasons", "SELECT * FROM gift_seasons WHERE user_id = ?"),
+        ("job_leads", "SELECT * FROM job_leads WHERE user_id = ?"),
     ];
     for (name, sql) in mine {
         out.insert((*name).into(), Value::Array(rows(db, sql, &user_id).await?));

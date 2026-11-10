@@ -27,11 +27,11 @@ pub const STEP_UP_BPS: i64 = 1000;
 pub const SWR_BPS: i64 = 325;
 
 /// ₹25,00,000 wedding budget in today's money, when a wedding date is set without one.
-const DEFAULT_WEDDING_BUDGET: i64 = 250_000_000;
+pub(crate) const DEFAULT_WEDDING_BUDGET: i64 = 250_000_000;
 /// ₹30,00,000 UG+PG cost in today's money.
 const DEFAULT_CHILD_EDUCATION: i64 = 300_000_000;
 /// ₹3,00,000 for delivery and the first year, in today's money.
-const CHILD_BIRTH_TODAY: i64 = 30_000_000;
+pub(crate) const CHILD_BIRTH_TODAY: i64 = 30_000_000;
 const EMERGENCY_MONTHS: i64 = 6;
 const EMERGENCY_HORIZON_MONTHS: i64 = 12;
 const TERM_YEARS_OF_INCOME: i64 = 15;
@@ -41,6 +41,10 @@ const FAMILY_HEALTH_COVER: i64 = 150_000_000;
 const HEALTH_AGE_TRIGGER: i64 = 45;
 const DEFAULT_MY_AGE: i64 = 28;
 const DEFAULT_RETIREMENT_AGE: i64 = 60;
+/// Yearly raise assumed for each income until retirement: 8%, two points over inflation.
+pub const DEFAULT_RAISE_BPS: i64 = 800;
+/// The life line runs to this age unless the profile says otherwise.
+pub const DEFAULT_LIVE_TO_AGE: i64 = 90;
 const MONTHS_PER_YEAR: i64 = 12;
 /// Under this many months a goal is held in debt; up to `HYBRID_MAX_MONTHS` it is hybrid.
 const DEBT_MAX_MONTHS: i64 = 36;
@@ -67,6 +71,11 @@ pub struct LifeProfile {
     pub term_cover_paise: i64,
     pub health_cover_paise: i64,
     pub loans_paise: i64,
+    /// Yearly raise on each take-home, in bps. Used by the life line only.
+    pub raise_bps: i64,
+    pub partner_raise_bps: i64,
+    /// The age the life line runs to.
+    pub live_to_age: i64,
 }
 
 impl Default for LifeProfile {
@@ -89,6 +98,9 @@ impl Default for LifeProfile {
             term_cover_paise: 0,
             health_cover_paise: 0,
             loans_paise: 0,
+            raise_bps: DEFAULT_RAISE_BPS,
+            partner_raise_bps: DEFAULT_RAISE_BPS,
+            live_to_age: DEFAULT_LIVE_TO_AGE,
         }
     }
 }
@@ -763,6 +775,9 @@ mod tests {
             term_cover_paise: i64::MIN,
             health_cover_paise: i64::MAX,
             loans_paise: i64::MAX,
+            raise_bps: i64::MAX,
+            partner_raise_bps: i64::MIN,
+            live_to_age: i64::MAX,
         };
         let plan = plan(&profile, i64::MAX, today());
         for g in &plan.goals {
