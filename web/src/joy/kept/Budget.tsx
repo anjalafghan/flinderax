@@ -36,7 +36,7 @@ function BudgetBar({ v }: { v: HistoryView }) {
     return (
       <div className="budget-line">
         <p>
-          <strong>{budget.spent}</strong> on dates this month
+          <strong>{budget.spent}</strong> spent on dates this month
         </p>
       </div>
     );
@@ -44,12 +44,8 @@ function BudgetBar({ v }: { v: HistoryView }) {
   return (
     <div className={`budget-line${budget.over ? " is-over" : ""}`}>
       <p>
-        <strong>{budget.spent}</strong> of {budget.budget} this month
-        {budget.over && (
-          <span className="k-worth hand" aria-hidden="true">
-            worth it
-          </span>
-        )}
+        <strong>{budget.spent}</strong> of {budget.budget} spent on dates this month
+        {budget.over && <span className="k-worth hand"> · over budget, worth it</span>}
       </p>
       <span className="budget-bar" style={bar(fill)} aria-hidden="true" />
     </div>
@@ -67,6 +63,7 @@ function RolloverForm({ v }: { v: HistoryView }) {
       <p>
         {r.month} is over: {r.spent} of {r.budget}, so {r.left} left.
       </p>
+      <p className="k-hint">Left over from {r.month}: choose what happens to it.</p>
       <div className="k-inline">
         <button className="k-btn" type="button" disabled={busy} onClick={() => void choose("roll")}>
           Roll {r.left} over
@@ -157,10 +154,9 @@ const KINDS: [string, string][] = [
 ];
 
 /** A date we had that never was a slip. It lands in Kept, ready for photos, a rating and lines. */
-function CustomDateFold() {
+export function CustomDateFold({ fold }: { fold: ReturnType<typeof useFold> }) {
   const { finish } = useKept();
   const { busy, err, act } = useAction();
-  const fold = useFold();
   const [title, setTitle] = useState("");
   const [place, setPlace] = useState("");
   const [setting, setSetting] = useState("local");
@@ -179,7 +175,7 @@ function CustomDateFold() {
     });
   };
   return (
-    <details className="k-budget-edit" {...fold.props}>
+    <details className="k-budget-edit" id="k-add" {...fold.props}>
       <summary>Add a date we had</summary>
       <form className="k-budget-form" onSubmit={submit}>
         <label className="k-label" htmlFor="custom-title">
@@ -330,10 +326,9 @@ function Savings({ s }: { s: SavingsState }) {
           )}
         </>
       ) : (
-        <p className="k-hint">
-          {s.saved_raw > 0 && `${s.saved} put aside. `}For a slip too big for one month, like a trip: put money aside until it’s covered.
-        </p>
+        <p className="k-hint">{s.saved_raw > 0 && `${s.saved} put aside. `}Pick something to save for, then put money aside until it’s covered.</p>
       )}
+      <p className="k-hint">The savings jar is for a slip too big for one month, like a trip. A month’s leftover can go in too.</p>
       <details className="k-budget-edit" {...goalFold.props}>
         <summary>{g ? "Save for something else" : "Choose what to save for"}</summary>
         <form
@@ -442,7 +437,6 @@ export function Budget({ v, hash }: { v: HistoryView; hash: string }) {
           </ul>
         </details>
       )}
-      <CustomDateFold />
       <OtherSpendFold v={v} />
       <Savings s={v.savings} />
     </div>
