@@ -1,16 +1,37 @@
-import { Link, useParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getSpread, regKeys } from "../regulars/api";
+import { getSpread, regKeys, stopTracking } from "../regulars/api";
+import { EditRegular } from "../regulars/EditRegular";
+import { apiMessage } from "../regulars/days";
 import { nightsWord } from "../regulars/days";
 import { NightPhoto } from "../regulars/NightPhoto";
 import { ApiError } from "../api";
-import { errText } from "../components/useBusy";
+import { ErrorState } from "../components/ErrorState";
+import { errText, useBusy } from "../components/useBusy";
 import "../regulars/regulars.css";
 
 export default function RegularPage() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
   const q = useQuery({ queryKey: regKeys.spread(id), queryFn: () => getSpread(id), retry: false });
+  const navigate = useNavigate();
+  const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [stopErr, setStopErr] = useState("");
+  const stopping = useBusy();
+  const stop = () =>
+    void stopping.run(async () => {
+      setStopErr("");
+      try {
+        await stopTracking(id);
+        await qc.invalidateQueries({ queryKey: regKeys.list });
+        qc.removeQueries({ queryKey: regKeys.spread(id) });
+        navigate("/joy/regulars", { replace: true });
+      } catch (e) {
+        setStopErr(apiMessage(e));
+      }
+    });
   const refresh = () => void qc.invalidateQueries({ queryKey: regKeys.spread(id) });
 
   if (q.isPending) return <p className="loading" role="status">Opening the stamps…</p>;
@@ -21,8 +42,7 @@ export default function RegularPage() {
         <nav className="m-top" aria-label="Back">
           <Link className="m-back" to="/joy/regulars"><span aria-hidden="true">←</span> Our regular nights</Link>
         </nav>
-        <p className="kind-error" role="alert">{gone ? "No such regular night." : errText(q.error)}</p>
-        {!gone && <button type="button" className="btn" onClick={() => void q.refetch()}>Try again</button>}
+        <ErrorState message={gone ? "No such regular night." : errText(q.error)} onRetry={gone ? undefined : () => void q.refetch()} />
       </div>
     );
   }
@@ -30,7 +50,7 @@ export default function RegularPage() {
   return (
     <>
       <nav className="m-top" aria-label="Back">
-        <Link className="m-back" to="/joy/kept"><span aria-hidden="true">←</span> Kept</Link>
+        <Link className="m-back" to="/joy/regulars"><span aria-hidden="true">←</span> Our regular nights</Link>
       </nav>
       <header className="rs-head">
         <h1 className="rs-title">{v.title}</h1>
@@ -51,6 +71,14 @@ export default function RegularPage() {
           </p>
         )}
       </header>
+
+      {editing ? (
+        <EditRegular regular={v} onDone={() => setEditing(false)} />
+      ) : (
+        <div className="rs-actions">
+          <button type="button" className="btn" onClick={() => setEditing(true)}>Edit</button>
+        </div>
+      )}
 
       {v.stamps.length === 0 ? (
         <p className="rs-empty">Nothing stamped yet. On {v.days} the jar page asks if we went.</p>
@@ -80,6 +108,27 @@ export default function RegularPage() {
           ))}
         </ul>
       )}
+
+      <section className="rs-stop" aria-labelledby="stop-h">
+        <h2 id="stop-h" className="reg-h">Stop tracking</h2>
+        {!confirming ? (
+          <button type="button" className="btn btn-quiet" aria-expanded="false" onClick={() => setConfirming(true)}>
+            Stop tracking this regular
+          </button>
+        ) : (
+          <div role="group" aria-labelledby="stop-h">
+            <p>
+              {v.title} leaves the list and the jar stops asking about it.
+              {v.count > 0 ? ` The ${v.count} ${nightsWord(v.count)} you stamped stay in your year.` : ""}
+            </p>
+            <div className="rs-actions">
+              <button type="button" className="btn btn-danger" disabled={stopping.busy} onClick={stop}>Yes, stop tracking</button>
+              <button type="button" className="btn btn-quiet" disabled={stopping.busy} onClick={() => setConfirming(false)}>Keep it</button>
+            </div>
+          </div>
+        )}
+        {stopErr && <p className="rs-error" role="alert">{stopErr}</p>}
+      </section>
     </>
   );
 }

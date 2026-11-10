@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ClipboardCheck, HeartPulse, ListChecks, LogOut, Plus, Sun, Users, Wallet, type LucideIcon } from "lucide-react";
+import { ClipboardCheck, HeartPulse, ListChecks, LogOut, Plus, Sun, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -102,6 +102,9 @@ export function Header() {
             <span className="hidden sm:inline">Add card</span>
           </Button>
           <ModeToggle />
+          <Button variant="outline" size="icon" onClick={() => navigate("/account")} title="Account" aria-label="Account" className="h-11 w-11 rounded-full border-border">
+            <UserRound className="h-[18px] w-[18px]" strokeWidth={1.5} />
+          </Button>
           <Button variant="outline" size="icon" onClick={handleLogout} title="Sign out" aria-label="Sign out" className="h-11 w-11 rounded-full border-border">
             <LogOut className="h-[18px] w-[18px]" strokeWidth={1.5} />
           </Button>

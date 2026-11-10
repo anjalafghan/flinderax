@@ -139,7 +139,8 @@ pub fn public_link(signed: String) -> String {
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/regulars", get(index).post(create))
-        .route("/regulars/{id}", get(spread))
+        .route("/regulars/{id}", get(spread).post(update))
+        .route("/regulars/{id}/delete", post(stop_tracking))
         .route("/regulars/{id}/went", post(went))
         .route("/regulars/{id}/skip", post(skip))
         .route("/nights/{id}/delete", post(delete_night))
@@ -342,9 +343,10 @@ pub async fn photo(State(s): State<AppState>, Path(vid): Path<i64>, Query(q): Qu
     let Some((couple,)) = row else { return Err(not_found("No photo")) };
     let path = photos::visit_path(&crate::import_joy::photos_root().join(&couple), vid);
     let Ok(bytes) = tokio::fs::read(&path).await else { return Err(not_found("No photo")) };
-    // The link carries the file's modified time, so a matching ?v= can be cached for good.
+    // The link carries the file's modified time, so a matching ?v= may be cached, but no longer
+    // than the link itself lives (7 days), so a removed photo doesn't linger in a browser cache.
     let fresh = v == mtime_secs(&path).to_string();
-    let cache = if fresh { "private, max-age=31536000, immutable" } else { "private, no-cache" };
+    let cache = if fresh { "private, max-age=604800" } else { "private, no-cache" };
     Ok(([(header::CONTENT_TYPE, "image/jpeg"), (header::CACHE_CONTROL, cache)], bytes).into_response())
 }
 
@@ -379,6 +381,10 @@ pub struct SpreadView {
     pub elsewhere: usize,
     pub total: String,
     pub average: String,
+    /// Weekday numbers (0 = Sunday), for the edit form.
+    pub day_values: Vec<u8>,
+    /// The usual amount as digits, for the edit form.
+    pub usual_raw: i64,
     pub stamps: Vec<Stamp>,
 }
 
@@ -424,6 +430,8 @@ pub async fn spread(State(s): State<AppState>, Extension((user_id, _)): User, Pa
         elsewhere: visits.iter().filter(|v| !v.place.is_empty()).count(),
         total: ctx.money(total),
         average: if count > 0 { ctx.money(total / count as i64) } else { String::new() },
+        day_values: r.weekdays.split(',').filter_map(|d| d.trim().parse().ok()).collect(),
+        usual_raw: r.usual_cost,
         stamps,
     }))
 }
@@ -501,31 +509,57 @@ fn clean_weekdays(days: &[String]) -> String {
     d.iter().map(u8::to_string).collect::<Vec<_>>().join(",")
 }
 
-/// `POST /regulars` → `Go` to the new regular's spread; a missing name or day is a 422 `{error}`.
-pub async fn create(State(s): State<AppState>, Extension((user_id, _)): User, Json(f): Json<NewRegular>) -> Result<Response, AppError> {
-    let j = joy(&s, &user_id).await?;
+/// The add and edit forms share their checks: (title, place, maps_url, weekdays, cost in rupees),
+/// or the 422 to hand back.
+fn clean_regular(f: &NewRegular, currency: &str) -> Result<(String, String, String, String, i64), Response> {
     let title: String = f.title.trim().chars().take(60).collect();
     if title.is_empty() {
-        return Ok(refuse("Give it a name."));
+        return Err(refuse("Give it a name."));
     }
     let weekdays = clean_weekdays(&f.days);
     if weekdays.is_empty() {
-        return Ok(refuse("Pick at least one day."));
+        return Err(refuse("Pick at least one day."));
     }
     // The link is shown as an href, so only a web address is kept.
     let maps = f.maps_url.trim();
     let maps = if maps.starts_with("https://") || maps.starts_with("http://") { maps } else { "" };
-    let cost = if f.cost.trim().is_empty() {
-        0
-    } else {
-        match typed_rupees(&f.cost, &j.ctx.currency) {
-            Ok(c) => c,
-            Err(e) => return Ok(refuse(e)),
-        }
-    };
+    let cost = if f.cost.trim().is_empty() { 0 } else { typed_rupees(&f.cost, currency).map_err(refuse)? };
     let place: String = f.place.trim().chars().take(120).collect();
-    let id = db::add_regular(&s.db, &j.couple, &title, &place, maps, &weekdays, cost, &f.since).await?;
+    Ok((title, place, maps.to_string(), weekdays, cost))
+}
+
+/// `POST /regulars` → `Go` to the new regular's spread; a missing name or day is a 422 `{error}`.
+pub async fn create(State(s): State<AppState>, Extension((user_id, _)): User, Json(f): Json<NewRegular>) -> Result<Response, AppError> {
+    let j = joy(&s, &user_id).await?;
+    let (title, place, maps, weekdays, cost) = match clean_regular(&f, &j.ctx.currency) {
+        Ok(v) => v,
+        Err(res) => return Ok(res),
+    };
+    let id = db::add_regular(&s.db, &j.couple, &title, &place, &maps, &weekdays, cost, &f.since).await?;
     Ok(go(spread_path(id)).into_response())
+}
+
+/// `POST /regulars/{id}` → `Go` to its spread: the same checks as adding (`since` is ignored; the
+/// nights already stamped stay as they are).
+pub async fn update(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>, Json(f): Json<NewRegular>) -> Result<Response, AppError> {
+    let j = joy(&s, &user_id).await?;
+    db::regular(&s.db, &j.couple, id).await?.ok_or_else(|| not_found("No such regular"))?;
+    let (title, place, maps, weekdays, cost) = match clean_regular(&f, &j.ctx.currency) {
+        Ok(v) => v,
+        Err(res) => return Ok(res),
+    };
+    db::update_regular(&s.db, &j.couple, id, &title, &place, &maps, &weekdays, cost).await?;
+    Ok(go(spread_path(id)).into_response())
+}
+
+/// `POST /regulars/{id}/delete`: stop tracking. The regular is archived, not erased, so the nights
+/// already stamped (and their photos) stay in the month and year pages.
+pub async fn stop_tracking(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    if !db::archive_regular(&s.db, &j.couple, id).await? {
+        return Err(not_found("No such regular"));
+    }
+    Ok(go("/joy/regulars"))
 }
 
 #[cfg(test)]

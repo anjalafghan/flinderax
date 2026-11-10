@@ -19,6 +19,9 @@ pub struct CreateUserPayload {
     /// Ignored: self-registration always creates a plain `user`. Kept so older clients still parse.
     #[serde(default)]
     pub user_role: String,
+    /// Must match the `SIGNUP_CODE` secret. With no secret set, sign-ups are closed.
+    #[serde(default)]
+    pub signup_code: String,
 }
 #[derive(serde::Serialize)]
 pub struct GetUserResponse {

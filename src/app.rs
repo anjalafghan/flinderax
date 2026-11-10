@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::compression::{CompressionLayer, CompressionLevel};
 use tower_http::services::ServeDir;
-use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
+use tower_http::trace::{DefaultOnResponse, TraceLayer};
 use tracing::{Level, error};
 
 use crate::models::AppState;
@@ -27,14 +27,25 @@ pub fn static_dir() -> String {
     std::env::var("STATIC_DIR").unwrap_or_else(|_| "web/dist".to_string())
 }
 
-fn trace_layer() -> TraceLayer<
+/// Logs each request by method and route TEMPLATE ("/api/public/reminders/{file}"), never the real
+/// path or query: those carry calendar-feed tokens, envelope tokens and photo signatures, and Fly
+/// keeps the logs.
+fn request_span(req: &axum::http::Request<axum::body::Body>) -> tracing::Span {
+    let route = req.extensions().get::<axum::extract::MatchedPath>().map_or("unmatched", |m| m.as_str());
+    tracing::info_span!("request", method = %req.method(), route)
+}
+
+type MakeSpan = fn(&axum::http::Request<axum::body::Body>) -> tracing::Span;
+type Trace = TraceLayer<
     tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>,
-    DefaultMakeSpan,
+    MakeSpan,
     tower_http::trace::DefaultOnRequest,
     DefaultOnResponse,
-> {
+>;
+
+fn trace_layer() -> Trace {
     TraceLayer::new_for_http()
-        .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+        .make_span_with(request_span as MakeSpan)
         .on_response(DefaultOnResponse::new().level(Level::INFO))
 }
 
@@ -157,7 +168,7 @@ fn spa_fallback(index: &str) -> impl Fn(axum::http::Uri) -> std::future::Ready<a
     }
 }
 
-async fn token_validator_middleware(
+pub async fn token_validator_middleware(
     State(state): State<AppState>,
     headers: HeaderMap,
     mut request: Request,
@@ -165,12 +176,31 @@ async fn token_validator_middleware(
 ) -> Result<Response, AppError> {
     match get_token(&headers) {
         Some(token) => {
-            let (user_id, role) = parse_token(token, &state.paseto_key)?;
+            let (user_id, role) = authenticate(token, &state).await?;
             request.extensions_mut().insert((user_id, role));
             let response = next.run(request).await;
             Ok(response)
         }
         _ => Err(AppError(StatusCode::UNAUTHORIZED, "error".to_string())),
+    }
+}
+
+fn sign_in_again() -> AppError {
+    AppError(StatusCode::UNAUTHORIZED, "Please sign in again.".to_string())
+}
+
+/// A valid token whose user still exists and whose version is still current. Password changes,
+/// "sign out everywhere" and account deletion all end older tokens this way. The role comes from
+/// the database, so a demotion applies at once.
+async fn authenticate(token: &str, state: &AppState) -> Result<(String, String), AppError> {
+    let (user_id, _token_role, version) = parse_token(token, &state.paseto_key)?;
+    let row: Option<(String, i64)> = sqlx::query_as("SELECT user_role, token_version FROM users WHERE user_id = ?")
+        .bind(&user_id)
+        .fetch_optional(&state.db)
+        .await?;
+    match row {
+        Some((role, current)) if version == Some(current) => Ok((user_id, role)),
+        _ => Err(sign_in_again()),
     }
 }
 
@@ -182,7 +212,7 @@ pub async fn token_validator_auth_middleware(
 ) -> Result<Response, AppError> {
     match get_token(&headers) {
         Some(token) => {
-            let (user_id, role) = parse_token(token, &state.paseto_key)?;
+            let (user_id, role) = authenticate(token, &state).await?;
             if role != "admin" {
                 return Err(AppError(
                     StatusCode::FORBIDDEN,
@@ -208,7 +238,7 @@ fn get_token(headers: &HeaderMap) -> Option<&str> {
 fn parse_token(
     token: &str,
     key: &Arc<PasetoSymmetricKey<V4, Local>>,
-) -> Result<(String, String), AppError> {
+) -> Result<(String, String, Option<i64>), AppError> {
     match PasetoParser::<V4, Local>::default()
         .check_claim(rusty_paseto::prelude::ExpirationClaim::default())
         .parse(token, key)
@@ -232,11 +262,14 @@ fn parse_token(
                     )
                 })?
                 .to_string();
-            Ok((user_id, role))
+            // Tokens issued before versions existed have none and no longer pass.
+            let version = json_value["tv"].as_i64();
+            Ok((user_id, role, version))
         }
         Err(err) => {
             error!("Error parsing token {}", err);
-            Err(AppError(StatusCode::UNAUTHORIZED, err.to_string()))
+            // The library's reason stays in the log; the client only learns to sign in again.
+            Err(AppError(StatusCode::UNAUTHORIZED, "Please sign in again.".to_string()))
         }
     }
 }

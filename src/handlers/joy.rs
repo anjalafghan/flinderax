@@ -3,9 +3,8 @@
 //! labels the matching bank-alert transactions as dates (`planner::joy`). One way only: Joy is
 //! shared with a partner, so nothing from here is ever sent there.
 
-use std::time::Duration as StdDuration;
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{extract::State, Extension, Json};
 use serde::{Deserialize, Serialize};
 use time::{macros::format_description, Date};
 
@@ -20,8 +19,6 @@ use crate::{
 
 type User = Extension<(String, String)>;
 
-const FETCH_TIMEOUT: StdDuration = StdDuration::from_secs(8);
-const MONTHS: u32 = 6;
 const RECENT: usize = 6;
 
 // ---------- Joy's response (whole rupees) ----------
@@ -57,39 +54,7 @@ fn parse_date(s: &str) -> Option<Date> {
     Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
 }
 
-/// `https://…`, or `http://` to this machine for local testing. No path, query or credentials.
-fn clean_url(raw: &str) -> Result<String, AppError> {
-    let url = raw.trim().trim_end_matches('/');
-    let rest = url
-        .strip_prefix("https://")
-        .or_else(|| url.strip_prefix("http://").filter(|r| r.starts_with("localhost") || r.starts_with("127.0.0.1")))
-        .ok_or_else(|| bad_request("Joy's address must start with https://"))?;
-    if rest.is_empty() || rest.contains(['/', '?', '#', '@', ' ']) {
-        return Err(bad_request("Use just Joy's address, like https://joy.fly.dev"));
-    }
-    Ok(url.to_string())
-}
 
-/// Asks Joy for its spending. Errors are short sentences shown to the user.
-async fn fetch(url: &str, token: &str) -> Result<JoyPayload, String> {
-    let client = reqwest::Client::builder()
-        .timeout(FETCH_TIMEOUT)
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .map_err(|e| e.to_string())?;
-    let res = client
-        .get(format!("{url}/api/v1/spending?months={MONTHS}"))
-        .bearer_auth(token)
-        .send()
-        .await
-        .map_err(|e| if e.is_timeout() { "Joy didn't answer in time".to_string() } else { "Couldn't reach Joy".to_string() })?;
-    match res.status() {
-        s if s.is_success() => res.json::<JoyPayload>().await.map_err(|_| "Joy sent something unexpected".to_string()),
-        reqwest::StatusCode::UNAUTHORIZED => Err("Joy didn't accept the token".into()),
-        reqwest::StatusCode::NOT_FOUND => Err("Joy's spending link is off (set JOY_API_TOKEN on Joy)".into()),
-        s => Err(format!("Joy answered {}", s.as_u16())),
-    }
-}
 
 /// Labels the debits that match Joy's dates; returns how many changed.
 async fn label_dates(db: &sqlx::SqlitePool, user_id: &str, payload: &JoyPayload) -> Result<u64, AppError> {
@@ -143,37 +108,15 @@ pub struct Done {
     pub status: bool,
 }
 
-/// Saves the link, but only after Joy has answered with that token.
+/// The old link to a separate Joy app. Dates is built into this app now, and the server no longer
+/// fetches from an address a user types (that was a way to make it call arbitrary hosts), so new
+/// links are refused.
 pub async fn connect(
-    State(state): State<AppState>,
-    Extension((user_id, _)): User,
-    Json(p): Json<ConnectPayload>,
+    State(_state): State<AppState>,
+    Extension((_user_id, _)): User,
+    Json(_p): Json<ConnectPayload>,
 ) -> Result<Json<Done>, AppError> {
-    let url = clean_url(&p.url)?;
-    let token = p.token.trim();
-    if token.is_empty() {
-        return Err(bad_request("Paste Joy's API token"));
-    }
-    if p.partner_paise < 0 {
-        return Err(bad_request("The partner's share can't be negative"));
-    }
-    let payload = fetch(&url, token).await.map_err(bad_request)?;
-    let json = serde_json::to_string(&payload).map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    sqlx::query!(
-        "INSERT INTO joy_links (user_id, url, token, partner_paise, last_payload, synced_at, last_error)
-         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, NULL)
-         ON CONFLICT(user_id) DO UPDATE SET url = excluded.url, token = excluded.token, partner_paise = excluded.partner_paise,
-            last_payload = excluded.last_payload, synced_at = excluded.synced_at, last_error = NULL",
-        user_id,
-        url,
-        token,
-        p.partner_paise,
-        json
-    )
-    .execute(&state.db)
-    .await?;
-    label_dates(&state.db, &user_id, &payload).await?;
-    Ok(Json(Done { status: true }))
+    Err(bad_request("Dates is part of joy now. Open Dates to start one, or join your partner's with their code."))
 }
 
 #[derive(Deserialize)]
@@ -255,7 +198,7 @@ pub async fn summary(State(state): State<AppState>, Extension((user_id, _)): Use
     let db = &state.db;
     // Dates lives in this app now: read it directly, nothing to fetch and nothing stale.
     if let Some((couple, who)) = couple_of(db, &user_id).await? {
-        let p = local_payload(db, &couple).await?;
+        let p = local_payload(db, &couple, Some(who)).await?;
         let partner = partner_covers(db, &couple, who, &p).await?;
         let mut out = Summary { connected: true, partner_paise: partner, ..Default::default() };
         out.labelled = label_dates(db, &user_id, &p).await?;
@@ -273,30 +216,10 @@ pub async fn summary(State(state): State<AppState>, Extension((user_id, _)): Use
     };
 
     let mut out = Summary { connected: true, url: Some(link.url.clone()), partner_paise: link.partner_paise, ..Default::default() };
-    let payload = match fetch(&link.url, &link.token).await {
-        Ok(p) => {
-            let json = serde_json::to_string(&p).unwrap_or_default();
-            sqlx::query!(
-                "UPDATE joy_links SET last_payload = ?, synced_at = CURRENT_TIMESTAMP, last_error = NULL WHERE user_id = ?",
-                json,
-                user_id
-            )
-            .execute(db)
-            .await?;
-            out.synced_at = sqlx::query_scalar!(r#"SELECT synced_at AS "s?: String" FROM joy_links WHERE user_id = ?"#, user_id)
-                .fetch_one(db)
-                .await?;
-            out.labelled = label_dates(db, &user_id, &p).await?;
-            Some(p)
-        }
-        Err(e) => {
-            sqlx::query!("UPDATE joy_links SET last_error = ? WHERE user_id = ?", e, user_id).execute(db).await?;
-            out.stale = true;
-            out.synced_at = link.synced_at;
-            out.error = Some(e);
-            link.last_payload.as_deref().and_then(|j| serde_json::from_str::<JoyPayload>(j).ok())
-        }
-    };
+    // A link from before Dates was built in: show the figures it last saved, never fetch again.
+    out.stale = true;
+    out.synced_at = link.synced_at;
+    let payload = link.last_payload.as_deref().and_then(|j| serde_json::from_str::<JoyPayload>(j).ok());
     if let Some(p) = payload {
         fill_month(&mut out, &p, link.partner_paise);
     }
@@ -333,27 +256,13 @@ fn fill_month(out: &mut Summary, p: &JoyPayload, partner_paise: i64) {
         .collect();
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn urls() {
-        assert_eq!(clean_url(" https://joy.fly.dev/ ").ok().unwrap(), "https://joy.fly.dev");
-        assert_eq!(clean_url("http://localhost:3000").ok().unwrap(), "http://localhost:3000");
-        assert!(clean_url("http://joy.fly.dev").is_err());
-        assert!(clean_url("https://joy.fly.dev/api").is_err());
-        assert!(clean_url("https://user@evil.example").is_err());
-        assert!(clean_url("ftp://x").is_err());
-    }
-}
 
 // ---------- Dates in this app (couples) ----------
 
 const LOCAL_MONTHS: i64 = 6;
 
 /// The same figures Joy's `/api/v1/spending` gave, read from the Dates tables (whole rupees).
-pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str) -> Result<JoyPayload, AppError> {
+pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str, who: Option<usize>) -> Result<JoyPayload, AppError> {
     use crate::joy::db as jdb;
     let mut months_list = Vec::new();
     for back in (0..LOCAL_MONTHS).rev() {
@@ -371,12 +280,16 @@ pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str) -> Result<JoyPay
         });
     }
     let (oldest, newest) = (months_list[0].clone(), months_list[months_list.len() - 1].clone());
-    // Kept dates (an unrevealed surprise keeps its amount but not its name), other date spending,
+    // Kept dates (an unrevealed surprise keeps its amount for the partner, but not its name or day: the day shows as the 1st of its month, so the budget adds up and the month still places it), other date spending,
     // and nights out with a regular: the same rules as Joy's spending API.
     let rows: Vec<(String, String, i64, String, String)> = sqlx::query_as(
-        "SELECT 'date:' || h.id, date(COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime'),
+        "SELECT 'date:' || h.id,
+                CASE WHEN h.surprise = 1 AND h.revealed = 0 AND COALESCE(h.drawn_by, -1) <> ?4
+                     THEN strftime('%Y-%m-01', COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime')
+                     ELSE date(COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime') END,
                 MAX(h.actual_cost - COALESCE(h.from_savings, 0), 0),
-                CASE WHEN h.surprise = 1 AND h.revealed = 0 THEN 'A surprise date' ELSE COALESCE(a.title, '') END, 'date'
+                CASE WHEN h.surprise = 1 AND h.revealed = 0 AND COALESCE(h.drawn_by, -1) <> ?4
+                     THEN 'A surprise date' ELSE COALESCE(a.title, '') END, 'date'
            FROM joy_history h LEFT JOIN joy_activities a ON a.id = h.activity_id
           WHERE h.couple_id = ?1 AND h.outcome = 'did_it' AND h.actual_cost IS NOT NULL
             AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()
@@ -393,6 +306,7 @@ pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str) -> Result<JoyPay
     .bind(couple)
     .bind(&oldest)
     .bind(&newest)
+    .bind(who.map_or(-1, |w| w as i64))
     .fetch_all(db)
     .await?;
     let entries = rows
@@ -448,7 +362,7 @@ pub struct SettleOut {
 pub async fn settle(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<SettleOut>, AppError> {
     let db = &state.db;
     let (couple, who) = crate::handlers::couple::require_couple(db, &user_id).await?;
-    let p = local_payload(db, &couple).await?;
+    let p = local_payload(db, &couple, Some(who)).await?;
     let partner = partner_covers(db, &couple, who, &p).await?;
     let budget = p.monthly_budget.unwrap_or(0) * 100;
     let your_share_bps = if budget > 0 { ((budget - partner).clamp(0, budget) * 10_000) / budget } else { 5_000 };

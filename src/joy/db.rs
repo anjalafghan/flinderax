@@ -313,6 +313,14 @@ pub async fn partners(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Ve
     .await
 }
 
+/// `partners`, minus slips sealed from `who`.
+pub async fn visible_partners(db: &SqlitePool, couple: &str, who: usize, id: i64) -> sqlx::Result<Vec<Activity>> {
+    let sealed = sealed_from(db, couple, who).await?;
+    let mut p = partners(db, couple, id).await?;
+    p.retain(|a| !sealed.contains(&a.id));
+    Ok(p)
+}
+
 /// Replace everything `id` pairs with.
 /// Both ends must be this couple's slips; anything else is skipped.
 pub async fn set_pairs(db: &SqlitePool, couple: &str, id: i64, with: &[i64]) -> sqlx::Result<()> {
@@ -392,6 +400,47 @@ pub async fn sealed_from(db: &SqlitePool, couple: &str, who: usize) -> sqlx::Res
     .bind(who as i64)
     .fetch_all(db)
     .await
+}
+
+/// Slips with an unrevealed surprise on them, whoever planned it: for lists shown to both of us
+/// (a Plan B suggestion), where neither of us may be handed a title that is still a secret.
+pub async fn sealed_any(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<i64>> {
+    sqlx::query_scalar("SELECT DISTINCT activity_id FROM joy_history WHERE couple_id = ? AND surprise = 1 AND revealed = 0")
+        .bind(couple)
+        .fetch_all(db)
+        .await
+}
+
+/// The couple's active slips as `who` may see them: `list` minus anything sealed from them. `None`
+/// (no viewer) fails closed and drops every unrevealed surprise.
+pub async fn visible_list(db: &SqlitePool, couple: &str, who: Option<usize>) -> sqlx::Result<Vec<Activity>> {
+    let sealed = match who {
+        Some(w) => sealed_from(db, couple, w).await?,
+        None => sealed_any(db, couple).await?,
+    };
+    let mut acts = list(db, couple, false).await?;
+    acts.retain(|a| !sealed.contains(&a.id));
+    Ok(acts)
+}
+
+/// `get`, but a slip sealed from `who` is not found, the same as one that doesn't exist.
+pub async fn visible_get(db: &SqlitePool, couple: &str, who: usize, id: i64) -> sqlx::Result<Option<Activity>> {
+    if sealed_from(db, couple, who).await?.contains(&id) {
+        return Ok(None);
+    }
+    get(db, couple, id).await
+}
+
+/// A joiner takes over an empty slot. Whatever the person who left was still planning in secret
+/// belongs to nobody now: `drawn_by` is cleared, which `sealed_from`/`sealed_for` read as sealed
+/// from everyone (the new partner can't be its planner, and can't reveal or read it).
+pub async fn orphan_surprises(tx: &mut sqlx::SqliteConnection, couple: &str, slot: i64) -> sqlx::Result<()> {
+    sqlx::query("UPDATE joy_history SET drawn_by = NULL WHERE couple_id = ? AND surprise = 1 AND revealed = 0 AND drawn_by = ?")
+        .bind(couple)
+        .bind(slot)
+        .execute(&mut *tx)
+        .await?;
+    Ok(())
 }
 
 pub async fn record(db: &SqlitePool, couple: &str, id: i64, did_it: bool) -> sqlx::Result<()> {
@@ -1508,7 +1557,7 @@ pub struct Visit {
 }
 
 pub async fn regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Option<Regular>> {
-    sqlx::query_as("SELECT * FROM joy_regulars WHERE couple_id = ? AND id = ?").bind(couple).bind(id).fetch_optional(db).await
+    sqlx::query_as("SELECT * FROM joy_regulars WHERE couple_id = ? AND id = ? AND active = 1").bind(couple).bind(id).fetch_optional(db).await
 }
 
 pub async fn regulars(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<Regular>> {
@@ -1699,6 +1748,30 @@ pub async fn add_regular(db: &SqlitePool, couple: &str, title: &str, place: &str
     .fetch_one(db)
     .await?;
     Ok(row.0)
+}
+
+/// Change a regular's details (the nights already stamped stay as they are). Scoped by couple.
+pub async fn update_regular(db: &SqlitePool, couple: &str, id: i64, title: &str, place: &str, maps_url: &str, weekdays: &str, usual_cost: i64) -> sqlx::Result<bool> {
+    let done = sqlx::query(
+        "UPDATE joy_regulars SET title = ?, place = ?, maps_url = ?, weekdays = ?, usual_cost = ?
+         WHERE couple_id = ? AND id = ? AND active = 1",
+    )
+    .bind(title)
+    .bind(place)
+    .bind(maps_url)
+    .bind(weekdays)
+    .bind(usual_cost)
+    .bind(couple)
+    .bind(id)
+    .execute(db)
+    .await?;
+    Ok(done.rows_affected() > 0)
+}
+
+/// Stop tracking a regular: archived (`active = 0`), never erased. False when it isn't ours.
+pub async fn archive_regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
+    let done = sqlx::query("UPDATE joy_regulars SET active = 0 WHERE couple_id = ? AND id = ? AND active = 1").bind(couple).bind(id).execute(db).await?;
+    Ok(done.rows_affected() > 0)
 }
 
 /// Fill a new couple's jar: copies every starter slip in `joy_seed_activities` into their

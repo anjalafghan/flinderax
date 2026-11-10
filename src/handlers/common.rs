@@ -80,7 +80,29 @@ pub fn validate_year_month(v: &Option<String>, what: &str) -> Result<(), AppErro
     }
 }
 
+/// Failed sign-ins per username per minute. Only failures count, so nobody can lock a user out by
+/// hammering their name, and a correct password always gets through while under the limit.
 const LOGIN_ATTEMPTS_PER_MINUTE: u32 = 10;
+/// Longest username we ever store (see `validate_credentials`); anything longer can't exist.
+const MAX_USERNAME: usize = 32;
+/// Longest password we accept; longer ones are refused before Argon2 runs.
+const MAX_PASSWORD: usize = 128;
+
+fn invalid_login() -> AppError {
+    AppError(StatusCode::UNAUTHORIZED, "Invalid username or password".into())
+}
+
+/// A real Argon2 hash of a random password, checked when the username doesn't exist so that a
+/// wrong name takes as long as a wrong password and the timing doesn't say which names are real.
+fn dummy_hash() -> &'static str {
+    static H: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    H.get_or_init(|| get_password_hash(nanoid!(32)).unwrap_or_default())
+}
+
+/// Equal without stopping at the first difference.
+fn same(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
 const REGISTRATIONS_PER_MINUTE: u32 = 5;
 
 fn too_many() -> AppError {
@@ -92,11 +114,16 @@ pub async fn login(
     headers: HeaderMap,
     Json(login_payload): Json<LoginPayload>,
 ) -> Result<Json<LoginResponse>, AppError> {
-    let name_key = format!("login-user:{}", login_payload.user_name.to_lowercase());
     let ip_key = format!("login-ip:{}", ratelimit::client_key(&headers));
-    if !ratelimit::allow(&name_key, LOGIN_ATTEMPTS_PER_MINUTE)
-        || !ratelimit::allow(&ip_key, LOGIN_ATTEMPTS_PER_MINUTE * 3)
-    {
+    if !ratelimit::allow(&ip_key, LOGIN_ATTEMPTS_PER_MINUTE * 3) {
+        return Err(too_many());
+    }
+    // Nothing longer than a real username or password reaches the limiter's map or Argon2.
+    if login_payload.user_name.chars().count() > MAX_USERNAME || login_payload.user_password.chars().count() > MAX_PASSWORD {
+        return Err(invalid_login());
+    }
+    let name_key = format!("login-user:{}", login_payload.user_name.to_lowercase());
+    if !ratelimit::under(&name_key, LOGIN_ATTEMPTS_PER_MINUTE) {
         return Err(too_many());
     }
 
@@ -108,17 +135,16 @@ pub async fn login(
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let user = match user {
-        Some(u) => u,
-        None => {
-            return Err(AppError(
-                StatusCode::UNAUTHORIZED,
-                "Invalid username or password".into(),
-            ))
-        }
+    let Some(user) = user else {
+        let _ = verify_user(dummy_hash().to_string(), login_payload.user_password);
+        ratelimit::hit(&name_key);
+        return Err(invalid_login());
     };
 
-    verify_user(user.user_password, login_payload.user_password)?;
+    if let Err(e) = verify_user(user.user_password, login_payload.user_password) {
+        ratelimit::hit(&name_key);
+        return Err(e);
+    }
 
     let user_id = user
         .user_id
@@ -130,14 +156,18 @@ pub async fn login(
         .to_string();
 
     let expiration = OffsetDateTime::now_utc() + Duration::hours(24);
-    let token = get_paseto_token(&user_id, user.user_role, &state.paseto_key, expiration)?;
+    let version: i64 = sqlx::query_scalar("SELECT token_version FROM users WHERE user_id = ?")
+        .bind(&user_id)
+        .fetch_one(&state.db)
+        .await?;
+    let token = get_paseto_token(&user_id, user.user_role, version, &state.paseto_key, expiration)?;
 
     Ok(Json(LoginResponse {
         access_token: token,
         expires_at: expiration.unix_timestamp(),
     }))
 }
-fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
+pub fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
     let parsed_hash = PasswordHash::new(&database_password)
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -154,9 +184,10 @@ fn verify_user(database_password: String, user_input_password: String) -> Result
     Ok(())
 }
 
-fn get_paseto_token(
+pub fn get_paseto_token(
     user_id: &str,
     user_role: String,
+    token_version: i64,
     key: &Arc<PasetoSymmetricKey<V4, Local>>,
     expiration: OffsetDateTime,
 ) -> Result<String, AppError> {
@@ -166,6 +197,10 @@ fn get_paseto_token(
     let token = PasetoBuilder::<V4, Local>::default()
         .set_claim(SubjectClaim::from(user_id))
         .set_claim(role_claim)
+        .set_claim(
+            CustomClaim::try_from(("tv", token_version))
+                .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?,
+        )
         .set_claim(
             ExpirationClaim::try_from(
                 expiration
@@ -189,6 +224,10 @@ pub fn validate_credentials(user_name: &str, user_password: &str) -> Result<(), 
             "Username must be 3-32 characters: letters, digits, '_', '-' or '.'",
         ));
     }
+    validate_password(user_password)
+}
+
+pub fn validate_password(user_password: &str) -> Result<(), AppError> {
     if !(8..=128).contains(&user_password.chars().count()) {
         return Err(bad_request("Password must be 8-128 characters"));
     }
@@ -212,8 +251,18 @@ pub async fn register(
     let CreateUserPayload {
         user_name,
         user_password,
+        signup_code,
         ..
     } = create_user;
+    // joy is for a couple, not the internet: a new account needs the code from the `SIGNUP_CODE`
+    // secret, and with no secret set nobody can sign up.
+    let expected = std::env::var("SIGNUP_CODE").unwrap_or_default();
+    if expected.trim().is_empty() {
+        return Err(AppError(StatusCode::FORBIDDEN, "Sign-ups are closed. Ask the owner for a sign-up code.".into()));
+    }
+    if !same(signup_code.trim().as_bytes(), expected.trim().as_bytes()) {
+        return Err(AppError(StatusCode::FORBIDDEN, "That sign-up code isn't right.".into()));
+    }
     let user_role = "user";
     validate_credentials(&user_name, &user_password)?;
 
@@ -241,7 +290,7 @@ pub async fn register(
     Ok(Json(CreateUserResponse { status: true }))
 }
 
-fn get_password_hash(user_password: String) -> Result<String, AppError> {
+pub fn get_password_hash(user_password: String) -> Result<String, AppError> {
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
     let password_hash = argon2

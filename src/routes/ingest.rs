@@ -31,5 +31,9 @@ pub fn routes(state: AppState) -> Router {
 
 /// Authenticated by `X-Ingest-Key`, not a bearer token.
 pub fn hook_routes(state: AppState) -> Router {
-    Router::new().route("/ingest", post(ingest::hook)).with_state(state)
+    // A bank alert is a few hundred bytes; refuse anything big before it is parsed.
+    Router::new()
+        .route("/ingest", post(ingest::hook))
+        .layer(axum::extract::DefaultBodyLimit::max(16 * 1024))
+        .with_state(state)
 }

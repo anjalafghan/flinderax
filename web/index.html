@@ -16,7 +16,7 @@
             content="credit card tracker, balance tracker, finance management, spending tracker, credit card balance, personal finance, joy, date ideas"
         />
         <meta name="author" content="joy" />
-        <meta name="robots" content="index, follow" />
+        <meta name="robots" content="noindex, nofollow" />
 
         <!-- Canonical URL (update __SITE_URL__ in production) -->
         <link rel="canonical" href="__SITE_URL__" />
@@ -80,11 +80,6 @@
                 document.documentElement.classList.add(t === "light" ? "light" : "dark"); // ThemeProvider defaults to dark
             } catch (e) {}
         </script>
-
-        <!-- Fonts: Newsreader (display, numbers) and Figtree (UI) -->
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,400&family=Figtree:wght@400;500;600&display=swap" />
 
         <!-- Stylesheet -->
         <link rel="stylesheet" href="./src/index.css" />

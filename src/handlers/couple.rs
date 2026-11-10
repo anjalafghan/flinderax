@@ -58,11 +58,13 @@ pub struct CoupleStatus {
     pub partner_name: Option<String>,
     /// Waiting for the partner to join.
     pub waiting: bool,
+    /// The couple's money symbol ("₹" unless they set another).
+    pub currency: String,
 }
 
 pub async fn status(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<CoupleStatus>, AppError> {
     let Some((couple, me)) = couple_of(&state.db, &user_id).await? else {
-        return Ok(Json(CoupleStatus { in_couple: false, me: None, partner_name: None, waiting: false }));
+        return Ok(Json(CoupleStatus { in_couple: false, me: None, partner_name: None, waiting: false, currency: "₹".into() }));
     };
     let me_slot = me as i64;
     let partner = sqlx::query_scalar!(
@@ -73,7 +75,12 @@ pub async fn status(State(state): State<AppState>, Extension((user_id, _)): User
     )
     .fetch_optional(&state.db)
     .await?;
-    Ok(Json(CoupleStatus { in_couple: true, me: Some(me), waiting: partner.is_none(), partner_name: partner }))
+    let currency: Option<String> = sqlx::query_scalar("SELECT value FROM joy_settings WHERE couple_id = ? AND key = 'CURRENCY_SYMBOL'")
+        .bind(&couple)
+        .fetch_optional(&state.db)
+        .await?;
+    let currency = currency.map(|c| c.trim().to_string()).filter(|c| !c.is_empty()).unwrap_or_else(|| "₹".into());
+    Ok(Json(CoupleStatus { in_couple: true, me: Some(me), waiting: partner.is_none(), partner_name: partner, currency }))
 }
 
 #[derive(Serialize)]
@@ -158,6 +165,10 @@ pub async fn join(
     if couple_of(&state.db, &user_id).await?.is_some() {
         return Err(bad_request("You're already in Dates. Leave it first to join someone else"));
     }
+    // Guessing codes is slow: a few tries a minute per account.
+    if !crate::ratelimit::allow(&format!("join-user:{user_id}"), 5) {
+        return Err(AppError(StatusCode::TOO_MANY_REQUESTS, "Too many tries. Wait a minute and check the code.".into()));
+    }
     let hash = hash_code(&p.code);
     let mut tx = state.db.begin().await?;
     let couple = sqlx::query_scalar!(
@@ -176,6 +187,8 @@ pub async fn join(
     .fetch_one(&mut *tx)
     .await?
     .ok_or_else(|| bad_request("That Dates already has two people"))?;
+    // Surprises left behind in this slot (from before this change, or from a leaver) stay sealed.
+    crate::joy::db::orphan_surprises(&mut tx, &couple, slot).await?;
     if slot == 1 {
         sqlx::query!("UPDATE couples SET user_1 = ? WHERE couple_id = ?", user_id, couple).execute(&mut *tx).await?;
     } else {
@@ -197,20 +210,58 @@ pub async fn join(
     Ok(Json(Done { status: true }))
 }
 
-/// Leaves the couple: your slot empties and the shared history stays with your partner. When
-/// nobody is left, Dates is deleted with everything in it.
-pub async fn leave(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Done>, AppError> {
-    let (couple, me) = couple_of(&state.db, &user_id).await?.ok_or_else(|| not_found("You're not in Dates"))?;
-    let mut tx = state.db.begin().await?;
-    if me == 0 {
-        sqlx::query!("UPDATE couples SET user_0 = NULL WHERE couple_id = ?", couple).execute(&mut *tx).await?;
-    } else {
-        sqlx::query!("UPDATE couples SET user_1 = NULL WHERE couple_id = ?", couple).execute(&mut *tx).await?;
-    }
-    sqlx::query!("DELETE FROM couples WHERE couple_id = ? AND user_0 IS NULL AND user_1 IS NULL", couple)
+/// Takes `user_id` out of their couple, inside `tx`: the slot empties and the shared history stays
+/// with the partner. When nobody is left the couple row goes, and with it everything in Dates.
+/// Returns `None` for someone who is not in a couple, otherwise `Some(emptied)` where `emptied` is
+/// the couple's id when it was deleted, so the caller can remove its photo folder after the commit.
+pub async fn leave_in_tx(tx: &mut sqlx::SqliteConnection, user_id: &str) -> Result<Option<Option<String>>, AppError> {
+    let row: Option<(String, Option<String>)> =
+        sqlx::query_as("SELECT couple_id, user_0 FROM couples WHERE user_0 = ? OR user_1 = ?")
+            .bind(user_id)
+            .bind(user_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let Some((couple, user_0)) = row else { return Ok(None) };
+    let me = if user_0.as_deref() == Some(user_id) { 0 } else { 1 };
+    let slot = if me == 0 { "user_0" } else { "user_1" };
+    // What the leaver was still planning in secret stays sealed from everyone, so whoever takes
+    // the empty slot next can't become its planner.
+    crate::joy::db::orphan_surprises(&mut *tx, &couple, me).await?;
+    sqlx::query(&format!("UPDATE couples SET {slot} = NULL WHERE couple_id = ?"))
+        .bind(&couple)
         .execute(&mut *tx)
         .await?;
+    let gone = sqlx::query("DELETE FROM couples WHERE couple_id = ? AND user_0 IS NULL AND user_1 IS NULL")
+        .bind(&couple)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+    Ok(Some((gone > 0).then_some(couple)))
+}
+
+/// Deletes a couple's photo folder (`<photos root>/<couple id>`). A folder that is already gone is fine.
+pub async fn remove_couple_photos(couple: &str) {
+    // Couple ids are nanoids; anything else must never become part of a path.
+    if couple.is_empty() || !couple.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        return;
+    }
+    let dir = crate::import_joy::photos_root().join(couple);
+    if let Err(e) = tokio::fs::remove_dir_all(&dir).await
+        && e.kind() != std::io::ErrorKind::NotFound
+    {
+        tracing::error!("could not remove photos of a deleted couple: {e}");
+    }
+}
+
+/// Leaves the couple: your slot empties and the shared history stays with your partner. When
+/// nobody is left, Dates is deleted with everything in it, photos included.
+pub async fn leave(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Done>, AppError> {
+    let mut tx = state.db.begin().await?;
+    let emptied = leave_in_tx(&mut tx, &user_id).await?.ok_or_else(|| not_found("You're not in Dates"))?;
     tx.commit().await?;
+    if let Some(couple) = emptied {
+        remove_couple_photos(&couple).await;
+    }
     Ok(Json(Done { status: true }))
 }
 

@@ -368,7 +368,7 @@ function Year({ v }: { v: YearView }) {
           </div>
 
           {v.photos.length > 0 && (
-            <section className="y-wall y-page y-page-wall" aria-labelledby="y-wall-h">
+            <section className="y-wall y-page y-page-wall" id="wall" aria-labelledby="y-wall-h">
               <div className="y-sec-head">
                 <h2 id="y-wall-h" className="y-hand-h">The photo wall</h2>
                 <p className="y-hand-label">{v.photos.length} {plural(v.photos.length, "photo", "photos")} ♡</p>

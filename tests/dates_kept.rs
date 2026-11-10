@@ -37,6 +37,9 @@ struct Res {
 }
 
 async fn setup() -> T {
+    // Sign-ups need the code from the SIGNUP_CODE secret; the tests use a fixed one.
+    // Safety: every test in this binary sets the same value before any request reads it.
+    unsafe { std::env::set_var("SIGNUP_CODE", "test-signup-code") };
     static PHOTOS: Once = Once::new();
     PHOTOS.call_once(|| {
         let dir = std::env::temp_dir().join(format!("joy-kept-{}", std::process::id()));
@@ -104,7 +107,7 @@ impl T {
     async fn user(&self, label: &str) -> String {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
         let (name, ip) = (format!("{label}{n}"), format!("10.88.{}.{}", n / 250, n % 250));
-        let creds = json!({"user_name": name, "user_password": "correct horse"});
+        let creds = json!({"user_name": name, "user_password": "correct horse", "signup_code": "test-signup-code"});
         for (path, expect) in [("/api/common/register", StatusCode::OK), ("/api/common/login", StatusCode::OK)] {
             let req = Request::post(path)
                 .header("content-type", "application/json")

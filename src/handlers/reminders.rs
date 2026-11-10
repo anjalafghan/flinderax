@@ -242,7 +242,9 @@ mod tests {
         assert!(text.starts_with("BEGIN:VCALENDAR\r\n"));
         assert!(text.ends_with("END:VCALENDAR\r\n"));
         assert!(text.contains("UID:joy-habit-bank_statement-acctB@joy\r\n"), "{text}");
-        assert!(text.contains("SUMMARY:Upload your Asha bank statement\r\n"), "{text}");
+        // Private by default: the account's name stays out of the synced calendar.
+        assert!(text.contains("SUMMARY:A money task in joy\r\n"), "{text}");
+        assert!(!text.contains("Asha"), "no account names in a private feed: {text}");
         assert!(text.contains(&format!("{}/spending\r\n", public_url())), "action link in the description: {text}");
         assert!(text.contains("UID:joy-checkin@joy\r\n"), "the check-in is in the feed: {text}");
         assert!(text.contains("SUMMARY:Quarterly check-in with joy\r\n"), "{text}");

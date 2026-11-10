@@ -10,6 +10,25 @@ use axum::{
 };
 
 const HSTS: &str = "max-age=31536000; includeSubDomains";
+/// What a page may load: our own scripts plus the one inline theme script (by hash, from
+/// web/index.html; update it if that script changes), styles from us and Google Fonts (inline
+/// styles are used by React), fonts, images (photos come from our own signed links; uploads are
+/// previewed as blob:), and API calls only to ourselves. Nothing may frame the app. A script
+/// injected by some future bug can't run, and couldn't send a token anywhere if it did.
+pub const CSP: &str = "default-src 'self'; \
+script-src 'self' 'sha256-dKgSjMjLHzOElpOWR0uUDjeOd7Ua5Zg1zKyZwm4QY8s='; \
+style-src 'self' 'unsafe-inline'; \
+font-src 'self' data:; \
+img-src 'self' data: blob:; \
+media-src 'self' blob:; \
+connect-src 'self'; \
+worker-src 'self'; \
+manifest-src 'self'; \
+object-src 'none'; \
+base-uri 'self'; \
+form-action 'self'; \
+frame-ancestors 'none'; \
+upgrade-insecure-requests";
 const IMMUTABLE: &str = "public, max-age=31536000, immutable";
 
 /// Build output whose name carries a content hash (`chunk-1dd7yscb.js`, `favicon-18zwz42s.svg`),
@@ -48,6 +67,7 @@ pub async fn security_headers(req: Request, next: Next) -> Response {
     set(h, header::REFERRER_POLICY, "no-referrer");
     set(h, header::X_CONTENT_TYPE_OPTIONS, "nosniff");
     set(h, header::X_FRAME_OPTIONS, "DENY");
+    set(h, header::CONTENT_SECURITY_POLICY, CSP);
     set(h, HeaderName::from_static("cross-origin-opener-policy"), "same-origin");
     set(h, HeaderName::from_static("permissions-policy"), "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
     if https {

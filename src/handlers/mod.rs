@@ -18,6 +18,7 @@ pub mod habits;
 pub mod ingest;
 pub mod insights;
 pub mod joy;
+pub mod lifecycle;
 pub mod life;
 pub mod moves;
 pub mod payees;

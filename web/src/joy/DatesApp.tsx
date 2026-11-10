@@ -43,31 +43,30 @@ function Nav({ page }: { page: ReturnType<typeof pageKey> }) {
           <Link to="/joy/kept" data-nav="kept" {...cur("kept")}>
             Kept
           </Link>
+          <Link to="/joy/year" data-nav="year" {...cur("year")}>
+            Year
+          </Link>
+          <Link to="/joy/regulars" data-nav="regulars" {...(page === "regulars" ? ({ "aria-current": "page" } as const) : {})}>
+            Regulars
+          </Link>
           <Link
             to="/joy/middle"
+            data-nav="middle"
             className="nav-middle-link"
-            aria-label="Meet in the middle"
-            title="Meet in the middle"
+            title="Meet in the middle: somewhere fair for both of you"
             {...(page === "middle" ? ({ "aria-current": "page" } as const) : {})}
           >
             <svg viewBox="0 0 64 28" aria-hidden="true" focusable="false">
               <circle cx="22" cy="14" r="11" />
               <circle cx="42" cy="14" r="11" />
             </svg>
+            Middle
+          </Link>
+          <Link to="/joy/settings" data-nav="settings" {...(page === "settings" ? ({ "aria-current": "page" } as const) : {})}>
+            Settings
           </Link>
         </nav>
       </header>
-      <nav className="subnav" aria-label="More in Dates">
-        <Link to="/joy/regulars" {...(page === "regulars" ? ({ "aria-current": "page" } as const) : {})}>
-          Regulars
-        </Link>
-        <Link to="/joy/year" {...(here === "year" ? ({ "aria-current": "page" } as const) : {})}>
-          Year
-        </Link>
-        <Link to="/joy/settings" {...(page === "settings" ? ({ "aria-current": "page" } as const) : {})}>
-          Settings
-        </Link>
-      </nav>
     </>
   );
 }

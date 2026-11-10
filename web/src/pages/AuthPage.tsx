@@ -35,6 +35,7 @@ export default function AuthPage() {
   // Register State
   const [regUser, setRegUser] = useState("");
   const [regPass, setRegPass] = useState("");
+  const [regCode, setRegCode] = useState("");
 
   const loginMutation = useMutation({
     mutationFn: async () => {
@@ -59,11 +60,10 @@ export default function AuthPage() {
 
   const registerMutation = useMutation({
     mutationFn: async () => {
-      // Backend requires user_role
       const res = await api.post<unknown>("/api/common/register", {
         user_name: regUser,
         user_password: regPass,
-        user_role: "user",
+        signup_code: regCode,
       });
       return res.data;
     },
@@ -73,6 +73,7 @@ export default function AuthPage() {
       // Reset fields
       setRegUser("");
       setRegPass("");
+      setRegCode("");
     },
     onError: (error) => {
       toast.error(errorMessage(error, "Registration failed. Please try again."));
@@ -186,6 +187,16 @@ export default function AuthPage() {
                         placeholder="Choose a username"
                         value={regUser}
                         onChange={(e) => setRegUser(e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <Label htmlFor="reg-code">Sign-up code</Label>
+                      <Input
+                        id="reg-code"
+                        autoComplete="off"
+                        placeholder="From the person who runs joy"
+                        value={regCode}
+                        onChange={(e) => setRegCode(e.target.value)}
                       />
                     </div>
                     <div className="field">

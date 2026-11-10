@@ -100,3 +100,56 @@
   .m-reveal .stack > .j-slip, .m-reveal .k-slip { animation: none; }
   #pick > .j-slip[data-kind="card"], .stack > .j-slip, #jar { touch-action: pan-y; }
 }
+/* ── UX pass: new pieces on the jar page ─────────────────── */
+.joy {
+  /* The chip groups are real fieldsets now; in the sentence they must flow like the spans they replaced. */
+  fieldset.where, fieldset.start-from { display: contents; border: 0; padding: 0; margin: 0; min-width: 0; }
+  fieldset.where > legend, fieldset.start-from > legend { position: absolute; }
+
+  /* Checkable jobs on the day plan: your own tick, your partner's stay greyed. */
+  .dp-job .dp-tick { cursor: pointer; align-items: center; flex-wrap: nowrap; padding-left: 0; color: var(--ink); }
+  .dp-job .dp-tick input { width: 24px; height: 24px; flex: none; margin: 0; accent-color: var(--stamp); cursor: pointer; }
+  .dp-job .dp-tick input:disabled { cursor: not-allowed; }
+  .dp-job:not(.is-mine) .dp-tick { color: var(--ink-soft); cursor: not-allowed; }
+  .dp-theirs-text { display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+  .dp-job .dp-tick:has(input:focus-visible) { outline: 2px solid var(--stamp); outline-offset: 2px; border-radius: 4px; }
+
+  /* After "It's a date": pick a day, or the day that was picked. */
+  .pick-day { margin: 12px 0 0; }
+  .pick-day .btn { display: inline-flex; align-items: center; gap: 8px; }
+  .pick-day .ico, .planned-line .ico { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .planned-line { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; font: 600 var(--step-0)/1.3 var(--font-ui); color: var(--ink); }
+  .share-note { margin: 8px 0 0; font-size: var(--step--1); color: var(--ink-soft); }
+  .veto-note { flex-basis: 100%; margin: -4px 0 4px; padding-left: 34px; font-size: var(--step--1); color: var(--ink-soft); }
+  .swipe-hint { margin: 10px 0 0; font: 600 1.15rem/1.2 var(--font-hand); color: var(--ink-soft); }
+
+  /* The Jar page's way into the check-in. */
+  .middle-link { margin: 4px 0 0; }
+  .middle-link a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink-soft); font: 500 var(--step--1)/1.3 var(--font-ui); text-decoration: underline; text-underline-offset: 3px; }
+  .middle-link a:hover { color: var(--ink); }
+
+  /* A visible "Opening the jar…" while the jar loads. */
+  .jar-loading { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 56px 0; color: var(--ink-soft); }
+  .jar-loading svg { width: 64px; height: auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; animation: jar-loading-sway 1.6s ease-in-out infinite; transform-origin: 50% 90%; }
+  .jar-loading p { margin: 0; font: 600 1.3rem/1.2 var(--font-hand); }
+
+  /* Phones: a shorter jar and a Draw button that stays in view, so the main action is never below the fold. */
+  @media (max-width: 879px) {
+    .jar-page { --stage-h: clamp(190px, 52vw, 330px); }
+    .tonight .draw-row {
+      position: sticky; bottom: 0; z-index: 5;
+      margin-inline: -4px; padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
+      background: linear-gradient(to top, var(--paper) 78%, transparent);
+    }
+    .tonight .draw-row .btn-middle, .tonight .draw-row #draw { flex: 1 1 9rem; padding-inline: 14px; }
+    .sentence { line-height: 1.7; }
+  }
+  /* Phones also have the app's tab bar fixed at the bottom: sit just above it, not behind it. */
+  @media (max-width: 767px) {
+    .tonight .draw-row { bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px)); padding-bottom: 10px; }
+  }
+}
+@keyframes jar-loading-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .joy .jar-loading svg { animation: none; }
+}

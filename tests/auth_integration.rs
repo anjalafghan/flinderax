@@ -12,6 +12,9 @@ use std::sync::Arc;
 use tower::ServiceExt;
 
 async fn test_app() -> Router {
+    // Sign-ups need the code from the SIGNUP_CODE secret; the tests use a fixed one.
+    // Safety: every test in this binary sets the same value before any request reads it.
+    unsafe { std::env::set_var("SIGNUP_CODE", "test-signup-code") };
     let db = SqlitePoolOptions::new()
         .max_connections(1)
         .connect("sqlite::memory:")
@@ -27,7 +30,11 @@ async fn test_app() -> Router {
 }
 
 /// Each test uses its own client IP: the rate limiter is process-wide.
-async fn post(app: &Router, ip: &str, path: &str, body: Value) -> (StatusCode, String) {
+async fn post(app: &Router, ip: &str, path: &str, mut body: Value) -> (StatusCode, String) {
+    // Every sign-up carries the code unless the test sets its own.
+    if path == "/api/common/register" && body.get("signup_code").is_none() {
+        body["signup_code"] = Value::from("test-signup-code");
+    }
     let req = Request::post(path)
         .header("content-type", "application/json")
         .header("fly-client-ip", ip)
@@ -286,30 +293,22 @@ async fn joy_dates_label_alerts_and_split_the_budget() {
         json!({"txn_id": coffee_id, "category": "food", "remember": false})).await;
     assert!(s.is_success());
 
+    // The old link to a separate Joy app is gone: the server refuses it and never calls the address.
     let (url, joy) = fake_joy(&today).await;
-    let (s, b) = authed_post(&app, &t, "/api/joy/connect", json!({"url": url, "token": "wrong", "partner_paise": 600_000})).await;
-    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
     let (s, b) = authed_post(&app, &t, "/api/joy/connect", json!({"url": url, "token": "joy-secret", "partner_paise": 600_000})).await;
-    assert!(s.is_success(), "{b}");
-
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
+    assert!(b.contains("Dates is part of joy now"), "{b}");
+    let (s, _) = authed_post(&app, &t, "/api/joy/connect", json!({"url": "http://localhost.evil.example", "token": "x", "partner_paise": 0})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
     let sum = authed_get(&app, &t, "/api/joy/summary").await;
-    assert_eq!(sum["connected"], true);
-    assert_eq!(sum["stale"], false);
-    assert_eq!(sum["month"]["spent_paise"], 300_000);
-    assert_eq!(sum["month"]["your_share_paise"], 210_000, "70% of ₹3,000");
-    assert_eq!(sum["month"]["your_budget_paise"], 1_400_000);
-
+    assert_eq!(sum["connected"], false);
+    // Nothing was labelled from an outside source.
     let txns = authed_get(&app, &t, "/api/ingest/transactions").await;
     let cat = |m: &str| txns.as_array().unwrap().iter().find(|x| x["merchant"] == m).unwrap()["category"].clone();
-    assert_eq!(cat("saltt"), "dates");
+    assert_ne!(cat("saltt"), "dates");
     assert_eq!(cat("bluetokai"), "food");
-
-    // Joy asleep or gone: the last figures, marked stale.
     joy.abort();
     let _ = joy.await;
-    let sum = authed_get(&app, &t, "/api/joy/summary").await;
-    assert_eq!(sum["stale"], true);
-    assert_eq!(sum["month"]["spent_paise"], 300_000);
 }
 
 #[tokio::test]
@@ -643,4 +642,45 @@ async fn old_joy_links_redirect_under_joy() {
     }
     let bad = app.clone().oneshot(Request::get("/e/%3Cscript%3E").body(Body::empty()).unwrap()).await.unwrap();
     assert_eq!(bad.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn sign_up_needs_the_code() {
+    let app = test_app().await;
+    let ip = "10.0.0.90";
+    let (s, body) = post(&app, ip, "/api/common/register", json!({"user_name": "eve", "user_password": "longenough1", "signup_code": "guess"})).await;
+    assert_eq!(s, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("sign-up code"), "{body}");
+    let (s, _) = post(&app, ip, "/api/common/register", json!({"user_name": "eve", "user_password": "longenough1", "signup_code": ""})).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    let (s, _) = post(&app, ip, "/api/common/register", json!({"user_name": "eve", "user_password": "longenough1"})).await;
+    assert_eq!(s, StatusCode::OK, "the helper adds the right code");
+}
+
+#[tokio::test]
+async fn failed_guesses_never_lock_out_the_real_password() {
+    let app = test_app().await;
+    post(&app, "10.0.0.91", "/api/common/register", json!({"user_name": "owner", "user_password": "correct horse"})).await;
+    // Ten wrong guesses from many addresses use up owner's failure budget...
+    for i in 0..10 {
+        let (s, _) = post(&app, &format!("10.0.1.{i}"), "/api/common/login", json!({"user_name": "owner", "user_password": "wrong pass"})).await;
+        assert_eq!(s, StatusCode::UNAUTHORIZED);
+    }
+    let (s, _) = post(&app, "10.0.1.50", "/api/common/login", json!({"user_name": "owner", "user_password": "wrong pass"})).await;
+    assert_eq!(s, StatusCode::TOO_MANY_REQUESTS, "then further guesses are slowed");
+    // A huge username is refused without touching the limiter or the database.
+    let huge = "u".repeat(1_000_000);
+    let (s, _) = post(&app, "10.0.1.60", "/api/common/login", json!({"user_name": huge, "user_password": "x"})).await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn a_bad_token_gets_a_plain_message() {
+    let app = test_app().await;
+    let req = Request::get("/api/diet").header("authorization", "Bearer v4.local.garbage").body(Body::empty()).unwrap();
+    let res = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let text = String::from_utf8_lossy(&bytes);
+    assert!(!text.to_lowercase().contains("paseto") && !text.contains("cipher"), "{text}");
 }

@@ -1,6 +1,7 @@
 // Every request the Dates section makes. Same bearer-token pattern as services/api.ts, but it keeps
 // the HTTP status and parsed body, because a refused slip save is a 422 that carries a FormView.
 import type { JoySummary } from "@/services/types";
+import { clearSession } from "@/session";
 
 export interface Opt {
   value: string;
@@ -147,6 +148,8 @@ export interface CoupleStatus {
   me: number | null;
   partner_name: string | null;
   waiting: boolean;
+  /** The couple's money symbol. */
+  currency: string;
 }
 
 export interface Invite {
@@ -230,11 +233,7 @@ export function authHeaders(): Record<string, string> {
 
 /** Sends the visitor to sign in. The promise never settles, because the page is leaving. */
 function toLogin<T>(): Promise<T> {
-  try {
-    localStorage.removeItem("token");
-  } catch {
-    /* ignore */
-  }
+  clearSession();
   window.location.href = "/auth";
   return new Promise<T>(() => {});
 }

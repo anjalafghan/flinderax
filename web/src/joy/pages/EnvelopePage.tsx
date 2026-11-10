@@ -62,7 +62,8 @@ export default function EnvelopePage() {
             <p className="loading" role="status">Opening…</p>
           ) : q.isError || !env ? (
             <div className="env-page">
-              <h1 className="env-to" role="status">This envelope has gone.</h1>
+              <h1 className="env-to" role="status">This envelope is no longer here.</h1>
+              <p className="env-hint">It may have been opened or replaced. Ask them to send it again.</p>
             </div>
           ) : (
             <div className="env-page">
@@ -123,7 +124,7 @@ export default function EnvelopePage() {
                       <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
                       <path d="M8.2 10.5V8a3.8 3.8 0 0 1 7.6 0v2.5" />
                     </svg>
-                    <span>The rest stays locked until {env.from ? `${env.from} reveals it` : "it's"}. Just be ready.</span>
+                    <span>The rest stays locked until {env.from ? `${env.from} reveals it` : "it's revealed"}. Just be ready.</span>
                   </p>
                 )}
                 <p className="env-sign">— joy</p>

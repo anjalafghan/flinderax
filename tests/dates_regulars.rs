@@ -31,6 +31,9 @@ struct Res {
 }
 
 async fn setup() -> T {
+    // Sign-ups need the code from the SIGNUP_CODE secret; the tests use a fixed one.
+    // Safety: every test in this binary sets the same value before any request reads it.
+    unsafe { std::env::set_var("SIGNUP_CODE", "test-signup-code") };
     static PHOTOS: std::sync::Once = std::sync::Once::new();
     PHOTOS.call_once(|| {
         let dir = std::env::temp_dir().join(format!("joy-regulars-test-{}", std::process::id()));
@@ -94,7 +97,7 @@ impl T {
     async fn user(&self, label: &str) -> String {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
         let (name, ip) = (format!("{label}{n}"), format!("10.88.{}.{}", n / 250, n % 250));
-        let creds = json!({"user_name": name, "user_password": "correct horse"});
+        let creds = json!({"user_name": name, "user_password": "correct horse", "signup_code": "test-signup-code"});
         for (path, expect) in [("/api/common/register", StatusCode::OK), ("/api/common/login", StatusCode::OK)] {
             let req = Request::post(path)
                 .header("content-type", "application/json")
@@ -300,11 +303,11 @@ async fn a_night_photo_uploads_and_is_served_only_to_a_valid_signature() {
     assert!(url.starts_with(&format!("/api/public/dates/nights/{vid}/photo?v=")), "{url}");
     assert_eq!(t.get(&format!("/api/dates/regulars/{id}"), &rohit).await.json["stamps"][0]["photo"].as_str().unwrap().split("&exp").next(), url.split("&exp").next());
 
-    // The signed link works with no login at all, and caches for good.
+    // The signed link works with no login at all, and caches no longer than the link lives.
     let img = t.call(Method::GET, &url, None, None).await;
     assert_eq!(img.status, StatusCode::OK);
     assert_eq!(img.headers["content-type"], "image/jpeg");
-    assert!(img.headers["cache-control"].to_str().unwrap().contains("immutable"));
+    assert_eq!(img.headers["cache-control"], "private, max-age=604800");
     assert!(img.text.len() > 100);
 
     // Tampering with anything breaks it.
@@ -464,4 +467,51 @@ async fn another_couples_regulars_nights_and_years_stay_theirs() {
         assert_eq!(t.get(path, &lonely).await.status, StatusCode::FORBIDDEN, "{path}");
     }
     assert_eq!(t.post("/api/dates/regulars", &lonely, json!({"title": "x", "days": [1]})).await.status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn editing_and_stopping_a_regular_stays_inside_the_couple() {
+    let t = setup().await;
+    let (rohit, neha, _) = t.couple().await;
+    let (carol, _) = t.loner().await;
+    let id = add_regular(&t, &rohit).await;
+    let day = today(&t, 0).await;
+    t.post(&format!("/api/dates/regulars/{id}/went"), &neha, json!({"day": day})).await;
+
+    // The spread carries what the edit form needs.
+    let v = t.get(&format!("/api/dates/regulars/{id}"), &rohit).await.json;
+    assert_eq!((v["day_values"].clone(), v["usual_raw"].clone()), (json!([2, 4]), json!(300)));
+
+    // Same checks as adding; a bad edit changes nothing.
+    let bad = t.post(&format!("/api/dates/regulars/{id}"), &neha, json!({"title": " ", "days": [1]})).await;
+    assert_eq!((bad.status, bad.json["error"].clone()), (StatusCode::UNPROCESSABLE_ENTITY, json!("Give it a name.")));
+    let bad = t.post(&format!("/api/dates/regulars/{id}"), &neha, json!({"title": "Chai", "days": []})).await;
+    assert_eq!(bad.json["error"], "Pick at least one day.");
+    assert_eq!(t.text("SELECT title FROM joy_regulars").await, "Blue Tokai");
+
+    // Either partner may edit; a blank spend means none; the stamped night is kept.
+    let ok = t
+        .post(&format!("/api/dates/regulars/{id}"), &neha, json!({"title": "Chai Point", "place": "Malad", "maps_url": "ftp://x", "days": ["5"], "cost": ""}))
+        .await;
+    assert_eq!((ok.status, ok.json["to"].clone()), (StatusCode::OK, json!(format!("/joy/regulars/{id}"))), "{}", ok.text);
+    let (title, place, maps, days, cost): (String, String, String, String, i64) =
+        sqlx::query_as("SELECT title, place, maps_url, weekdays, usual_cost FROM joy_regulars").fetch_one(&t.db).await.unwrap();
+    assert_eq!((title.as_str(), place.as_str(), maps.as_str(), days.as_str(), cost), ("Chai Point", "Malad", "", "5", 0));
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_regular_visits").await, 1);
+
+    // Another couple can neither edit nor stop it, and nothing changes.
+    assert_eq!(t.post(&format!("/api/dates/regulars/{id}"), &carol, json!({"title": "Mine", "days": [1]})).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.post(&format!("/api/dates/regulars/{id}/delete"), &carol, json!({})).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.text("SELECT title FROM joy_regulars").await, "Chai Point");
+    assert_eq!(t.scalar("SELECT active FROM joy_regulars").await, 1);
+
+    // Stopping archives it: gone from the list and the page, the night it stamped is kept.
+    let gone = t.post(&format!("/api/dates/regulars/{id}/delete"), &rohit, json!({})).await;
+    assert_eq!((gone.status, gone.json["to"].clone()), (StatusCode::OK, json!("/joy/regulars")), "{}", gone.text);
+    assert_eq!(t.scalar("SELECT active FROM joy_regulars").await, 0);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_regular_visits").await, 1);
+    assert_eq!(t.get("/api/dates/regulars", &rohit).await.json["items"], json!([]));
+    assert_eq!(t.get(&format!("/api/dates/regulars/{id}"), &rohit).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.post(&format!("/api/dates/regulars/{id}"), &rohit, json!({"title": "Back", "days": [1]})).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.post(&format!("/api/dates/regulars/{id}/delete"), &rohit, json!({})).await.status, StatusCode::NOT_FOUND);
 }

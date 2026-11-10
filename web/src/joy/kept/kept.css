@@ -26,3 +26,19 @@
 .joy .k-photo-pick li { display: grid; gap: 6px; justify-items: stretch; }
 .joy .k-photo-pick img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: var(--paper-2); }
 .joy .k-photo-pick .k-btn { min-height: 44px; }
+
+/* Field captions, photo tip, "More" tools, money section, add-a-date. */
+.joy .k-field-cap { display: block; margin: 10px 0 4px; font-size: var(--step--1); font-weight: 650; }
+.joy .k-photo-tip { margin: 8px 0 0; text-align: center; font-size: var(--step--1); color: var(--ink-soft); }
+.joy .k-photo-tip a { display: inline-block; min-height: 44px; line-height: 44px; }
+.joy .k-more > summary { cursor: pointer; }
+.joy .k-more[open] > summary { margin-bottom: 8px; }
+.joy .k-add { margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.joy .k-add .btn { min-height: 44px; }
+.joy .k-money-sec { margin: 40px 0 24px; padding-top: 16px; border-top: 1px dashed var(--ink-soft); }
+.joy .k-money-sec > h2 { margin: 0 0 8px; }
+.joy .k-month-open { display: inline-block; white-space: nowrap; margin-left: 10px; min-height: 44px; line-height: 44px; font-size: var(--step--1); font-weight: 650; text-decoration: underline; }
+
+/* The header's "+ Add a date we had" button opens this fold, so its own summary line only shows
+   once it is open (to close it again). */
+.joy #k-add:not([open]) > summary { display: none; }
