@@ -7,7 +7,7 @@ describe("peek counting from the server's card", () => {
   test("three peeks, all there", () => {
     const v = peekView(card());
     expect(v.dots.map((d) => d.full)).toEqual([true, true, true]);
-    expect(v.label).toBe("3 peeks left");
+    expect(v.label).toBe("3 more tries");
     expect(v.canPutBack).toBe(true);
     expect(v.bonusNote).toBe(false);
   });
@@ -15,7 +15,7 @@ describe("peek counting from the server's card", () => {
     const v = peekView(card({ rerolls_left: 4, max_rerolls: 4, bonus_peek: true }));
     expect(v.dots).toHaveLength(4);
     expect(v.dots.map((d) => d.bonus)).toEqual([false, false, false, true]);
-    expect(v.label).toBe("4 peeks left");
+    expect(v.label).toBe("4 more tries");
     expect(v.bonusNote).toBe(true);
   });
   test("the bonus note goes once one is spent", () => {
@@ -24,11 +24,11 @@ describe("peek counting from the server's card", () => {
     expect(v.dots.map((d) => d.full)).toEqual([true, true, true, false]);
   });
   test("one left reads singular", () => {
-    expect(peekView(card({ rerolls_left: 1 })).label).toBe("1 peek left");
+    expect(peekView(card({ rerolls_left: 1 })).label).toBe("1 more try");
   });
   test("after the last: no more peeking, and no put-back button", () => {
     const v = peekView(card({ rerolls_left: 0 }));
-    expect(v.label).toBe("No more peeking. This one's yours.");
+    expect(v.label).toBe("No more tries. This one's yours.");
     expect(v.canPutBack).toBe(false);
     expect(v.dots.every((d) => !d.full)).toBe(true);
   });

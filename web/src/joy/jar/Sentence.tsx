@@ -1,8 +1,9 @@
 // "For Thursday evening we have ₹__, about __, around __, no further than __ from __, feeling __."
 // Joy's decide.html: native selects for the blanks (the existing CSS styles and sizes them), and
-// tappable chips for the places and where we start from. Chips are checkboxes announced as toggle
-// buttons (`role="button"` + `aria-pressed`) so Joy's pen-circle CSS keeps working.
+// tappable chips for the places and where we start from. Chips are plain checkboxes (inside a
+// fieldset whose legend names the group), drawn as Joy's pen-circle by the CSS.
 import { useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import type { DecideView, Opt } from "./api";
 import { toggleSetting, toggleStart, type Filters } from "./form";
 
@@ -36,7 +37,7 @@ const Ico = ({ d }: { d: string[] }) => (
 function Chip({ on, tint, onToggle, children }: { on: boolean; tint?: string; onToggle: () => void; children: string }) {
   return (
     <label className="j-chip" style={tint ? ({ "--tint": `var(--tint-${tint})` } as React.CSSProperties) : undefined}>
-      <input type="checkbox" role="button" aria-pressed={on} checked={on} onChange={onToggle} />
+      <input type="checkbox" checked={on} onChange={onToggle} />
       <span>{children}</span>
     </label>
   );
@@ -108,8 +109,9 @@ export default function Sentence({ view: v, filters: f, onChange, busy, onDraw, 
             </label>{" "}
             {v.office_name && (
               <>
-                <span className="start-from" role="group" aria-labelledby="start-l" title="Tap again to go back to the usual for that day">
-                  <span id="start-l" className="start-l">
+                <fieldset className="start-from" title="Tap again to go back to the usual for that day">
+                  <legend className="visually-hidden">Where the day starts</legend>
+                  <span className="start-l" aria-hidden="true">
                     from
                   </span>{" "}
                   <Chip on={f.start === "office"} onToggle={() => onChange({ start: toggleStart(f.start, "office") })}>
@@ -118,7 +120,7 @@ export default function Sentence({ view: v, filters: f, onChange, busy, onDraw, 
                   <Chip on={f.start === "home"} onToggle={() => onChange({ start: toggleStart(f.start, "home") })}>
                     home
                   </Chip>
-                </span>{" "}
+                </fieldset>{" "}
               </>
             )}
             <span className="lead-rest">we have</span>
@@ -137,8 +139,9 @@ export default function Sentence({ view: v, filters: f, onChange, busy, onDraw, 
         </label>{" "}
         and{" "}
         {sel("max_duration", "Time we have", "all the time in the world", v.durations, (o) => `up to ${o.label.toLowerCase()}`)},{" "}
-        <span className="where" role="group" aria-labelledby="where-l">
-          <span id="where-l" className="where-l">
+        <fieldset className="where">
+          <legend className="visually-hidden">Where</legend>
+          <span className="where-l" aria-hidden="true">
             anywhere:
           </span>{" "}
           {v.settings.map((o, i) => (
@@ -149,26 +152,25 @@ export default function Sentence({ view: v, filters: f, onChange, busy, onDraw, 
               {i < v.settings.length - 1 ? " " : ""}
             </span>
           ))}
-        </span>
+        </fieldset>
         ,{" "}
-        {sel("max_km", "How far we'll go", "as far as it takes", v.kms, (o) => `within ${o.label}`)}
+        {sel("max_km", "How far we'll go", "any distance", v.kms, (o) => `within ${o.label}`)}
         <span className="from-clause">
           {" "}
-          of{" "}
-          {sel("from", "Measured from", "both our places", v.froms, (o) => o.label)}
+          {sel("from", "Measured from", "from either of our homes", v.froms, (o) => `from ${o.label}`)}
         </span>
-        , feeling {sel("tag", "Vibe", "anything", v.tags, (o) => o.label)} with{" "}
-        {sel("energy", "Energy", "any", v.energies, (o) => o.label.toLowerCase())} energy.
+        , {sel("tag", "Mood", "any mood", v.tags, (o) => `feeling ${o.label}`)},{" "}
+        {sel("energy", "Energy", "any energy", v.energies, (o) => `${o.label.toLowerCase()} energy`)}.
       </p>
 
       <div className="draw-row">
         {bothIn && (
           <button className="btn btn-stamp btn-draw btn-middle" type="button" disabled={busy} onClick={onDrawMiddle}>
-            Draw from the middle
+            Draw for both of us
           </button>
         )}
         <button id="draw" className={`btn ${bothIn ? "btn-ink" : "btn-stamp btn-draw"}`} type="submit" disabled={busy}>
-          {bothIn ? "Draw with this sentence" : "Draw a slip"}
+          {bothIn ? "Draw with my answers" : "Draw a slip"}
         </button>
         {shake.available && (
           <button id="shake" className="shake-opt" type="button" aria-pressed={shake.on} onClick={shake.toggle}>
@@ -176,6 +178,9 @@ export default function Sentence({ view: v, filters: f, onChange, busy, onDraw, 
           </button>
         )}
       </div>
+      <p className="middle-link">
+        <Link to="/joy/middle">Can't agree? Check in separately.</Link>
+      </p>
 
       {v.turn_name && (
         <p className={`turn${v.my_turn ? " is-mine" : ""}`}>
