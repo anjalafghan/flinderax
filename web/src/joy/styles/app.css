@@ -2,15 +2,20 @@
 .joy { overflow-x: clip; }
 .joy .top { top: 0; }
 .joy * { font-synthesis-weight: none; }
-.joy .subnav {
-  max-width: 680px; margin: 0 auto; padding: 0 var(--gutter);
-  display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: flex-end;
+/* One row for every Dates page. On a phone it scrolls sideways instead of wrapping onto a second
+   row, so the jar and "Draw a slip" stay near the top. */
+.joy .top nav {
+  flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  padding-right: 24px;
 }
-.joy .subnav a {
-  min-height: 44px; display: inline-flex; align-items: center; padding: 0 6px;
-  font: 500 var(--step--1)/1 var(--font-ui); color: var(--ink-soft); text-decoration: underline; text-decoration-color: var(--rule);
-}
-.joy .subnav a[aria-current="page"] { color: var(--ink); text-decoration-color: var(--stamp); }
+.joy .top nav::-webkit-scrollbar { display: none; }
+.joy .top nav a { flex: 0 0 auto; white-space: nowrap; }
+.joy .top nav a[aria-current="page"] { color: var(--ink); }
+.joy .top nav a[aria-current="page"]::after { transform: scaleX(1); }
+.joy .nav-middle-link { gap: 6px; }
+.joy .nav-middle-link svg { width: 22px; height: 11px; }
 /* the phone tab bar is fixed to the bottom: keep the toast above it */
 .joy .toast-region { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 5.5rem); }
 @media (min-width: 768px) { .joy .toast-region { bottom: max(16px, env(safe-area-inset-bottom)); } }
