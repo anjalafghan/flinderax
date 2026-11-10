@@ -141,6 +141,7 @@ pub async fn report_on(
     report.calibration = calibration::latest(state, user_id, today).await?;
     report.diet = diet::report(&state.db, user_id, period, today).await?;
     report.people = people::report(&state.db, user_id, period, today).await?;
+    report.lifeline = crate::handlers::lifeline::checkin_note(&state.db, user_id, today).await?;
     Ok(report)
 }
 
@@ -169,6 +170,7 @@ pub async fn complete_on(
     report.calibration = calibration::latest(state, user_id, today).await?;
     report.diet = diet::report(db, user_id, period, today).await?;
     report.people = people::report(db, user_id, period, today).await?;
+    report.lifeline = crate::handlers::lifeline::checkin_note(db, user_id, today).await?;
     let summary = serde_json::to_string(&report).map_err(stored_error)?;
     // The forecast as it stands now, for the next check-in to compare with.
     let snap = calibration::snapshot(state, user_id, today).await?;

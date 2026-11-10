@@ -56,6 +56,7 @@ describe("HealthPage", () => {
     expect(JSON.parse(String(init.body))).toEqual({
       feel: 5,
       note: "",
+      prep_hours_x10: null,
       entries: [
         { habit_id: "h1", days_hit: 3 },
         { habit_id: "h2", days_hit: 0 },
@@ -97,7 +98,7 @@ describe("HealthPage", () => {
   it("asks for habits when none are tracked", async () => {
     serve({ ...overview, habits: [] });
     renderWithProviders(<HealthPage />);
-    expect(await screen.findByText("Pick up to three habits to track each week.")).toBeInTheDocument();
+    expect(await screen.findByText("Pick up to five habits to track each week.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add habit" })).toBeInTheDocument();
   });
 

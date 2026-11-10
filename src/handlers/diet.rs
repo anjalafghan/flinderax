@@ -90,6 +90,8 @@ pub struct Week {
     pub week_start: String,
     pub feel: Option<i64>,
     pub note: String,
+    /// Hours of job preparation that week, in tenths.
+    pub prep_hours_x10: Option<i64>,
     pub entries: Vec<Entry>,
 }
 
@@ -186,7 +188,7 @@ async fn active_count(db: &sqlx::SqlitePool, user_id: &str, except: Option<&str>
 }
 
 fn limit_reached() -> AppError {
-    AppError(StatusCode::CONFLICT, "You can track up to three at a time.".to_string())
+    AppError(StatusCode::CONFLICT, "You can track up to five at a time.".to_string())
 }
 
 fn check_label(label: &str) -> Result<String, AppError> {
@@ -308,8 +310,8 @@ pub async fn delete_habit(
 // Weeks
 
 async fn week_out(db: &sqlx::SqlitePool, user_id: &str, week_start: &str) -> Result<Week, AppError> {
-    let head: Option<(Option<i64>, String)> =
-        sqlx::query_as("SELECT feel, note FROM diet_weeks WHERE user_id = ? AND week_start = ?")
+    let head: Option<(Option<i64>, String, Option<i64>)> =
+        sqlx::query_as("SELECT feel, note, prep_hours_x10 FROM diet_weeks WHERE user_id = ? AND week_start = ?")
             .bind(user_id)
             .bind(week_start)
             .fetch_optional(db)
@@ -322,11 +324,12 @@ async fn week_out(db: &sqlx::SqlitePool, user_id: &str, week_start: &str) -> Res
     .bind(week_start)
     .fetch_all(db)
     .await?;
-    let (feel, note) = head.unwrap_or((None, String::new()));
+    let (feel, note, prep_hours_x10) = head.unwrap_or((None, String::new(), None));
     Ok(Week {
         week_start: week_start.to_string(),
         feel,
         note,
+        prep_hours_x10,
         entries: rows.into_iter().map(|(habit_id, days_hit)| Entry { habit_id, days_hit }).collect(),
     })
 }
@@ -341,6 +344,8 @@ pub struct EntryIn {
 pub struct WeekPayload {
     pub feel: Option<i64>,
     pub note: Option<String>,
+    #[serde(default)]
+    pub prep_hours_x10: Option<i64>,
     #[serde(default)]
     pub entries: Vec<EntryIn>,
 }
@@ -386,6 +391,9 @@ async fn put_week_at(
     if p.feel.is_some_and(|f| !(1..=5).contains(&f)) {
         return Err(unprocessable("How it felt must be between 1 and 5."));
     }
+    if p.prep_hours_x10.is_some_and(|h| !(0..=1680).contains(&h)) {
+        return Err(unprocessable("Prep hours must be between 0 and 168."));
+    }
     let note = p.note.unwrap_or_default();
     if note.chars().count() > 280 {
         return Err(unprocessable("The note can be up to 280 characters."));
@@ -406,13 +414,15 @@ async fn put_week_at(
 
     let mut tx = db.begin().await?;
     sqlx::query(
-        "INSERT INTO diet_weeks (user_id, week_start, feel, note, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-         ON CONFLICT(user_id, week_start) DO UPDATE SET feel = excluded.feel, note = excluded.note, updated_at = CURRENT_TIMESTAMP",
+        "INSERT INTO diet_weeks (user_id, week_start, feel, note, prep_hours_x10, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(user_id, week_start) DO UPDATE SET feel = excluded.feel, note = excluded.note,
+             prep_hours_x10 = excluded.prep_hours_x10, updated_at = CURRENT_TIMESTAMP",
     )
     .bind(user_id)
     .bind(week_start)
     .bind(p.feel)
     .bind(&note)
+    .bind(p.prep_hours_x10)
     .execute(&mut *tx)
     .await?;
     sqlx::query("DELETE FROM diet_week_habits WHERE user_id = ? AND week_start = ?")
@@ -1000,6 +1010,7 @@ mod tests {
         WeekPayload {
             feel,
             note: None,
+            prep_hours_x10: None,
             entries: entries.iter().map(|(h, d)| EntryIn { habit_id: (*h).into(), days_hit: *d }).collect(),
         }
     }
@@ -1036,14 +1047,16 @@ mod tests {
         assert_eq!((a.label.as_str(), a.target_days, a.active), ("Home-cooked dinner", 5, true));
         let b = add_habit(&s, "u", "Walk 30 minutes", 4).await;
         add_habit(&s, "u", "Water", 5).await;
-        // A fourth is refused with the plain message; another user is unaffected.
-        let Err(e) = create_habit(State(s.clone()), who("u"), Json(bad("Fourth", 3))).await else { panic!("expected 409") };
-        assert_eq!((e.0, e.1.as_str()), (StatusCode::CONFLICT, "You can track up to three at a time."));
+        add_habit(&s, "u", "Workout", 3).await;
+        add_habit(&s, "u", "10,000 steps", 5).await;
+        // A sixth is refused with the plain message; another user is unaffected.
+        let Err(e) = create_habit(State(s.clone()), who("u"), Json(bad("Sixth", 3))).await else { panic!("expected 409") };
+        assert_eq!((e.0, e.1.as_str()), (StatusCode::CONFLICT, "You can track up to five at a time."));
         add_habit(&s, "other", "Their habit", 2).await;
 
         // Remove one, add another, then reactivating the removed one hits the limit.
         assert_eq!(ok(delete_habit(State(s.clone()), who("u"), Path(b.id.clone())).await), StatusCode::NO_CONTENT);
-        add_habit(&s, "u", "Fourth", 3).await;
+        add_habit(&s, "u", "Sixth", 3).await;
         let react = HabitPatch { label: None, target_days: None, active: Some(true), sort: None };
         assert_eq!(code(update_habit(State(s.clone()), who("u"), Path(b.id.clone()), Json(react)).await), StatusCode::CONFLICT);
 
@@ -1056,9 +1069,9 @@ mod tests {
 
         // Deactivated rows are kept, and the overview lists only active ones.
         let ov = ok(overview_at(&s.db, "u", today()).await);
-        assert_eq!(ov.habits.len(), 3);
+        assert_eq!(ov.habits.len(), 5);
         assert!(ov.habits.iter().all(|h| h.id != b.id));
-        assert_eq!(ov.presets.len(), 6);
+        assert_eq!(ov.presets.len(), 8);
         let kept: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM diet_habits WHERE habit_id = ?")
             .bind(&b.id)
             .fetch_one(&s.db)
@@ -1104,7 +1117,7 @@ mod tests {
         assert_eq!(code(put("2026-11-09", week(None, &[(&a.id, 8)])).await), unp);
         assert_eq!(code(put("2026-11-09", week(None, &[(&a.id, -1)])).await), unp);
         assert_eq!(code(put("2026-11-09", week(None, &[(&a.id, 1), (&a.id, 2)])).await), unp);
-        let long = WeekPayload { feel: None, note: Some("n".repeat(281)), entries: vec![] };
+        let long = WeekPayload { feel: None, note: Some("n".repeat(281)), prep_hours_x10: None, entries: vec![] };
         assert_eq!(code(put("2026-11-09", long).await), unp);
         // Eight weeks back is the edge and is allowed.
         ok(put("2026-09-14", week(None, &[])).await);
@@ -1112,9 +1125,10 @@ mod tests {
         let w = ok(put("2026-11-09", week(Some(4), &[(&a.id, 3), (&b.id, 4)])).await);
         assert_eq!((w.feel, w.entries.len()), (Some(4), 2));
         // Replace: one entry, new feel, and a note.
-        let p = WeekPayload { feel: None, note: Some("Busy week".into()), entries: vec![EntryIn { habit_id: a.id.clone(), days_hit: 5 }] };
+        let p = WeekPayload { feel: None, note: Some("Busy week".into()), prep_hours_x10: Some(45), entries: vec![EntryIn { habit_id: a.id.clone(), days_hit: 5 }] };
         let w = ok(put("2026-11-09", p).await);
         assert_eq!((w.feel, w.note.as_str(), w.entries.len(), w.entries[0].days_hit), (None, "Busy week", 1, 5));
+        assert_eq!(w.prep_hours_x10, Some(45));
 
         let ov = ok(overview_at(&s.db, "u", today()).await);
         assert_eq!(ov.week.week_start, "2026-11-09");

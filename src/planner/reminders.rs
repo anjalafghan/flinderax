@@ -78,6 +78,7 @@ pub fn hide_names(habits: &mut [Habit]) {
             match h.area {
                 Area::Food | Area::Health => "A health task in joy".into(),
                 Area::People => "Something for the people you care about".into(),
+                Area::Work => "A work task in joy".into(),
                 _ => "A money task in joy".into(),
             }
         };

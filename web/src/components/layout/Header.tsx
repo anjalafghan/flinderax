@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ClipboardCheck, HeartPulse, ListChecks, LogOut, Plus, Sun, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
+import { ClipboardCheck, HeartPulse, LogOut, Plus, Route, Sun, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -16,17 +16,29 @@ interface Tab {
 const TABS: Tab[] = [
   { to: "/", label: "Today", icon: Sun, prefixes: ["/", "/cards"] },
   { to: "/money", label: "Money", icon: Wallet, prefixes: ["/money", "/accounts", "/spending"] },
-  { to: "/plan", label: "Plan", icon: ListChecks, prefixes: ["/plan", "/what-if", "/working", "/life"] },
+  { to: "/life", label: "Life", icon: Route, prefixes: ["/life", "/plan", "/what-if", "/working", "/work"] },
   { to: "/joy", label: "People", icon: Users, prefixes: ["/joy", "/people"] },
-  { to: "/health", label: "Health", icon: HeartPulse, prefixes: ["/health"] },
+  { to: "/health", label: "Health", icon: HeartPulse, prefixes: ["/health", "/week"] },
   { to: "/review", label: "Review", icon: ClipboardCheck, prefixes: ["/review"] },
 ];
 
-/** Inside the People tab: the two of you (Dates), and everyone else. */
-const PEOPLE_SUBTABS = [
-  { to: "/joy", label: "Us", prefixes: ["/joy"] },
-  { to: "/people", label: "Circle", prefixes: ["/people"] },
-];
+/** The pages inside a tab, keyed by the tab's path. People: the two of you (Dates), and everyone else. */
+const SUBTABS: Record<string, { to: string; label: string; prefixes: string[] }[]> = {
+  "/life": [
+    { to: "/life", label: "Life line", prefixes: ["/life"] },
+    { to: "/plan", label: "Budget", prefixes: ["/plan", "/working"] },
+    { to: "/what-if", label: "What-if", prefixes: ["/what-if"] },
+    { to: "/work", label: "Work", prefixes: ["/work"] },
+  ],
+  "/joy": [
+    { to: "/joy", label: "Us", prefixes: ["/joy"] },
+    { to: "/people", label: "Circle", prefixes: ["/people"] },
+  ],
+  "/health": [
+    { to: "/week", label: "This week", prefixes: ["/week"] },
+    { to: "/health", label: "Health", prefixes: ["/health"] },
+  ],
+};
 
 /** The tab whose prefixes match the path. "/" only matches exactly, so it doesn't light up everything. */
 function activeTab(pathname: string): Tab | undefined {
@@ -35,13 +47,15 @@ function activeTab(pathname: string): Tab | undefined {
   );
 }
 
-/** Us / Circle, shown under the top bar while the People tab is open. */
-export function PeopleSubTabs() {
+/** The open tab's pages (Us / Circle, Life line / Budget / ...), shown under the top bar. */
+export function SubTabs() {
   const { pathname } = useLocation();
-  if (activeTab(pathname)?.to !== "/joy") return null;
+  const tab = activeTab(pathname);
+  const subtabs = tab && SUBTABS[tab.to];
+  if (!tab || !subtabs) return null;
   return (
-    <nav aria-label="People" className="mx-auto mt-4 flex w-full max-w-[1040px] gap-1 px-4 md:px-6">
-      {PEOPLE_SUBTABS.map((t) => {
+    <nav aria-label={tab.label} className="mx-auto mt-4 flex w-full max-w-[1040px] flex-wrap gap-1 px-4 md:px-6">
+      {subtabs.map((t) => {
         const on = t.prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
         return (
           <Link
@@ -110,7 +124,7 @@ export function Header() {
           </Button>
         </div>
       </div>
-      <PeopleSubTabs />
+      <SubTabs />
     </header>
   );
 }

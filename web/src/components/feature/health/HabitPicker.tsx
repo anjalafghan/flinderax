@@ -14,7 +14,7 @@ import {
 } from "@/services/diet";
 
 const SECTION = "flex flex-col gap-6 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10";
-const MAX_HABITS = 3;
+const MAX_HABITS = 5;
 const DAYS = [1, 2, 3, 4, 5, 6, 7];
 
 /** Presets, custom habits, a days target for each, and a way to stop tracking one. */
@@ -103,7 +103,7 @@ export function HabitPicker({ overview }: { overview: DietOverview }) {
       )}
 
       {full ? (
-        <p className="empty-note m-0">You can track up to three at a time. Stop one to add another.</p>
+        <p className="empty-note m-0">You can track up to five at a time. Stop one to add another.</p>
       ) : (
         <>
           {presets.length > 0 && (

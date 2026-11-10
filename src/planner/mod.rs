@@ -27,12 +27,14 @@ pub mod history;
 pub mod insights;
 pub mod joy;
 pub mod life;
+pub mod lifeline;
 pub mod people;
 pub mod projection;
 pub mod recurring;
 pub mod reminders;
 pub mod review;
 pub mod tax;
+pub mod work;
 
 use serde::Serialize;
 use time::{Date, Duration, Month};

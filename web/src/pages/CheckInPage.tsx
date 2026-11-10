@@ -271,6 +271,16 @@ function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
         {data.diet && <DietReportSection report={data.diet} />}
         {data.people && <PeopleReportSection report={data.people} />}
 
+        {data.lifeline && (
+          <div className="flex flex-col gap-3">
+            <h3 className="m-0 text-[15px] font-medium">Your life line</h3>
+            <p className="m-0 text-[15px]">{data.lifeline.line}</p>
+            <Link to="/life" className="self-start text-sm font-medium text-primary">
+              Open the life line
+            </Link>
+          </div>
+        )}
+
         {data.calibration && data.calibration.lines.length > 0 && (
           <div className="flex flex-col gap-3">
             <h3 className="m-0 text-[15px] font-medium">How the last forecast did</h3>

@@ -21,6 +21,10 @@ export interface LifeProfile {
   term_cover_paise: number;
   health_cover_paise: number;
   loans_paise: number;
+  /** Yearly raise on each take-home (bps) and the age the life line runs to. Older saves lack them. */
+  raise_bps?: number;
+  partner_raise_bps?: number;
+  live_to_age?: number;
 }
 
 export interface LifeOut {

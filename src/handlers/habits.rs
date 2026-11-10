@@ -115,6 +115,7 @@ pub async fn load_input(
         }),
         diet: crate::handlers::diet::habits_input(db, user_id, today).await?,
         people: crate::handlers::people::habits_input(db, user_id, today).await?,
+        work: crate::handlers::work::habits_input(db, user_id).await?,
     })
 }
 
