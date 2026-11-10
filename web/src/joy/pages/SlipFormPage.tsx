@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { archiveSlip, getSlipForm, keys, saveSlip, type FormView } from "../api";
 import { errorField, formToState, tidyTitle, toPayload, type FormState } from "../form";
 import { mapGoTo } from "../paths";
+import { parseMapLink } from "../maplink";
+import { ErrorState } from "../components/ErrorState";
 import { errText, useBusy } from "../components/useBusy";
 
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -25,7 +27,7 @@ export default function SlipFormPage() {
     return (
       <div className="write-page">
         <Link className="back" to="/joy/slips">All slips</Link>
-        <p className="kind-error" role="alert">{errText(q.error, "That slip isn’t here.")}</p>
+        <ErrorState message={errText(q.error, "That slip isn’t here.")} onRetry={() => void q.refetch()} />
       </div>
     );
   }
@@ -47,6 +49,8 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
   const [fieldErr, setFieldErr] = useState<ReturnType<typeof errorField>>(null);
   const [more, setMore] = useState(view.details_open);
   const [folding, setFolding] = useState(false);
+  const [link, setLink] = useState("");
+  const [coordsOpen, setCoordsOpen] = useState(false);
   const { busy, run } = useBusy();
   const archiving = useBusy();
   const errBox = useRef<HTMLDivElement>(null);
@@ -86,6 +90,7 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
         setFolding(false);
         const field = errorField(res.form.error);
         if (field === "hours") setMore(true);
+        if (field === "location") setCoordsOpen(true);
         setFieldErr(field);
         setError(res.form.error);
       } catch (er) {
@@ -219,22 +224,57 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
             </div>
           </div>
           <div className="field">
-            <label htmlFor="f-loc">Location <span className="opt">lat, lng</span></label>
+            <label htmlFor="f-link">Paste a Google Maps link <span className="opt">optional</span></label>
             <input
-              ref={locationRef}
-              id="f-loc"
-              name="location"
-              value={s.location}
-              onChange={(e) => set("location", e.target.value)}
+              id="f-link"
+              name="maps_link"
+              type="url"
+              value={link}
+              onChange={(e) => {
+                const v = e.target.value;
+                setLink(v);
+                const m = parseMapLink(v);
+                if (m.kind === "coords") set("location", m.location);
+              }}
               autoComplete="off"
-              inputMode="text"
               spellCheck={false}
-              placeholder="19.13, 72.81"
-              aria-describedby="loc-hint"
-              aria-invalid={fieldErr === "location" ? true : undefined}
+              placeholder="https://www.google.com/maps/place/…"
+              aria-describedby="link-hint"
             />
-            <p className="hint" id="loc-hint">In Google Maps, long-press the spot and copy the numbers at the top. Leave it blank for at-home plans.</p>
+            <p className="hint" id="link-hint" role="status">
+              {(() => {
+                const m = parseMapLink(link);
+                if (m.kind === "coords") return `Got the spot: ${m.location}.`;
+                if (m.kind === "short") return "Open the link and copy the full address from the browser bar.";
+                if (link.trim()) return "That link has no spot in it. Open the place in Google Maps and copy the address from the browser bar.";
+                return s.location ? `Pinned at ${s.location}.` : "In Google Maps, tap Share on the place and paste it here. Leave it blank for at-home plans.";
+              })()}
+            </p>
+            {!coordsOpen && (
+              <button type="button" className="btn btn-quiet" aria-expanded="false" aria-controls="f-loc-box" onClick={() => setCoordsOpen(true)}>
+                Enter coordinates instead
+              </button>
+            )}
           </div>
+          {coordsOpen && (
+            <div className="field" id="f-loc-box">
+              <label htmlFor="f-loc">Coordinates <span className="opt">latitude, longitude</span></label>
+              <input
+                ref={locationRef}
+                id="f-loc"
+                name="location"
+                value={s.location}
+                onChange={(e) => set("location", e.target.value)}
+                autoComplete="off"
+                inputMode="text"
+                spellCheck={false}
+                placeholder="19.13, 72.81"
+                aria-describedby="loc-hint"
+                aria-invalid={fieldErr === "location" ? true : undefined}
+              />
+              <p className="hint" id="loc-hint">Two numbers with a comma. In Google Maps, long-press the spot and copy the numbers at the top.</p>
+            </div>
+          )}
         </fieldset>
 
         <div className="field">
@@ -297,12 +337,12 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
               onChange={(e) => set("hours", e.target.value)}
               autoComplete="off"
               spellCheck={false}
-              placeholder="tue-sun 12:00-23:30; mon 18:00-23:00"
+              placeholder="e.g. tue-sun 12:00-23:30; mon 18:00-23:00"
               aria-describedby="hours-hint"
               aria-invalid={fieldErr === "hours" ? true : undefined}
             />
             <p className="hint" id="hours-hint">
-              {view.hours_today ? `Today: ${view.hours_today}` : "Days, then 24-hour times. A close before the open runs past midnight."}
+              {view.hours_today ? `Today: ${view.hours_today}` : "Write the days, then the open and close in 24-hour time, like tue-sun 12:00-23:30. Separate different days with a semicolon. A close before the open runs past midnight."}
             </p>
           </div>
           <div className="pair">
@@ -382,7 +422,7 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
         )}
 
         <fieldset className="chips">
-          <legend>Written by</legend>
+          <legend>Whose idea was it?</legend>
           <div className="chip-row">
             {view.people.map((o) => (
               <label key={o.value} className="chip">

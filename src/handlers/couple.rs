@@ -58,11 +58,13 @@ pub struct CoupleStatus {
     pub partner_name: Option<String>,
     /// Waiting for the partner to join.
     pub waiting: bool,
+    /// The couple's money symbol ("₹" unless they set another).
+    pub currency: String,
 }
 
 pub async fn status(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<CoupleStatus>, AppError> {
     let Some((couple, me)) = couple_of(&state.db, &user_id).await? else {
-        return Ok(Json(CoupleStatus { in_couple: false, me: None, partner_name: None, waiting: false }));
+        return Ok(Json(CoupleStatus { in_couple: false, me: None, partner_name: None, waiting: false, currency: "₹".into() }));
     };
     let me_slot = me as i64;
     let partner = sqlx::query_scalar!(
@@ -73,7 +75,12 @@ pub async fn status(State(state): State<AppState>, Extension((user_id, _)): User
     )
     .fetch_optional(&state.db)
     .await?;
-    Ok(Json(CoupleStatus { in_couple: true, me: Some(me), waiting: partner.is_none(), partner_name: partner }))
+    let currency: Option<String> = sqlx::query_scalar("SELECT value FROM joy_settings WHERE couple_id = ? AND key = 'CURRENCY_SYMBOL'")
+        .bind(&couple)
+        .fetch_optional(&state.db)
+        .await?;
+    let currency = currency.map(|c| c.trim().to_string()).filter(|c| !c.is_empty()).unwrap_or_else(|| "₹".into());
+    Ok(Json(CoupleStatus { in_couple: true, me: Some(me), waiting: partner.is_none(), partner_name: partner, currency }))
 }
 
 #[derive(Serialize)]

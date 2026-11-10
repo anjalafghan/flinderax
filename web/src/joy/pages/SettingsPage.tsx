@@ -4,20 +4,21 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCouple, getSettle, getSummary, inviteCode, keys, leaveCouple, recordSettlement, setPartnerShare, type Invite } from "../api";
 import { CodeCard } from "../components/CodeCard";
 import { useStateFrom } from "../components/useStateFrom";
+import { ErrorState } from "../components/ErrorState";
 import { errText, useBusy } from "../components/useBusy";
 import { rupees, standing, toPaise } from "../money";
 
 export default function SettingsPage() {
   const couple = useQuery({ queryKey: keys.couple, queryFn: getCouple });
   if (couple.isPending) return <p className="loading" role="status">Opening settings…</p>;
-  if (couple.isError) return <p className="kind-error" role="alert">{errText(couple.error)}</p>;
+  if (couple.isError) return <ErrorState message={errText(couple.error)} onRetry={() => void couple.refetch()} />;
   const c = couple.data;
   return (
     <div className="set-page">
       <h1>Settings</h1>
       <PartnerCard name={c.partner_name} waiting={c.waiting} />
-      <CoversCard />
-      <SettleCard partner={c.partner_name} />
+      <CoversCard partner={c.partner_name} currency={c.currency} />
+      <SettleCard partner={c.partner_name} currency={c.currency} />
       <LeaveCard partner={c.partner_name} />
     </div>
   );
@@ -64,7 +65,7 @@ function PartnerCard({ name, waiting }: { name: string | null; waiting: boolean 
   );
 }
 
-function CoversCard() {
+function CoversCard({ partner, currency }: { partner: string | null; currency: string }) {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: keys.summary, queryFn: getSummary });
   const loaded = q.data?.partner_paise;
@@ -77,7 +78,7 @@ function CoversCard() {
     e.preventDefault();
     const paise = toPaise(val);
     if (paise === null) {
-      setErr("Enter an amount in rupees, like 2000.");
+      setErr("Enter a whole amount, like 2000.");
       setMsg("");
       return;
     }
@@ -96,11 +97,11 @@ function CoversCard() {
 
   return (
     <form className="set-card" onSubmit={save} aria-labelledby="covers-h">
-      <h2 id="covers-h">What your partner covers</h2>
+      <h2 id="covers-h">What {partner ?? "your partner"} covers each month</h2>
       <div className="field">
-        <label htmlFor="covers">Your partner covers ₹ a month</label>
+        <label htmlFor="covers">Amount each month</label>
         <div className="money">
-          <span className="money-sign" aria-hidden="true">₹</span>
+          <span className="money-sign" aria-hidden="true">{currency}</span>
           <input
             id="covers"
             className="set-input"
@@ -125,7 +126,7 @@ function CoversCard() {
   );
 }
 
-function SettleCard({ partner }: { partner: string | null }) {
+function SettleCard({ partner, currency }: { partner: string | null; currency: string }) {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: keys.settle, queryFn: getSettle });
   const balance = q.data?.balance_paise;
@@ -137,7 +138,7 @@ function SettleCard({ partner }: { partner: string | null }) {
   const record = (youPaid: boolean) => {
     const paise = toPaise(amount);
     if (!paise) {
-      setErr("Enter how much, in rupees.");
+      setErr("Enter how much, like 500.");
       setMsg("");
       return;
     }
@@ -147,7 +148,7 @@ function SettleCard({ partner }: { partner: string | null }) {
       try {
         await recordSettlement(youPaid, paise);
         await qc.invalidateQueries({ queryKey: keys.settle });
-        setMsg(youPaid ? `Noted: you paid ${partner ?? "them"} back ${rupees(paise)}.` : `Noted: ${partner ?? "they"} paid you back ${rupees(paise)}.`);
+        setMsg(youPaid ? `Noted: you paid ${partner ?? "them"} back ${rupees(paise, currency)}.` : `Noted: ${partner ?? "they"} paid you back ${rupees(paise, currency)}.`);
       } catch (e) {
         setErr(errText(e));
       }
@@ -158,17 +159,17 @@ function SettleCard({ partner }: { partner: string | null }) {
     <section className="set-card" aria-labelledby="settle-h">
       <h2 id="settle-h">Settle up</h2>
       {q.isPending && <p className="soft" role="status">Counting…</p>}
-      {q.isError && <p className="set-err" role="alert">{errText(q.error)}</p>}
+      {q.isError && <ErrorState message={errText(q.error)} onRetry={() => void q.refetch()} />}
       {q.data && (
         <>
-          <p className="settle-big" role="status">{standing(q.data.balance_paise).text}</p>
+          <p className="settle-big" role="status">{standing(q.data.balance_paise, currency).text}</p>
           <p className="soft">
-            You paid {rupees(q.data.you_paid_paise)}, {partner ?? "your partner"} paid {rupees(q.data.partner_paid_paise)}. Your share is {Math.round(q.data.your_share_bps / 100)}%.
+            You paid {rupees(q.data.you_paid_paise, currency)}, {partner ?? "your partner"} paid {rupees(q.data.partner_paid_paise, currency)}. Your share is {Math.round(q.data.your_share_bps / 100)}%.
           </p>
           <div className="field">
             <label htmlFor="settle-amt">Amount paid back</label>
             <div className="money">
-              <span className="money-sign" aria-hidden="true">₹</span>
+              <span className="money-sign" aria-hidden="true">{currency}</span>
               <input id="settle-amt" className="set-input" type="number" inputMode="decimal" min={0} step="any" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
           </div>
@@ -185,7 +186,7 @@ function SettleCard({ partner }: { partner: string | null }) {
                 {q.data.settlements.map((s) => (
                   <li key={s.id}>
                     <span>
-                      {s.payer_is_you ? "You paid back" : `${partner ?? "They"} paid back`} {rupees(s.amount_paise)}
+                      {s.payer_is_you ? "You paid back" : `${partner ?? "They"} paid back`} {rupees(s.amount_paise, currency)}
                       {s.note ? `, ${s.note}` : ""}
                     </span>
                     <span className="soft">{s.on_day}</span>
@@ -219,12 +220,13 @@ function LeaveCard({ partner }: { partner: string | null }) {
       }
     });
   return (
-    <section className="set-card" aria-labelledby="leave-h">
-      <h2 id="leave-h">Leave Dates</h2>
+    <section className="set-card set-leave" aria-labelledby="leave-h" style={{ marginTop: "var(--space-8, 3rem)", borderTop: "2px dashed currentColor" }}>
+      <h2 id="leave-h">Leave</h2>
+      <p className="soft">Not something you need often. Leaving asks you to confirm first.</p>
       {!open ? (
         <div className="set-row">
           <button type="button" className="btn" aria-expanded="false" aria-controls="leave-box" onClick={() => setOpen(true)}>
-            Leave Dates…
+            Leave our jar…
           </button>
         </div>
       ) : (
@@ -235,7 +237,7 @@ function LeaveCard({ partner }: { partner: string | null }) {
           </p>
           <div className="set-row">
             <button type="button" className="btn btn-danger" disabled={busy} onClick={() => void leave()}>
-              Yes, leave Dates
+              {partner ? `Leave and give ${partner} the jar` : "Yes, leave Dates"}
             </button>
             <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => setOpen(false)}>
               Keep it

@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createCouple, getCouple, inviteCode, joinCouple, keys, type Invite } from "../api";
 import { CodeCard } from "./CodeCard";
+import { ErrorState } from "./ErrorState";
 import { errText } from "./useBusy";
 
 function Jar() {
@@ -61,12 +61,8 @@ export function Gate({ children }: { children: ReactNode }) {
   if (couple.isError) {
     return (
       <main id="main" tabIndex={-1}>
-        <section className="onboard" role="alert">
-          <h2>We couldn’t reach Dates.</h2>
-          <p className="soft">{errText(couple.error, "Something went wrong.")}</p>
-          <button type="button" className="btn" onClick={() => void couple.refetch()}>
-            Try again
-          </button>
+        <section className="onboard">
+          <ErrorState title="We couldn’t reach Dates." message={errText(couple.error, "Something went wrong.")} onRetry={() => void couple.refetch()} />
         </section>
       </main>
     );
@@ -79,7 +75,9 @@ export function Gate({ children }: { children: ReactNode }) {
           <Jar />
           <h2 id="made-h">Your jar is ready.</h2>
           <CodeCard invite={issued} />
-          <p className="soft">You can start writing slips now. Your partner joins with this code, and you can get a new one in Settings.</p>
+          <p className="soft">
+            Send this code to your partner. They sign up, open People → Us and tap Join with a code. You can start writing slips now, and get a new code any time from the bar at the top.
+          </p>
           <button type="button" className="btn btn-stamp" onClick={() => setIssued(null)}>
             Continue
           </button>
@@ -95,7 +93,7 @@ export function Gate({ children }: { children: ReactNode }) {
         <section className="empty-jar onboard" aria-labelledby="empty-h">
           <Jar />
           <h2 id="empty-h">Dates is for two.</h2>
-          <p className="soft">Every date starts as a little idea. Start a jar of your own and invite your partner, or join the one they started.</p>
+          <p className="soft">Every date starts as a little idea. Start a jar and send your partner a code, or join the one they already started.</p>
           {error && (
             <p className="set-msg set-err" role="alert">
               {error}
@@ -103,7 +101,7 @@ export function Gate({ children }: { children: ReactNode }) {
           )}
           <div className="onboard-acts">
             <button type="button" className="btn btn-stamp" disabled={busy} onClick={() => start.mutate()}>
-              Start Dates
+              Start our jar (I’ll invite them)
             </button>
             <button
               type="button"
@@ -113,7 +111,7 @@ export function Gate({ children }: { children: ReactNode }) {
               disabled={busy}
               onClick={() => setJoining((j) => !j)}
             >
-              I have a code
+              Join with a code
             </button>
           </div>
           {joining && (
@@ -151,12 +149,44 @@ export function Gate({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {couple.data.waiting && (
-        <p className="waiting-bar" role="status" style={{ maxWidth: 680, margin: "0 auto", padding: "0 var(--gutter)" }}>
-          Waiting for your partner to join. <Link to="/joy/settings">Get the code</Link>
-        </p>
-      )}
+      {couple.data.waiting && <WaitingBar />}
       {children}
     </>
+  );
+}
+
+/** "Waiting for your partner": the code is one tap away, right here (a new one replaces the last). */
+function WaitingBar() {
+  const [invite, setInvite] = useState<Invite | null>(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const get = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      setInvite(await inviteCode());
+    } catch (e) {
+      setErr(errText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="waiting-bar" style={{ maxWidth: 680, margin: "0 auto", padding: "0 var(--gutter)" }}>
+      <p role="status">
+        Waiting for your partner to join.{" "}
+        {!invite && (
+          <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => void get()}>
+            Get a code to send
+          </button>
+        )}
+      </p>
+      {invite && <CodeCard invite={invite} />}
+      {err && (
+        <p className="set-msg set-err" role="alert">
+          {err}
+        </p>
+      )}
+    </div>
   );
 }
