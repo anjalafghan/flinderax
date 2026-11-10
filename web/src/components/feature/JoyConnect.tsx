@@ -45,7 +45,7 @@ function ConnectForm() {
             type="url"
             inputMode="url"
             autoComplete="off"
-            placeholder="https://joy-jar.fly.dev"
+            placeholder="https://joy.fly.dev"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />

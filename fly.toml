@@ -1,10 +1,10 @@
-# fly.toml for joy: the one production app. The merged server (finance hub + Dates) runs on the
-# Fly app that used to be Joy, `joy-jar`, so https://joy-jar.fly.dev keeps working and the envelope
-# links already sent on WhatsApp still open. It reuses Joy's volume `joy_data`. The database is a NEW
-# file, /data/joy-app.db; Joy's old /data/joy.db stays untouched next to it as the archive.
+# fly.toml for joy: the one production app, at https://joy.fly.dev (Fly app `joy`). The old app
+# `joy-jar` now only redirects to it (see deploy/redirect), so envelope links already sent on
+# WhatsApp and calendar subscriptions keep working. The database is /data/joy-app.db on the volume
+# `joy_data`; Joy's old /data/joy.db is kept next to it as the archive.
 # Secrets (PASETO_KEY, ...) are set with `fly secrets`, never here. Deploy: fly deploy --depot=false
 
-app = 'joy-jar'
+app = 'joy'
 primary_region = 'sin'
 
 [build]
@@ -13,7 +13,7 @@ primary_region = 'sin'
   PORT = '3000'
   DATABASE_URL = 'sqlite:///data/joy-app.db?mode=rwc'
   JOY_PHOTOS_DIR = '/data/joy-photos'
-  PUBLIC_URL = 'https://joy-jar.fly.dev'
+  PUBLIC_URL = 'https://joy.fly.dev'
   # Local time for dates, months and calendar invites.
   TZ = 'Asia/Kolkata'
   # What "today" is for the money side (330 = IST).
