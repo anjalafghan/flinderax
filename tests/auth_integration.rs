@@ -338,6 +338,11 @@ async fn couples_start_invite_join_and_leave() {
     let st = authed_get(&app, &b, "/api/couple").await;
     assert_eq!((st["me"].as_i64(), st["partner_name"].as_str()), (Some(1), Some("anjal")));
 
+    // A partner with no money data gets the Dates home; entering an account switches that off.
+    assert_eq!(authed_get(&app, &b, "/api/couple").await["uses_money"], false);
+    authed_post(&app, &b, "/api/account/create", json!({"name": "HDFC", "kind": "bank", "balance_paise": 0, "role": "spending"})).await;
+    assert_eq!(authed_get(&app, &b, "/api/couple").await["uses_money"], true);
+
     // Safe to Spend still computes for a couple (it reads their planned dates).
     let sum = authed_get(&app, &a, "/api/dashboard/summary").await;
     assert!(sum["safe_to_spend_paise"].is_i64(), "{sum}");

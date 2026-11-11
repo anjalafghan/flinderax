@@ -60,11 +60,28 @@ pub struct CoupleStatus {
     pub waiting: bool,
     /// The couple's money symbol ("₹" unless they set another).
     pub currency: String,
+    /// This user has put any money data into the app (an account, card, income, fixed payment or
+    /// transaction). False for a partner who only came for Dates: they get a Dates home screen.
+    pub uses_money: bool,
+}
+
+/// Whether the user has any money data at all.
+async fn uses_money(db: &sqlx::SqlitePool, user_id: &str) -> Result<bool, AppError> {
+    Ok(sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM accounts WHERE user_id = ?1)
+             OR EXISTS (SELECT 1 FROM cards WHERE user_id = ?1)
+             OR EXISTS (SELECT 1 FROM income_sources WHERE user_id = ?1)
+             OR EXISTS (SELECT 1 FROM commitments WHERE user_id = ?1)
+             OR EXISTS (SELECT 1 FROM transactions WHERE user_id = ?1)",
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await?)
 }
 
 pub async fn status(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<CoupleStatus>, AppError> {
     let Some((couple, me)) = couple_of(&state.db, &user_id).await? else {
-        return Ok(Json(CoupleStatus { in_couple: false, me: None, partner_name: None, waiting: false, currency: "₹".into() }));
+        return Ok(Json(CoupleStatus { in_couple: false, me: None, partner_name: None, waiting: false, currency: "₹".into(), uses_money: false }));
     };
     let me_slot = me as i64;
     let partner = sqlx::query_scalar!(
@@ -80,7 +97,7 @@ pub async fn status(State(state): State<AppState>, Extension((user_id, _)): User
         .fetch_optional(&state.db)
         .await?;
     let currency = currency.map(|c| c.trim().to_string()).filter(|c| !c.is_empty()).unwrap_or_else(|| "₹".into());
-    Ok(Json(CoupleStatus { in_couple: true, me: Some(me), waiting: partner.is_none(), partner_name: partner, currency }))
+    Ok(Json(CoupleStatus { in_couple: true, me: Some(me), waiting: partner.is_none(), partner_name: partner, currency, uses_money: uses_money(&state.db, &user_id).await? }))
 }
 
 #[derive(Serialize)]

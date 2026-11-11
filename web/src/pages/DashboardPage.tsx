@@ -23,6 +23,8 @@ import { CheckInCard } from "@/components/feature/CheckInCard";
 import { LifeLineCard } from "@/components/feature/life/LifeLineCard";
 import { UpcomingDatesCard } from "@/components/feature/people/UpcomingDatesCard";
 import { useDashboardHistory } from "@/hooks/usePlanner";
+import { DatesHome } from "@/components/feature/DatesHome";
+import { getCouple, keys as joyKeys } from "@/joy/api";
 
 const QUICK_ACTIONS: { to: string; label: string; hint: string; icon: LucideIcon }[] = [
   { to: "/spending", label: "Log spending", hint: "Paste, upload or add", icon: Plus },
@@ -61,7 +63,7 @@ interface DeferredBatchStatus {
   items: DeferredItem[];
 }
 
-export default function DashboardPage() {
+function MoneyDashboard() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1200,
@@ -388,4 +390,13 @@ export default function DashboardPage() {
       )}
     </div>
   );
+}
+
+/** Today. A partner who is in a couple but has entered no money gets the Dates home instead. */
+export default function DashboardPage() {
+  const { data: couple, isLoading } = useQuery({ queryKey: joyKeys.couple, queryFn: getCouple, retry: 1 });
+  // Wait for the answer so a Dates-only partner never sees the empty money screen flash by.
+  if (isLoading) return <div className="min-h-[100dvh]" aria-busy="true" />;
+  if (couple?.in_couple && !couple.uses_money) return <DatesHome partnerName={couple.partner_name} />;
+  return <MoneyDashboard />;
 }

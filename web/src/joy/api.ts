@@ -150,6 +150,8 @@ export interface CoupleStatus {
   waiting: boolean;
   /** The couple's money symbol. */
   currency: string;
+  /** Any money data entered. False for a partner who only uses Dates. */
+  uses_money: boolean;
 }
 
 export interface Invite {
