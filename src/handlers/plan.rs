@@ -156,18 +156,19 @@ pub async fn commitment_update(
     ensure_account_owned(&state.db, &p.to_account_id, &user_id).await?;
     // A partial update keeps what is stored for the fields it leaves out, rather than resetting them
     // (which would, say, resume a paused yearly bill as a monthly one).
-    let current = sqlx::query!(
+    // (A runtime query, not `query!`: the committed `.sqlx` data would need regenerating.)
+    let (cur_frequency, cur_category, cur_active): (String, String, i64) = sqlx::query_as(
         "SELECT frequency, category, active FROM commitments WHERE commitment_id = ? AND user_id = ?",
-        id,
-        user_id
     )
+    .bind(&id)
+    .bind(&user_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or_else(|| not_found("Commitment not found"))?;
-    let frequency = p.frequency.clone().unwrap_or(current.frequency);
-    let category = p.category.unwrap_or(current.category);
+    let frequency = p.frequency.clone().unwrap_or(cur_frequency);
+    let category = p.category.unwrap_or(cur_category);
     let bucket = bucket_for(&p.bucket, &category);
-    let active = p.active.unwrap_or(current.active != 0);
+    let active = p.active.unwrap_or(cur_active != 0);
     let res = sqlx::query!(
         "UPDATE commitments SET label = ?, amount_paise = ?, day_of_month = ?, account_id = ?, category = ?,
                 bucket = ?, frequency = ?, due_month = ?, to_account_id = ?, active = ?, start_month = ?, end_month = ?
