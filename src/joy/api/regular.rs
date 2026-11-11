@@ -143,6 +143,8 @@ pub fn router() -> Router<AppState> {
         .route("/regulars/{id}/delete", post(stop_tracking))
         .route("/regulars/{id}/went", post(went))
         .route("/regulars/{id}/skip", post(skip))
+        .route("/regulars/{id}/skips/clear", post(clear_skips))
+        .route("/regulars/{id}/restore", post(restore_regular))
         .route("/nights/{id}/delete", post(delete_night))
         .route("/nights/{id}/photo", post(upload_photo).layer(DefaultBodyLimit::max(photos::MAX_UPLOAD_BYTES + 64 * 1024)))
         .route("/nights/{id}/photo/delete", post(delete_photo))
@@ -455,11 +457,19 @@ pub struct DayBox {
     pub checked: bool,
 }
 
+#[derive(Debug, Serialize)]
+pub struct StoppedItem {
+    pub id: i64,
+    pub title: String,
+}
+
 /// `GET /regulars`: every regular, and the day boxes for the add form.
 #[derive(Debug, Serialize)]
 pub struct RegularsView {
     pub me_name: String,
     pub items: Vec<ListItem>,
+    /// Regulars you stopped tracking, so any can be brought back.
+    pub stopped: Vec<StoppedItem>,
     pub days: Vec<DayBox>,
 }
 
@@ -475,7 +485,8 @@ pub async fn index(State(s): State<AppState>, Extension((user_id, _)): User) -> 
     }
     const LABELS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     let days = LABELS.iter().enumerate().map(|(i, l)| DayBox { value: i, label: l, checked: i == 2 || i == 4 }).collect();
-    Ok(Json(RegularsView { me_name: Me::new(&j.ctx, Some(j.who)).name, items, days }))
+    let stopped = db::stopped_regulars(&s.db, &j.couple).await?.into_iter().map(|(id, title)| StoppedItem { id, title }).collect();
+    Ok(Json(RegularsView { me_name: Me::new(&j.ctx, Some(j.who)).name, items, stopped, days }))
 }
 
 #[derive(Debug, Deserialize)]
@@ -560,6 +571,23 @@ pub async fn stop_tracking(State(s): State<AppState>, Extension((user_id, _)): U
         return Err(not_found("No such regular"));
     }
     Ok(go("/joy/regulars"))
+}
+
+/// `POST /regulars/{id}/restore`: track a stopped regular again.
+pub async fn restore_regular(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    if !db::restore_regular(&s.db, &j.couple, id).await? {
+        return Err(not_found("No such stopped regular"));
+    }
+    Ok(go(spread_path(id)))
+}
+
+/// `POST /regulars/{id}/skips/clear`: forgets the nights you skipped here, so they are open again.
+pub async fn clear_skips(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    db::regular(&s.db, &j.couple, id).await?.ok_or_else(|| not_found("No such regular"))?;
+    db::clear_skipped_nights(&s.db, &j.couple, id).await?;
+    Ok(go(spread_path(id)))
 }
 
 #[cfg(test)]

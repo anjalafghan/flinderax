@@ -730,3 +730,26 @@ async fn another_couple_cannot_see_or_touch_these_slips() {
     // And they still work for us.
     assert_eq!(t.get(&format!("/api/dates/slips/{mine}"), &rohit).await.status, StatusCode::OK);
 }
+
+#[tokio::test]
+async fn vetoes_archived_slips_and_put_backs_can_all_be_cleared() {
+    let t = setup().await;
+    let (rohit, neha, couple) = t.couple().await;
+    let a = t.scalar(&format!("SELECT min(id) FROM joy_activities WHERE couple_id = '{couple}'")).await;
+    let b = a + 1;
+    t.exec(&format!("INSERT INTO joy_vetoes (activity_id, person) VALUES ({a}, 0), ({a}, 1), ({b}, 1)")).await;
+    t.exec(&format!("UPDATE joy_activities SET archived = 1 WHERE id IN ({a}, {b})")).await;
+    t.exec(&format!("INSERT INTO joy_history (couple_id, activity_id, outcome) VALUES ('{couple}', {a}, 'skipped'), ('{couple}', {b}, 'skipped')")).await;
+
+    let r = t.post("/api/dates/slips/vetoes/clear", &neha, json!({})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_vetoes").await, 0);
+
+    let r = t.post("/api/dates/slips/restore-all", &rohit, json!({})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE couple_id = '{couple}' AND archived = 1")).await, 0);
+
+    let r = t.post("/api/dates/putbacks/clear", &rohit, json!({})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'skipped'").await, 0);
+}

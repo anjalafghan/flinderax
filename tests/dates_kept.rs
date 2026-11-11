@@ -696,3 +696,28 @@ async fn a_date_we_had_without_a_slip_goes_straight_into_kept_and_takes_photos()
     assert_eq!(t.upload(&format!("/api/dates/history/{hid}/photo"), &neha, &tiny_jpeg()).await.status, StatusCode::OK);
     assert_eq!(t.item(&rohit, hid).await["photos"].as_array().unwrap().len(), 1);
 }
+
+#[tokio::test]
+async fn deleting_a_hand_added_date_takes_its_one_off_slip_with_it() {
+    let t = setup().await;
+    let (rohit, _neha, _) = t.couple().await;
+    let r = t.post("/api/dates/history/custom", &rohit, json!({"title": "Picnic at the lake", "place": "Powai", "on": "2026-03-14", "cost": "1,200"})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    let hid: i64 = r.json["to"].as_str().unwrap().rsplit("#k").next().unwrap().parse().unwrap();
+    let slips_before = t.scalar("SELECT count(*) FROM joy_activities").await;
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_activities WHERE custom = 1").await, 1);
+
+    // Deleting the date leaves no ghost slip in the archive.
+    let gone = t.post(&format!("/api/dates/history/{hid}/delete"), &rohit, json!({})).await;
+    assert_eq!(gone.status, StatusCode::OK, "{}", gone.text);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_activities WHERE custom = 1").await, 0);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_activities").await, slips_before - 1);
+
+    // A normal archived slip with one kept date keeps its slip when that date goes.
+    let slip = t.scalar("SELECT min(id) FROM joy_activities").await;
+    t.exec(&format!("UPDATE joy_activities SET archived = 1 WHERE id = {slip}")).await;
+    t.exec(&format!("INSERT INTO joy_history (couple_id, activity_id, outcome, picked_at) SELECT couple_id, id, 'did_it', unixepoch() - 60 FROM joy_activities WHERE id = {slip}")).await;
+    let hid = t.scalar("SELECT max(id) FROM joy_history").await;
+    assert_eq!(t.post(&format!("/api/dates/history/{hid}/delete"), &rohit, json!({})).await.status, StatusCode::OK);
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE id = {slip}")).await, 1);
+}

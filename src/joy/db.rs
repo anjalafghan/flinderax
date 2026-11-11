@@ -518,8 +518,8 @@ pub async fn keep_custom(
 ) -> sqlx::Result<i64> {
     let mut tx = db.begin().await?;
     let activity = sqlx::query(
-        "INSERT INTO joy_activities (couple_id, title, est_cost, setting, venue, duration, added_by, archived, times_done, last_done_at)
-         VALUES (?, ?, ?, ?, ?, 'short', 'us', 1, 1, CAST(strftime('%s', ? || ' 12:00:00', 'utc') AS INTEGER))",
+        "INSERT INTO joy_activities (couple_id, title, est_cost, setting, venue, duration, added_by, archived, custom, times_done, last_done_at)
+         VALUES (?, ?, ?, ?, ?, 'short', 'us', 1, 1, 1, CAST(strftime('%s', ? || ' 12:00:00', 'utc') AS INTEGER))",
     )
     .bind(couple)
     .bind(title)
@@ -707,6 +707,17 @@ pub async fn delete_history(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Res
                times_done = (SELECT COUNT(*) FROM joy_history WHERE activity_id = ?1 AND outcome = 'did_it'),
                last_done_at = (SELECT MAX(picked_at) FROM joy_history WHERE activity_id = ?1 AND outcome = 'did_it')
              WHERE id = ?1 AND couple_id = ?2",
+        )
+        .bind(a)
+        .bind(couple)
+        .execute(&mut *tx)
+        .await?;
+        // A date that never was a slip leaves a one-off archived slip behind; with its only date
+        // gone, that slip has no reason to exist (it would sit in the archive, and Restore would
+        // put it in the jar).
+        sqlx::query(
+            "DELETE FROM joy_activities WHERE id = ?1 AND couple_id = ?2 AND custom = 1 AND archived = 1
+               AND NOT EXISTS (SELECT 1 FROM joy_history WHERE activity_id = ?1)",
         )
         .bind(a)
         .bind(couple)
@@ -1114,6 +1125,35 @@ pub async fn veto(db: &SqlitePool, couple: &str, activity: i64, person: usize) -
     Ok(())
 }
 
+/// Everything anyone passed on goes back into the draw. Returns how many slips came back.
+pub async fn clear_vetoes(db: &SqlitePool, couple: &str) -> sqlx::Result<u64> {
+    let done = sqlx::query("DELETE FROM joy_vetoes WHERE activity_id IN (SELECT id FROM joy_activities WHERE couple_id = ?)")
+        .bind(couple)
+        .execute(db)
+        .await?;
+    Ok(done.rows_affected())
+}
+
+/// Every archived slip comes back into the jar, except the one-off slips behind dates you added
+/// by hand (those were never meant to be drawn). Returns how many came back.
+pub async fn restore_all_archived(db: &SqlitePool, couple: &str) -> sqlx::Result<u64> {
+    let done = sqlx::query("UPDATE joy_activities SET archived = 0 WHERE couple_id = ? AND archived = 1 AND custom = 0")
+        .bind(couple)
+        .execute(db)
+        .await?;
+    Ok(done.rows_affected())
+}
+
+/// The "put back" rows that rerolling leaves in Kept. They also make a slip count as having history,
+/// so it can only be archived, not deleted. Returns how many went.
+pub async fn clear_putbacks(db: &SqlitePool, couple: &str) -> sqlx::Result<u64> {
+    let done = sqlx::query("DELETE FROM joy_history WHERE couple_id = ? AND outcome = 'skipped'")
+        .bind(couple)
+        .execute(db)
+        .await?;
+    Ok(done.rows_affected())
+}
+
 pub async fn unveto(db: &SqlitePool, couple: &str, activity: i64) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM joy_vetoes WHERE activity_id = ? AND activity_id IN (SELECT id FROM joy_activities WHERE couple_id = ?)")
         .bind(activity)
@@ -1234,7 +1274,7 @@ pub async fn add_saving(db: &SqlitePool, couple: &str, amount: i64, kind: &str, 
 
 /// The latest money in and out, newest first: (id, amount, kind, note, on_day).
 pub async fn savings_recent(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(i64, i64, String, String, String)>> {
-    sqlx::query_as("SELECT id, amount, kind, note, on_day FROM joy_savings WHERE couple_id = ? ORDER BY id DESC LIMIT 6")
+    sqlx::query_as("SELECT id, amount, kind, note, on_day FROM joy_savings WHERE couple_id = ? ORDER BY id DESC LIMIT 30")
         .bind(couple)
         .fetch_all(db)
         .await
@@ -1769,6 +1809,31 @@ pub async fn update_regular(db: &SqlitePool, couple: &str, id: i64, title: &str,
 }
 
 /// Stop tracking a regular: archived (`active = 0`), never erased. False when it isn't ours.
+/// Nights you skipped at a regular are hidden everywhere; this forgets them, so those days are open
+/// again. Returns how many went.
+pub async fn clear_skipped_nights(db: &SqlitePool, couple: &str, regular: i64) -> sqlx::Result<u64> {
+    let done = sqlx::query(
+        "DELETE FROM joy_regular_visits WHERE regular_id = ?1 AND status = 'skipped'
+           AND regular_id IN (SELECT id FROM joy_regulars WHERE couple_id = ?2)",
+    )
+    .bind(regular)
+    .bind(couple)
+    .execute(db)
+    .await?;
+    Ok(done.rows_affected())
+}
+
+/// Start tracking a stopped regular again.
+pub async fn restore_regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
+    let done = sqlx::query("UPDATE joy_regulars SET active = 1 WHERE couple_id = ? AND id = ? AND active = 0").bind(couple).bind(id).execute(db).await?;
+    Ok(done.rows_affected() > 0)
+}
+
+/// The regulars you stopped tracking: (id, title).
+pub async fn stopped_regulars(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(i64, String)>> {
+    sqlx::query_as("SELECT id, title FROM joy_regulars WHERE couple_id = ? AND active = 0 ORDER BY title").bind(couple).fetch_all(db).await
+}
+
 pub async fn archive_regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
     let done = sqlx::query("UPDATE joy_regulars SET active = 0 WHERE couple_id = ? AND id = ? AND active = 1").bind(couple).bind(id).execute(db).await?;
     Ok(done.rows_affected() > 0)

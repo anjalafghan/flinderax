@@ -500,6 +500,20 @@ pub async fn unveto(State(s): State<AppState>, Extension((user_id, _)): User, Pa
     Ok(go(SLIPS))
 }
 
+/// `POST /slips/vetoes/clear`: every slip anyone passed on goes back into the draw.
+pub async fn vetoes_clear(State(s): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    db::clear_vetoes(&s.db, &j.couple).await?;
+    Ok(go(SLIPS))
+}
+
+/// `POST /slips/restore-all`: every archived slip comes back into the jar.
+pub async fn restore_all(State(s): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    db::restore_all_archived(&s.db, &j.couple).await?;
+    Ok(go(SLIPS))
+}
+
 /// `POST /slips/{id}/delete`
 pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;

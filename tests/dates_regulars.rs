@@ -513,3 +513,34 @@ async fn editing_and_stopping_a_regular_stays_inside_the_couple() {
     assert_eq!(t.post(&format!("/api/dates/regulars/{id}"), &rohit, json!({"title": "Back", "days": [1]})).await.status, StatusCode::NOT_FOUND);
     assert_eq!(t.post(&format!("/api/dates/regulars/{id}/delete"), &rohit, json!({})).await.status, StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn skipped_nights_can_be_forgotten_and_a_stopped_regular_restored() {
+    let t = setup().await;
+    let (rohit, _neha, _) = t.couple().await;
+    let (carol, _) = t.loner().await;
+    let id = add_regular(&t, &rohit).await;
+    let (d1, d2) = (today(&t, -1).await, today(&t, -2).await);
+    t.post(&format!("/api/dates/regulars/{id}/skip"), &rohit, json!({"day": d1})).await;
+    t.post(&format!("/api/dates/regulars/{id}/went"), &rohit, json!({"day": d2})).await;
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_regular_visits WHERE status = 'skipped'").await, 1);
+
+    // Another couple can't clear them; yours can, and the night you went stays.
+    assert_eq!(t.post(&format!("/api/dates/regulars/{id}/skips/clear"), &carol, json!({})).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_regular_visits WHERE status = 'skipped'").await, 1);
+    let r = t.post(&format!("/api/dates/regulars/{id}/skips/clear"), &rohit, json!({})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_regular_visits WHERE status = 'skipped'").await, 0);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_regular_visits WHERE status = 'went'").await, 1);
+
+    // Stop it, see it in the stopped list, bring it back (only its own couple can).
+    t.post(&format!("/api/dates/regulars/{id}/delete"), &rohit, json!({})).await;
+    let list = t.get("/api/dates/regulars", &rohit).await.json;
+    assert_eq!((list["items"].clone(), list["stopped"][0]["title"].clone()), (json!([]), json!("Blue Tokai")));
+    assert_eq!(t.post(&format!("/api/dates/regulars/{id}/restore"), &carol, json!({})).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.post(&format!("/api/dates/regulars/{id}/restore"), &rohit, json!({})).await.status, StatusCode::OK);
+    let list = t.get("/api/dates/regulars", &rohit).await.json;
+    assert_eq!((list["items"][0]["title"].clone(), list["stopped"].clone()), (json!("Blue Tokai"), json!([])));
+    // Restoring one that is already active is a 404, not a silent success.
+    assert_eq!(t.post(&format!("/api/dates/regulars/{id}/restore"), &rohit, json!({})).await.status, StatusCode::NOT_FOUND);
+}

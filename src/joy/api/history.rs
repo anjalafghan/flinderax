@@ -1036,6 +1036,7 @@ pub fn router() -> Router<AppState> {
         .route("/history/{id}", post(rate))
         .route("/history/{id}/reveal", post(reveal))
         .route("/history/{id}/delete", post(delete))
+        .route("/putbacks/clear", post(clear_putbacks))
         .route("/history/{id}/cost", post(set_cost))
         .route("/history/{id}/line", post(set_line))
         .route("/history/{id}/photo", post(upload_photo).layer(DefaultBodyLimit::max(photos::MAX_UPLOAD_BYTES + UPLOAD_SLACK)))
@@ -1050,6 +1051,13 @@ pub fn router() -> Router<AppState> {
         .route("/savings/add", post(add_saving))
         .route("/savings/{id}/delete", post(delete_saving))
         .route("/savings/keep", post(keep_goal))
+}
+
+/// `POST /putbacks/clear`: clears the "put back" list that rerolling leaves in Kept.
+pub async fn clear_putbacks(State(s): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    db::clear_putbacks(&s.db, &j.couple).await?;
+    Ok(go("/joy/kept"))
 }
 
 /// No login, but each needs the signature its link carries.

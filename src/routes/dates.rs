@@ -21,6 +21,8 @@ pub fn routes(state: AppState) -> Router {
         .route("/slips", get(wishlist::page).post(wishlist::create))
         .route("/slips/new", get(wishlist::new))
         .route("/slips/{id}", get(wishlist::edit).post(wishlist::update))
+        .route("/slips/vetoes/clear", post(wishlist::vetoes_clear))
+        .route("/slips/restore-all", post(wishlist::restore_all))
         .route("/slips/{id}/archive", post(wishlist::archive))
         .route("/slips/{id}/restore", post(wishlist::restore))
         .route("/slips/{id}/delete", post(wishlist::delete))
