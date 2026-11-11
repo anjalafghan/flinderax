@@ -6,7 +6,9 @@ import { ChevronDown, Trash2 } from "lucide-react";
 import { ChoiceForm } from "@/components/feature/life/ChoiceForm";
 import { LineChart, type ChartMarker, type ChartSeries } from "@/components/feature/LineChart";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import {
+  clearChoices,
   describeChoice,
   dropChoice,
   freeLabel,
@@ -205,6 +207,14 @@ export function LifeLine() {
     },
     onError: fail,
   });
+  const clearAll = useMutation({
+    mutationFn: clearChoices,
+    onSuccess: () => {
+      setPreview(null);
+      return refresh();
+    },
+    onError: fail,
+  });
   const drop = useMutation({
     mutationFn: (c: SavedChoice) => dropChoice(c.id),
     onSuccess: () => {
@@ -269,7 +279,15 @@ export function LifeLine() {
 
       {data.choices.length > 0 && (
         <div className="grid gap-3">
-          <h3 className="m-0 text-[17px] font-medium">Your choices</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="m-0 text-[17px] font-medium">Your choices</h3>
+            <ResetButton
+              label="Reset: remove all choices"
+              disabled={clearAll.isPending}
+              confirm="Take every choice off your life line? Your details stay."
+              onReset={() => clearAll.mutate()}
+            />
+          </div>
           <ul className="m-0 grid list-none gap-2 p-0">
             {data.choices.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[14px] border border-border px-4 py-3">

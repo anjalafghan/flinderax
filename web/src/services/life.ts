@@ -89,5 +89,8 @@ export const lifeKey = ["life-plan"] as const;
 
 export const getLife = async (): Promise<LifeOut> => (await api.get<LifeOut>("/api/plan/life")).data;
 
+/** Forgets the saved details: the plan goes back to the defaults. */
+export const resetLifeProfile = async (): Promise<LifeOut> => (await api.post<LifeOut>("/api/plan/life/reset", {})).data;
+
 export const saveLifeProfile = async (p: LifeProfile): Promise<LifeOut> =>
   (await api.post<LifeOut>("/api/plan/life/profile", p)).data;

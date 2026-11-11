@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { rate } from "@/services/checkin";
-import { useDietWeek, useSaveDietWeek, type DietHabit, type DietOverview, type Week, type WeekInput } from "@/services/diet";
+import { ResetButton } from "@/components/ui/reset-button";
+import { useClearDietWeek, useDietWeek, useSaveDietWeek, type DietHabit, type DietOverview, type Week, type WeekInput } from "@/services/diet";
 import { formatDay } from "@/utils/dates";
 import { cn } from "@/utils/cn";
 
@@ -182,6 +183,7 @@ function RecentWeeks({ recent }: { recent: DietOverview["recent"] }) {
 /** This week's habit days and feel, plus a way to log a past week. */
 export function WeekCard({ overview }: { overview: DietOverview }) {
   const save = useSaveDietWeek();
+  const clearWeek = useClearDietWeek();
   const current = overview.week.week_start;
   const [weekStart, setWeekStart] = useState(current);
   const active = overview.habits.filter((h) => h.active);
@@ -227,6 +229,22 @@ export function WeekCard({ overview }: { overview: DietOverview }) {
         </>
       ) : (
         <p className="empty-note m-0">Pick up to five habits to track each week.</p>
+      )}
+
+      {active.length > 0 && (
+        <div>
+          <ResetButton
+            label={isPast ? "Reset: clear this week" : "Reset: clear this week's log"}
+            disabled={clearWeek.isPending}
+            confirm="Clear everything logged for this week (habit days, how it felt, the note)? It will no longer count as logged."
+            onReset={() =>
+              clearWeek.mutate(weekStart, {
+                onSuccess: () => toast.success("Week cleared."),
+                onError: (e) => toast.error(e.message || "Couldn't clear the week. Try again."),
+              })
+            }
+          />
+        </div>
       )}
 
       <div className="flex flex-col gap-3">

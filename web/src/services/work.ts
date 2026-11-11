@@ -39,6 +39,8 @@ export const workKey = ["work"] as const;
 export const getWork = () => api.get<{ leads: Lead[] }>("/api/work").then((r) => r.data);
 export const addLead = (lead: LeadInput) => api.post<Lead>("/api/work", lead).then((r) => r.data);
 export const saveLead = (id: string, lead: LeadInput) => api.put<Lead>(`/api/work/${id}`, lead).then((r) => r.data);
+/** Starts the job search again with no leads. */
+export const clearLeads = () => api.post<{ removed: number }>("/api/work/clear", {}).then((r) => r.data);
 export const removeLead = (id: string) => api.del<void>(`/api/work/${id}`).then((r) => r.data);
 
 export const useWork = () => useQuery({ queryKey: workKey, queryFn: getWork, retry: 1 });
@@ -58,6 +60,7 @@ function useWorkWrite<V, T>(fn: (v: V) => Promise<T>) {
 export const useAddLead = () => useWorkWrite(addLead);
 export const useSaveLead = () => useWorkWrite((v: { id: string; lead: LeadInput }) => saveLead(v.id, v.lead));
 export const useRemoveLead = () => useWorkWrite(removeLead);
+export const useClearLeads = () => useWorkWrite(() => clearLeads());
 
 /** A next step this many days away, or already late, belongs on this week's list. */
 const SOON_DAYS = 7;

@@ -174,6 +174,11 @@ export const useCheckinReport = (enabled = true) =>
 export const useCheckinHistory = () =>
   useQuery({ queryKey: checkinHistoryKey, queryFn: getCheckinHistory, retry: 1 });
 export const useReminderLink = () => useMutation({ mutationFn: getReminderLink });
+/** A new private calendar link; the old one stops working. */
+export const resetReminderLink = () => api.post<ReminderLink>("/api/reminders/link/reset", {}).then((r) => r.data);
+export const useResetReminderLink = () => useMutation({ mutationFn: resetReminderLink });
+/** Forgets the forecast kept with check-ins, so the forecast is no longer tempered by it. */
+export const resetCalibration = () => api.post<{ status: boolean }>("/api/checkin/calibration/reset", {}).then((r) => r.data);
 export const useCompleteCheckin = () => useMutation({ mutationFn: completeCheckin });
 
 /**

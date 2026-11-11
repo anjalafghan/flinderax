@@ -6,12 +6,14 @@ import { ForecastPanel } from "@/components/feature/ForecastPanel";
 import { LifeLine } from "@/components/feature/life/LifeLine";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import {
   getLife,
   lifeKey,
+  resetLifeProfile,
   saveLifeProfile,
   type LifeGoal,
   type LifePlan,
@@ -30,6 +32,18 @@ import { cn } from "@/utils/cn";
 
 function useLife() {
   return useQuery({ queryKey: lifeKey, queryFn: getLife });
+}
+
+function useResetLife() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: resetLifeProfile,
+    onSuccess: (out) => {
+      qc.setQueryData(lifeKey, out);
+      void qc.invalidateQueries({ queryKey: forecastKey });
+      void qc.invalidateQueries({ queryKey: lifelineKey });
+    },
+  });
 }
 
 function useSaveLife() {
@@ -446,6 +460,7 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
   const [draft, setDraft] = useState<Draft>(() => toDraft(profile));
   const [error, setError] = useState<string | null>(null);
   const save = useSaveLife();
+  const reset = useResetLife();
 
   const set = (k: keyof Draft) => (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -552,6 +567,19 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
           </p>
         )}
         <div className="form-actions">
+          <ResetButton
+            label="Undo my edits"
+            onReset={() => {
+              setDraft(toDraft(profile));
+              setError(null);
+            }}
+          />
+          <ResetButton
+            label="Reset to defaults"
+            disabled={reset.isPending}
+            confirm="Forget your saved details and go back to the placeholder numbers?"
+            onReset={() => reset.mutate(undefined, { onSuccess: (out) => { setDraft(toDraft(out.profile)); setError(null); } })}
+          />
           <Button type="submit" disabled={save.isPending}>
             {save.isPending ? "Saving..." : "Save details"}
           </Button>

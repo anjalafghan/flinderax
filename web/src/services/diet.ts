@@ -126,6 +126,10 @@ export const removeDietHabit = (id: string) => sendJson<void>("DELETE", `/api/di
 export const saveDietWeek = (weekStart: string, week: WeekInput) =>
   sendJson<Week>("PUT", `/api/diet/weeks/${weekStart}`, week);
 export const removeDietMark = (id: string) => sendJson<void>("DELETE", `/api/diet/marks/${id}`);
+/** Clears one week's plan, feel and habit ticks, so it no longer counts as logged. */
+export const clearDietWeek = (weekStart: string) => sendJson<Week>("DELETE", `/api/diet/weeks/${weekStart}`);
+/** Removes every reading of one kind. */
+export const clearDietMarks = (kind: MarkKind) => api.post<{ removed: number }>("/api/diet/marks/clear", { kind }).then((r) => r.data);
 
 /** PUT, PATCH and DELETE through the shared client, so a lapsed session goes back to sign-in. */
 function sendJson<T>(method: "PUT" | "PATCH" | "DELETE", url: string, body?: unknown): Promise<T> {
@@ -157,6 +161,8 @@ export const useRemoveDietHabit = () => useDietWrite(removeDietHabit);
 export const useSaveDietWeek = () => useDietWrite((v: { weekStart: string; week: WeekInput }) => saveDietWeek(v.weekStart, v.week));
 export const useAddDietMark = () => useDietWrite(addDietMark);
 export const useRemoveDietMark = () => useDietWrite(removeDietMark);
+export const useClearDietWeek = () => useDietWrite(clearDietWeek);
+export const useClearDietMarks = () => useDietWrite(clearDietMarks);
 export const useSaveDietCap = () => useDietWrite(saveDietCap);
 
 /** Today as "YYYY-MM-DD" in the viewer's own calendar. */

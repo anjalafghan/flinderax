@@ -94,6 +94,9 @@ export const keepChoice = (input: { label: string; choice: Choice; in_plan: bool
 export const updateChoice = (id: string, patch: { label?: string; choice?: Choice; in_plan?: boolean }) =>
   api.patch<SavedChoice>(`/api/plan/lifeline/choices/${id}`, patch).then((r) => r.data);
 
+/** Takes every choice off the line. */
+export const clearChoices = () => api.post<{ removed: number }>("/api/plan/lifeline/choices/clear", {}).then((r) => r.data);
+
 export const dropChoice = (id: string) => api.del<void>(`/api/plan/lifeline/choices/${id}`).then((r) => r.data);
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

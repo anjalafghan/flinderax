@@ -4,7 +4,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { rupees, useCheckinStatus, useReminderLink, type CheckinStatus } from "@/services/checkin";
+import { rupees, useCheckinStatus, useReminderLink, useResetReminderLink, type CheckinStatus } from "@/services/checkin";
+import { ResetButton } from "@/components/ui/reset-button";
 import { formatDay } from "@/utils/dates";
 
 const SHOWN_ESTIMATES = 2;
@@ -28,6 +29,7 @@ async function copyLink(url: string) {
 export function CheckInCard() {
   const { data, isLoading } = useCheckinStatus();
   const reminders = useReminderLink();
+  const resetLink = useResetReminderLink();
   const [calendarUrl, setCalendarUrl] = useState<string | null>(null);
 
   if (!data) {
@@ -94,6 +96,20 @@ export function CheckInCard() {
                 Copy link
               </Button>
             </div>
+            <ResetButton
+              label="Make a new link"
+              confirm="Make a new calendar link? The old one will stop working, so you will need to add the new one to your calendar."
+              disabled={resetLink.isPending}
+              onReset={() =>
+                resetLink.mutate(undefined, {
+                  onSuccess: (out) => {
+                    setCalendarUrl(out.url);
+                    toast.success("New link ready. The old one no longer works.");
+                  },
+                  onError: () => toast.error("Couldn't make a new link. Try again."),
+                })
+              }
+            />
             <p className="m-0 text-[13px] text-muted-foreground">
               Paste this into Google Calendar → Other calendars → From URL, or open it on your iPhone.
             </p>

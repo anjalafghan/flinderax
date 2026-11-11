@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
 import type { Choice } from "@/services/lifeline";
-import { STAGES, stageLabel, useAddLead, useRemoveLead, useSaveLead, useWork, type Lead, type LeadInput, type Stage } from "@/services/work";
+import { ResetButton } from "@/components/ui/reset-button";
+import { STAGES, stageLabel, useAddLead, useClearLeads, useRemoveLead, useSaveLead, useWork, type Lead, type LeadInput, type Stage } from "@/services/work";
 import { formatDay } from "@/utils/dates";
 import { formatINR, paiseToInput, toPaise } from "@/utils/money";
 
@@ -223,6 +224,7 @@ function LeadRow({ lead }: { lead: Lead }) {
 /** Work: the job search as a short list of leads, each with one next step. */
 export default function WorkPage() {
   const work = useWork();
+  const clearLeads = useClearLeads();
   const add = useAddLead();
   const [error, setError] = useState<string | null>(null);
   const leads = work.data?.leads ?? [];
@@ -246,6 +248,17 @@ export default function WorkPage() {
             <Button variant="link" className="h-auto p-0" onClick={() => void work.refetch()}>
               Try again
             </Button>
+          </div>
+        )}
+
+        {work.data && leads.length > 0 && (
+          <div>
+            <ResetButton
+              label="Reset: clear all leads"
+              confirm="Remove every lead and start your job search again? This cannot be undone."
+              disabled={clearLeads.isPending}
+              onReset={() => clearLeads.mutate()}
+            />
           </div>
         )}
 

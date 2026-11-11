@@ -6,12 +6,14 @@ import { toast } from "sonner";
 import { Header } from "@/components/layout/Header";
 import { StatementImport } from "@/components/feature/StatementImport";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import {
   checkinHistoryKey,
   checkinKey,
   checkinReportKey,
   isSaved,
   rate,
+  resetCalibration,
   rupees,
   signedChange,
   useCheckinHistory,
@@ -206,6 +208,7 @@ function BodyStep({ status }: { status: CheckinStatus }) {
 }
 
 function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
+  const qc = useQueryClient();
   const step = status.steps.find((s) => s.key === "report");
   const report = useCheckinReport(true);
   if (!step) return null;
@@ -292,6 +295,13 @@ function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
                 <li key={l}>{l}</li>
               ))}
             </ul>
+            <div>
+              <ResetButton
+                label="Reset: forget how the forecast did"
+                confirm="Forget how the last forecast did? Your forecast stops being adjusted by it. Your check-ins stay."
+                onReset={() => void resetCalibration().then(() => qc.invalidateQueries({ queryKey: checkinKey }))}
+              />
+            </div>
           </div>
         )}
 

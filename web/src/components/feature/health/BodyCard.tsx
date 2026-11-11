@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -12,6 +13,7 @@ import {
   signedKg,
   todayIso,
   useAddDietMark,
+  useClearDietMarks,
   useDietMarks,
   useRemoveDietMark,
   type BodySummary,
@@ -150,6 +152,14 @@ function AddMark({ initialKind, onDone }: { initialKind: MarkKind; onDone: () =>
             {error}
           </p>
         )}
+        <ResetButton
+          label="Clear"
+          onReset={() => {
+            setOn(todayIso());
+            setValue("");
+            setError(null);
+          }}
+        />
         <Button type="submit" disabled={add.isPending}>
           Add
         </Button>
@@ -170,6 +180,7 @@ function sinceLabel(prev: number, weightOn: string, marks: Mark[] | undefined): 
 /** Weight, waist and the yearly check-up, with a quiet note that this is private. */
 export function BodyCard({ body }: { body: BodySummary }) {
   const weightMarks = useDietMarks("weight");
+  const clearMarks = useClearDietMarks();
   const [adding, setAdding] = useState<MarkKind | null>(null);
 
   const change =
@@ -232,6 +243,22 @@ export function BodyCard({ body }: { body: BodySummary }) {
       <div className="flex flex-col gap-3">
         <h3 className="m-0 text-[15px] font-medium">Recent readings</h3>
         <MarkList />
+        <div className="flex flex-wrap gap-2">
+          {(["weight", "waist", "checkup"] as const).map((k) => (
+            <ResetButton
+              key={k}
+              label={`Reset: clear all ${k === "checkup" ? "check-up dates" : `${k} readings`}`}
+              disabled={clearMarks.isPending}
+              confirm={`Delete every ${k === "checkup" ? "check-up date" : `${k} reading`}? This cannot be undone.`}
+              onReset={() =>
+                clearMarks.mutate(k, {
+                  onSuccess: () => toast.success("Cleared."),
+                  onError: (e) => toast.error(e.message || "Couldn't clear those. Try again."),
+                })
+              }
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
