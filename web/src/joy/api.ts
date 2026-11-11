@@ -348,6 +348,9 @@ export const getEnvelope = (token: string) =>
 // ---- money ----
 export const getSummary = () => get<JoySummary>("/api/joy/summary");
 export const setPartnerShare = (partner_paise: number) => post<{ status: boolean }>("/api/joy/partner", { partner_paise });
+export const resetPartnerShare = () => post<{ status: boolean }>("/api/joy/partner/reset");
 export const getSettle = () => get<SettleOut>("/api/joy/settle");
+export const deleteSettlement = (id: number) => post<{ status: boolean }>("/api/joy/settle/delete", { id });
+export const clearSettlements = () => post<{ status: boolean; removed: number }>("/api/joy/settle/clear");
 export const recordSettlement = (you_paid: boolean, amount_paise: number, note?: string) =>
   post<{ status: boolean }>("/api/joy/settle", { you_paid, amount_paise, note });

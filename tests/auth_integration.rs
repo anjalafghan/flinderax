@@ -474,6 +474,30 @@ async fn partners_settle_up_date_money() {
     authed_post(&app, &b, "/api/joy/settle", json!({"you_paid": true, "amount_paise": 50_000})).await;
     assert_eq!(authed_get(&app, &a, "/api/joy/settle").await["balance_paise"], 0);
     assert_eq!(authed_get(&app, &b, "/api/joy/settle").await["balance_paise"], 0);
+
+    // A repayment recorded by mistake can be removed (by either of you); nobody else's id works.
+    let id = authed_get(&app, &a, "/api/joy/settle").await["settlements"][0]["id"].as_i64().unwrap();
+    let (st, _) = authed_post(&app, &a, "/api/joy/settle/delete", json!({"id": id + 1000})).await;
+    assert_eq!(st, StatusCode::NOT_FOUND);
+    let (st, _) = authed_post(&app, &a, "/api/joy/settle/delete", json!({"id": id})).await;
+    assert!(st.is_success());
+    assert_eq!(authed_get(&app, &a, "/api/joy/settle").await["balance_paise"], 50_000);
+
+    // Clearing starts from scratch.
+    authed_post(&app, &b, "/api/joy/settle", json!({"you_paid": true, "amount_paise": 10_000})).await;
+    authed_post(&app, &a, "/api/joy/settle", json!({"you_paid": false, "amount_paise": 5_000})).await;
+    let (st, body) = authed_post(&app, &a, "/api/joy/settle/clear", json!({})).await;
+    assert!(st.is_success(), "{body}");
+    assert_eq!(serde_json::from_str::<Value>(&body).unwrap()["removed"], 2);
+    let s = authed_get(&app, &a, "/api/joy/settle").await;
+    assert_eq!((s["balance_paise"].as_i64(), s["settlements"].as_array().map(Vec::len)), (Some(50_000), Some(0)));
+
+    // What the partner covers goes back to the default (half the budget) on reset.
+    authed_post(&app, &a, "/api/joy/partner", json!({"partner_paise": 120_000})).await;
+    assert_eq!(authed_get(&app, &a, "/api/joy/summary").await["partner_paise"], 120_000);
+    let (st, _) = authed_post(&app, &a, "/api/joy/partner/reset", json!({})).await;
+    assert!(st.is_success());
+    assert_eq!(authed_get(&app, &a, "/api/joy/summary").await["partner_paise"], 0);
 }
 
 #[tokio::test]

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getCouple, getSettle, getSummary, inviteCode, keys, leaveCouple, recordSettlement, setPartnerShare, type Invite } from "../api";
+import { clearSettlements, deleteSettlement, getCouple, getSettle, getSummary, inviteCode, keys, leaveCouple, recordSettlement, resetPartnerShare, setPartnerShare, type Invite } from "../api";
 import { CodeCard } from "../components/CodeCard";
 import { useStateFrom } from "../components/useStateFrom";
 import { ErrorState } from "../components/ErrorState";
@@ -95,6 +95,21 @@ function CoversCard({ partner, currency }: { partner: string | null; currency: s
     });
   };
 
+  // Back to the default: half the monthly budget when there are two of you.
+  const useDefault = () => {
+    void run(async () => {
+      setErr("");
+      setMsg("");
+      try {
+        await resetPartnerShare();
+        await Promise.all([qc.invalidateQueries({ queryKey: keys.summary }), qc.invalidateQueries({ queryKey: keys.settle })]);
+        setMsg("Back to the default: half the monthly budget.");
+      } catch (er) {
+        setErr(errText(er));
+      }
+    });
+  };
+
   return (
     <form className="set-card" onSubmit={save} aria-labelledby="covers-h">
       <h2 id="covers-h">What {partner ?? "your partner"} covers each month</h2>
@@ -119,6 +134,9 @@ function CoversCard({ partner, currency }: { partner: string | null; currency: s
       </div>
       <div className="set-row">
         <button type="submit" className="btn btn-stamp" disabled={busy || q.isPending}>Save</button>
+        <button type="button" className="btn" disabled={busy || q.isPending} onClick={useDefault}>
+          Use the default
+        </button>
       </div>
       <p className="set-msg" role="status">{msg}</p>
       {err && <p className="set-msg set-err" role="alert">{err}</p>}
@@ -149,6 +167,35 @@ function SettleCard({ partner, currency }: { partner: string | null; currency: s
         await recordSettlement(youPaid, paise);
         await qc.invalidateQueries({ queryKey: keys.settle });
         setMsg(youPaid ? `Noted: you paid ${partner ?? "them"} back ${rupees(paise, currency)}.` : `Noted: ${partner ?? "they"} paid you back ${rupees(paise, currency)}.`);
+      } catch (e) {
+        setErr(errText(e));
+      }
+    });
+  };
+
+  const removeOne = (id: number) => {
+    void run(async () => {
+      setErr("");
+      setMsg("");
+      try {
+        await deleteSettlement(id);
+        await qc.invalidateQueries({ queryKey: keys.settle });
+        setMsg("Removed.");
+      } catch (e) {
+        setErr(errText(e));
+      }
+    });
+  };
+
+  const clearAll = () => {
+    if (!window.confirm("Start settling up from scratch? Every repayment you have noted will be removed.")) return;
+    void run(async () => {
+      setErr("");
+      setMsg("");
+      try {
+        await clearSettlements();
+        await qc.invalidateQueries({ queryKey: keys.settle });
+        setMsg("Cleared. You are settling up from scratch.");
       } catch (e) {
         setErr(errText(e));
       }
@@ -190,9 +237,17 @@ function SettleCard({ partner, currency }: { partner: string | null; currency: s
                       {s.note ? `, ${s.note}` : ""}
                     </span>
                     <span className="soft">{s.on_day}</span>
+                    <button type="button" className="btn" disabled={busy} onClick={() => removeOne(s.id)} aria-label={`Remove the repayment of ${rupees(s.amount_paise, currency)} on ${s.on_day}`}>
+                      Remove
+                    </button>
                   </li>
                 ))}
               </ul>
+              <div className="set-row">
+                <button type="button" className="btn" disabled={busy} onClick={clearAll}>
+                  Reset: clear all repayments
+                </button>
+              </div>
             </>
           )}
         </>

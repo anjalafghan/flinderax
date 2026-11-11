@@ -388,3 +388,58 @@ pub async fn settle_record(
     .await?;
     Ok(Json(Done { status: true }))
 }
+
+#[derive(Deserialize)]
+pub struct SettlementId {
+    pub id: i64,
+}
+
+/// Removes one recorded repayment (a mistake, or one that turned out not to have happened).
+pub async fn settle_delete(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<SettlementId>,
+) -> Result<Json<Done>, AppError> {
+    let (couple, _) = crate::handlers::couple::require_couple(&state.db, &user_id).await?;
+    let gone = sqlx::query("DELETE FROM joy_settlements WHERE id = ? AND couple_id = ?")
+        .bind(p.id)
+        .bind(&couple)
+        .execute(&state.db)
+        .await?
+        .rows_affected();
+    if gone == 0 {
+        return Err(crate::handlers::common::not_found("No such repayment"));
+    }
+    Ok(Json(Done { status: true }))
+}
+
+#[derive(Serialize)]
+pub struct Cleared {
+    pub status: bool,
+    pub removed: u64,
+}
+
+/// Starts settling up from scratch: every recorded repayment goes, so the balance is again just
+/// what each of you paid against your shares.
+pub async fn settle_clear(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Cleared>, AppError> {
+    let (couple, _) = crate::handlers::couple::require_couple(&state.db, &user_id).await?;
+    let removed = sqlx::query("DELETE FROM joy_settlements WHERE couple_id = ?")
+        .bind(&couple)
+        .execute(&state.db)
+        .await?
+        .rows_affected();
+    Ok(Json(Cleared { status: true, removed }))
+}
+
+/// Puts what your partner covers back to the default (half the monthly budget when there are two
+/// of you, nothing when there is one).
+pub async fn partner_reset(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Done>, AppError> {
+    let (couple, who) = crate::handlers::couple::require_couple(&state.db, &user_id).await?;
+    let key = format!("COVERS_{}", 1 - who);
+    sqlx::query("DELETE FROM joy_settings WHERE couple_id = ? AND key = ?")
+        .bind(&couple)
+        .bind(&key)
+        .execute(&state.db)
+        .await?;
+    Ok(Json(Done { status: true }))
+}

@@ -46,7 +46,8 @@
 .joy .set-err { color: var(--stamp); font-weight: 600; }
 .joy .settle-big { font: 600 var(--step-2)/1.15 var(--font-display); }
 .joy .settle-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: var(--step--1); }
-.joy .settle-list li { display: flex; justify-content: space-between; gap: 10px; border-top: 1px dashed var(--rule); padding-top: 6px; }
+.joy .settle-list li { display: flex; justify-content: space-between; gap: 10px; align-items: center; border-top: 1px dashed var(--rule); padding-top: 6px; }
+.joy .settle-list .btn { padding: 4px 12px; min-height: 0; font-size: var(--step--1); flex: 0 0 auto; }
 .joy .leave-box { border: 1.5px solid var(--stamp); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
 .joy .btn-danger { background: var(--stamp); border-color: var(--stamp); color: var(--stamp-ink); }
 .joy .waiting-bar { margin: 8px 0 0; font-size: var(--step--1); color: var(--ink-soft); }

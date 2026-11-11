@@ -10,5 +10,8 @@ pub fn routes(state: AppState) -> Router {
         .route("/summary", get(joy::summary))
         .route("/partner", post(joy::set_partner))
         .route("/settle", get(joy::settle).post(joy::settle_record))
+        .route("/settle/delete", post(joy::settle_delete))
+        .route("/settle/clear", post(joy::settle_clear))
+        .route("/partner/reset", post(joy::partner_reset))
         .with_state(state)
 }
