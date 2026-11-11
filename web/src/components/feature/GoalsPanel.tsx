@@ -13,6 +13,7 @@ import { formatDay } from "@/utils/dates";
 import { formatINR, paiseToInput, toPaise } from "@/utils/money";
 import { cn } from "@/utils/cn";
 import { GOAL_STATUS_LABEL, GOAL_STATUS_TONE, monthsCoveredLabel, progressPercent } from "@/utils/planner";
+import { useArchivedGoals, useUnarchiveGoal } from "@/hooks/usePlanner";
 import { EmptyScene } from "@/components/ui/EmptyScene";
 import { celebrate } from "@/utils/motion";
 import { useAnimatedList } from "@/hooks/useAnimatedList";
@@ -222,6 +223,33 @@ function GoalItem({ goal }: { goal: Goal }) {
 
 // ---------- the section ----------
 
+/** Goals you put away. Restoring one brings its history back too. */
+function ArchivedGoals() {
+  const { data } = useArchivedGoals();
+  const restore = useUnarchiveGoal();
+  if (!data || data.length === 0) return null;
+  return (
+    <details className="rounded-2xl border border-border px-4 py-3 text-sm">
+      <summary className="cursor-pointer font-medium">Archived goals ({data.length})</summary>
+      <ul className="ledger mt-2">
+        {data.map((g) => (
+          <li key={g.goal_id} className="ledger-row">
+            <span className="min-w-0">
+              <span className="block truncate font-medium">{g.name}</span>
+              <span className="block text-[13px] text-muted-foreground tabular-nums">
+                {formatINR(g.saved_paise)} of {formatINR(g.target_paise)}
+              </span>
+            </span>
+            <Button size="sm" variant="outline" disabled={restore.isPending} onClick={() => restore.mutate(g.goal_id)}>
+              Restore
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export function GoalsPanel() {
   const listRef = useAnimatedList<HTMLUListElement>();
   const { data, isLoading, isError } = useGoals();
@@ -281,6 +309,8 @@ export function GoalsPanel() {
             {formatINR(data.unallocated_paise)} of this month's savings not assigned yet.
           </p>
         )}
+
+        <ArchivedGoals />
 
         {adding ? (
           <GoalForm onDone={() => setAdding(false)} />

@@ -34,6 +34,7 @@ export const keys = {
   bills: ["bills"] as const,
   billSuggestions: ["bill-suggestions"] as const,
   goals: ["goals"] as const,
+  goalsArchived: ["goals-archived"] as const,
   reviewMonth: (month: string | undefined) => ["review-month", month ?? "last"] as const,
   // A prefix: every tax query (any financial year) is refreshed by a tax write.
   tax: ["review-tax"] as const,
@@ -96,7 +97,14 @@ export const useSaveGoal = () =>
     { success: "Goal saved. You’ve got a plan!" },
   );
 export const useArchiveGoal = () =>
-  usePlannerMutation((goal_id: string) => goalsApi.archive(goal_id), GOAL_INVALIDATE, { success: "Goal archived" });
+  usePlannerMutation((goal_id: string) => goalsApi.archive(goal_id), [...GOAL_INVALIDATE, keys.goalsArchived], { success: "Goal archived" });
+export const useArchivedGoals = () => useQuery({ queryKey: keys.goalsArchived, queryFn: goalsApi.archived, retry: 1 });
+export const useUnarchiveGoal = () =>
+  usePlannerMutation((goal_id: string) => goalsApi.unarchive(goal_id), [...GOAL_INVALIDATE, keys.goalsArchived], { success: "Goal is back" });
+export const useResetSettings = () =>
+  usePlannerMutation(() => planApi.resetSettings(), [keys.settings], { success: "Budget settings are back to the defaults" });
+export const useRestoreSuggestions = () =>
+  usePlannerMutation(() => billsApi.restore(), [keys.billSuggestions], { success: "Dismissed suggestions are back" });
 export const useContribute = () =>
   usePlannerMutation(
     (v: { goal_id: string; amount_paise: number }) => goalsApi.contribute(v.goal_id, v.amount_paise),

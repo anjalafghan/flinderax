@@ -298,3 +298,41 @@ mod tests {
         assert!(validate(&payload(-5)).is_err());
     }
 }
+
+/// Brings an archived goal back, with its history.
+pub async fn unarchive(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<GoalRef>,
+) -> Result<Json<Done>, AppError> {
+    let res = sqlx::query("UPDATE goals SET archived = 0 WHERE goal_id = ? AND user_id = ?")
+        .bind(&p.goal_id)
+        .bind(&user_id)
+        .execute(&state.db)
+        .await?;
+    if res.rows_affected() == 0 {
+        return Err(not_found("Goal not found"));
+    }
+    Ok(Json(Done { status: true }))
+}
+
+#[derive(Serialize)]
+pub struct ArchivedGoal {
+    pub goal_id: String,
+    pub name: String,
+    pub target_paise: i64,
+    pub saved_paise: i64,
+}
+
+/// `GET /api/goals/archived`: the goals you put away, so any of them can come back.
+pub async fn archived(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Vec<ArchivedGoal>>, AppError> {
+    let rows: Vec<(String, String, i64, i64)> = sqlx::query_as(
+        "SELECT g.goal_id, g.name, g.target_paise,
+                COALESCE((SELECT SUM(amount_paise) FROM goal_contributions c WHERE c.goal_id = g.goal_id), 0)
+           FROM goals g WHERE g.user_id = ? AND g.archived = 1 ORDER BY g.name",
+    )
+    .bind(&user_id)
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(rows.into_iter().map(|(goal_id, name, target_paise, saved_paise)| ArchivedGoal { goal_id, name, target_paise, saved_paise }).collect()))
+}

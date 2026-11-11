@@ -4,7 +4,8 @@ import { LineChart, Trash2 } from "lucide-react";
 
 import { planApi } from "@/services/api";
 import type { Account, Bucket, Commitment, Income } from "@/services/types";
-import { keys, useAccounts, useCommitments, useIncomes, usePlannerMutation, useSettings, useSummary } from "@/hooks/usePlanner";
+import { keys, useAccounts, useCommitments, useIncomes, usePlannerMutation, useResetSettings, useSettings, useSummary } from "@/hooks/usePlanner";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Header } from "@/components/layout/Header";
 import { AffordPanel } from "@/components/feature/AffordPanel";
 import { BillsPanel } from "@/components/feature/BillsPanel";
@@ -309,8 +310,20 @@ function SettingsSection() {
   const [error, setError] = useState<string | null>(null);
   const save = usePlannerMutation(planApi.updateSettings, [keys.settings], { success: "Saved" });
 
+  const resetDefaults = useResetSettings();
+
   // Fill the form from the settings each time they arrive. Done during render rather than in an effect.
   const [seenData, setSeenData] = useState<typeof data>(undefined);
+  const fillFrom = (d: NonNullable<typeof data>) => {
+    setError(null);
+    setSpending(
+      d.spending_bps != null ? formatPercent(d.spending_bps) : d.spending_paise == null ? "" : paiseToInput(d.spending_paise),
+    );
+    setAllocDay(String(d.allocation_day));
+    setFloor(d.savings_floor_paise == null ? "" : paiseToInput(d.savings_floor_paise));
+    setMonths(String(d.recovery_months));
+    setAutoPost(d.auto_post);
+  };
   if (data !== seenData) {
     setSeenData(data);
     if (data) {
@@ -454,6 +467,13 @@ function SettingsSection() {
           </label>
           {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
           <div className="form-actions">
+            <ResetButton label="Undo my edits" disabled={!data} onReset={() => data && fillFrom(data)} />
+            <ResetButton
+              label="Reset to defaults"
+              disabled={resetDefaults.isPending}
+              confirm="Put the budget settings back to their defaults? Your saved spending, savings floor and other choices here will be cleared."
+              onReset={() => resetDefaults.mutate()}
+            />
             <Button type="submit" disabled={save.isPending || !data}>
               Save budget
             </Button>

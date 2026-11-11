@@ -16,6 +16,7 @@ pub fn routes(state: AppState) -> Router {
         .route("/afford", post(projection::afford_handler))
         .route("/settings/get", get(plan::settings_get))
         .route("/settings/update", post(plan::settings_update))
+        .route("/settings/reset", post(plan::settings_reset))
         .route("/life", get(life::get))
         .route("/life/profile", post(life::save))
         .route("/forecast", get(forecast::get))

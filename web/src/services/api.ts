@@ -28,6 +28,7 @@ import type {
   Txn,
   UpdateTxnCategory,
   JoySummary,
+  ArchivedGoal,
   BillsResponse,
   BillSuggestion,
   GoalInput,
@@ -153,6 +154,7 @@ export const planApi = {
   project: (body: { months?: number; spend_pct?: number; items: ScenarioItem[] }) =>
     data(api.post<Projection>("/api/plan/project", body)),
   updateSettings: (s: PlanSettings) => data(api.post<Ok>("/api/plan/settings/update", s)),
+  resetSettings: () => data(api.post<Ok>("/api/plan/settings/reset", {})),
 };
 
 export const cardPlanApi = {
@@ -243,6 +245,7 @@ export const billsApi = {
   list: (days = 30) => data(api.get<BillsResponse>(`/api/bills?days=${days}`)),
   suggestions: () => data(api.get<BillSuggestion[]>("/api/bills/suggestions")),
   dismiss: (merchant: string) => data(api.post<Ok>("/api/bills/suggestions/dismiss", { merchant })),
+  restore: () => data(api.post<Ok & { restored: number }>("/api/bills/suggestions/restore", {})),
 };
 
 export const goalsApi = {
@@ -250,6 +253,8 @@ export const goalsApi = {
   create: (g: GoalInput) => data(api.post<{ goal_id: string; status: boolean }>("/api/goals/create", g)),
   update: (g: GoalInput & { goal_id: string }) => data(api.post<Ok>("/api/goals/update", g)),
   archive: (goal_id: string) => data(api.post<Ok>("/api/goals/archive", { goal_id })),
+  unarchive: (goal_id: string) => data(api.post<Ok>("/api/goals/unarchive", { goal_id })),
+  archived: () => data(api.get<ArchivedGoal[]>("/api/goals/archived")),
   contribute: (goal_id: string, amount_paise: number, note?: string) =>
     data(api.post<Ok>("/api/goals/contribute", { goal_id, amount_paise, note })),
 };

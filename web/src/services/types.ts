@@ -558,6 +558,13 @@ export interface JoySummary {
   labelled: number;
 }
 
+export interface ArchivedGoal {
+  goal_id: string;
+  name: string;
+  target_paise: number;
+  saved_paise: number;
+}
+
 // ---------- bills (what is due, and what looks like a subscription) ----------
 
 export type BillKind = "monthly" | "yearly" | "card_bill" | "date";

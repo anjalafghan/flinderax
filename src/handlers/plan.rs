@@ -441,3 +441,23 @@ pub async fn settings_update(
     .await?;
     Ok(Json(StatusResponse { status: true }))
 }
+
+/// Puts the budget settings back to their defaults (spending allowance by the usual share of
+/// income, top-up on the 10th, no savings floor, 3 months to pay back a shortfall, week from
+/// Monday, automatic postings on). Other things kept in the same row, such as holder names and the
+/// eating-out cap, are left alone.
+pub async fn settings_reset(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<StatusResponse>, AppError> {
+    let d = Settings::default();
+    sqlx::query(
+        "UPDATE user_settings SET spending_paise = NULL, spending_bps = NULL, allocation_day = ?, savings_floor_paise = NULL,
+                recovery_months = ?, week_start = ?, auto_post = ? WHERE user_id = ?",
+    )
+    .bind(d.allocation_day)
+    .bind(d.recovery_months)
+    .bind(d.week_start)
+    .bind(d.auto_post)
+    .bind(&user_id)
+    .execute(&state.db)
+    .await?;
+    Ok(Json(StatusResponse { status: true }))
+}

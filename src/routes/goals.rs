@@ -11,6 +11,8 @@ pub fn routes(state: AppState) -> Router {
         .route("/create", post(goals::create))
         .route("/update", post(goals::update))
         .route("/archive", post(goals::archive))
+        .route("/unarchive", post(goals::unarchive))
+        .route("/archived", get(goals::archived))
         .route("/contribute", post(goals::contribute))
         .with_state(state)
 }

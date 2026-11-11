@@ -509,6 +509,17 @@ pub async fn reset_transactions(
             AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         })?;
 
+    // The planner reads the latest balance snapshot, so a reset that left the snapshots would still
+    // show the old balance (and old spending). A runtime query keeps the committed .sqlx data valid.
+    sqlx::query("DELETE FROM card_snapshots WHERE card_id = ?")
+        .bind(card_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            error!("Error deleting card snapshots: {}", e);
+            AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })?;
+
     sqlx::query!(
         "UPDATE card_running_state SET last_total_due = 0, last_delta = 0 WHERE card_id = ?",
         card_id

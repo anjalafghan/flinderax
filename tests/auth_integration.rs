@@ -180,6 +180,20 @@ async fn card_history_is_only_visible_to_its_owner() {
     assert_eq!(s, StatusCode::OK);
     let (s, _) = authed_post(&app, &snoop, "/api/card/history", json!({"card_id": card_id})).await;
     assert_eq!(s, StatusCode::NOT_FOUND);
+
+    // Resetting a card's history also forgets its balance snapshots, so the balance really is zero.
+    let (s, b) = authed_post(&app, &owner, "/api/card/snapshot", json!({
+        "card_id": card_id, "total_due_paise": 500_000, "outstanding_paise": 500_000, "starting_balance": true
+    })).await;
+    assert!(s.is_success(), "{s} {b}");
+    let before = authed_post(&app, &owner, "/api/card/breakdown", json!({"card_id": card_id})).await.1;
+    assert!(before.contains("500000"), "{before}");
+    let (s, _) = authed_post(&app, &snoop, "/api/card/reset", json!({"card_id": card_id})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+    let (s, b) = authed_post(&app, &owner, "/api/card/reset", json!({"card_id": card_id})).await;
+    assert!(s.is_success(), "{s} {b}");
+    let after = authed_post(&app, &owner, "/api/card/breakdown", json!({"card_id": card_id})).await.1;
+    assert!(!after.contains("500000"), "{after}");
 }
 
 #[tokio::test]
@@ -712,4 +726,50 @@ async fn streaks_count_logged_days_and_saved_months() {
     }
     let s = authed_get(&app, &t, "/api/dashboard/streaks").await;
     assert_eq!(s["saved"], json!({"current": 1, "best": 1}), "{s}");
+}
+
+#[tokio::test]
+async fn goals_settings_and_suggestions_can_be_put_back() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.0.92", "resetter").await;
+
+    // An archived goal can come back.
+    let (st, b) = authed_post(&app, &t, "/api/goals/create", json!({"name": "Trip", "target_paise": 5_000_000, "priority": 1})).await;
+    assert!(st.is_success(), "{b}");
+    let goal = serde_json::from_str::<Value>(&b).unwrap()["goal_id"].as_str().unwrap().to_string();
+    authed_post(&app, &t, "/api/goals/archive", json!({"goal_id": goal})).await;
+    assert_eq!(authed_get(&app, &t, "/api/goals/archived").await[0]["name"], "Trip");
+    let (st, _) = authed_post(&app, &t, "/api/goals/unarchive", json!({"goal_id": "nope"})).await;
+    assert_eq!(st, StatusCode::NOT_FOUND);
+    let (st, _) = authed_post(&app, &t, "/api/goals/unarchive", json!({"goal_id": goal})).await;
+    assert!(st.is_success());
+    assert_eq!(authed_get(&app, &t, "/api/goals/archived").await.as_array().unwrap().len(), 0);
+
+    // Budget settings go back to the defaults.
+    let (st, b) = authed_post(&app, &t, "/api/plan/settings/update", json!({
+        "spending_paise": 2_500_000, "allocation_day": 20, "savings_floor_paise": 100_000, "recovery_months": 6, "week_start": 0, "auto_post": false
+    })).await;
+    assert!(st.is_success(), "{b}");
+    assert_eq!(authed_get(&app, &t, "/api/plan/settings/get").await["allocation_day"], 20);
+    let (st, _) = authed_post(&app, &t, "/api/plan/settings/reset", json!({})).await;
+    assert!(st.is_success());
+    let s = authed_get(&app, &t, "/api/plan/settings/get").await;
+    assert_eq!((s["allocation_day"].as_i64(), s["recovery_months"].as_i64(), s["auto_post"].as_bool()), (Some(10), Some(3), Some(true)));
+    assert_eq!((s["spending_paise"].clone(), s["savings_floor_paise"].clone()), (Value::Null, Value::Null));
+
+    // A dismissed subscription suggestion is offered again after a restore.
+    let today = joy::handlers::common::today_local();
+    for back in [0, 30, 60] {
+        let on = (today - time::Duration::days(back)).to_string();
+        authed_post(&app, &t, "/api/ingest/transactions/create", json!({
+            "occurred_on": on, "direction": "debit", "amount_paise": 64_900, "merchant": "NETFLIX.COM", "category": "entertainment"
+        })).await;
+    }
+    assert_eq!(authed_get(&app, &t, "/api/bills/suggestions").await[0]["label"], "NETFLIX.COM");
+    authed_post(&app, &t, "/api/bills/suggestions/dismiss", json!({"merchant": "NETFLIX.COM"})).await;
+    assert_eq!(authed_get(&app, &t, "/api/bills/suggestions").await.as_array().unwrap().len(), 0);
+    let (st, b) = authed_post(&app, &t, "/api/bills/suggestions/restore", json!({})).await;
+    assert!(st.is_success(), "{b}");
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap()["restored"], 1);
+    assert_eq!(authed_get(&app, &t, "/api/bills/suggestions").await[0]["label"], "NETFLIX.COM");
 }

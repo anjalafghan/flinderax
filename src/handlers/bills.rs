@@ -113,3 +113,20 @@ pub async fn dismiss(
         .await?;
     Ok(Json(Done { status: true }))
 }
+
+#[derive(Serialize)]
+pub struct Restored {
+    pub status: bool,
+    pub restored: u64,
+}
+
+/// `POST /api/bills/suggestions/restore`: forgets every "not a subscription" you said, so those
+/// repeating payments are offered again.
+pub async fn restore(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Restored>, AppError> {
+    let restored = sqlx::query("DELETE FROM dismissed_recurring WHERE user_id = ?")
+        .bind(&user_id)
+        .execute(&state.db)
+        .await?
+        .rows_affected();
+    Ok(Json(Restored { status: true, restored }))
+}

@@ -10,5 +10,6 @@ pub fn routes(state: AppState) -> Router {
         .route("/", get(bills::upcoming))
         .route("/suggestions", get(bills::suggestions))
         .route("/suggestions/dismiss", post(bills::dismiss))
+        .route("/suggestions/restore", post(bills::restore))
         .with_state(state)
 }

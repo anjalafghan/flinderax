@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 
 import type { Bill, BillSuggestion, SinkingFund } from "@/services/types";
-import { useAddSuggestion, useBills, useBillSuggestions, useDismissSuggestion } from "@/hooks/usePlanner";
+import { useAddSuggestion, useBills, useBillSuggestions, useDismissSuggestion, useRestoreSuggestions } from "@/hooks/usePlanner";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { defaultBucket } from "@/utils/buckets";
@@ -111,6 +112,7 @@ function SinkingFundRow({ f }: { f: SinkingFund }) {
 export function BillsPanel() {
   const { data, isLoading, isError } = useBills(30);
   const { data: suggestions = [] } = useBillSuggestions();
+  const restoreDismissed = useRestoreSuggestions();
   const today = localIsoDate();
   const weeks = data ? groupBillsByWeek(data.bills, today) : [];
 
@@ -143,6 +145,13 @@ export function BillsPanel() {
             </ul>
           </section>
         )}
+        <div>
+          <ResetButton
+            label="Bring back dismissed suggestions"
+            disabled={restoreDismissed.isPending}
+            onReset={() => restoreDismissed.mutate()}
+          />
+        </div>
 
         {data && data.sinking_funds.length > 0 && (
           <section aria-label="Saving up for" className="space-y-2">
