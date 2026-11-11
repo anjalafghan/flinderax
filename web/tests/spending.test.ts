@@ -118,3 +118,42 @@ describe("plural", () => {
     expect(plural(3, "other", "others")).toBe("3 others");
   });
 });
+
+import { suggestCategory, topCategories } from "@/utils/spending";
+
+describe("suggestCategory", () => {
+  const history = [
+    { merchant: "Swiggy", direction: "debit", category: "food" },
+    { merchant: "swiggy ", direction: "debit", category: "food" },
+    { merchant: "Swiggy", direction: "debit", category: "groceries" },
+    { merchant: "Swiggy", direction: "credit", category: "refund" },
+    { merchant: "Ola", direction: "debit", category: "uncategorized" },
+  ];
+
+  it("picks the category you used most for the same merchant, ignoring case and spaces", () => {
+    expect(suggestCategory({ merchant: "SWIGGY", direction: "debit" }, history)).toBe("food");
+  });
+
+  it("keeps debits and credits apart", () => {
+    expect(suggestCategory({ merchant: "Swiggy", direction: "credit" }, history)).toBe("refund");
+  });
+
+  it("does not guess without history, or for a missing merchant, or from uncategorised rows", () => {
+    expect(suggestCategory({ merchant: "Ola", direction: "debit" }, history)).toBeNull();
+    expect(suggestCategory({ merchant: "Zomato", direction: "debit" }, history)).toBeNull();
+    expect(suggestCategory({ merchant: null, direction: "debit" }, history)).toBeNull();
+  });
+});
+
+describe("topCategories", () => {
+  it("lists the most used first and tops up with common ones", () => {
+    const rows = [
+      { category: "fuel", direction: "debit" },
+      { category: "fuel", direction: "debit" },
+      { category: "health", direction: "debit" },
+      { category: "uncategorized", direction: "debit" },
+    ];
+    expect(topCategories(rows, "debit", 4)).toEqual(["fuel", "health", "food", "groceries"]);
+    expect(topCategories([], "credit", 3)).toEqual(["income", "refund", "transfer"]);
+  });
+});

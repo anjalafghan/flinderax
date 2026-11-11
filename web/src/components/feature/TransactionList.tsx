@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Layers, Trash2 } from "lucide-react";
 
 import { ingestApi } from "@/services/api";
 import type { Txn } from "@/services/types";
@@ -22,6 +22,7 @@ import {
   sourceLabel,
 } from "@/utils/spending";
 import { cn } from "@/utils/cn";
+import { SwipeSorter } from "@/components/feature/SwipeSorter";
 import { useAnimatedList } from "@/hooks/useAnimatedList";
 
 interface Draft {
@@ -134,6 +135,7 @@ export function TransactionList({
   const [month, setMonth] = useState(thisMonth);
   const { data: txns, isLoading, isError } = useTransactions(month);
   const [toDelete, setToDelete] = useState<Txn | null>(null);
+  const [sorting, setSorting] = useState(false);
 
   const update = usePlannerMutation(ingestApi.updateCategory, INGEST_INVALIDATE);
   const remove = usePlannerMutation(ingestApi.removeTxn, INGEST_INVALIDATE, { success: "Transaction deleted" });
@@ -152,6 +154,15 @@ export function TransactionList({
       },
     );
   };
+
+  // The swipe sorter saves quietly (a toast per swipe would pile up); a failure brings the card back.
+  const sortOne = (txn: Txn, category: string, remember: boolean, undo: () => void) => {
+    update.mutate(
+      { txn_id: txn.txn_id, category, merchant: txn.merchant, remember },
+      { onError: () => undo() },
+    );
+  };
+  const unsorted = (txns ?? []).filter((t) => t.category === "uncategorized");
 
   const shown = (txns ?? []).filter((t) => !uncategorizedOnly || t.category === "uncategorized");
   const isCurrent = month === thisMonth;
@@ -187,7 +198,14 @@ export function TransactionList({
         >
           Uncategorized only
         </Button>
+        {unsorted.length > 0 && !sorting && (
+          <Button size="sm" variant="outline" className="ml-2 gap-2" onClick={() => setSorting(true)}>
+            <Layers className="h-4 w-4" aria-hidden /> Sort {unsorted.length} one by one
+          </Button>
+        )}
       </div>
+
+      {sorting && txns && <SwipeSorter queue={unsorted} all={txns} onCategorise={sortOne} onClose={() => setSorting(false)} />}
 
       {isLoading && <div className="h-24 animate-pulse rounded-xl bg-muted/40" />}
       {isError && <p className="text-sm text-destructive">Couldn't load transactions.</p>}

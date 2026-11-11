@@ -171,3 +171,41 @@ export function plural(n: number, one: string, many: string): string {
 
 /** The path the phone posts alerts to, relative to the site origin. */
 export const INGEST_WEBHOOK_PATH = "/api/hook/ingest";
+
+const NOT_A_CHOICE = new Set(["uncategorized"]);
+
+function norm(s: string | null): string {
+  return (s ?? "").trim().toLowerCase();
+}
+
+/**
+ * The category most likely right for a transaction, from what you already sorted: the one you used
+ * most for the same merchant, or null when there is no history for it (never a blind guess).
+ */
+export function suggestCategory(txn: { merchant: string | null; direction: string }, all: readonly { merchant: string | null; direction: string; category: string }[]): string | null {
+  const name = norm(txn.merchant);
+  if (!name) return null;
+  const counts = new Map<string, number>();
+  for (const t of all) {
+    if (NOT_A_CHOICE.has(t.category) || t.direction !== txn.direction || norm(t.merchant) !== name) continue;
+    counts.set(t.category, (counts.get(t.category) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  let bestN = 0;
+  for (const [c, n] of counts) {
+    if (n > bestN) [best, bestN] = [c, n];
+  }
+  return best;
+}
+
+/** The categories you use most (for the quick-pick chips), topped up with common ones. */
+export function topCategories(all: readonly { category: string; direction: string }[], direction: string, n = 6): string[] {
+  const counts = new Map<string, number>();
+  for (const t of all) {
+    if (NOT_A_CHOICE.has(t.category) || t.direction !== direction) continue;
+    counts.set(t.category, (counts.get(t.category) ?? 0) + 1);
+  }
+  const used = [...counts].sort((a, b) => b[1] - a[1]).map(([c]) => c);
+  const fill = direction === "credit" ? ["income", "refund", "transfer", "other"] : ["food", "groceries", "shopping", "transport", "bills", "other"];
+  return [...new Set([...used, ...fill])].slice(0, n);
+}

@@ -257,6 +257,10 @@ body:has([data-status="red"])::before { opacity: .4; background: radial-gradient
 .empty-float { animation: empty-float 3s ease-in-out infinite; }
 .empty-shadow { transform-origin: 48px 64px; animation: empty-shadow 3s ease-in-out infinite; }
 
+@keyframes sorter-pop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+.sorter-pop { animation: sorter-pop .5s cubic-bezier(.22, 1, .36, 1) both; }
+.sorter-stamp { transition: opacity .12s linear; }
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }
