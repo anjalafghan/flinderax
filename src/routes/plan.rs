@@ -19,10 +19,12 @@ pub fn routes(state: AppState) -> Router {
         .route("/settings/reset", post(plan::settings_reset))
         .route("/life", get(life::get))
         .route("/life/profile", post(life::save))
+        .route("/life/reset", post(life::reset))
         .route("/forecast", get(forecast::get))
         .route("/lifeline", get(lifeline::get))
         .route("/lifeline/try", post(lifeline::try_choices))
         .route("/lifeline/choices", post(lifeline::create))
+        .route("/lifeline/choices/clear", post(lifeline::clear))
         .route("/lifeline/choices/{id}", patch(lifeline::patch).delete(lifeline::delete))
         .with_state(state)
 }

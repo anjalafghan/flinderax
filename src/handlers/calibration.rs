@@ -90,3 +90,18 @@ pub fn day_label(on: &str) -> String {
 fn day(s: &str) -> Option<Date> {
     Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
 }
+
+#[derive(serde::Serialize)]
+pub struct CalibrationReset {
+    pub status: bool,
+}
+
+/// `POST /api/checkin/calibration/reset`: forgets the forecast kept with check-ins, so the
+/// forecast stops being tempered by how the last one turned out. The check-ins themselves stay.
+pub async fn reset(
+    axum::extract::State(state): axum::extract::State<AppState>,
+    axum::Extension((user_id, _)): axum::Extension<(String, String)>,
+) -> Result<axum::Json<CalibrationReset>, AppError> {
+    sqlx::query("UPDATE checkins SET forecast_json = NULL WHERE user_id = ?").bind(&user_id).execute(&state.db).await?;
+    Ok(axum::Json(CalibrationReset { status: true }))
+}

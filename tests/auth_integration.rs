@@ -773,3 +773,53 @@ async fn goals_settings_and_suggestions_can_be_put_back() {
     assert_eq!(serde_json::from_str::<Value>(&b).unwrap()["restored"], 1);
     assert_eq!(authed_get(&app, &t, "/api/bills/suggestions").await[0]["label"], "NETFLIX.COM");
 }
+
+#[tokio::test]
+async fn life_work_tax_and_checkin_data_can_be_cleared() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.0.93", "clearer").await;
+    let other = new_user(&app, "10.0.0.94", "neighbour").await;
+
+    // Job leads: clearing removes only your own.
+    for who in [&t, &other] {
+        let (st, b) = authed_post(&app, who, "/api/work", json!({"company": "Acme", "role": "Engineer"})).await;
+        assert!(st.is_success(), "{st} {b}");
+    }
+    assert_eq!(authed_get(&app, &t, "/api/work").await["leads"].as_array().unwrap().len(), 1);
+    let (st, b) = authed_post(&app, &t, "/api/work/clear", json!({})).await;
+    assert!(st.is_success(), "{b}");
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap()["removed"], 1);
+    assert_eq!(authed_get(&app, &t, "/api/work").await["leads"].as_array().unwrap().len(), 0);
+    assert_eq!(authed_get(&app, &other, "/api/work").await["leads"].as_array().unwrap().len(), 1);
+
+    // Life profile: saved, then reset to the defaults.
+    let (st, b) = authed_post(&app, &t, "/api/plan/life/profile", json!({
+        "my_age": 33, "my_take_home_paise": 10_000_000, "retirement_age": 60
+    })).await;
+    assert!(st.is_success(), "{st} {b}");
+    assert_eq!(authed_get(&app, &t, "/api/plan/life").await["saved"], true);
+    let (st, b) = authed_post(&app, &t, "/api/plan/life/reset", json!({})).await;
+    assert!(st.is_success(), "{st} {b}");
+    assert_eq!(authed_get(&app, &t, "/api/plan/life").await["saved"], false);
+
+    // Life line choices: clearing is for everything you added.
+    let (st, b) = authed_post(&app, &t, "/api/plan/lifeline/choices/clear", json!({})).await;
+    assert!(st.is_success(), "{st} {b}");
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap()["removed"], 0);
+
+    // Tax: manual entries for a year can be cleared, only for that user.
+    for who in [&t, &other] {
+        authed_post(&app, who, "/api/review/tax/entry", json!({"section": "80C", "label": "PPF", "amount_paise": 1_000_000})).await;
+    }
+    let (st, b) = authed_post(&app, &t, "/api/review/tax/entries/clear", json!({})).await;
+    assert!(st.is_success(), "{b}");
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap()["removed"], 1);
+    let (_, b) = authed_post(&app, &t, "/api/review/tax/entries/clear", json!({})).await;
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap()["removed"], 0);
+    let (st, _) = authed_post(&app, &t, "/api/review/tax/entries/clear", json!({"fy": "garbage"})).await;
+    assert_eq!(st, StatusCode::BAD_REQUEST);
+
+    // Forecast calibration reset is safe with no check-ins.
+    let (st, _) = authed_post(&app, &t, "/api/checkin/calibration/reset", json!({})).await;
+    assert!(st.is_success());
+}

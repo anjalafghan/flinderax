@@ -161,6 +161,14 @@ fn validate_profile(p: &LifeProfile, today: Date) -> Result<(), AppError> {
     Ok(())
 }
 
+/// `POST /api/plan/life/reset`: forgets the saved life profile, so the plan goes back to the
+/// defaults and to the expenses Safe to Spend uses.
+pub async fn reset(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<LifeOut>, AppError> {
+    sqlx::query("DELETE FROM life_profiles WHERE user_id = ?").bind(&user_id).execute(&state.db).await?;
+    let (profile, saved) = load_profile(&state.db, &user_id).await?;
+    Ok(Json(respond(&state.db, &user_id, today_local(), profile, saved).await?))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

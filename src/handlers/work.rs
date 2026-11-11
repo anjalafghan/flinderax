@@ -220,6 +220,17 @@ pub async fn delete(State(state): State<AppState>, Extension((user_id, _)): User
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[derive(Serialize)]
+pub struct Cleared {
+    pub removed: u64,
+}
+
+/// `POST /api/work/clear`: starts the job search again with no leads.
+pub async fn clear(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Cleared>, AppError> {
+    let removed = sqlx::query("DELETE FROM job_leads WHERE user_id = ?").bind(&user_id).execute(&state.db).await?.rows_affected();
+    Ok(Json(Cleared { removed }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

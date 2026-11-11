@@ -306,6 +306,18 @@ pub async fn delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[derive(Serialize)]
+pub struct Cleared {
+    pub removed: u64,
+}
+
+/// `POST /api/plan/lifeline/choices/clear`: takes every choice off the line (including any that
+/// can no longer be read and so are hidden but still count towards the limit).
+pub async fn clear(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Cleared>, AppError> {
+    let removed = sqlx::query("DELETE FROM life_choices WHERE user_id = ?").bind(&user_id).execute(&state.db).await?.rows_affected();
+    Ok(Json(Cleared { removed }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

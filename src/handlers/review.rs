@@ -442,3 +442,27 @@ pub async fn tag_commitment(State(state): State<AppState>, Extension((user_id, _
     }
     Ok(Json(Done { status: true }))
 }
+
+#[derive(Deserialize)]
+pub struct ClearEntriesPayload {
+    pub fy: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct EntriesCleared {
+    pub status: bool,
+    pub removed: u64,
+}
+
+/// `POST /api/review/tax/entries/clear`: removes every manual entry for one financial year (the
+/// current one by default). Tags on fixed payments are left alone.
+pub async fn clear_entries(State(state): State<AppState>, Extension((user_id, _)): User, Json(p): Json<ClearEntriesPayload>) -> Result<Json<EntriesCleared>, AppError> {
+    let fy = tax::fy_label(fy_start(p.fy.as_deref(), today_local())?);
+    let removed = sqlx::query("DELETE FROM tax_entries WHERE user_id = ? AND fy = ?")
+        .bind(&user_id)
+        .bind(&fy)
+        .execute(&state.db)
+        .await?
+        .rows_affected();
+    Ok(Json(EntriesCleared { status: true, removed }))
+}
