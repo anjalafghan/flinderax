@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getSpread, regKeys, stopTracking } from "../regulars/api";
+import { clearSkips, getSpread, regKeys, stopTracking } from "../regulars/api";
 import { EditRegular } from "../regulars/EditRegular";
 import { apiMessage } from "../regulars/days";
 import { nightsWord } from "../regulars/days";
@@ -33,6 +33,17 @@ export default function RegularPage() {
       }
     });
   const refresh = () => void qc.invalidateQueries({ queryKey: regKeys.spread(id) });
+  const forgetSkips = () =>
+    void stopping.run(async () => {
+      setStopErr("");
+      try {
+        await clearSkips(id);
+        await qc.invalidateQueries({ queryKey: regKeys.list });
+        refresh();
+      } catch (e) {
+        setStopErr(apiMessage(e));
+      }
+    });
 
   if (q.isPending) return <p className="loading" role="status">Opening the stamps…</p>;
   if (q.isError) {
@@ -77,6 +88,14 @@ export default function RegularPage() {
       ) : (
         <div className="rs-actions">
           <button type="button" className="btn" onClick={() => setEditing(true)}>Edit</button>
+          <button
+            type="button"
+            className="btn"
+            disabled={stopping.busy}
+            onClick={() => window.confirm("Forget every night you skipped here? Those days will be open again.") && forgetSkips()}
+          >
+            Reset: forget skipped nights
+          </button>
         </div>
       )}
 

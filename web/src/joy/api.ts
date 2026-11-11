@@ -335,6 +335,9 @@ export const archiveSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/arch
 export const restoreSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/restore`);
 export const deleteSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/delete`);
 export const unvetoSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/unveto`);
+export const clearVetoes = () => post<Go>("/api/dates/slips/vetoes/clear");
+export const restoreAllSlips = () => post<Go>("/api/dates/slips/restore-all");
+export const clearPutbacks = () => post<Go>("/api/dates/putbacks/clear");
 export const planSlip = (id: number, at: string) => post<SlipPlanned>(`/api/dates/slips/${id}/plan`, { at });
 
 // ---- jar (the page here only needs tonight's "meet in the middle" part) ----

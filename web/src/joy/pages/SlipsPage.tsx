@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { archiveSlip, deleteSlip, getSlips, keys, restoreSlip, unvetoSlip, type ActivityView } from "../api";
+import { archiveSlip, clearVetoes, deleteSlip, getSlips, keys, restoreAllSlips, restoreSlip, unvetoSlip, type ActivityView } from "../api";
 import { filterGroups, slipsWord } from "../slips";
 import { createUndoTimer } from "../undo";
 import { ErrorState } from "../components/ErrorState";
@@ -126,6 +126,30 @@ export default function SlipsPage() {
         setError(errText(e));
       } finally {
         setLeaving(null);
+      }
+    });
+
+  const putAllBack = () =>
+    run(async () => {
+      setError("");
+      try {
+        await restoreAllSlips();
+        await refresh();
+        show("Everything in the drawer is back in the jar.");
+      } catch (e) {
+        setError(errText(e));
+      }
+    });
+
+  const bringAllBack = () =>
+    run(async () => {
+      setError("");
+      try {
+        await clearVetoes();
+        await refresh();
+        show("Every slip you passed on is back in the draw.");
+      } catch (e) {
+        setError(errText(e));
       }
     });
 
@@ -342,6 +366,15 @@ export default function SlipsPage() {
           </>
         )}
 
+        {groups.some((g) => g.items.some((a) => a.vetoed_by)) && (
+          <p className="soft">
+            Some slips are out of the draw because someone passed on them.{" "}
+            <button type="button" className="btn" disabled={busy} onClick={() => void bringAllBack()}>
+              Reset: bring them all back
+            </button>
+          </p>
+        )}
+
         {archived.length > 0 && (
           <details className="drawer" id="drawer">
             <summary>
@@ -356,6 +389,11 @@ export default function SlipsPage() {
               </svg>
             </summary>
             <p className="drawer-note soft">Slips set aside. They won’t be drawn until you put them back.</p>
+            <p>
+              <button type="button" className="btn" disabled={busy} onClick={() => void putAllBack()}>
+                Reset: put them all back
+              </button>
+            </p>
             <ul className="drawer-list" role="list">
               {archived.map((a) => (
                 <DrawerSlip key={a.id} a={a} busy={busy} onRestore={() => void restore(a)} onDelete={() => void simple(() => deleteSlip(a.id))} />

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCouple, keys } from "../api";
-import { createRegular, getRegulars, regKeys, type DayBox } from "../regulars/api";
+import { createRegular, getRegulars, regKeys, restoreRegular, type DayBox, type StoppedItem } from "../regulars/api";
 import { apiMessage, newRegularBody, nightsWord } from "../regulars/days";
 import { mapGoTo } from "../paths";
 import { ErrorState } from "../components/ErrorState";
@@ -17,7 +17,7 @@ export default function RegularsPage() {
       <ErrorState message={errText(q.error)} onRetry={() => void q.refetch()} />
     );
   }
-  const { items, days } = q.data;
+  const { items, days, stopped } = q.data;
   return (
     <>
       <nav className="m-top" aria-label="Back">
@@ -45,8 +45,45 @@ export default function RegularsPage() {
         </ul>
       )}
 
+      {stopped.length > 0 && <StoppedList stopped={stopped} />}
+
       <AddForm days={days} />
     </>
+  );
+}
+
+/** Regulars you stopped tracking. Their nights are kept; restoring one starts the prompts again. */
+function StoppedList({ stopped }: { stopped: StoppedItem[] }) {
+  const qc = useQueryClient();
+  const { busy, run } = useBusy();
+  const [err, setErr] = useState("");
+  const restore = (id: number) =>
+    void run(async () => {
+      setErr("");
+      try {
+        await restoreRegular(id);
+        await qc.invalidateQueries({ queryKey: regKeys.list });
+      } catch (e) {
+        setErr(errText(e));
+      }
+    });
+  return (
+    <details className="rs-stopped">
+      <summary>Stopped ({stopped.length})</summary>
+      <ul className="rl-list">
+        {stopped.map((s) => (
+          <li key={s.id}>
+            <span className="rl-item">
+              <strong>{s.title}</strong>
+              <button type="button" className="btn" disabled={busy} onClick={() => restore(s.id)}>
+                Reset: track it again
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {err && <p role="alert">{err}</p>}
+    </details>
   );
 }
 

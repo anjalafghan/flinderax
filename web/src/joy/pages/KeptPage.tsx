@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Go } from "../api";
 import { errText } from "../components/useBusy";
 import { mapGoTo } from "../paths";
-import { getKept, keptKey } from "../kept/api";
+import { clearPutbacks, getKept, keptKey } from "../kept/api";
 import { Budget, CustomDateFold } from "../kept/Budget";
 import { useFold } from "../kept/useFold";
 import { KeptContext, type FinishOptions, type KeptCtx } from "../kept/ctx";
@@ -230,6 +230,19 @@ export default function KeptPage() {
                 *
               </span>
               {v.skipped.length === 1 ? "One slip was drawn and put back" : `${v.skipped.length} slips were drawn and put back`}, no harm done.
+            </p>
+            <p>
+              <button
+                type="button"
+                className="btn"
+                onClick={() =>
+                  void clearPutbacks()
+                    .then(() => refresh())
+                    .catch(() => {})
+                }
+              >
+                Reset: clear this list
+              </button>
             </p>
             <details className="k-foot-more">
               <summary>Which {v.skipped.length === 1 ? "one" : "ones"}</summary>

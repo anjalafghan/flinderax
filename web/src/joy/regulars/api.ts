@@ -20,9 +20,16 @@ export interface DayBox {
   checked: boolean;
 }
 
+export interface StoppedItem {
+  id: number;
+  title: string;
+}
+
 export interface RegularsView {
   me_name: string;
   items: ListItem[];
+  /** Regulars you stopped tracking, so any can come back. */
+  stopped: StoppedItem[];
   days: DayBox[];
 }
 
@@ -97,6 +104,8 @@ export const getSpread = (id: string) => get<SpreadView>(`${BASE}/regulars/${enc
 export const updateRegular = (id: number | string, body: NewRegularBody) => post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}`, body);
 /** Stop tracking: the server archives it, so the nights already stamped stay in the year. */
 export const stopTracking = (id: number | string) => post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}/delete`, {});
+export const restoreRegular = (id: number | string) => post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}/restore`, {});
+export const clearSkips = (id: number | string) => post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}/skips/clear`, {});
 export const wentTo = (id: number, body: WentBody) => post<Go>(`${BASE}/regulars/${id}/went`, body);
 export const skipTo = (id: number, body: { day: string; back: string }) => post<Go>(`${BASE}/regulars/${id}/skip`, body);
 export const deleteNight = (visitId: number, back = "") => post<Go>(`${BASE}/nights/${visitId}/delete`, { back });

@@ -45,3 +45,7 @@ export const setGoal = (id: string) => post("/savings/goal", goalBody(id));
 export const addSaving = (amount: string, note: string) => post("/savings/add", moneyBody(amount, note));
 export const deleteSaving = (id: number) => post(`/savings/${id}/delete`);
 export const keepGoal = () => post("/savings/keep");
+
+// ---- put-backs ----
+/** Clears the "drawn and put back" list that rerolling leaves behind. */
+export const clearPutbacks = () => post("/putbacks/clear");
