@@ -261,6 +261,9 @@ body:has([data-status="red"])::before { opacity: .4; background: radial-gradient
 .sorter-pop { animation: sorter-pop .5s cubic-bezier(.22, 1, .36, 1) both; }
 .sorter-stamp { transition: opacity .12s linear; }
 
+@keyframes flicker { 0%, 100% { transform: scale(1) rotate(0); } 30% { transform: scale(1.12) rotate(-4deg); } 60% { transform: scale(.97) rotate(3deg); } }
+.streak-flame { animation: flicker 2.4s ease-in-out infinite; transform-origin: 50% 80%; }
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }

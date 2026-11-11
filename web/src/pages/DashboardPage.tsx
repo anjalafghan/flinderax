@@ -25,6 +25,7 @@ import { UpcomingDatesCard } from "@/components/feature/people/UpcomingDatesCard
 import { EmptyScene } from "@/components/ui/EmptyScene";
 import { celebrate } from "@/utils/motion";
 import { useDashboardHistory } from "@/hooks/usePlanner";
+import { StreaksCard } from "@/components/feature/StreaksCard";
 import { DatesHome } from "@/components/feature/DatesHome";
 import { getCouple, keys as joyKeys } from "@/joy/api";
 
@@ -224,6 +225,7 @@ function MoneyDashboard() {
       <main className={`page flex-1 ${hasPendingDeferred ? "pb-32" : ""}`}>
         <div className="mb-6 w-full">
           <PlannerSummary />
+          <StreaksCard />
           <LifeLineCard />
           <InsightsNudge />
           <HabitsCard />

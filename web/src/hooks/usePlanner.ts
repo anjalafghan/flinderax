@@ -62,7 +62,7 @@ export const useSpendSummary = (months = 6) =>
 export const useIngestKey = () => useQuery({ queryKey: keys.ingestKey, queryFn: ingestApi.keyStatus });
 export const useIngestRules = () => useQuery({ queryKey: keys.ingestRules, queryFn: ingestApi.rules });
 /** Everything a spending write can change. The dashboard summary and history are added by usePlannerMutation. */
-export const INGEST_INVALIDATE: QueryKey[] = [keys.txns, keys.spendSummary, keys.ingestRules];
+export const INGEST_INVALIDATE: QueryKey[] = [keys.txns, keys.spendSummary, keys.ingestRules, ['streaks']];
 export const useJoySummary = () => useQuery({ queryKey: keys.joy, queryFn: joyApi.summary, retry: 1 });
 /** Joy writes can re-label transactions as dates, so the spending data is refreshed too. */
 export const JOY_INVALIDATE: QueryKey[] = [keys.joy, keys.txns, keys.spendSummary];
