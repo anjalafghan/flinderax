@@ -27,7 +27,6 @@ import type {
   SpendSummary,
   Txn,
   UpdateTxnCategory,
-  JoyConnect,
   JoySummary,
   BillsResponse,
   BillSuggestion,
@@ -235,9 +234,7 @@ export const ingestApi = {
 
 export const joyApi = {
   summary: () => data(api.get<JoySummary>("/api/joy/summary")),
-  connect: (c: JoyConnect) => data(api.post<Ok>("/api/joy/connect", c)),
   setPartner: (partner_paise: number) => data(api.post<Ok>("/api/joy/partner", { partner_paise })),
-  disconnect: () => data(api.post<Ok>("/api/joy/disconnect", {})),
 };
 
 // ---------- bills, goals, can I afford it ----------

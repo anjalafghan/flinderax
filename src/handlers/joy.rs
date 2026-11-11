@@ -1,8 +1,6 @@
-//! Link to Joy, the shared date jar. Flinderax pulls Joy's date spending
-//! (`GET <joy>/api/v1/spending`, bearer token) to show a Dates budget with your share of it, and
-//! labels the matching bank-alert transactions as dates (`planner::joy`). One way only: Joy is
-//! shared with a partner, so nothing from here is ever sent there.
-
+//! Dates spending seen from the money side: this month's date budget with your share of it, the
+//! bank-alert transactions that match a date (`planner::joy`), and settling up with your partner.
+//! All of it is read from the Dates tables in this database.
 
 use axum::{extract::State, Extension, Json};
 use serde::{Deserialize, Serialize};
@@ -95,28 +93,9 @@ async fn label_dates(db: &sqlx::SqlitePool, user_id: &str, payload: &JoyPayload)
 
 // ---------- endpoints ----------
 
-#[derive(Deserialize)]
-pub struct ConnectPayload {
-    pub url: String,
-    pub token: String,
-    #[serde(default)]
-    pub partner_paise: i64,
-}
-
 #[derive(Serialize)]
 pub struct Done {
     pub status: bool,
-}
-
-/// The old link to a separate Joy app. Dates is built into this app now, and the server no longer
-/// fetches from an address a user types (that was a way to make it call arbitrary hosts), so new
-/// links are refused.
-pub async fn connect(
-    State(_state): State<AppState>,
-    Extension((_user_id, _)): User,
-    Json(_p): Json<ConnectPayload>,
-) -> Result<Json<Done>, AppError> {
-    Err(bad_request("Dates is part of joy now. Open Dates to start one, or join your partner's with their code."))
 }
 
 #[derive(Deserialize)]
@@ -145,15 +124,7 @@ pub async fn set_partner(
         .await?;
         return Ok(Json(Done { status: true }));
     }
-    sqlx::query!("UPDATE joy_links SET partner_paise = ? WHERE user_id = ?", p.partner_paise, user_id)
-        .execute(&state.db)
-        .await?;
-    Ok(Json(Done { status: true }))
-}
-
-pub async fn disconnect(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Done>, AppError> {
-    sqlx::query!("DELETE FROM joy_links WHERE user_id = ?", user_id).execute(&state.db).await?;
-    Ok(Json(Done { status: true }))
+    Err(bad_request("Start Dates or join your partner's first, then set what they cover."))
 }
 
 #[derive(Serialize)]
@@ -179,24 +150,18 @@ pub struct RecentOut {
 
 #[derive(Serialize, Default)]
 pub struct Summary {
+    /// You are in a couple, so Dates figures exist.
     pub connected: bool,
-    pub url: Option<String>,
     pub partner_paise: i64,
-    /// Joy couldn't be reached: these are the last figures it sent.
-    pub stale: bool,
-    pub synced_at: Option<String>,
-    pub error: Option<String>,
     pub month: Option<MonthOut>,
     pub recent: Vec<RecentOut>,
     /// Transactions labelled as dates on this refresh.
     pub labelled: u64,
 }
 
-/// `GET /api/joy/summary`: refreshes from Joy (falling back to the last figures) and returns this
-/// month's date spending with your share.
+/// `GET /api/joy/summary`: this month's date spending with your share.
 pub async fn summary(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Summary>, AppError> {
     let db = &state.db;
-    // Dates lives in this app now: read it directly, nothing to fetch and nothing stale.
     if let Some((couple, who)) = couple_of(db, &user_id).await? {
         let p = local_payload(db, &couple, Some(who)).await?;
         let partner = partner_covers(db, &couple, who, &p).await?;
@@ -205,25 +170,7 @@ pub async fn summary(State(state): State<AppState>, Extension((user_id, _)): Use
         fill_month(&mut out, &p, partner);
         return Ok(Json(out));
     }
-    let Some(link) = sqlx::query!(
-        r#"SELECT url, token, partner_paise, last_payload, synced_at AS "synced_at: String" FROM joy_links WHERE user_id = ?"#,
-        user_id
-    )
-    .fetch_optional(db)
-    .await?
-    else {
-        return Ok(Json(Summary::default()));
-    };
-
-    let mut out = Summary { connected: true, url: Some(link.url.clone()), partner_paise: link.partner_paise, ..Default::default() };
-    // A link from before Dates was built in: show the figures it last saved, never fetch again.
-    out.stale = true;
-    out.synced_at = link.synced_at;
-    let payload = link.last_payload.as_deref().and_then(|j| serde_json::from_str::<JoyPayload>(j).ok());
-    if let Some(p) = payload {
-        fill_month(&mut out, &p, link.partner_paise);
-    }
-    Ok(Json(out))
+    Ok(Json(Summary::default()))
 }
 
 /// This month's figures and recent entries from a payload, with your share.

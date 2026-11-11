@@ -243,36 +243,6 @@ async fn authed_get(app: &Router, token: &str, path: &str) -> Value {
     serde_json::from_slice(&bytes).unwrap()
 }
 
-/// A stand-in for Joy's `/api/v1/spending` on a random local port.
-async fn fake_joy(today: &str) -> (String, tokio::task::JoinHandle<()>) {
-    let month = &today[..7];
-    let body = json!({
-        "currency": "₹", "monthly_budget": 20000,
-        "months": [{ "month": month, "budget": 20000, "carry": 0, "spent": 3000 }],
-        "entries": [
-            { "id": "date:1", "day": today, "amount": 2400, "title": "Saltt dinner", "kind": "date" },
-            { "id": "night:2", "day": today, "amount": 600, "title": "Blue Tokai", "kind": "regular" }
-        ]
-    });
-    let joy = Router::new().route(
-        "/api/v1/spending",
-        axum::routing::get(move |h: axum::http::HeaderMap| {
-            let body = body.clone();
-            async move {
-                if h.get("authorization").and_then(|v| v.to_str().ok()) == Some("Bearer joy-secret") {
-                    axum::Json(body).into_response()
-                } else {
-                    StatusCode::UNAUTHORIZED.into_response()
-                }
-            }
-        }),
-    );
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let url = format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port());
-    let handle = tokio::spawn(async move { axum::serve(listener, joy).await.unwrap() });
-    (url, handle)
-}
-
 #[tokio::test]
 async fn joy_dates_label_alerts_and_split_the_budget() {
     let app = test_app().await;
@@ -283,7 +253,6 @@ async fn joy_dates_label_alerts_and_split_the_budget() {
     let (_, b) = authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
     let key = serde_json::from_str::<Value>(&b).unwrap()["key"].as_str().unwrap().to_string();
 
-    let today = joy::handlers::common::today_local().to_string();
     let (dinner, _) = hook_post(&app, &key, "Rs.2,400.00 debited from a/c **4821 to VPA saltt@okhdfc (UPI Ref No 430500000001).").await;
     assert_eq!(dinner, StatusCode::OK);
     let (_, coffee) = hook_post(&app, &key, "Rs.600.00 debited from a/c **4821 to VPA bluetokai@okicici (UPI Ref No 430500000002).").await;
@@ -293,13 +262,9 @@ async fn joy_dates_label_alerts_and_split_the_budget() {
         json!({"txn_id": coffee_id, "category": "food", "remember": false})).await;
     assert!(s.is_success());
 
-    // The old link to a separate Joy app is gone: the server refuses it and never calls the address.
-    let (url, joy) = fake_joy(&today).await;
-    let (s, b) = authed_post(&app, &t, "/api/joy/connect", json!({"url": url, "token": "joy-secret", "partner_paise": 600_000})).await;
-    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
-    assert!(b.contains("Dates is part of joy now"), "{b}");
+    // There is no outside Joy to link to any more: the connect endpoint is gone.
     let (s, _) = authed_post(&app, &t, "/api/joy/connect", json!({"url": "http://localhost.evil.example", "token": "x", "partner_paise": 0})).await;
-    assert_eq!(s, StatusCode::BAD_REQUEST);
+    assert!(s == StatusCode::NOT_FOUND || s == StatusCode::METHOD_NOT_ALLOWED, "{s}");
     let sum = authed_get(&app, &t, "/api/joy/summary").await;
     assert_eq!(sum["connected"], false);
     // Nothing was labelled from an outside source.
@@ -307,8 +272,6 @@ async fn joy_dates_label_alerts_and_split_the_budget() {
     let cat = |m: &str| txns.as_array().unwrap().iter().find(|x| x["merchant"] == m).unwrap()["category"].clone();
     assert_ne!(cat("saltt"), "dates");
     assert_eq!(cat("bluetokai"), "food");
-    joy.abort();
-    let _ = joy.await;
 }
 
 #[tokio::test]

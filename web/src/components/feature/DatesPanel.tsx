@@ -1,7 +1,7 @@
 import { useJoySummary } from "@/hooks/usePlanner";
 import { cn } from "@/utils/cn";
 import { formatINR } from "@/utils/money";
-import { barPercent, budgetTone, dayLabel, syncedLabel } from "@/utils/joy";
+import { barPercent, budgetTone, dayLabel } from "@/utils/joy";
 import { DatesNudge } from "@/joy/DatesNudge";
 
 /** Dashboard card: this month's date budget from Joy, and the user's share of it. Hidden unless Joy is connected. */
@@ -66,11 +66,6 @@ export function DatesPanel() {
         </ul>
       )}
 
-      {data.stale && (
-        <p className="text-sm text-muted-foreground">
-          Joy couldn't be reached — showing figures from {syncedLabel(data.synced_at)}.
-        </p>
-      )}
     </section>
   );
 }

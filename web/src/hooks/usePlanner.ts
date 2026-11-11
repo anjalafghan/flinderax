@@ -15,7 +15,7 @@ import {
   planApi,
   reviewApi,
 } from "@/services/api";
-import type { AffordRequest, GoalInput, JoyConnect, NewCommitment, NewTaxEntry, TaxSectionId } from "@/services/types";
+import type { AffordRequest, GoalInput, NewCommitment, NewTaxEntry, TaxSectionId } from "@/services/types";
 
 export const keys = {
   txns: ["ingest-transactions"] as const,
@@ -66,14 +66,10 @@ export const INGEST_INVALIDATE: QueryKey[] = [keys.txns, keys.spendSummary, keys
 export const useJoySummary = () => useQuery({ queryKey: keys.joy, queryFn: joyApi.summary, retry: 1 });
 /** Joy writes can re-label transactions as dates, so the spending data is refreshed too. */
 export const JOY_INVALIDATE: QueryKey[] = [keys.joy, keys.txns, keys.spendSummary];
-export const useJoyConnect = () =>
-  usePlannerMutation((c: JoyConnect) => joyApi.connect(c), JOY_INVALIDATE, { success: "Joy connected" });
 export const useJoySetPartner = () =>
   usePlannerMutation((partner_paise: number) => joyApi.setPartner(partner_paise), JOY_INVALIDATE, {
     success: "Partner amount saved",
   });
-export const useJoyDisconnect = () =>
-  usePlannerMutation(() => joyApi.disconnect(), JOY_INVALIDATE, { success: "Joy disconnected" });
 
 // Bills and goals. Adding a suggestion also adds a fixed payment, so the commitments are refreshed.
 export const useBills = (days = 30) =>

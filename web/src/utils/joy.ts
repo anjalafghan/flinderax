@@ -37,7 +37,6 @@ export function dayLabel(day: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(day) ? formatDay(day) : day;
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY_MS = 86_400_000;
 
 /** Parses an RFC 3339 or SQLite timestamp. A timestamp without a zone is UTC. Null when it can't be read. */
@@ -56,15 +55,4 @@ export function calendarDaysAgo(ts: string, now: Date = new Date()): number | nu
   const dayStart = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
   // Round, so a daylight-saving shift inside the span can't leave a fraction.
   return Math.max(0, Math.round((dayStart(now) - dayStart(t)) / DAY_MS));
-}
-
-/** When Joy last answered: "today", "yesterday", "6 Nov" (local date), or "an earlier sync" when unknown. */
-export function syncedLabel(ts: string | null, now: Date = new Date()): string {
-  if (!ts) return "an earlier sync";
-  const days = calendarDaysAgo(ts, now);
-  if (days === null) return "an earlier sync";
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  const d = parseTimestamp(ts) as Date;
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }

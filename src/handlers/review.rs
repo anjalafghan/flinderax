@@ -16,7 +16,6 @@ use crate::{
         autopost,
         common::{bad_request, not_found, today_local, AppError},
         dashboard::load_input,
-        joy::JoyPayload,
     },
     models::AppState,
     planner::{
@@ -97,8 +96,7 @@ async fn net_worth_change(db: &sqlx::SqlitePool, user_id: &str, today: Date, mon
     Ok(at(month).zip(at(prev)).map(|(a, b)| a - b))
 }
 
-/// Date spending for `month`: from the Dates tables when you're in a couple, else from the last
-/// payload a linked Joy app sent.
+/// Date spending for `month`, from the Dates tables. None when you're not in a couple.
 async fn dates_facts(db: &sqlx::SqlitePool, user_id: &str, month: &str) -> Result<Option<DatesFacts>, AppError> {
     if let Some((couple, who)) = crate::handlers::couple::couple_of(db, user_id).await? {
         let payload = crate::handlers::joy::local_payload(db, &couple, Some(who)).await?;
@@ -112,20 +110,7 @@ async fn dates_facts(db: &sqlx::SqlitePool, user_id: &str, month: &str) -> Resul
         }
         return Ok(Some(DatesFacts { spent_paise: spent, budget_paise: budget, your_share_paise: your_share(spent, budget, partner) }));
     }
-    let Some(link) = sqlx::query!("SELECT partner_paise, last_payload FROM joy_links WHERE user_id = ?", user_id)
-        .fetch_optional(db)
-        .await?
-    else {
-        return Ok(None);
-    };
-    let Some(payload) = link.last_payload.as_deref().and_then(|j| serde_json::from_str::<JoyPayload>(j).ok()) else {
-        return Ok(None);
-    };
-    Ok(payload.months.iter().find(|m| m.month == month).map(|m| {
-        let budget = m.budget.map(|b| (b + m.carry) * 100);
-        let spent = m.spent * 100;
-        DatesFacts { spent_paise: spent, budget_paise: budget, your_share_paise: your_share(spent, budget, link.partner_paise) }
-    }))
+    Ok(None)
 }
 
 /// `GET /api/review/month?month=2026-10` (default: last month).

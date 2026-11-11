@@ -552,20 +552,10 @@ export interface JoyRecent {
 
 export interface JoySummary {
   connected: boolean;
-  url: string | null;
   partner_paise: number;
-  stale: boolean;
-  synced_at: string | null;
-  error: string | null;
   month: JoyMonth | null;
   recent: JoyRecent[];
   labelled: number;
-}
-
-export interface JoyConnect {
-  url: string;
-  token: string;
-  partner_paise: number;
 }
 
 // ---------- bills (what is due, and what looks like a subscription) ----------
