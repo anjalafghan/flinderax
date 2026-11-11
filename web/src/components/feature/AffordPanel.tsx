@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { AffordAnswer, AffordResult } from "@/services/types";
 import { useAfford } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -140,6 +141,16 @@ export function AffordPanel() {
 
           {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
           <div className="form-actions">
+            <ResetButton
+              label="Clear"
+              onReset={() => {
+                setAmount("");
+                setMode("now");
+                setEmi({ months: "12", rate: "", fee: "" });
+                setError(null);
+                check.reset();
+              }}
+            />
             <Button type="submit" disabled={check.isPending}>
               {check.isPending ? "Checking..." : "Check"}
             </Button>

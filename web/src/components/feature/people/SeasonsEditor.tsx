@@ -104,12 +104,13 @@ function SeasonRow({ season }: { season: Season }) {
           variant="ghost"
           className="min-h-11"
           disabled={remove.isPending}
-          onClick={() =>
+          onClick={() => {
+            if (!window.confirm(`Remove ${season.label}?`)) return;
             remove.mutate(season.id, {
               onSuccess: () => toast.success(`${season.label} removed.`),
               onError: (err) => toast.error(errorMessage(err)),
-            })
-          }
+            });
+          }}
         >
           {`Delete ${season.label}`}
         </Button>

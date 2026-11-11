@@ -64,7 +64,7 @@ export default function PersonPage() {
             <div className={PANEL}>
               <PersonDates personId={data.person.id} personName={data.person.name} dates={data.dates} />
               <PersonGifts personId={data.person.id} gifts={data.gifts} dates={data.dates} />
-              <PersonTouches touches={data.touches} />
+              <PersonTouches touches={data.touches} personId={data.person.id} />
               <PersonEditForm person={data.person} />
             </div>
           </>

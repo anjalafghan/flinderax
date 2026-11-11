@@ -5,6 +5,7 @@ import { cardPlanApi } from "@/services/api";
 import { keys, usePlannerMutation } from "@/hooks/usePlanner";
 import type { CardBreakdown } from "@/services/types";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -101,6 +102,7 @@ export function CardLoansSection({ cardId, breakdown }: { cardId: string; breakd
               <MoneyInput id="emi-remaining" value={emi.remaining} onChange={(e) => setEmi({ ...emi, remaining: e.target.value })} />
             </div>
             <div className="form-actions">
+              <ResetButton label="Clear" onReset={() => setEmi({ label: "", monthly: "", remaining: "", months: "" })} />
               <Button type="submit" disabled={addEmi.isPending}>
                 <Plus className="mr-2 h-4 w-4" /> Add EMI
               </Button>
@@ -145,6 +147,7 @@ export function CardLoansSection({ cardId, breakdown }: { cardId: string; breakd
               <MoneyInput id="pc-amount" value={charge.amount} onChange={(e) => setCharge({ ...charge, amount: e.target.value })} />
             </div>
             <div className="form-actions">
+              <ResetButton label="Clear" onReset={() => setCharge({ label: "", amount: "" })} />
               <Button type="submit" disabled={addPending.isPending}>
                 <Plus className="mr-2 h-4 w-4" /> Add pending charge
               </Button>

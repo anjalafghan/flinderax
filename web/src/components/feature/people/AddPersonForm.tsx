@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -82,6 +83,15 @@ export function AddPersonForm() {
           <Button type="submit" disabled={add.isPending}>
             Add to circle
           </Button>
+          <ResetButton
+            label="Clear"
+            onReset={() => {
+              setName("");
+              setCircle("friend");
+              setWeeks("");
+              setNote("");
+            }}
+          />
         </div>
       </form>
     </section>

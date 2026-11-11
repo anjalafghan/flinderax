@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -125,6 +126,16 @@ export function PersonEditForm({ person }: { person: PersonRow }) {
           <Button type="submit" disabled={save.isPending}>
             Save
           </Button>
+          <ResetButton
+            label="Undo my edits"
+            onReset={() => {
+              setName(person.name);
+              setCircle(person.circle);
+              setWeeks(wholeWeeks ? String(person.every_days! / 7) : "");
+              setWeeksChanged(false);
+              setNote(person.note);
+            }}
+          />
           <Button type="button" variant="outline" disabled={save.isPending} onClick={toggleArchive}>
             {person.archived ? "Bring back to circle" : "Archive"}
           </Button>

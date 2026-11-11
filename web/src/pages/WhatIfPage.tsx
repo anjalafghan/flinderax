@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { formatINR } from "@/utils/money";
 import { newDraft, toScenarioItem, type ScenarioDraft } from "@/utils/scenario";
 import { cn } from "@/utils/cn";
+import { ResetButton } from "@/components/ui/reset-button";
 
 const STORE = "flinderax-whatif-v1";
 type Metric = "total" | "spending" | "reserve" | "deposits";
@@ -151,6 +152,16 @@ export default function WhatIfPage() {
               <Button size="sm" onClick={() => add("rd")}><Plus className="mr-1 h-4 w-4" /> Recurring deposit</Button>
               <Button size="sm" variant="outline" onClick={() => add("fd")}><Plus className="mr-1 h-4 w-4" /> Fixed deposit</Button>
               <Button size="sm" variant="outline" onClick={() => add("one_off")}><Plus className="mr-1 h-4 w-4" /> One-off spend</Button>
+              <ResetButton
+                label="Reset everything"
+                disabled={drafts.length === 0 && months === 24 && spendPct === 100}
+                confirm={drafts.length > 0 ? "Remove everything you tried and put the sliders back?" : undefined}
+                onReset={() => {
+                  setDrafts([]);
+                  setMonths(24);
+                  setSpendPct(100);
+                }}
+              />
             </div>
             {drafts.map((d, i) => (
               <ScenarioItemForm

@@ -105,6 +105,13 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
           </div>
           {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
           <div className="form-actions">
+            <ResetButton
+              label="Clear"
+              onReset={() => {
+                setF({ label: "", amount: "", day: "", account: "" });
+                setError(null);
+              }}
+            />
             <Button type="submit" disabled={create.isPending}>
               Add income
             </Button>
@@ -287,6 +294,13 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
           </div>
           {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
           <div className="form-actions">
+            <ResetButton
+              label="Clear"
+              onReset={() => {
+                setF(blank);
+                setError(null);
+              }}
+            />
             <Button type="submit" disabled={create.isPending}>
               Add fixed payment
             </Button>

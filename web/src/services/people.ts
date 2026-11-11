@@ -196,6 +196,8 @@ export const deletePerson = (id: string) => request<void>("DELETE", `/api/people
 
 export const addTouch = (personId: string, input: TouchInput) =>
   api.post<PersonRow>(`/api/people/${personId}/touches`, input).then((r) => r.data);
+/** Forgets every catch-up with a person, however old (their page only shows the latest). */
+export const clearTouches = (personId: string) => request<PersonRow>("DELETE", `/api/people/${personId}/touches`);
 export const deleteTouch = (touchId: string) => request<void>("DELETE", `/api/people/touches/${touchId}`);
 
 export const addDate = (personId: string, input: DateInput) =>

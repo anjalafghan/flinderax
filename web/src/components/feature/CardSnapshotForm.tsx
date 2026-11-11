@@ -3,6 +3,7 @@ import { useState } from "react";
 import { cardPlanApi } from "@/services/api";
 import { keys, usePlannerMutation } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -127,6 +128,17 @@ export function CardSnapshotForm({ cardId, isFirst }: { cardId: string; isFirst:
           )}
           {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
           <div className="form-actions">
+            <ResetButton
+              label="Clear"
+              onReset={() => {
+                setTotalDue("");
+                setOutstanding("");
+                setUnbilledSpent("");
+                setUnbilledCredit("");
+                setStarting(true);
+                setError(null);
+              }}
+            />
             <Button type="submit" disabled={save.isPending}>
               {save.isPending ? "Saving..." : "Save snapshot"}
             </Button>

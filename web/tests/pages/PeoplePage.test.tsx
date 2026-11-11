@@ -283,7 +283,11 @@ describe("PeoplePage", () => {
       budget_paise: 750_050,
     });
 
+    // Deleting a season asks first.
+    const realConfirm = window.confirm;
+    window.confirm = () => true;
     fireEvent.click(within(card).getByRole("button", { name: "Delete Diwali" }));
+    window.confirm = realConfirm;
     await waitFor(() => expect(success).toHaveBeenCalledWith("Diwali removed."));
     expect(calls.some((c) => c.method === "DELETE" && c.url === "/api/people/seasons/s1")).toBe(true);
   });

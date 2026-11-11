@@ -4,6 +4,7 @@ import { ingestApi } from "@/services/api";
 import type { TxnDirection } from "@/services/types";
 import { INGEST_INVALIDATE, usePlannerMutation } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -72,6 +73,13 @@ export function ManualTransaction() {
         </div>
         {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
         <div className="form-actions">
+          <ResetButton
+            label="Clear"
+            onReset={() => {
+              setF(blank());
+              setError(null);
+            }}
+          />
           <Button type="submit" disabled={create.isPending}>
             {create.isPending ? "Adding..." : "Add transaction"}
           </Button>
