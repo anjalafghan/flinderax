@@ -13,6 +13,7 @@ import { formatDay } from "@/utils/dates";
 import { formatINR, paiseToInput, toPaise } from "@/utils/money";
 import { cn } from "@/utils/cn";
 import { GOAL_STATUS_LABEL, GOAL_STATUS_TONE, monthsCoveredLabel, progressPercent } from "@/utils/planner";
+import { EmptyScene } from "@/components/ui/EmptyScene";
 import { celebrate } from "@/utils/motion";
 import { useAnimatedList } from "@/hooks/useAnimatedList";
 
@@ -266,7 +267,7 @@ export function GoalsPanel() {
           </div>
         )}
 
-        {data && data.goals.length === 0 && <p className="empty-note">No goals yet.</p>}
+        {data && data.goals.length === 0 && <EmptyScene scene="sprout" title="No goals yet">Plant one: a trip, a wedding, a rainy-day fund.</EmptyScene>}
         {data && data.goals.length > 0 && (
           <ul className="ledger" ref={listRef}>
             {data.goals.map((g) => (

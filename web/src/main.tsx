@@ -7,6 +7,7 @@ import { AuthProvider } from '@/context/AuthProvider'
 import { ThemeProvider } from "@/context/ThemeContext"
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { sweepOfflineCopies } from '@/session'
+import { tick } from '@/utils/motion'
 
 
 const queryClient = new QueryClient()
@@ -60,3 +61,8 @@ if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
 }
+
+// A light tick under the finger when a button is pressed (phones only; skipped under reduced motion).
+document.addEventListener("pointerdown", (e) => {
+  if (e.pointerType === "touch" && (e.target as Element | null)?.closest("button:not(:disabled)")) tick();
+});

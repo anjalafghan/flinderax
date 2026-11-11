@@ -22,6 +22,7 @@ import { HabitsCard } from "@/components/feature/HabitsCard";
 import { CheckInCard } from "@/components/feature/CheckInCard";
 import { LifeLineCard } from "@/components/feature/life/LifeLineCard";
 import { UpcomingDatesCard } from "@/components/feature/people/UpcomingDatesCard";
+import { EmptyScene } from "@/components/ui/EmptyScene";
 import { celebrate } from "@/utils/motion";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 import { DatesHome } from "@/components/feature/DatesHome";
@@ -264,8 +265,8 @@ function MoneyDashboard() {
             ) : cards && cards.length > 0 ? (
               <CardCarousel cards={cards} activeIndex={activeIndex} setActiveIndex={setActiveIndex} isMobile={isMobile} />
             ) : (
-              <Link to="/cards/new" className="rounded-3xl border border-dashed border-primary/25 bg-card/30 border-border px-6 py-10 text-center text-sm text-muted-foreground hover:bg-accent">
-                No cards yet. Add your first card
+              <Link to="/cards/new" className="no-underline">
+                <EmptyScene scene="coins" title="No cards yet">Add your first card and watch it come alive.</EmptyScene>
               </Link>
             )}
           </div>

@@ -25,3 +25,13 @@ export async function celebrate(kind: "burst" | "shower" = "burst"): Promise<voi
     // Confetti is a nicety: never let it break the page.
   }
 }
+
+/** A tiny tick on phones that support it, for presses that matter. */
+export function tick(ms = 8): void {
+  if (prefersReducedMotion()) return;
+  try {
+    navigator.vibrate?.(ms);
+  } catch {
+    // Not supported: nothing to do.
+  }
+}

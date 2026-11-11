@@ -251,6 +251,12 @@ body:has([data-status="red"])::before { opacity: .4; background: radial-gradient
   background-size: 200% 100%;
 }
 
+/* Empty-state illustrations bob gently; the shadow breathes with them. */
+@keyframes empty-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes empty-shadow { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(.85); opacity: .6; } }
+.empty-float { animation: empty-float 3s ease-in-out infinite; }
+.empty-shadow { transform-origin: 48px 64px; animation: empty-shadow 3s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }
