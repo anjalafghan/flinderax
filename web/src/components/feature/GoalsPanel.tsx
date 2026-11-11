@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Archive, Pencil, PiggyBank } from "lucide-react";
 
 import type { Goal, GoalInput } from "@/services/types";
@@ -13,6 +13,8 @@ import { formatDay } from "@/utils/dates";
 import { formatINR, paiseToInput, toPaise } from "@/utils/money";
 import { cn } from "@/utils/cn";
 import { GOAL_STATUS_LABEL, GOAL_STATUS_TONE, monthsCoveredLabel, progressPercent } from "@/utils/planner";
+import { celebrate } from "@/utils/motion";
+import { useAnimatedList } from "@/hooks/useAnimatedList";
 
 // ---------- add / edit form ----------
 
@@ -140,6 +142,12 @@ function GoalItem({ goal }: { goal: Goal }) {
   const archive = useArchiveGoal();
   const pct = progressPercent(goal.saved_paise, goal.target_paise);
   const done = goal.status === "done";
+  // A goal that becomes done while you watch gets confetti; one that was already done stays quiet.
+  const wasDone = useRef(done);
+  useEffect(() => {
+    if (done && !wasDone.current) void celebrate("shower");
+    wasDone.current = done;
+  }, [done]);
 
   const onArchive = () => {
     if (window.confirm(`Archive "${goal.name}"? It will leave this list.`)) archive.mutate(goal.id);
@@ -214,6 +222,7 @@ function GoalItem({ goal }: { goal: Goal }) {
 // ---------- the section ----------
 
 export function GoalsPanel() {
+  const listRef = useAnimatedList<HTMLUListElement>();
   const { data, isLoading, isError } = useGoals();
   const save = useSaveGoal();
   const [adding, setAdding] = useState(false);
@@ -259,7 +268,7 @@ export function GoalsPanel() {
 
         {data && data.goals.length === 0 && <p className="empty-note">No goals yet.</p>}
         {data && data.goals.length > 0 && (
-          <ul className="ledger">
+          <ul className="ledger" ref={listRef}>
             {data.goals.map((g) => (
               <GoalItem key={g.id} goal={g} />
             ))}

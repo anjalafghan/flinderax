@@ -6,6 +6,7 @@ import { formatDay } from "@/utils/dates";
 import { formatINR } from "@/utils/money";
 import { daysBetween, localIsoDate } from "@/utils/planner";
 import { cn } from "@/utils/cn";
+import { useCountUp } from "@/hooks/useCountUp";
 
 /** Balances this old or older make the number a guess, not just a little behind. */
 const STALE_GUESS_DAYS = 21;
@@ -97,7 +98,9 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
         ? `Could be a little lower: spending since ${since} isn’t counted.`
         : `Could be lower: spending since ${since} isn’t counted.`;
 
-  const amount = rupees(summary.safe_to_spend_paise);
+  const shownSafe = useCountUp(summary.safe_to_spend_paise);
+  const shownWeek = useCountUp(summary.per_week_paise);
+  const amount = rupees(shownSafe);
   const aria =
     freshness === "fresh"
       ? `Safe to spend: ${amount}`
@@ -142,7 +145,7 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
           About{" "}
           <span className="font-medium text-foreground">
             {tilde}
-            {rupees(summary.per_week_paise)} a week
+            {rupees(shownWeek)} a week
           </span>{" "}
           for the next {summary.days_left} {summary.days_left === 1 ? "day" : "days"}. {line}
         </p>

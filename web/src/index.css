@@ -231,6 +231,12 @@ button:not(:disabled):active, [role="button"]:active, nav[aria-label="Quick acti
 details[open] > :not(summary) { animation: rise-in .3s ease-out both; }
 [data-sonner-toast] { animation: pop-in .35s cubic-bezier(.22, 1, .36, 1) both; }
 
+/* Today's mood: a soft wash behind the page that follows the Safe to Spend status. */
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity 1.2s ease; }
+body:has([data-status="green"])::before { opacity: .55; background: radial-gradient(60% 40% at 50% 0%, hsl(var(--good) / .16), transparent 70%); }
+body:has([data-status="yellow"])::before { opacity: .55; background: radial-gradient(60% 40% at 50% 0%, hsl(var(--warn) / .16), transparent 70%); }
+body:has([data-status="red"])::before { opacity: .4; background: radial-gradient(60% 40% at 50% 0%, hsl(var(--over) / .12), transparent 70%); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }
 }

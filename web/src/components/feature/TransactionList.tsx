@@ -22,6 +22,7 @@ import {
   sourceLabel,
 } from "@/utils/spending";
 import { cn } from "@/utils/cn";
+import { useAnimatedList } from "@/hooks/useAnimatedList";
 
 interface Draft {
   category: string;
@@ -128,6 +129,7 @@ export function TransactionList({
   uncategorizedOnly: boolean;
   onUncategorizedOnlyChange: (on: boolean) => void;
 }) {
+  const listRef = useAnimatedList<HTMLUListElement>();
   const [thisMonth] = useState(() => monthKey(new Date()));
   const [month, setMonth] = useState(thisMonth);
   const { data: txns, isLoading, isError } = useTransactions(month);
@@ -198,7 +200,7 @@ export function TransactionList({
               : `No transactions in ${monthTitle(month)}. Alerts from your bank show up here automatically.`}
           </p>
         ) : (
-          <ul className="ledger">
+          <ul className="ledger" ref={listRef}>
             {shown.map((t) => (
               <TransactionRow
                 key={t.txn_id}

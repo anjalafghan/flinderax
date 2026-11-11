@@ -22,6 +22,7 @@ import { HabitsCard } from "@/components/feature/HabitsCard";
 import { CheckInCard } from "@/components/feature/CheckInCard";
 import { LifeLineCard } from "@/components/feature/life/LifeLineCard";
 import { UpcomingDatesCard } from "@/components/feature/people/UpcomingDatesCard";
+import { celebrate } from "@/utils/motion";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 import { DatesHome } from "@/components/feature/DatesHome";
 import { getCouple, keys as joyKeys } from "@/joy/api";
@@ -134,6 +135,7 @@ function MoneyDashboard() {
      },
      onSuccess: (data) => {
        if (data.status) {
+         void celebrate();
          toast.success(
            `Settled ${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(data.total_settled)} successfully!`,
          );
