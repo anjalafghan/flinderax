@@ -4,8 +4,7 @@ import { ChevronDown, ClipboardPaste, FileUp, PenLine } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 import { Header } from "@/components/layout/Header";
-import { IngestSetup } from "@/components/feature/IngestSetup";
-import { PartnerShare } from "@/components/feature/PartnerShare";
+import { Link } from "react-router-dom";
 import { ManualTransaction } from "@/components/feature/ManualTransaction";
 import { PasteAlert } from "@/components/feature/PasteAlert";
 import { StatementImport } from "@/components/feature/StatementImport";
@@ -89,18 +88,19 @@ export default function SpendingPage() {
         <details className="group glass rounded-[1.75rem]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 md:px-8">
             <span>
-              <span className="block font-semibold">Automation &amp; rules</span>
-              <span className="block text-sm leading-snug text-muted-foreground">Alert forwarding, date budget share, category rules</span>
+              <span className="block font-semibold">Rules</span>
+              <span className="block text-sm leading-snug text-muted-foreground">Category rules</span>
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
           </summary>
           <div className="stack border-t border-border p-6 md:p-8">
-            <section aria-label="Import setup">
-              <IngestSetup />
-            </section>
-            <section aria-label="Date budget share">
-              <PartnerShare />
-            </section>
+            <p className="text-sm text-muted-foreground">
+              Alert forwarding and your partner's date share are in{" "}
+              <Link to="/account" className="font-medium text-primary">
+                Settings
+              </Link>
+              .
+            </p>
             <section aria-label="Rules" className="space-y-3">
               <h2 className="font-display text-[32px] leading-none">Rules</h2>
               <SpendingRules />

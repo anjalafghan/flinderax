@@ -62,6 +62,9 @@ function Nav({ page }: { page: ReturnType<typeof pageKey> }) {
             </svg>
             Middle
           </Link>
+          <Link to="/people" data-nav="circle">
+            Circle
+          </Link>
           <Link to="/joy/settings" data-nav="settings" {...(page === "settings" ? ({ "aria-current": "page" } as const) : {})}>
             Settings
           </Link>

@@ -52,7 +52,8 @@ export function SubTabs() {
   const { pathname } = useLocation();
   const tab = activeTab(pathname);
   const subtabs = tab && SUBTABS[tab.to];
-  if (!tab || !subtabs) return null;
+  // Dates has its own row of pages, which includes the Circle link: don't stack a second row on it.
+  if (!tab || !subtabs || pathname === "/joy" || pathname.startsWith("/joy/")) return null;
   return (
     <nav aria-label={tab.label} className="mx-auto mt-4 flex w-full max-w-[1040px] flex-wrap gap-1 px-4 md:px-6">
       {subtabs.map((t) => {
@@ -81,6 +82,8 @@ export function Header() {
   const { pathname } = useLocation();
   const { logout } = useAuth();
   const current = activeTab(pathname);
+  // Cards belong to money; inside the date jar the button is just noise.
+  const inDates = pathname === "/joy" || pathname.startsWith("/joy/");
 
   const handleLogout = () => {
     logout();
@@ -111,12 +114,14 @@ export function Header() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5">
-          <Button variant="outline" onClick={() => navigate("/cards/new")} className="h-11 gap-2 rounded-full border-border px-3 sm:px-4" aria-label="Add card">
-            <Plus className="h-4 w-4" strokeWidth={1.6} />
-            <span className="hidden sm:inline">Add card</span>
-          </Button>
+          {!inDates && (
+            <Button variant="outline" onClick={() => navigate("/cards/new")} className="h-11 gap-2 rounded-full border-border px-3 sm:px-4" aria-label="Add card">
+              <Plus className="h-4 w-4" strokeWidth={1.6} />
+              <span className="hidden sm:inline">Add card</span>
+            </Button>
+          )}
           <ModeToggle />
-          <Button variant="outline" size="icon" onClick={() => navigate("/account")} title="Account" aria-label="Account" className="h-11 w-11 rounded-full border-border">
+          <Button variant="outline" size="icon" onClick={() => navigate("/account")} title="Settings" aria-label="Settings" className="h-11 w-11 rounded-full border-border">
             <UserRound className="h-[18px] w-[18px]" strokeWidth={1.5} />
           </Button>
           <Button variant="outline" size="icon" onClick={handleLogout} title="Sign out" aria-label="Sign out" className="h-11 w-11 rounded-full border-border">
