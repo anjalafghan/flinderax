@@ -188,6 +188,50 @@ pub async fn list(State(state): State<AppState>, Extension((user_id, _)): User) 
     Ok(Json(compute(&state, &user_id, today_local()).await?))
 }
 
+#[derive(Serialize, Debug, PartialEq)]
+pub struct Suggestion {
+    pub name: String,
+    pub cost_paise: i64,
+    /// Where the cost came from, in words ("a tenth of this month's unassigned savings").
+    pub note: String,
+}
+
+/// Whole-₹100 steps: suggested amounts are rounded down so they look like a price.
+const ROUND_PAISE: i64 = 10_000;
+/// The "buy something" idea is a tenth of what this month's savings left unassigned.
+const SPLURGE_DIVISOR: i64 = 10;
+
+/// Pure: the ideas to offer. The splurge is sized from `unallocated_paise` (savings no goal has
+/// claimed this month) and never above what the monthly cap still allows, so it can't undermine
+/// the goals. It is left out when that comes to nothing.
+pub fn suggestions(unallocated_paise: i64, cap_left_paise: Option<i64>) -> Vec<Suggestion> {
+    let mut out = vec![
+        Suggestion { name: "A back massage".into(), cost_paise: 150_000, note: "a typical price, change it to suit".into() },
+        Suggestion { name: "A slice of cheesecake".into(), cost_paise: 40_000, note: "a typical price, change it to suit".into() },
+        Suggestion { name: "A film night in, snacks on me".into(), cost_paise: 0, note: "free".into() },
+    ];
+    let mut amount = unallocated_paise.max(0) / SPLURGE_DIVISOR;
+    if let Some(left) = cap_left_paise {
+        amount = amount.min(left);
+    }
+    amount = amount.min(validate::MAX_AMOUNT_PAISE) / ROUND_PAISE * ROUND_PAISE;
+    if amount > 0 {
+        let note = if cap_left_paise.is_some() { "a tenth of this month's unassigned savings, held to your reward budget" } else { "a tenth of this month's unassigned savings" };
+        out.push(Suggestion { name: "Buy something I've been wanting".into(), cost_paise: amount, note: note.into() });
+    }
+    out
+}
+
+/// `GET /api/rewards/suggestions`: a few ideas to start from; the money one comes from the
+/// savings plan (the same numbers the goals use).
+pub async fn suggest(State(state): State<AppState>, Extension((user_id, uname)): User) -> Result<Json<Vec<Suggestion>>, AppError> {
+    let today = today_local();
+    let unallocated = crate::handlers::goals::list(State(state.clone()), Extension((user_id.clone(), uname))).await?.0.unallocated_paise;
+    let cap = cap_of(&state.db, &user_id).await?;
+    let left = cap_left(cap, spent_in(&state.db, &user_id, &month_of(today)).await?);
+    Ok(Json(suggestions(unallocated, left)))
+}
+
 #[derive(Deserialize)]
 pub struct CreatePayload {
     pub name: String,
@@ -485,6 +529,24 @@ mod tests {
         assert_eq!(state_of(&state, &three, later).await, RewardState::Earned);
         assert_eq!(state_of(&state, &seven, later).await, RewardState::Locked);
         ok(claim_on(&state, "u", &three, later).await);
+    }
+
+    #[test]
+    fn the_money_idea_is_a_tenth_of_unassigned_savings_in_round_hundreds() {
+        let s = suggestions(2_345_600, None); // ₹23,456 unassigned
+        assert_eq!(s.len(), 4);
+        assert_eq!(s[3].cost_paise, 230_000); // ₹2,300
+        assert_eq!(s[0].name, "A back massage");
+    }
+
+    #[test]
+    fn the_money_idea_respects_the_cap_and_vanishes_without_money() {
+        assert_eq!(suggestions(2_345_600, Some(50_000))[3].cost_paise, 50_000);
+        assert_eq!(suggestions(2_345_600, Some(0)).len(), 3);
+        assert_eq!(suggestions(0, None).len(), 3);
+        assert_eq!(suggestions(-9, None).len(), 3);
+        assert_eq!(suggestions(5_000, None).len(), 3); // under ₹100 rounds to nothing
+        assert!(suggestions(i64::MAX, None)[3].cost_paise <= validate::MAX_AMOUNT_PAISE);
     }
 
     #[tokio::test]

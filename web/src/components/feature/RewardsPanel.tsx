@@ -6,6 +6,7 @@ import {
   useAddReward,
   useClaimReward,
   useRemoveReward,
+  useRewardSuggestions,
   useRewards,
   useSetRewardCap,
   useUnclaimReward,
@@ -34,11 +35,11 @@ const STREAK_LABEL: Record<StreakKind, string> = {
 
 // ---------- add form ----------
 
-function RewardForm({ onDone }: { onDone: () => void }) {
+function RewardForm({ onDone, preset }: { onDone: () => void; preset?: { name: string; cost_paise: number } }) {
   const { data: goals } = useGoals();
   const add = useAddReward();
-  const [name, setName] = useState("");
-  const [cost, setCost] = useState("");
+  const [name, setName] = useState(preset?.name ?? "");
+  const [cost, setCost] = useState(preset && preset.cost_paise > 0 ? paiseToInput(preset.cost_paise) : "");
   const [trigger, setTrigger] = useState<"goal" | "streak">("goal");
   const [goalId, setGoalId] = useState("");
   const [pct, setPct] = useState("100");
@@ -220,7 +221,9 @@ function RewardRow({ r, goalName }: { r: Reward; goalName?: string }) {
 export function RewardsPanel() {
   const { data, isLoading, isError } = useRewards();
   const { data: goals } = useGoals();
+  const { data: ideas } = useRewardSuggestions();
   const [adding, setAdding] = useState(false);
+  const [preset, setPreset] = useState<{ name: string; cost_paise: number } | undefined>();
   const goalName = (id: string | null) => goals?.goals.find((g) => g.id === id)?.name;
 
   return (
@@ -263,10 +266,24 @@ export function RewardsPanel() {
         )}
 
         {adding ? (
-          <RewardForm onDone={() => setAdding(false)} />
+          <RewardForm key={preset?.name ?? "blank"} preset={preset} onDone={() => { setAdding(false); setPreset(undefined); }} />
         ) : (
-          <div>
-            <Button variant="outline" onClick={() => setAdding(true)}>Add a reward</Button>
+          <div className="space-y-3">
+            {ideas && ideas.length > 0 && (
+              <div>
+                <p className="mb-2 text-[13px] text-muted-foreground">Ideas to start from (you choose what unlocks them):</p>
+                <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label="Reward ideas">
+                  {ideas.map((i) => (
+                    <li key={i.name}>
+                      <Button size="sm" variant="outline" title={i.note} onClick={() => { setPreset(i); setAdding(true); }}>
+                        {i.name}{i.cost_paise > 0 && ` · ${formatINR(i.cost_paise)}`}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <Button variant="outline" onClick={() => { setPreset(undefined); setAdding(true); }}>Add a reward</Button>
           </div>
         )}
       </CardContent>

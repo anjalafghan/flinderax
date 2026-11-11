@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { RewardChips } from "@/components/feature/RewardChips";
@@ -35,6 +35,7 @@ const out: RewardsOut = {
 function withData(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
   qc.setQueryData(["rewards"], out);
+  qc.setQueryData(["rewards", "suggestions"], [{ name: "A back massage", cost_paise: 150000, note: "x" }, { name: "Buy something I've been wanting", cost_paise: 230000, note: "y" }]);
   qc.setQueryData(["goals"], { goals: [{ id: "g1", name: "Trip" }], available_paise: 0, unallocated_paise: 0, months_covered_tenths: null, emergency_suggested_paise: null });
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
@@ -69,5 +70,12 @@ describe("rewards", () => {
     expect(screen.getByText(/claimed this month/)).toHaveTextContent("₹500");
     expect(screen.getByText("Claimed so far (1)")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add a reward" })).toBeTruthy();
+  });
+
+  it("offers ideas, and picking one fills the form with its name and cost", () => {
+    withData(<RewardsPanel />);
+    fireEvent.click(screen.getByRole("button", { name: /Buy something I've been wanting/ }));
+    expect((screen.getByLabelText("The treat") as HTMLInputElement).value).toBe("Buy something I've been wanting");
+    expect((screen.getByLabelText(/What it costs/) as HTMLInputElement).value).toBe("2300");
   });
 });

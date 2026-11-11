@@ -35,6 +35,12 @@ export interface RewardsOut {
   cap_left_paise: number | null;
 }
 
+export interface RewardSuggestion {
+  name: string;
+  cost_paise: number;
+  note: string;
+}
+
 export interface RewardInput {
   name: string;
   cost_paise: number;
@@ -51,12 +57,15 @@ const data = <T>(p: Promise<{ data: T }>) => p.then((r) => r.data);
 
 export const rewardsApi = {
   list: () => data(api.get<RewardsOut>("/api/rewards")),
+  suggestions: () => data(api.get<RewardSuggestion[]>("/api/rewards/suggestions")),
   create: (r: RewardInput) => data(api.post<{ reward_id: string }>("/api/rewards/create", r)),
   remove: (reward_id: string) => data(api.post("/api/rewards/remove", { reward_id })),
   claim: (reward_id: string) => data(api.post("/api/rewards/claim", { reward_id })),
   unclaim: (reward_id: string) => data(api.post("/api/rewards/unclaim", { reward_id })),
   setCap: (monthly_cap_paise: number | null) => data(api.post("/api/rewards/cap", { monthly_cap_paise })),
 };
+
+export const useRewardSuggestions = () => useQuery({ queryKey: [...rewardsKey, "suggestions"], queryFn: rewardsApi.suggestions, retry: 1 });
 
 export const useRewards = () => useQuery({ queryKey: rewardsKey, queryFn: rewardsApi.list, retry: 1 });
 
