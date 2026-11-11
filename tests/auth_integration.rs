@@ -823,3 +823,39 @@ async fn life_work_tax_and_checkin_data_can_be_cleared() {
     let (st, _) = authed_post(&app, &t, "/api/checkin/calibration/reset", json!({})).await;
     assert!(st.is_success());
 }
+
+#[tokio::test]
+async fn learned_rules_hand_set_categories_and_layouts_can_be_reset() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.0.95", "tidier").await;
+    let today = joy::handlers::common::today_local().to_string();
+
+    let (st, b) = authed_post(&app, &t, "/api/ingest/transactions/create", json!({
+        "occurred_on": today, "direction": "debit", "amount_paise": 25_000, "merchant": "Zorblax Cafe", "category": "uncategorized"
+    })).await;
+    assert!(st.is_success(), "{b}");
+    let txn = serde_json::from_str::<Value>(&b).unwrap()["txn_id"].as_str().unwrap().to_string();
+
+    // Hand-set a category and teach a rule.
+    let (st, _) = authed_post(&app, &t, "/api/ingest/transactions/update",
+        json!({"txn_id": txn, "category": "shopping", "remember": true})).await;
+    assert!(st.is_success());
+    assert_eq!(authed_get(&app, &t, "/api/ingest/rules").await.as_array().unwrap().len(), 1);
+
+    // Clearing the rules keeps the row's category but forgets the lesson.
+    let (st, b) = authed_post(&app, &t, "/api/ingest/rules/clear", json!({})).await;
+    assert!(st.is_success(), "{b}");
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap()["removed"], 1);
+    assert_eq!(authed_get(&app, &t, "/api/ingest/rules").await.as_array().unwrap().len(), 0);
+
+    // Back to automatic: the keywords read "Cafe" as food (not the shopping it was set to), and the row is unlocked.
+    let (st, b) = authed_post(&app, &t, "/api/ingest/transactions/unlock", json!({"txn_id": txn})).await;
+    assert!(st.is_success(), "{b}");
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap()["category"], "food");
+    let (st, _) = authed_post(&app, &t, "/api/ingest/transactions/unlock", json!({"txn_id": "nope"})).await;
+    assert_eq!(st, StatusCode::NOT_FOUND);
+
+    // Saved statement layouts can be forgotten (nothing saved is fine).
+    let (st, b) = authed_post(&app, &t, "/api/ingest/statement/layouts/clear", json!({})).await;
+    assert!(st.is_success(), "{b}");
+}

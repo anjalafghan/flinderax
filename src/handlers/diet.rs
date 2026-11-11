@@ -369,6 +369,22 @@ pub async fn put_week(
     Ok(Json(put_week_at(&state.db, &user_id, &week_start, p, today_local()).await?))
 }
 
+/// `DELETE /api/diet/weeks/{week_start}`: clears the week's plan, feel and habit ticks, so it no
+/// longer counts as logged. Answers with the now-empty week.
+pub async fn delete_week(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(week_start): Path<String>,
+) -> Result<Json<Week>, AppError> {
+    let start = parse_day(&week_start).ok_or_else(|| unprocessable("The week must look like 2026-11-09."))?;
+    let key = start.to_string();
+    let mut tx = state.db.begin().await?;
+    sqlx::query("DELETE FROM diet_week_habits WHERE user_id = ? AND week_start = ?").bind(&user_id).bind(&key).execute(&mut *tx).await?;
+    sqlx::query("DELETE FROM diet_weeks WHERE user_id = ? AND week_start = ?").bind(&user_id).bind(&key).execute(&mut *tx).await?;
+    tx.commit().await?;
+    Ok(Json(week_out(&state.db, &user_id, &key).await?))
+}
+
 async fn put_week_at(
     db: &sqlx::SqlitePool,
     user_id: &str,
@@ -554,6 +570,34 @@ pub async fn delete_mark(
         return Err(not_found("That entry was not found."));
     }
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize)]
+pub struct ClearMarks {
+    pub kind: String,
+}
+
+#[derive(Serialize)]
+pub struct MarksCleared {
+    pub removed: u64,
+}
+
+/// `POST /api/diet/marks/clear`: removes every reading of one kind (weight, waist or checkup).
+pub async fn clear_marks(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<ClearMarks>,
+) -> Result<Json<MarksCleared>, AppError> {
+    if !matches!(p.kind.as_str(), "weight" | "waist" | "checkup") {
+        return Err(unprocessable("The kind must be weight, waist or checkup."));
+    }
+    let removed = sqlx::query("DELETE FROM health_marks WHERE user_id = ? AND kind = ?")
+        .bind(&user_id)
+        .bind(&p.kind)
+        .execute(&state.db)
+        .await?
+        .rows_affected();
+    Ok(Json(MarksCleared { removed }))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1078,6 +1122,31 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(kept, 1);
+    }
+
+    #[tokio::test]
+    async fn a_week_and_a_kind_of_reading_can_be_cleared() {
+        let s = test_state().await;
+        let h = add_habit(&s, "u", "Walk", 4).await;
+        ok(put_week_at(&s.db, "u", "2026-11-09", week(Some(4), &[(&h.id, 3)]), today()).await);
+        ok(put_week_at(&s.db, "other", "2026-11-09", week(Some(2), &[]), today()).await);
+        let Json(w) = ok(delete_week(State(s.clone()), who("u"), Path("2026-11-09".into())).await);
+        assert_eq!((w.feel, w.entries.len()), (None, 0));
+        let left: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM diet_weeks WHERE week_start = '2026-11-09'").fetch_one(&s.db).await.unwrap();
+        assert_eq!(left, 1, "only the other user's week is left");
+        let ticks: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM diet_week_habits WHERE user_id = 'u'").fetch_one(&s.db).await.unwrap();
+        assert_eq!(ticks, 0);
+        assert_eq!(code(delete_week(State(s.clone()), who("u"), Path("nonsense".into())).await), StatusCode::UNPROCESSABLE_ENTITY);
+
+        ok(create_mark_at(&s.db, "u", mark("weight", "2026-11-01", Some(700)), today()).await);
+        ok(create_mark_at(&s.db, "u", mark("weight", "2026-11-08", Some(695)), today()).await);
+        ok(create_mark_at(&s.db, "u", mark("waist", "2026-11-08", Some(820)), today()).await);
+        ok(create_mark_at(&s.db, "other", mark("weight", "2026-11-08", Some(800)), today()).await);
+        let Json(c) = ok(clear_marks(State(s.clone()), who("u"), Json(ClearMarks { kind: "weight".into() })).await);
+        assert_eq!(c.removed, 2);
+        let rest: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM health_marks").fetch_one(&s.db).await.unwrap();
+        assert_eq!(rest, 2, "a waist reading and the other user's weight stay");
+        assert_eq!(code(clear_marks(State(s.clone()), who("u"), Json(ClearMarks { kind: "height".into() })).await), StatusCode::UNPROCESSABLE_ENTITY);
     }
 
     #[tokio::test]

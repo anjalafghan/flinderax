@@ -671,6 +671,23 @@ pub async fn add_touch(
     Ok(Json(find_person(&state.db, &user_id, &id).await?.to_row(today)))
 }
 
+/// `DELETE /api/people/{id}/touches`: forgets every catch-up with this person, however old (the
+/// person's page only shows the latest ones).
+pub async fn clear_touches(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(id): Path<String>,
+) -> Result<Json<PersonRow>, AppError> {
+    find_person(&state.db, &user_id, &id).await?;
+    sqlx::query("DELETE FROM touches WHERE person_id = ? AND user_id = ?")
+        .bind(&id)
+        .bind(&user_id)
+        .execute(&state.db)
+        .await?;
+    recompute_last_contact(&state.db, &user_id, &id).await?;
+    Ok(Json(find_person(&state.db, &user_id, &id).await?.to_row(today_local())))
+}
+
 pub async fn delete_touch(
     State(state): State<AppState>,
     Extension((user_id, _)): User,
@@ -963,15 +980,22 @@ pub async fn patch_gift(
     }
     let for_year = p.for_year.unwrap_or(cur.for_year);
     check_for_year(for_year, today)?;
-    let txn_id = p.txn_id.clone().unwrap_or(cur.txn_id.clone());
+    let mut txn_id = p.txn_id.clone().unwrap_or(cur.txn_id.clone());
     if p.txn_id.is_some() {
         check_txn(db, &user_id, &txn_id).await?;
     }
+    // Moving a settled gift back to an idea lets go of when it was given and the payment it was
+    // matched to (unless the request sets them), so it really is an idea again.
+    let back_to_idea = p.status == Some(GiftStatus::Idea) && GiftStatus::parse(&cur.status).is_some_and(|s| s.settled());
     let mut on_day = match &p.on_day {
         Some(Some(s)) => Some(parse_day(s, "The day")?.to_string()),
         Some(None) => None,
+        None if back_to_idea => None,
         None => cur.on_day.clone(),
     };
+    if back_to_idea && p.txn_id.is_none() {
+        txn_id = Default::default();
+    }
     if on_day.is_none() && status.settled() {
         on_day = Some(today.to_string());
     }
@@ -1680,6 +1704,30 @@ mod tests {
         assert_eq!(ok(list(st(&s), user("u")).await).0.upcoming[0].gift_status, GiftState::Given);
         let body = Json(serde_json::from_str::<GiftPatch>(r#"{"amount_paise":null}"#).unwrap());
         assert_eq!(ok(patch_gift(st(&s), user("u"), Path(idea.id), body).await).0.amount_paise, None);
+    }
+
+    #[tokio::test]
+    async fn moving_a_given_gift_back_to_an_idea_lets_go_of_its_day_and_clearing_catch_ups_resets_last_contact() {
+        let s = test_state().await;
+        let p = person(&s, "u", "Person A", Circle::Family, None).await;
+        let mut g = new_gift(&p.id, "Book");
+        g.status = Some(GiftStatus::Given);
+        g.amount_paise = Some(45_000);
+        let given = ok(add_gift(st(&s), user("u"), Json(g)).await).0;
+        assert!(given.on_day.is_some());
+        let body = Json(serde_json::from_str::<GiftPatch>(r#"{"status":"idea"}"#).unwrap());
+        let idea = ok(patch_gift(st(&s), user("u"), Path(given.id.clone()), body).await).0;
+        assert_eq!((idea.status, idea.on_day.clone(), idea.amount_paise), (GiftStatus::Idea, None, Some(45_000)));
+
+        // Every catch-up goes, however many there are, and last contact goes with them.
+        for _ in 0..25 {
+            ok(add_touch(st(&s), user("u"), Path(p.id.clone()), Json(new_touch(TouchKind::Call, None))).await);
+        }
+        let cleared = ok(clear_touches(st(&s), user("u"), Path(p.id.clone())).await).0;
+        assert_eq!(cleared.last_contact_on, None);
+        let left: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM touches WHERE person_id = ?").bind(&p.id).fetch_one(&s.db).await.unwrap();
+        assert_eq!(left, 0);
+        assert_eq!(code(clear_touches(st(&s), user("other"), Path(p.id)).await), StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]

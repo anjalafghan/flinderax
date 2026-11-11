@@ -639,6 +639,69 @@ pub async fn rule_delete(
     Ok(Json(Done { status: true }))
 }
 
+#[derive(Serialize)]
+pub struct Cleared {
+    pub status: bool,
+    pub removed: u64,
+}
+
+/// `POST /api/ingest/rules/clear`: forgets every category you taught it. Rows already sorted keep
+/// the category they have; new ones go back to the automatic keywords.
+pub async fn rules_clear(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Cleared>, AppError> {
+    let removed = sqlx::query("DELETE FROM merchant_rules WHERE user_id = ?").bind(&user_id).execute(&state.db).await?.rows_affected();
+    Ok(Json(Cleared { status: true, removed }))
+}
+
+/// `POST /api/ingest/statement/layouts/clear`: forgets the column layouts saved for statements, so
+/// the next upload of each is detected afresh.
+pub async fn layouts_clear(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Cleared>, AppError> {
+    let removed = sqlx::query("DELETE FROM statement_profiles WHERE user_id = ?").bind(&user_id).execute(&state.db).await?.rows_affected();
+    Ok(Json(Cleared { status: true, removed }))
+}
+
+#[derive(Serialize)]
+pub struct Unlocked {
+    pub status: bool,
+    pub category: String,
+}
+
+/// `POST /api/ingest/transactions/unlock`: hands a hand-set category back to the automatic one.
+/// The row works out its category again from your rules and the keywords (a statement row also from
+/// its structure), and later re-checks may change it as they do for any other row.
+pub async fn unlock(State(state): State<AppState>, Extension((user_id, _)): User, Json(p): Json<TxnId>) -> Result<Json<Unlocked>, AppError> {
+    let db = &state.db;
+    let row: Option<(Option<String>, String, Option<String>, bool, bool)> = sqlx::query_as(
+        "SELECT merchant, direction, raw_text, on_statement = 1, card_id IS NOT NULL FROM transactions WHERE txn_id = ? AND user_id = ?",
+    )
+    .bind(&p.txn_id)
+    .bind(&user_id)
+    .fetch_optional(db)
+    .await?;
+    let (merchant, direction, raw, on_statement, on_card) = row.ok_or_else(|| not_found("Transaction not found"))?;
+    let credit = direction == Direction::Credit.as_str();
+    let dir = if credit { Direction::Credit } else { Direction::Debit };
+    let rules = load_rules(db, &user_id).await?;
+    let category = match (&raw, on_statement) {
+        (Some(raw), true) => {
+            let names = load_holder_names(db, &user_id).await?;
+            let owner = crate::narration::Owner { holder_names: &names };
+            let parts = crate::narration::parse(raw);
+            match statement_structure(raw, credit, on_card, &parts, &owner) {
+                Some(c) => c.to_string(),
+                None => categorize(parts.payee.as_deref(), dir, false, &rules),
+            }
+        }
+        _ => categorize(merchant.as_deref(), dir, false, &rules),
+    };
+    sqlx::query("UPDATE transactions SET category = ?, category_locked = 0 WHERE txn_id = ? AND user_id = ?")
+        .bind(&category)
+        .bind(&p.txn_id)
+        .bind(&user_id)
+        .execute(db)
+        .await?;
+    Ok(Json(Unlocked { status: true, category }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

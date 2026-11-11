@@ -19,7 +19,7 @@ pub fn routes(state: AppState) -> Router {
         .route("/dates/{id}", patch(h::patch_date).delete(h::delete_date))
         .route("/touches/{id}", delete(h::delete_touch))
         .route("/{id}", get(h::get).patch(h::patch).delete(h::delete))
-        .route("/{id}/touches", post(h::add_touch))
+        .route("/{id}/touches", post(h::add_touch).delete(h::clear_touches))
         .route("/{id}/dates", post(h::add_date))
         .with_state(state)
 }
