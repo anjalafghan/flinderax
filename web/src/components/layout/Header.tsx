@@ -62,6 +62,7 @@ export function SubTabs() {
           <Link
             key={t.to}
             to={t.to}
+            viewTransition
             aria-current={on ? "page" : undefined}
             className={cn(
               "inline-flex min-h-11 items-center rounded-full px-4 text-sm no-underline transition-colors",
@@ -102,6 +103,7 @@ export function Header() {
             <Link
               key={t.to}
               to={t.to}
+              viewTransition
               aria-current={current?.to === t.to ? "page" : undefined}
               className={cn(
                 "inline-flex min-h-11 items-center rounded-full px-4 text-sm no-underline transition-colors",
@@ -150,6 +152,7 @@ export function TabBar() {
             <li key={t.to}>
               <Link
                 to={t.to}
+                viewTransition
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-[44px] flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors",

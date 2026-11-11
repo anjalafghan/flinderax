@@ -235,6 +235,7 @@ function MoneyDashboard() {
             <Link
               key={a.label}
               to={a.to}
+              viewTransition
               className="flex min-h-[72px] items-center gap-3.5 rounded-[18px] border border-border px-5 no-underline transition-colors hover:bg-[hsl(var(--chip))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <a.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.5} aria-hidden />
