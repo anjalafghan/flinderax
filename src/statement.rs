@@ -303,8 +303,22 @@ fn find_columns(header: &[String]) -> Option<Columns> {
     if debit.is_none() && credit.is_none() && amount.is_none() {
         return None;
     }
-    // A separate Dr/Cr indicator next to an amount column; never the amount column itself.
-    let flag = find(&|n| n == "dr/cr" || n == "cr/dr" || n == "type" || n.contains("transaction type")).filter(|i| Some(*i) != amount);
+    // A separate Dr/Cr indicator next to an amount column; never the amount column itself. Spacing in
+    // the name does not matter ("Dr / Cr"). Some banks print a second one after the balance (always
+    // "CR", it says which side the balance is on): the one that belongs to the amount comes first,
+    // right after it, and a flag after the balance column is never the amount's.
+    let balance = find(&|n| n.contains("balance"));
+    let flag_name = |n: &str| {
+        let squeezed: String = n.chars().filter(|c| !c.is_whitespace()).collect();
+        squeezed == "dr/cr" || squeezed == "cr/dr" || n == "type" || n.contains("transaction type")
+    };
+    let flags: Vec<usize> = (0..names.len()).filter(|i| flag_name(&names[*i]) && Some(*i) != amount).collect();
+    let flag = flags
+        .iter()
+        .copied()
+        .find(|i| amount.is_none_or(|a| *i > a) && balance.is_none_or(|b| *i < b))
+        .or_else(|| flags.iter().copied().find(|i| balance.is_none_or(|b| *i < b)))
+        .or_else(|| flags.first().copied());
     Some(Columns {
         date,
         narration: find(&|n| n.contains("narration") || n.contains("description") || n.contains("particular") || n.contains("remark") || n.contains("details") || n.contains("merchant")),
@@ -313,7 +327,7 @@ fn find_columns(header: &[String]) -> Option<Columns> {
         credit,
         amount,
         flag,
-        balance: find(&|n| n.contains("balance")),
+        balance,
     })
 }
 
@@ -517,6 +531,19 @@ mod tests {
         assert_eq!(parse_amount("450.5 Dr"), Some(45_050));
         assert_eq!(parse_amount(""), None);
         assert_eq!(parse_amount("0.00"), None);
+    }
+
+    #[test]
+    fn a_dr_cr_column_after_the_amount_is_the_side_and_the_one_after_the_balance_is_ignored() {
+        // Newest first, an amount column with a "Dr / Cr" flag, and a second "Dr / Cr" after the balance.
+        let csv = "Account Statement\nAccount No.,0000\n\n\"Sl. No.\",\"Transaction Date\",\"Value Date\",\"Description\",\"Chq /Ref No.\",\"Amount\",\"Dr / Cr\",\"Balance\",\"Dr / Cr\"\n\
+\"1\",\"02-11-2026 10:00:00\",\"02-11-2026\",\"UPI/SHOP/HDFC/1/Paid\",\"UPI-1\",\"60.00\",\"DR\",\"1,00,026.09\",\"CR\"\n\
+\"2\",\"01-11-2026 09:00:00\",\"01-11-2026\",\"UPI/FRIEND/HDFC/2/Paid\",\"UPI-2\",\"1,00,000.00\",\"CR\",\"1,00,086.09\",\"CR\"\n";
+        let p = parse(csv).unwrap();
+        assert_eq!(p.rows.len(), 2);
+        assert_eq!((p.rows[0].direction, p.rows[0].amount_paise), (Direction::Debit, 6_000));
+        assert_eq!((p.rows[1].direction, p.rows[1].amount_paise), (Direction::Credit, 10_000_000));
+        assert_eq!(p.rows[0].balance_paise, Some(10_002_609));
     }
 
     #[test]
