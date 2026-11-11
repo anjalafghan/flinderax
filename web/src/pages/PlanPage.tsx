@@ -10,6 +10,7 @@ import { Header } from "@/components/layout/Header";
 import { AffordPanel } from "@/components/feature/AffordPanel";
 import { BillsPanel } from "@/components/feature/BillsPanel";
 import { GoalsPanel } from "@/components/feature/GoalsPanel";
+import { RewardsPanel } from "@/components/feature/RewardsPanel";
 import { AccountSelect } from "@/components/feature/AccountSelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -539,6 +540,7 @@ export default function PlanPage() {
           <AffordPanel />
           <BillsPanel />
           <GoalsPanel />
+          <RewardsPanel />
           <IncomeSection accounts={accounts} />
           <CommitmentsSection accounts={accounts} />
           <SettingsSection />

@@ -33,6 +33,7 @@ pub mod projection;
 pub mod recurring;
 pub mod reminders;
 pub mod review;
+pub mod rewards;
 pub mod streaks;
 pub mod tax;
 pub mod work;

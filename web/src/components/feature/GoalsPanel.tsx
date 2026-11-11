@@ -17,6 +17,9 @@ import { useArchivedGoals, useUnarchiveGoal } from "@/hooks/usePlanner";
 import { EmptyScene } from "@/components/ui/EmptyScene";
 import { celebrate } from "@/utils/motion";
 import { useAnimatedList } from "@/hooks/useAnimatedList";
+import { RewardChips } from "@/components/feature/RewardChips";
+import { useRewards } from "@/services/rewards";
+import { forGoal } from "@/utils/rewards";
 
 // ---------- add / edit form ----------
 
@@ -143,6 +146,7 @@ function GoalItem({ goal }: { goal: Goal }) {
   const [mode, setMode] = useState<"none" | "contribute" | "edit">("none");
   const archive = useArchiveGoal();
   const pct = progressPercent(goal.saved_paise, goal.target_paise);
+  const { data: rewards } = useRewards();
   const done = goal.status === "done";
   // A goal that becomes done while you watch gets confetti; one that was already done stays quiet.
   const wasDone = useRef(done);
@@ -182,6 +186,8 @@ function GoalItem({ goal }: { goal: Goal }) {
       >
         <div className="h-full rounded-full bg-good transition-[width]" style={{ width: `${pct}%` }} />
       </div>
+
+      <RewardChips rewards={forGoal(rewards?.rewards, goal.id)} goalName={goal.name} />
 
       {!done && goal.this_month_paise > 0 && (
         <p className="font-medium">This month: put in {formatINR(goal.this_month_paise)}</p>

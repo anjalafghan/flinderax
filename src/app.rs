@@ -116,6 +116,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/reminders", protected(&state, routes::reminders::routes(state.clone())))
         .nest("/api/public/reminders", routes::reminders::public_routes(state.clone()).layer(trace_layer()))
         .nest("/api/goals", protected(&state, routes::goals::routes(state.clone())))
+        .nest("/api/rewards", protected(&state, routes::rewards::routes(state.clone())))
         .nest(
             "/api/export",
             protected(&state, Router::new().route("/", axum::routing::get(crate::handlers::export::export)).with_state(state.clone())),

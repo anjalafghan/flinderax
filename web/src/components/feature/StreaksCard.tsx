@@ -5,6 +5,9 @@ import { useStreaks, type Streak } from "@/services/streaks";
 import { celebrate } from "@/utils/motion";
 import { milestoneFor, milestoneKey, streakHeadline, streakLine, unitLabel, type StreakKind } from "@/utils/streaks";
 import { cn } from "@/utils/cn";
+import { RewardChips } from "@/components/feature/RewardChips";
+import { useRewards } from "@/services/rewards";
+import { forStreak } from "@/utils/rewards";
 
 const META: Record<StreakKind, { title: string; icon: LucideIcon }> = {
   logging: { title: "Keeping up", icon: Flame },
@@ -31,6 +34,7 @@ function remember(key: string): void {
 function Tile({ kind, streak }: { kind: StreakKind; streak: Streak }) {
   const { title, icon: Icon } = META[kind];
   const alive = streak.current > 0;
+  const { data: rewards } = useRewards();
   return (
     <li className="flex min-w-0 flex-col gap-2 rounded-[18px] border border-border px-4 py-4">
       <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
@@ -42,6 +46,7 @@ function Tile({ kind, streak }: { kind: StreakKind; streak: Streak }) {
       {streak.best > streak.current && streak.current > 0 && (
         <p className="m-0 text-xs text-muted-foreground">Best: {unitLabel(kind, streak.best)}</p>
       )}
+      <RewardChips rewards={forStreak(rewards?.rewards, kind)} />
     </li>
   );
 }

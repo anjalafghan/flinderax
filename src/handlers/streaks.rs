@@ -27,7 +27,7 @@ const DAY_WINDOW: i64 = 400;
 /// How many completed months to judge.
 const MONTH_WINDOW: i32 = 24;
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct StreaksOut {
     /// Days in a row with at least one transaction.
     pub logging: Streak,
@@ -49,8 +49,13 @@ fn month_of(s: &str) -> Option<i32> {
 }
 
 pub async fn get(State(state): State<AppState>, Extension((user_id, _)): Extension<(String, String)>) -> Result<Json<StreaksOut>, AppError> {
+    Ok(Json(compute(&state, &user_id, today_local()).await?))
+}
+
+/// The streaks as of `today`; rewards read the same numbers.
+pub async fn compute(state: &AppState, user_id: &str, today: Date) -> Result<StreaksOut, AppError> {
     let db = &state.db;
-    let today = today_local();
+    let user_id = user_id.to_string();
 
     let since = (today - time::Duration::days(DAY_WINDOW)).to_string();
     let day_rows: Vec<(String,)> = sqlx::query_as(
@@ -107,5 +112,5 @@ pub async fn get(State(state): State<AppState>, Extension((user_id, _)): Extensi
         }
     };
 
-    Ok(Json(StreaksOut { logging: day_streak(&days, today), saved, dates }))
+    Ok(StreaksOut { logging: day_streak(&days, today), saved, dates })
 }

@@ -8,6 +8,7 @@ import type { StreaksOut } from "@/services/streaks";
 function withStreaks(data: StreaksOut) {
   const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
   qc.setQueryData(["streaks"], data);
+  qc.setQueryData(["rewards"], { rewards: [], history: [], monthly_cap_paise: null, spent_this_month_paise: 0, cap_left_paise: null });
   return render(
     <QueryClientProvider client={qc}>
       <StreaksCard />
