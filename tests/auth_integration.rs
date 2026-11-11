@@ -656,3 +656,36 @@ async fn a_bad_token_gets_a_plain_message() {
     let text = String::from_utf8_lossy(&bytes);
     assert!(!text.to_lowercase().contains("paseto") && !text.contains("cipher"), "{text}");
 }
+
+#[tokio::test]
+async fn streaks_count_logged_days_and_saved_months() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.0.91", "streaker").await;
+
+    // Nothing yet: all zero, and no dates streak for someone outside a couple.
+    let s = authed_get(&app, &t, "/api/dashboard/streaks").await;
+    assert_eq!(s["logging"], json!({"current": 0, "best": 0}), "{s}");
+    assert_eq!(s["saved"], json!({"current": 0, "best": 0}));
+    assert_eq!(s["dates"], Value::Null);
+
+    // Three days in a row ending today, plus a last-month pay cheque with modest spending.
+    let today = joy::handlers::common::today_local();
+    for back in 0..3 {
+        let on = (today - time::Duration::days(back)).to_string();
+        let (st, b) = authed_post(&app, &t, "/api/ingest/transactions/create",
+            json!({"occurred_on": on, "direction": "debit", "amount_paise": 10_000, "merchant": "Chai", "category": "food"})).await;
+        assert!(st.is_success(), "{b}");
+    }
+    let s = authed_get(&app, &t, "/api/dashboard/streaks").await;
+    assert_eq!(s["logging"]["current"], 3, "{s}");
+
+    let (y, m) = joy::planner::cycle::add_months(today.year(), today.month(), -1);
+    let last = time::Date::from_calendar_date(y, m, 10).unwrap().to_string();
+    for (dir, amount, cat) in [("credit", 100_000, "income"), ("debit", 40_000, "food")] {
+        let (st, b) = authed_post(&app, &t, "/api/ingest/transactions/create",
+            json!({"occurred_on": last, "direction": dir, "amount_paise": amount, "merchant": "X", "category": cat})).await;
+        assert!(st.is_success(), "{b}");
+    }
+    let s = authed_get(&app, &t, "/api/dashboard/streaks").await;
+    assert_eq!(s["saved"], json!({"current": 1, "best": 1}), "{s}");
+}

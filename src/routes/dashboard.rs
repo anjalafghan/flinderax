@@ -1,5 +1,5 @@
 use axum::{routing::get, Router};
-use crate::handlers::{analytics, dashboard, habits, insights};
+use crate::handlers::{analytics, dashboard, habits, insights, streaks};
 use crate::models::AppState;
 
 pub fn routes(state: AppState) -> Router {
@@ -9,5 +9,6 @@ pub fn routes(state: AppState) -> Router {
         .route("/insights", get(insights::get))
         .route("/analytics", get(analytics::get))
         .route("/habits", get(habits::get))
+        .route("/streaks", get(streaks::get))
         .with_state(state)
 }

@@ -28,5 +28,6 @@ pub mod plan;
 pub mod projection;
 pub mod reminders;
 pub mod review;
+pub mod streaks;
 pub mod user;
 pub mod work;
