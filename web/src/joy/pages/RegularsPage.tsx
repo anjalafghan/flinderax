@@ -161,6 +161,22 @@ function AddForm({ days }: { days: DayBox[] }) {
         <small>Blank is today. Pick an earlier day to be asked about nights you've missed this week.</small>
       </label>
       <button className="btn btn-stamp" type="submit" disabled={busy}>Add it</button>
+      <button
+        type="button"
+        className="btn"
+        disabled={busy}
+        onClick={() => {
+          setTitle("");
+          setPlace("");
+          setMaps("");
+          setPicked(days.filter((d) => d.checked).map((d) => d.value));
+          setCost("");
+          setSince("");
+          setError("");
+        }}
+      >
+        Clear
+      </button>
     </form>
   );
 }

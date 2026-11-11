@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
@@ -81,10 +82,20 @@ function ChangePassword() {
             Password changed. Other devices are signed out.
           </p>
         )}
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" disabled={busy || !current || !next || !again}>
             Change password
           </Button>
+          <ResetButton
+            label="Clear"
+            disabled={busy || (!current && !next && !again && !error)}
+            onReset={() => {
+              setCurrent("");
+              setNext("");
+              setAgain("");
+              setError("");
+            }}
+          />
         </div>
       </form>
     </section>

@@ -137,6 +137,18 @@ function CoversCard({ partner, currency }: { partner: string | null; currency: s
         <button type="button" className="btn" disabled={busy || q.isPending} onClick={useDefault}>
           Use the default
         </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={busy || q.isPending || loaded === undefined}
+          onClick={() => {
+            setVal(loaded !== undefined ? String(Math.round(loaded / 100)) : "");
+            setMsg("");
+            setErr("");
+          }}
+        >
+          Revert
+        </button>
       </div>
       <p className="set-msg" role="status">{msg}</p>
       {err && <p className="set-msg set-err" role="alert">{err}</p>}

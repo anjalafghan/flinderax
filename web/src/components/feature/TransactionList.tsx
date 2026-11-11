@@ -198,6 +198,7 @@ export function TransactionList({
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
+          {!isCurrent && <ResetButton label="This month" onReset={() => setMonth(thisMonth)} />}
         </div>
       </div>
 

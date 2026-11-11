@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -230,6 +231,14 @@ export function ChoiceForm({ initial, busy, onTry }: { initial?: Choice; busy: b
         </p>
       )}
       <div className="form-actions">
+        <ResetButton
+          label="Reset"
+          disabled={busy}
+          onReset={() => {
+            setDraft(startDraft(kind, initial?.kind === kind ? initial : undefined));
+            setError(null);
+          }}
+        />
         <Button type="submit" disabled={busy}>
           {busy ? "Working it out..." : "See what changes"}
         </Button>

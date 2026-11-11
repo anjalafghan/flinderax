@@ -134,6 +134,9 @@ function BudgetEdit({ v, hash }: { v: HistoryView; hash: string }) {
           <button className="k-btn" type="submit" disabled={busy}>
             Save
           </button>
+          <button className="k-btn" type="button" disabled={busy} onClick={() => setAmount(v.budget.budget_raw)}>
+            Revert
+          </button>
         </div>
         <p className="k-hint" id="budget-hint">
           Leave it empty for no budget. It’s a guide, not a rule.
@@ -198,6 +201,20 @@ export function CustomDateFold({ fold }: { fold: ReturnType<typeof useFold> }) {
           <button className="k-btn" type="submit" disabled={busy}>
             Keep it
           </button>
+          <button
+            className="k-btn"
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setTitle("");
+              setPlace("");
+              setSetting("local");
+              setOn("");
+              setCost("");
+            }}
+          >
+            Clear
+          </button>
         </div>
         <p className="k-hint">It goes straight into Kept for photos, a rating and your lines. It won’t be added to the jar.</p>
         <Err text={err} />
@@ -236,6 +253,18 @@ function OtherSpendFold({ v }: { v: HistoryView }) {
           <input className="k-field" name="on" type="date" value={on} onChange={(e) => setOn(e.target.value)} aria-label="Date (blank is today)" />
           <button className="k-btn" type="submit" disabled={busy}>
             Add
+          </button>
+          <button
+            className="k-btn"
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setAmount("");
+              setNote("");
+              setOn("");
+            }}
+          >
+            Clear
           </button>
         </div>
         <p className="k-hint">Counts toward this month’s budget. Leave the date blank for today.</p>

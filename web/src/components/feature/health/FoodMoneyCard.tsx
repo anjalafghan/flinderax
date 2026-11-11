@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import { rate, rupees } from "@/services/checkin";
@@ -135,10 +136,17 @@ export function FoodMoneyCard({ money }: { money: FoodMoney }) {
             {error}
           </p>
         )}
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" disabled={save.isPending}>
             Save cap
           </Button>
+          <ResetButton
+            label="Undo my edits"
+            onReset={() => {
+              setCap(money.cap_paise === null ? "" : paiseToInput(money.cap_paise));
+              setError(null);
+            }}
+          />
         </div>
       </form>
     </section>

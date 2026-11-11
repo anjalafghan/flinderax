@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { MonthReview } from "@/services/types";
 import { useReviewMonth } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { categoryLabel, monthTitle } from "@/utils/spending";
 import { formatINR, formatPercent } from "@/utils/money";
@@ -162,6 +163,7 @@ export function MonthClosePanel() {
           >
             <ChevronRight className="h-4 w-4" aria-hidden />
           </Button>
+          {month !== last && <ResetButton label="Latest" onReset={() => setMonth(last)} />}
         </div>
       </div>
 

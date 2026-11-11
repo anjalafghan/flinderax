@@ -6,6 +6,7 @@ import type { Account, AccountKind, AccountRole, Renewal } from "@/services/type
 import { keys, useAccounts, usePlannerMutation } from "@/hooks/usePlanner";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
@@ -139,6 +140,19 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
         )}
         {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
         <div className="form-actions">
+          <ResetButton
+            label="Undo my edits"
+            onReset={() => {
+              setRole(account.role);
+              setInstitution(account.institution ?? "");
+              setRate(account.interest_bps == null ? "" : String(account.interest_bps / 100));
+              setMaturity(account.maturity_date ?? "");
+              setRenewal(account.renewal);
+              setPayout(account.payout_account_id ?? "");
+              setLast4(account.last_4_digits ?? "");
+              setError(null);
+            }}
+          />
           <Button type="submit" disabled={save.isPending}>Save details</Button>
         </div>
       </form>
@@ -216,6 +230,9 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
         <Button size="sm" disabled={!dirty || updateBalance.isPending} onClick={() => parsed !== null && updateBalance.mutate(parsed)}>
           Update
         </Button>
+        {balance !== paiseToInput(account.balance_paise) && (
+          <ResetButton label="Revert" onReset={() => setBalance(paiseToInput(account.balance_paise))} />
+        )}
         <Button
           size="sm"
           variant="outline"
@@ -392,6 +409,23 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
           )}
           {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
           <div className="form-actions">
+            <ResetButton
+              label="Clear"
+              onReset={() => {
+                setName("");
+                setKind("bank");
+                setBalance("");
+                setRole("other");
+                setLocked(null);
+                setInstitution("");
+                setLast4("");
+                setRate("");
+                setMaturity("");
+                setRenewal("payout");
+                setPayout("");
+                setError(null);
+              }}
+            />
             <Button type="submit" disabled={create.isPending}>
               {create.isPending ? "Adding..." : "Add account"}
             </Button>

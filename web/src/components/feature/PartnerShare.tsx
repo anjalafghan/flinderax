@@ -6,6 +6,7 @@ import { useJoySetPartner, useJoySummary } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
+import { ResetButton } from "@/components/ui/reset-button";
 import { paiseToInput, toPaise } from "@/utils/money";
 
 /** Parses the partner amount field. Zero is allowed; blank or negative is not. */
@@ -34,6 +35,7 @@ function ShareForm({ saved }: { saved: number }) {
         <MoneyInput id="partner-covers" value={partner} onChange={(e) => setPartner(e.target.value)} />
       </div>
       <div className="form-actions">
+        <ResetButton label="Revert" disabled={unchanged && partner === paiseToInput(saved)} onReset={() => setPartner(paiseToInput(saved))} />
         <Button type="submit" disabled={unchanged || mutation.isPending}>
           {mutation.isPending ? "Saving..." : "Save"}
         </Button>

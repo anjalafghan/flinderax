@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 
 import api from "@/services/api";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -224,6 +225,20 @@ export default function CreateCardPage() {
               </div>
 
               <div className="form-actions">
+                <ResetButton
+                  label="Reset"
+                  onReset={() => {
+                    setName("My Card");
+                    setBank("Bank Name");
+                    setPrimaryColor("#1e293b");
+                    setSecondaryColor("#334155");
+                    setLast4Digits("");
+                    setStatementDay("");
+                    setDueDay("");
+                    setCreditLimit("");
+                    setPayFrom("");
+                  }}
+                />
                 <Button
                   onClick={() => createCardMutation.mutate()}
                   disabled={createCardMutation.isPending}
