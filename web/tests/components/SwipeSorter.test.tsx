@@ -75,3 +75,21 @@ describe("SwipeSorter", () => {
     expect(wasClosed()).toBe(true);
   });
 });
+
+describe("SwipeSorter chips", () => {
+  it("keep their order while you sort, so a tap never lands on a moved chip", async () => {
+    render(
+      <SwipeSorter
+        queue={[txn("p", "Metro", "uncategorized"), txn("q", "Cafe", "uncategorized")]}
+        all={[txn("p", "Metro", "uncategorized"), txn("q", "Cafe", "uncategorized")]}
+        onCategorise={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    const names = () => screen.getAllByRole("button").map((b) => b.textContent).slice(1, 7);
+    const before = names();
+    fireEvent.click(screen.getByRole("button", { name: "Transport" }));
+    await waitFor(() => expect(screen.getByText("1 sorted · 1 to go")).toBeTruthy());
+    expect(names()).toEqual(before);
+  });
+});

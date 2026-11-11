@@ -103,21 +103,22 @@ pub fn sentences(f: &MonthFacts) -> Vec<String> {
             format_inr(f.allowance_paise)
         )
     } else {
-        format!("You spent {} of {}.", format_inr(f.spent_paise), format_inr(f.allowance_paise))
+        format!("You spent {} of {}. Within your allowance, well done.", format_inr(f.spent_paise), format_inr(f.allowance_paise))
     });
     if let Some(top) = f.top_categories.first() {
         out.push(format!("{} was your biggest category at {}.", capitalise(&top.category), format_inr(top.amount_paise)));
     }
     out.push(match f.savings_rate_bps {
+        Some(bps) if bps >= 1_000 => format!("You saved {}% of your income. Nicely done.", (bps + 50) / 100),
         Some(bps) if bps >= 0 => format!("You saved {}% of your income.", (bps + 50) / 100),
-        Some(_) => "You spent more than you earned this month.".to_string(),
+        Some(_) => "You spent more than you earned this month. Small steps next month will turn it around.".to_string(),
         None => "No income was recorded this month.".to_string(),
     });
     if let Some(change) = f.net_worth_change_paise {
         out.push(match change {
             0 => "Net worth stayed the same.".to_string(),
-            c if c > 0 => format!("Net worth went up {}.", format_inr(c)),
-            c => format!("Net worth went down {}.", format_inr(-c)),
+            c if c > 0 => format!("Net worth went up {}. Lovely.", format_inr(c)),
+            c => format!("Net worth went down {}. One month is not a trend.", format_inr(-c)),
         });
     }
     if let Some(d) = f.dates.as_ref().filter(|d| d.spent_paise > 0) {
@@ -155,10 +156,10 @@ mod tests {
         assert_eq!(
             sentences(&facts()),
             [
-                "You spent ₹18,200 of ₹20,000.",
+                "You spent ₹18,200 of ₹20,000. Within your allowance, well done.",
                 "Food was your biggest category at ₹6,100.",
-                "You saved 31% of your income.",
-                "Net worth went up ₹12,000.",
+                "You saved 31% of your income. Nicely done.",
+                "Net worth went up ₹12,000. Lovely.",
             ]
         );
     }
@@ -174,8 +175,8 @@ mod tests {
         };
         let s = sentences(&f);
         assert_eq!(s[0], "You spent ₹22,000, which is ₹2,000 over your ₹20,000 allowance.");
-        assert_eq!(s[2], "You spent more than you earned this month.");
-        assert_eq!(s[3], "Net worth went down ₹3,000.");
+        assert_eq!(s[2], "You spent more than you earned this month. Small steps next month will turn it around.");
+        assert_eq!(s[3], "Net worth went down ₹3,000. One month is not a trend.");
         assert_eq!(s.len(), 5);
         assert_eq!(s[4], "Dates took ₹3,000, of which your share was ₹2,100. Your accounts show ₹1,500 of it labelled as dates.");
     }

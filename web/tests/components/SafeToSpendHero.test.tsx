@@ -78,7 +78,7 @@ describe("SafeToSpendHero", () => {
   it("names the status in words", () => {
     const { container } = renderHero({ ...base, status: "red", safe_to_spend_paise: 0 });
     expect(container.querySelector("[data-status='red']")).not.toBeNull();
-    expect(screen.getByText("Over plan")).toBeInTheDocument();
+    expect(screen.getByText("A bit over plan")).toBeInTheDocument();
     expect(screen.getByText(/Pause non-essentials until 30 Oct\./)).toBeInTheDocument();
   });
 

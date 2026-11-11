@@ -20,9 +20,9 @@ interface Tone {
 }
 
 const TONES: Record<Status, Tone> = {
-  green: { label: "You’re fine", unsure: "Probably fine", tone: "good", line: () => "On track." },
-  yellow: { label: "Getting tight", unsure: "Probably tight", tone: "warn", line: () => "Ease off a little this week." },
-  red: { label: "Over plan", unsure: "Possibly over", tone: "over", line: (u) => `Pause non-essentials until ${u}.` },
+  green: { label: "You’re doing well", unsure: "Probably fine", tone: "good", line: () => "On track. Nicely done." },
+  yellow: { label: "Getting snug", unsure: "Probably tight", tone: "warn", line: () => "A little care this week keeps you comfortable." },
+  red: { label: "A bit over plan", unsure: "Possibly over", tone: "over", line: (u) => `Pause non-essentials until ${u}. You can get back on track.` },
 };
 
 /** Whole rupees: the hero is a reading, not a ledger, so paise are dropped. */

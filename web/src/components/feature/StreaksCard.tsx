@@ -71,7 +71,7 @@ export function StreaksCard() {
   if (tiles.every(([, s]) => s.current === 0 && s.best === 0)) return null;
 
   return (
-    <section aria-label="Your streaks" className="mb-6 w-full">
+    <section aria-label="Your streaks" className="my-6 w-full">
       <div className="mb-3 flex items-center gap-2">
         <CalendarCheck className="h-5 w-5 text-muted-foreground" strokeWidth={1.6} aria-hidden />
         <h2 className="m-0 font-display text-[26px] leading-none">Your streaks</h2>

@@ -17,7 +17,7 @@ const blank = () => ({ date: dateKey(new Date()), direction: "debit" as TxnDirec
 export function ManualTransaction() {
   const [f, setF] = useState(blank);
   const [error, setError] = useState<string | null>(null);
-  const create = usePlannerMutation(ingestApi.createTxn, INGEST_INVALIDATE, { success: "Transaction added" });
+  const create = usePlannerMutation(ingestApi.createTxn, INGEST_INVALIDATE, { success: "Logged. Nice and tidy!" });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();

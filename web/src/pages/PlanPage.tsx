@@ -39,7 +39,7 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
   const { data: incomes } = useIncomes();
   const [f, setF] = useState({ label: "", amount: "", day: "", account: "" });
   const [error, setError] = useState<string | null>(null);
-  const create = usePlannerMutation(planApi.createIncome, [keys.incomes], { success: "Income added" });
+  const create = usePlannerMutation(planApi.createIncome, [keys.incomes], { success: "Income added. Nice!" });
   const remove = usePlannerMutation(planApi.removeIncome, [keys.incomes], { success: "Income removed" });
 
   const submit = (e: React.FormEvent) => {

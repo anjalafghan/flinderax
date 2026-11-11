@@ -152,7 +152,7 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
   const updateBalance = usePlannerMutation(
     (paise: number) => accountApi.updateBalance(account.account_id, paise),
     refresh,
-    { success: "Balance updated" },
+    { success: "Balance updated. Fresh numbers!" },
   );
   const toggleLock = usePlannerMutation(
     () =>
@@ -258,7 +258,7 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
   const [renewal, setRenewal] = useState<Renewal>("payout");
   const [payout, setPayout] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const create = usePlannerMutation(accountApi.create, [keys.accounts], { success: "Account added" });
+  const create = usePlannerMutation(accountApi.create, [keys.accounts], { success: "Account added. Welcome aboard!" });
 
   const isSavings = kind === "fd" || kind === "rd";
 

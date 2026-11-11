@@ -93,7 +93,7 @@ export const useSaveGoal = () =>
   usePlannerMutation(
     (g: GoalInput) => (g.goal_id ? goalsApi.update({ ...g, goal_id: g.goal_id }) : goalsApi.create(g)),
     GOAL_INVALIDATE,
-    { success: "Goal saved" },
+    { success: "Goal saved. You’ve got a plan!" },
   );
 export const useArchiveGoal = () =>
   usePlannerMutation((goal_id: string) => goalsApi.archive(goal_id), GOAL_INVALIDATE, { success: "Goal archived" });

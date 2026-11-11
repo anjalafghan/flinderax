@@ -52,7 +52,9 @@ export function SwipeSorter({ queue, all, onCategorise, onClose }: Props) {
   const current = line[0];
   const upNext = line[1];
   const suggestion = current ? suggestCategory(current, all) : null;
-  const chips = current ? topCategories(all, current.direction, 6) : [];
+  // Fixed for the whole session: chips that reorder as you sort would move under your finger.
+  const [chipSets] = useState(() => ({ debit: topCategories(all, "debit", 6), credit: topCategories(all, "credit", 6) }));
+  const chips = current ? (current.direction === "credit" ? chipSets.credit : chipSets.debit) : [];
 
   const reset = useCallback(() => {
     setDx(0);
@@ -161,7 +163,9 @@ export function SwipeSorter({ queue, all, onCategorise, onClose }: Props) {
         <p className="m-0 text-sm text-muted-foreground">
           {sorted > 0 ? `You sorted ${sorted} ${sorted === 1 ? "transaction" : "transactions"}. Your spending picture just got clearer.` : "Everything here already has a category."}
         </p>
-        <Button onClick={onClose}>Done</Button>
+        <Button onClick={onClose} className="mt-2">
+          Done
+        </Button>
       </section>
     );
   }

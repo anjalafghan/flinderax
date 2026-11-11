@@ -146,9 +146,9 @@ export function TransactionList({
       {
         onSuccess: (res) => {
           if (res.recategorized > 0) {
-            toast.success(`Also updated ${plural(res.recategorized, "other", "others")}`);
+            toast.success(`Sorted! Also updated ${plural(res.recategorized, "other", "others")}`);
           } else {
-            toast.success("Category updated");
+            toast.success("Sorted!");
           }
         },
       },
@@ -200,7 +200,7 @@ export function TransactionList({
         </Button>
         {unsorted.length > 0 && !sorting && (
           <Button size="sm" variant="outline" className="ml-2 gap-2" onClick={() => setSorting(true)}>
-            <Layers className="h-4 w-4" aria-hidden /> Sort {unsorted.length} one by one
+            <Layers className="h-4 w-4" aria-hidden /> {unsorted.length === 1 ? "Sort this one" : `Sort ${unsorted.length} one by one`}
           </Button>
         )}
       </div>
@@ -214,7 +214,7 @@ export function TransactionList({
         shown.length === 0 ? (
           <p className="empty-note">
             {uncategorizedOnly
-              ? "Nothing to categorize here."
+              ? "All caught up. Nothing left to categorize!"
               : `No transactions in ${monthTitle(month)}. Alerts from your bank show up here automatically.`}
           </p>
         ) : (
