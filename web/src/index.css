@@ -195,8 +195,44 @@
   .tone-quiet { color: hsl(var(--muted-foreground)); background: hsl(var(--chip)); }
 }
 
+/* ---- Motion: a little lift on arrival, a little life on touch. All of it stops under reduced motion (below). ---- */
+@keyframes rise-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes pop-in { 0% { opacity: 0; transform: scale(.9); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: none; } }
+@keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes soft-pulse { 0%, 100% { box-shadow: 0 0 0 0 hsl(var(--good) / .45); } 50% { box-shadow: 0 0 0 6px hsl(var(--good) / 0); } }
+@keyframes today-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.15); } 75% { transform: rotate(10deg) scale(1.15); } }
+
+/* Each page's blocks rise in one after another. */
+.page > *, .page > div > * { animation: rise-in .5s cubic-bezier(.22, 1, .36, 1) both; }
+.page > :nth-child(2), .page > div > :nth-child(2) { animation-delay: 60ms; }
+.page > :nth-child(3), .page > div > :nth-child(3) { animation-delay: 120ms; }
+.page > :nth-child(4), .page > div > :nth-child(4) { animation-delay: 180ms; }
+.page > :nth-child(5), .page > div > :nth-child(5) { animation-delay: 240ms; }
+.page > :nth-child(n+6), .page > div > :nth-child(n+6) { animation-delay: 300ms; }
+
+/* The big number lands with a little pop; the status pill breathes when things are good. */
+[data-status] [aria-label^="Safe to spend"] { animation: pop-in .7s cubic-bezier(.22, 1, .36, 1) both .1s; transform-origin: left center; }
+[data-status="green"] .tone-good > span:first-child { animation: soft-pulse 2.6s ease-in-out infinite; }
+
+/* The pay-period strip grows in day by day, and today bounces. */
+[role="img"][aria-label$="in this pay period"] > span { transform-origin: bottom; animation: bar-grow .4s ease-out both; }
+[role="img"][aria-label$="in this pay period"] > span:nth-child(-n+30) { animation-delay: calc(var(--i, 0) * 12ms); }
+
+/* Touch: buttons and tiles press down and spring back; tiles lift on hover; icons wiggle. */
+button, [role="button"], a.glass, nav[aria-label="Quick actions"] a { transition: transform .15s ease, background-color .2s ease, box-shadow .2s ease; }
+button:not(:disabled):active, [role="button"]:active, nav[aria-label="Quick actions"] a:active { transform: scale(.97); }
+@media (hover: hover) {
+  nav[aria-label="Quick actions"] a:hover { transform: translateY(-2px); }
+  nav[aria-label="Quick actions"] a:hover svg { animation: wiggle .5s ease; }
+}
+
+/* Details panels open smoothly, and toasts bounce in. */
+details[open] > :not(summary) { animation: rise-in .3s ease-out both; }
+[data-sonner-toast] { animation: pop-in .35s cubic-bezier(.22, 1, .36, 1) both; }
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }
 }
 
 

@@ -51,8 +51,9 @@ function PeriodStrip({ start, until, today, dot }: { start: string; until: strin
         {Array.from({ length: total }, (_, i) => (
           <span
             key={i}
-            className="h-1.5 rounded-[3px]"
+            className={cn("h-1.5 rounded-[3px]", i === elapsed && "[animation:today-bounce_1.8s_ease-in-out_infinite_.6s]")}
             style={{
+              ["--i" as string]: i,
               background:
                 i < elapsed ? "hsl(var(--muted-foreground))" : i === elapsed ? dot : "hsl(var(--border))",
             }}
