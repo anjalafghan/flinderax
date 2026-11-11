@@ -20,6 +20,8 @@ pub struct DatesFacts {
     pub spent_paise: i64,
     pub budget_paise: Option<i64>,
     pub your_share_paise: i64,
+    /// Your own debits labelled as dates in this month's transactions: what the bank side saw.
+    pub in_accounts_paise: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -119,7 +121,12 @@ pub fn sentences(f: &MonthFacts) -> Vec<String> {
         });
     }
     if let Some(d) = f.dates.as_ref().filter(|d| d.spent_paise > 0) {
-        out.push(format!("Dates took {}, of which your share was {}.", format_inr(d.spent_paise), format_inr(d.your_share_paise)));
+        let seen = if d.in_accounts_paise > 0 {
+            format!("Your accounts show {} of it labelled as dates.", format_inr(d.in_accounts_paise))
+        } else {
+            "None of it is labelled as dates in your accounts.".to_string()
+        };
+        out.push(format!("Dates took {}, of which your share was {}. {seen}", format_inr(d.spent_paise), format_inr(d.your_share_paise)));
     }
     out.truncate(5);
     out
@@ -162,7 +169,7 @@ mod tests {
             spent_paise: 22_000_00,
             savings_rate_bps: Some(-500),
             net_worth_change_paise: Some(-3_000_00),
-            dates: Some(DatesFacts { spent_paise: 3_000_00, budget_paise: Some(20_000_00), your_share_paise: 2_100_00 }),
+            dates: Some(DatesFacts { spent_paise: 3_000_00, budget_paise: Some(20_000_00), your_share_paise: 2_100_00, in_accounts_paise: 1_500_00 }),
             ..facts()
         };
         let s = sentences(&f);
@@ -170,7 +177,7 @@ mod tests {
         assert_eq!(s[2], "You spent more than you earned this month.");
         assert_eq!(s[3], "Net worth went down ₹3,000.");
         assert_eq!(s.len(), 5);
-        assert_eq!(s[4], "Dates took ₹3,000, of which your share was ₹2,100.");
+        assert_eq!(s[4], "Dates took ₹3,000, of which your share was ₹2,100. Your accounts show ₹1,500 of it labelled as dates.");
     }
 
     #[test]

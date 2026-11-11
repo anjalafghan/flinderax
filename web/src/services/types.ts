@@ -560,7 +560,7 @@ export interface JoySummary {
 
 // ---------- bills (what is due, and what looks like a subscription) ----------
 
-export type BillKind = "monthly" | "yearly" | "card_bill";
+export type BillKind = "monthly" | "yearly" | "card_bill" | "date";
 
 export interface Bill {
   /** "YYYY-MM-DD" */

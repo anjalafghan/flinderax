@@ -12,6 +12,8 @@ pub enum BillKind {
     Monthly,
     Yearly,
     CardBill,
+    /// A date planned in Dates, held out of Safe to Spend.
+    Date,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -64,6 +66,16 @@ pub fn calendar(input: &PlanInput, from: Date, to: Date) -> Vec<Bill> {
                 });
             }
         }
+    }
+    for d in input.planned_dates.iter().filter(|d| d.date >= from && d.date < to && d.amount > 0) {
+        out.push(Bill {
+            date: d.date,
+            label: d.label.clone(),
+            amount_paise: d.amount,
+            kind: BillKind::Date,
+            account_id: None,
+            covered_paise: 0,
+        });
     }
     out.sort_by(|a, b| a.date.cmp(&b.date).then_with(|| b.amount_paise.cmp(&a.amount_paise)));
     out
@@ -164,5 +176,18 @@ mod tests {
         let i = input(date!(2026 - 11 - 08), vec![commitment("Gym", 12_000, 5, Freq::Yearly, Some(3))], vec![]);
         let f = sinking_funds(&i);
         assert_eq!((f[0].due, f[0].saved_paise), (date!(2027 - 03 - 05), 800_000));
+    }
+
+    #[test]
+    fn planned_dates_sit_in_the_same_calendar_as_bills() {
+        let today = date!(2026 - 10 - 05);
+        let mut i = input(today, vec![commitment("Rent", 10_000, 8, Freq::Monthly, None)], vec![]);
+        i.planned_dates = vec![
+            crate::planner::PlannedDateIn { date: date!(2026 - 10 - 07), label: "Dinner".into(), amount: 240_000 },
+            crate::planner::PlannedDateIn { date: date!(2027 - 03 - 01), label: "Too far".into(), amount: 100 },
+        ];
+        let bills = calendar(&i, today, date!(2026 - 11 - 05));
+        let kinds: Vec<_> = bills.iter().map(|b| (b.label.as_str(), b.kind.clone())).collect();
+        assert_eq!(kinds, [("Dinner", BillKind::Date), ("Rent", BillKind::Monthly)]);
     }
 }

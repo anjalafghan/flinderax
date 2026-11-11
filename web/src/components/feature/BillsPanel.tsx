@@ -13,6 +13,7 @@ const KIND_LABEL: Record<Bill["kind"], string> = {
   monthly: "Monthly",
   yearly: "Yearly",
   card_bill: "Card bill",
+  date: "Date",
 };
 
 function BillRow({ bill }: { bill: Bill }) {

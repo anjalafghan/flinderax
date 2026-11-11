@@ -108,7 +108,21 @@ async fn dates_facts(db: &sqlx::SqlitePool, user_id: &str, month: &str) -> Resul
         if spent == 0 && budget.is_none() {
             return Ok(None);
         }
-        return Ok(Some(DatesFacts { spent_paise: spent, budget_paise: budget, your_share_paise: your_share(spent, budget, partner) }));
+        let from = format!("{month}-01");
+        let in_accounts: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(SUM(amount_paise), 0) FROM transactions
+             WHERE user_id = ?2 AND category = 'dates' AND direction = 'debit' AND occurred_on >= ?1 AND occurred_on < date(?1, '+1 month')",
+        )
+        .bind(&from)
+        .bind(user_id)
+        .fetch_one(db)
+        .await?;
+        return Ok(Some(DatesFacts {
+            spent_paise: spent,
+            budget_paise: budget,
+            your_share_paise: your_share(spent, budget, partner),
+            in_accounts_paise: in_accounts,
+        }));
     }
     Ok(None)
 }
