@@ -203,7 +203,7 @@ mod tests {
     fn postings_already_seen_in_an_alert_are_skipped() {
         let b = base(&[("hdfc", date!(2026 - 10 - 20))]);
         let salary_alert = Seen { account_id: "hdfc".into(), on: date!(2026 - 10 - 31), amount: 9_010_000 };
-        let p = due_postings(&[income(1, 90_000, "hdfc")], &[], &b, &[salary_alert.clone()], date!(2026 - 11 - 02));
+        let p = due_postings(&[income(1, 90_000, "hdfc")], &[], &b, std::slice::from_ref(&salary_alert), date!(2026 - 11 - 02));
         assert!(p.is_empty(), "{p:?}");
         let other_account = Seen { account_id: "kotak".into(), ..salary_alert.clone() };
         let wrong_sign = Seen { amount: -9_000_000, ..salary_alert };

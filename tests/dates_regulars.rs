@@ -129,9 +129,7 @@ impl T {
     async fn loner(&self) -> (String, String) {
         let c = self.user("carol").await;
         assert!(self.post("/api/couple/create", &c, json!({})).await.status.is_success());
-        let id = self.text(&format!(
-            "SELECT couple_id FROM couples WHERE user_0 = (SELECT user_id FROM users ORDER BY rowid DESC LIMIT 1)"
-        ))
+        let id = self.text(&"SELECT couple_id FROM couples WHERE user_0 = (SELECT user_id FROM users ORDER BY rowid DESC LIMIT 1)".to_string())
         .await;
         (c, id)
     }
@@ -376,7 +374,7 @@ async fn the_month_page_lists_the_night() {
     assert_eq!(t.get(&format!("/api/dates/year/{y}/13"), &rohit).await.status, StatusCode::NOT_FOUND);
     assert_eq!(t.get(&format!("/api/dates/year/{y}/abc"), &rohit).await.status, StatusCode::NOT_FOUND);
     assert_eq!(t.get("/api/dates/year/1999/5", &rohit).await.status, StatusCode::NOT_FOUND);
-    let quiet = t.get(&format!("/api/dates/year/2001/2"), &rohit).await;
+    let quiet = t.get(&"/api/dates/year/2001/2".to_string(), &rohit).await;
     assert_eq!((quiet.status, quiet.json["entries"].as_array().unwrap().len()), (StatusCode::OK, 0));
 }
 

@@ -321,9 +321,9 @@ async fn a_surprise_is_hidden_from_the_partner_who_cannot_reveal_or_touch_it() {
         (format!("/api/dates/history/{hid}/delete"), json!({})),
         (format!("/api/dates/history/{hid}/photos/{pid}/delete"), json!({})),
         (format!("/api/dates/history/{hid}/plan-b"), json!({})),
-        (format!("/api/dates/history/when"), json!({"ids": hid, "at": "2030-01-02T19:00"})),
-        (format!("/api/dates/budget/spend"), json!({"amount": 100, "history_id": hid})),
-        (format!("/api/dates/savings/add"), json!({"amount": 100, "history_id": hid.to_string()})),
+        ("/api/dates/history/when".to_string(), json!({"ids": hid, "at": "2030-01-02T19:00"})),
+        ("/api/dates/budget/spend".to_string(), json!({"amount": 100, "history_id": hid})),
+        ("/api/dates/savings/add".to_string(), json!({"amount": 100, "history_id": hid.to_string()})),
     ] {
         let r = t.post(&path, &neha, body).await;
         assert_eq!(r.status, StatusCode::FORBIDDEN, "{path}: {}", r.text);

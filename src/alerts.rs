@@ -133,7 +133,7 @@ fn find_merchant(text: &str, direction: Direction) -> Option<String> {
         format!(r"(?i)\bat\s+(.{{2,40}}?){stop}"),
         format!(r"(?i)\btrf to\s+(.{{2,40}}?){stop}"),
         format!(r"(?i)\bto\s+(?:vpa\s+)?(.{{2,40}}?){stop}"),
-        format!(r"(?i)\bon\s+([A-Z][A-Za-z0-9&'.* \-]{{1,30}}?)\.\s*avl"),
+        r"(?i)\bon\s+([A-Z][A-Za-z0-9&'.* \-]{1,30}?)\.\s*avl".to_string(),
         r"(?i);\s*([A-Za-z0-9&'.* \-]{2,40}?)\s+credited".to_string(),
         format!(r"(?i)\bfor\s+(?:upi|neft|imps)?[\s\-/]*(.{{2,40}}?){stop}"),
     ];

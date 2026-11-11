@@ -236,11 +236,10 @@ pub async fn get_all_cards(
     let cache_key = format!("user_cards_proto_v2:{}", user_id);
 
     // Check Redis cache if available
-    if let Some(mut redis) = state.redis.clone() {
-        if let Ok(Some(cached_data)) = redis.get::<_, Option<Vec<u8>>>(&cache_key).await {
+    if let Some(mut redis) = state.redis.clone()
+        && let Ok(Some(cached_data)) = redis.get::<_, Option<Vec<u8>>>(&cache_key).await {
             return Ok(([(header::CONTENT_TYPE, "application/x-protobuf")], cached_data));
         }
-    }
 
     let cards = sqlx::query!(
         "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color, c.last_4_digits,
@@ -407,7 +406,7 @@ fn rupees_to_paise(amount: f32) -> Result<i64, AppError> {
 /// failure to 400.
 fn check_rupees(amount: f32, check: fn(i64) -> Result<i64, String>) -> Result<(), AppError> {
     let paise = rupees_to_paise(amount)?;
-    check(paise).map(|_| ()).map_err(|e| bad_request(e))
+    check(paise).map(|_| ()).map_err(bad_request)
 }
 
 pub async fn insert_transaction(
@@ -636,8 +635,8 @@ pub async fn delete_transaction(
         (0.0, 0.0)
     };
 
-    let new_total_due_f32 = new_total_due as f32;
-    let new_delta_f32 = new_delta as f32;
+    let new_total_due_f32 = new_total_due;
+    let new_delta_f32 = new_delta;
 
     // Update the running state
     sqlx::query!(

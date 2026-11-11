@@ -832,8 +832,8 @@ pub fn compute(input: &PlanInput) -> Summary {
                 kind: "card_due",
             });
         }
-        if let (true, Some(d)) = (card.next_bill_est > 0, card.next_due_date) {
-            if d >= today && d < payday2 {
+        if let (true, Some(d)) = (card.next_bill_est > 0, card.next_due_date)
+            && d >= today && d < payday2 {
                 upcoming.push(Upcoming {
                     date: d,
                     label: format!("{} next bill (est.)", card.name),
@@ -841,7 +841,6 @@ pub fn compute(input: &PlanInput) -> Summary {
                     kind: "card_bill",
                 });
             }
-        }
     }
     upcoming.sort_by_key(|u| u.date);
 

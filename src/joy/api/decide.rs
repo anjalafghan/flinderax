@@ -114,12 +114,11 @@ async fn nudge(db: &SqlitePool, couple: &str, ctx: &Ctx, who: Option<usize>) -> 
         what.dedup();
         return Ok((format!("{day}, {time}: {}", what.join(" + ")), true));
     }
-    if !db::anything_planned(db, couple).await? {
-        if let Some(days) = db::days_since_last_date(db, couple).await?.filter(|d| *d >= NUDGE_AFTER_DAYS) {
+    if !db::anything_planned(db, couple).await?
+        && let Some(days) = db::days_since_last_date(db, couple).await?.filter(|d| *d >= NUDGE_AFTER_DAYS) {
             let weeks = days / 7;
             return Ok((format!("It's been {weeks} weeks since your last date."), false));
         }
-    }
     Ok((String::new(), false))
 }
 
@@ -625,8 +624,8 @@ pub async fn pick(
             db::veto(db, couple, cur, j.who).await?;
             excluded.push(cur);
         }
-    } else if f.reroll == "1" {
-        if let Ok(cur) = f.current.parse::<i64>() {
+    } else if f.reroll == "1"
+        && let Ok(cur) = f.current.parse::<i64>() {
             super::unsealed(db, couple, j.who, cur).await?;
             let current = db::get(db, couple, cur).await?;
             match picker::put_back(used, current.as_ref().is_some_and(|a| a.generated), d.max) {
@@ -645,7 +644,6 @@ pub async fn pick(
                 }
             }
         }
-    }
 
     let jar = jar_data(db, couple, ctx, j.who, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
     let mut cands = jar.candidates(ctx, &f);

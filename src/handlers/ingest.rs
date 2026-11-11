@@ -579,13 +579,12 @@ pub async fn summary(
         if let Some(cats) = per_month.get_mut(&ym) {
             *cats.entry(r.category.clone()).or_default() += r.amount_paise;
         }
-        if ym == current {
-            if let Some(m) = &r.merchant {
+        if ym == current
+            && let Some(m) = &r.merchant {
                 let e = merchants.entry(normalize(m)).or_insert_with(|| (m.clone(), 0, 0));
                 e.1 += r.amount_paise;
                 e.2 += 1;
             }
-        }
     }
     let months = per_month
         .into_iter()

@@ -1,3 +1,4 @@
+#![allow(clippy::inconsistent_digit_grouping)] // amounts are written in lakh grouping (12_34_567)
 pub mod alerts;
 pub mod app;
 pub mod backup;

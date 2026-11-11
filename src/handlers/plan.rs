@@ -154,10 +154,20 @@ pub async fn commitment_update(
     let id = p.commitment_id.clone().ok_or_else(|| bad_request("commitment_id is required"))?;
     ensure_account_owned(&state.db, &p.account_id, &user_id).await?;
     ensure_account_owned(&state.db, &p.to_account_id, &user_id).await?;
-    let frequency = p.frequency.clone().unwrap_or_else(|| "monthly".into());
-    let category = p.category.unwrap_or_else(|| "other".into());
+    // A partial update keeps what is stored for the fields it leaves out, rather than resetting them
+    // (which would, say, resume a paused yearly bill as a monthly one).
+    let current = sqlx::query!(
+        "SELECT frequency, category, active FROM commitments WHERE commitment_id = ? AND user_id = ?",
+        id,
+        user_id
+    )
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| not_found("Commitment not found"))?;
+    let frequency = p.frequency.clone().unwrap_or(current.frequency);
+    let category = p.category.unwrap_or(current.category);
     let bucket = bucket_for(&p.bucket, &category);
-    let active = p.active.unwrap_or(true);
+    let active = p.active.unwrap_or(current.active != 0);
     let res = sqlx::query!(
         "UPDATE commitments SET label = ?, amount_paise = ?, day_of_month = ?, account_id = ?, category = ?,
                 bucket = ?, frequency = ?, due_month = ?, to_account_id = ?, active = ?, start_month = ?, end_month = ?

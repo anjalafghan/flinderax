@@ -323,11 +323,10 @@ impl Schedule {
         let minutes = a.minutes();
         let hours = Hours::parse(&a.hours);
         let wd = slot.weekday();
-        if let Some(h) = &hours {
-            if !h.open_on(wd) {
+        if let Some(h) = &hours
+            && !h.open_on(wd) {
                 return Err(format!("closed on {}s", WEEKDAY_NAMES[wd as usize]));
             }
-        }
         match slot.kind {
             Kind::Apart => {
                 if a.setting == "apart" {

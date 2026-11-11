@@ -118,11 +118,10 @@ pub fn jobs(a: &Activity, place: &str, date: Option<Date>, today: Date) -> Vec<(
 /// Deal jobs out one at a time, starting with whoever has had fewer (on a tie, whoever didn't
 /// draw, since drawing was their bit). A surprise's jobs all go to whoever planned it.
 pub fn deal(jobs: Vec<(String, String)>, counts: [i64; 2], drawn_by: Option<usize>, surprise: bool) -> Vec<(usize, String, String)> {
-    if surprise {
-        if let Some(d) = drawn_by {
+    if surprise
+        && let Some(d) = drawn_by {
             return jobs.into_iter().map(|(t, due)| (d, t, due)).collect();
         }
-    }
     let mut counts = counts;
     jobs.into_iter()
         .map(|(t, due)| {
@@ -361,15 +360,13 @@ pub async fn on_keep(
     let Some(&first) = ids.first() else { return Ok(()) };
     let Some(row) = db::history_row(db, couple, first).await? else { return Ok(()) };
     let Some(a) = db::get(db, couple, row.activity_id).await? else { return Ok(()) };
-    if let (Some(slot), Some(sched)) = (slot, &ctx.schedule) {
-        if row.planned_at.is_none() {
-            if let Ok(fit) = sched.fit(ctx, slot, &a) {
+    if let (Some(slot), Some(sched)) = (slot, &ctx.schedule)
+        && row.planned_at.is_none()
+            && let Ok(fit) = sched.fit(ctx, slot, &a) {
                 db::set_planned(db, couple, ids, Some(&slot.local(fit.start))).await?;
                 // Remember an office Saturday or a Monday off, so the plan stays that way.
                 db::set_day_kind(db, couple, ids, slot.kind.as_str()).await?;
             }
-        }
-    }
     // Plan B shows to both of us, so a slip that's a secret surprise from either one can't be it.
     let sealed = db::sealed_any(db, couple).await?;
     let acts: Vec<Activity> = db::list(db, couple, false).await?.into_iter().filter(|x| !sealed.contains(&x.id)).collect();

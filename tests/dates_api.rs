@@ -105,9 +105,7 @@ impl T {
     async fn loner(&self) -> (String, String) {
         let c = self.user("carol").await;
         assert!(self.post("/api/couple/create", &c, json!({})).await.status.is_success());
-        let id = self.text(&format!(
-            "SELECT couple_id FROM couples WHERE user_0 = (SELECT user_id FROM users ORDER BY rowid DESC LIMIT 1)"
-        ))
+        let id = self.text(&"SELECT couple_id FROM couples WHERE user_0 = (SELECT user_id FROM users ORDER BY rowid DESC LIMIT 1)".to_string())
         .await;
         (c, id)
     }
@@ -193,7 +191,7 @@ async fn the_jar_page_carries_its_view_model() {
     let jar = t.get("/api/dates/jar", &rohit).await;
     assert_eq!(jar.status, StatusCode::OK, "{}", jar.text);
     let j = &jar.json;
-    assert_eq!(j["me_name"].as_str().unwrap().starts_with("rohit"), true);
+    assert!(j["me_name"].as_str().unwrap().starts_with("rohit"));
     assert_eq!(j["count"].as_u64().unwrap() as usize, j["slips"].as_array().unwrap().len());
     assert_eq!(j["budget"]["spent"], "₹0");
     assert_eq!(j["middle"]["both_in"], false);

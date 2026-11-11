@@ -67,7 +67,7 @@ pub fn parse_fy(s: &str) -> Option<i32> {
         return None;
     }
     let (start, end): (i32, i32) = (a.parse().ok()?, b.parse().ok()?);
-    (start >= 2000 && start < 2200 && (start + 1).rem_euclid(100) == end).then_some(start)
+    ((2000..2200).contains(&start) && (start + 1).rem_euclid(100) == end).then_some(start)
 }
 
 /// First and last day of the FY.

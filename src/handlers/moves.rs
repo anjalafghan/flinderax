@@ -107,6 +107,27 @@ pub async fn record(
 
     let move_id = nanoid!();
     let mut tx = state.db.begin().await?;
+    // A double-tap or a retried request records the same move twice; an identical move in the last
+    // few seconds is that, so answer with the one already recorded instead of moving money again.
+    let recent: Option<String> = sqlx::query_scalar(
+        "SELECT move_id FROM moves
+         WHERE user_id = ? AND kind = ? AND move_key = ? AND mode = ? AND amount_paise = ?
+           AND from_account_id IS ? AND to_account_id IS ?
+           AND created_at >= datetime('now', '-10 seconds')
+         ORDER BY created_at DESC LIMIT 1",
+    )
+    .bind(&user_id)
+    .bind(&p.kind)
+    .bind(&p.key)
+    .bind(&p.mode)
+    .bind(p.amount_paise)
+    .bind(&p.from_account_id)
+    .bind(&p.to_account_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    if let Some(move_id) = recent {
+        return Ok(Json(MoveId { move_id, status: true }));
+    }
     sqlx::query!(
         "INSERT INTO moves (move_id, user_id, kind, move_key, amount_paise, mode, from_account_id, to_account_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
