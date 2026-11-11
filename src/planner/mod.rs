@@ -188,6 +188,16 @@ pub struct AllocationState {
     pub skipped: i64,
 }
 
+/// A date from Dates that is planned for later and still unpaid: its estimated cost is held back
+/// from Safe to Spend until it is kept.
+#[derive(Debug, Clone)]
+pub struct PlannedDateIn {
+    pub date: Date,
+    pub label: String,
+    /// Estimated cost in paise, less what the jar already covers.
+    pub amount: i64,
+}
+
 #[derive(Debug, Clone)]
 pub struct PlanInput {
     pub today: Date,
@@ -197,6 +207,7 @@ pub struct PlanInput {
     pub cards: Vec<CardIn>,
     pub settings: SettingsIn,
     pub allocation: AllocationState,
+    pub planned_dates: Vec<PlannedDateIn>,
 }
 
 pub fn month_index(d: Date) -> i32 {
@@ -688,7 +699,16 @@ pub fn compute(input: &PlanInput) -> Summary {
     let alloc_unfunded = alloc_remaining - alloc_to_move;
     let free_cash = free_before_top_up - alloc_to_move;
     let safe_cash = free_cash.max(0);
-    let safe = safe_cash.min(spending_left);
+    // Planned dates before payday are spending that has not happened yet: hold their estimates back.
+    let dates_held: i64 = input
+        .planned_dates
+        .iter()
+        .filter(|d| d.date >= today && d.date < payday1)
+        .map(|d| d.amount.max(0))
+        .fold(0i64, |a, b| a.saturating_add(b));
+    let safe_before_dates = safe_cash.min(spending_left);
+    let dates_held_applied = dates_held.min(safe_before_dates);
+    let safe = safe_before_dates - dates_held_applied;
     let weeks = ((days_left + 6) / 7).max(1);
     let per_week = safe / weeks;
     let status = if per_week >= GREEN_PER_WEEK_PAISE {
@@ -766,6 +786,15 @@ pub fn compute(input: &PlanInput) -> Summary {
             false,
         ));
     }
+    if dates_held_applied > 0 {
+        let n = input.planned_dates.iter().filter(|d| d.date >= today && d.date < payday1 && d.amount > 0).count();
+        breakdown.push(line(
+            "Held back for planned dates".into(),
+            -dates_held_applied,
+            Some(format!("{n} planned before {}; released when you keep them", short_date(payday1))),
+            false,
+        ));
+    }
     breakdown.push(line("Safe to spend".into(), safe, None, true));
 
     let pots = Pots {
@@ -822,6 +851,9 @@ pub fn compute(input: &PlanInput) -> Summary {
         for d in commitment_dates(c, today, payday2) {
             upcoming.push(Upcoming { date: d, label: c.label.clone(), amount_paise: c.amount, kind: "commitment" });
         }
+    }
+    for d in input.planned_dates.iter().filter(|d| d.date >= today && d.date < payday2 && d.amount > 0) {
+        upcoming.push(Upcoming { date: d.date, label: d.label.clone(), amount_paise: d.amount, kind: "planned_date" });
     }
     for card in &input.cards {
         if card.due_now > 0 {

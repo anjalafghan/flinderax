@@ -122,6 +122,7 @@ mod tests {
             cards,
             settings: SettingsIn { spending: None, spending_bps: None, allocation_day: 10, savings_floor: None, recovery_months: 3 },
             allocation: AllocationState::default(),
+            planned_dates: vec![],
         }
     }
 

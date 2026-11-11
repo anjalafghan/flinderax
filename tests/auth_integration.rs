@@ -338,6 +338,10 @@ async fn couples_start_invite_join_and_leave() {
     let st = authed_get(&app, &b, "/api/couple").await;
     assert_eq!((st["me"].as_i64(), st["partner_name"].as_str()), (Some(1), Some("anjal")));
 
+    // Safe to Spend still computes for a couple (it reads their planned dates).
+    let sum = authed_get(&app, &a, "/api/dashboard/summary").await;
+    assert!(sum["safe_to_spend_paise"].is_i64(), "{sum}");
+
     // Single use, and the couple is full.
     let (s, _) = authed_post(&app, &c, "/api/couple/join", json!({"code": code})).await;
     assert_eq!(s, StatusCode::BAD_REQUEST);

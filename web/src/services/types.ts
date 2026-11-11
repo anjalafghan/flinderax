@@ -136,7 +136,7 @@ export interface UpcomingItem {
   date: string;
   label: string;
   amount_paise: number;
-  kind: "commitment" | "card_due" | "card_bill";
+  kind: "commitment" | "card_due" | "card_bill" | "planned_date";
 }
 
 export interface BreakdownLine {

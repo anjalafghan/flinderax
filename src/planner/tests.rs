@@ -73,6 +73,7 @@ fn fixture() -> PlanInput {
         cards: vec![card("c1", "Main HDFC", 2_306_700), card("c2", "HDFC UPI", 497_500)],
         settings: SettingsIn { spending: Some(1_887_500), spending_bps: None, allocation_day: 10, savings_floor: Some(4_110_200), recovery_months: 3 },
         allocation: AllocationState::default(),
+        planned_dates: vec![],
     }
 }
 
@@ -344,6 +345,7 @@ fn ten_thousand_spent_takes_ten_thousand_off_the_remaining_allowance() {
         }],
         settings: SettingsIn { spending: None, spending_bps: None, allocation_day: 10, savings_floor: None, recovery_months: 3 },
         allocation: AllocationState::default(),
+        planned_dates: vec![],
     };
     // before: no spend tracked, so the allowance (20% = ₹20,000) runs at an even pace: 27 of 31 days left
     let before = compute(&input);
@@ -574,4 +576,27 @@ fn rupee_formatting_uses_indian_grouping() {
     assert_eq!(format_inr(12_345_600), "₹1,23,456");
     assert_eq!(format_inr(754_990_000), "₹75,49,900");
     assert_eq!(format_inr(-150), "-₹1.50");
+}
+
+// ---------- planned dates ----------
+
+#[test]
+fn a_planned_date_before_payday_is_held_back_and_listed() {
+    let before = compute(&settled());
+    let mut i = settled();
+    i.planned_dates = vec![PlannedDateIn { date: date!(2026 - 10 - 10), label: "Dinner".into(), amount: 240_000 }];
+    let s = compute(&i);
+    assert_eq!(s.safe_to_spend_paise, before.safe_to_spend_paise - 240_000);
+    assert_eq!(line(&s, "Held back for planned dates").amount_paise, -240_000);
+    assert!(s.upcoming.iter().any(|u| u.kind == "planned_date" && u.label == "Dinner" && u.amount_paise == 240_000));
+}
+
+#[test]
+fn a_planned_date_after_payday_is_not_held_yet_and_the_hold_never_goes_below_zero() {
+    let before = compute(&settled());
+    let mut i = settled();
+    i.planned_dates = vec![PlannedDateIn { date: date!(2026 - 12 - 20), label: "Trip".into(), amount: 900_000 }];
+    assert_eq!(compute(&i).safe_to_spend_paise, before.safe_to_spend_paise);
+    i.planned_dates = vec![PlannedDateIn { date: date!(2026 - 10 - 10), label: "Big".into(), amount: i64::MAX }];
+    assert_eq!(compute(&i).safe_to_spend_paise, 0);
 }

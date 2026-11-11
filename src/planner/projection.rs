@@ -708,6 +708,7 @@ mod tests {
                 }],
                 settings: SettingsIn { spending: Some(1_887_500), spending_bps: None, allocation_day: 10, savings_floor: Some(0), recovery_months: 3 },
                 allocation: AllocationState { moved: 0, skipped: 2_662_400 },
+                planned_dates: vec![],
             },
             deposits: vec![DepositIn {
                 account_id: FD1.into(),

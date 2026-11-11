@@ -22,7 +22,7 @@ use crate::{
     planner::{
         self,
         history::{monthly_net_worth, MonthPoint, Point}, parse_year_month, AccountIn, AllocationState, Bucket, CardIn, CommitmentIn, Freq, IncomeIn,
-        PlanInput, Role, SettingsIn, Summary,
+        PlanInput, PlannedDateIn, Role, SettingsIn, Summary,
     },
 };
 
@@ -114,6 +114,7 @@ pub async fn load_input(db: &sqlx::SqlitePool, user_id: &str, today: Date) -> Re
         })
         .collect();
 
+    let planned_dates = load_planned_dates(db, user_id).await?;
     let s = load_settings(db, user_id).await?;
     let (moved, skipped) = cov.get(&period.start.to_string()).copied().unwrap_or((0, 0));
     Ok(PlanInput {
@@ -130,7 +131,34 @@ pub async fn load_input(db: &sqlx::SqlitePool, user_id: &str, today: Date) -> Re
             recovery_months: s.recovery_months,
         },
         allocation: AllocationState { moved, skipped },
+        planned_dates,
     })
+}
+
+/// Dates planned for later whose cost is not yet paid: the estimate, less what the jar covers, in
+/// paise. A surprise still sealed from this user keeps its amount but not its name.
+async fn load_planned_dates(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<PlannedDateIn>, AppError> {
+    let Some((couple, who)) = crate::handlers::couple::couple_of(db, user_id).await? else { return Ok(Vec::new()) };
+    let rows: Vec<(String, String, i64)> = sqlx::query_as(
+        "SELECT date(h.planned_at, 'unixepoch', 'localtime'),
+                CASE WHEN h.surprise = 1 AND h.revealed = 0 AND COALESCE(h.drawn_by, -1) <> ?2
+                     THEN 'A surprise date' ELSE COALESCE(a.title, 'A date') END,
+                MAX(h.est_cost - COALESCE(h.from_savings, 0), 0)
+           FROM joy_history h LEFT JOIN joy_activities a ON a.id = h.activity_id
+          WHERE h.couple_id = ?1 AND h.outcome = 'did_it' AND h.actual_cost IS NULL
+            AND h.planned_at IS NOT NULL AND h.planned_at > unixepoch() AND h.est_cost > 0",
+    )
+    .bind(&couple)
+    .bind(who as i64)
+    .fetch_all(db)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(day, label, rupees)| {
+            let date = time::Date::parse(&day, time::macros::format_description!("[year]-[month]-[day]")).ok()?;
+            Some(PlannedDateIn { date, label, amount: rupees.saturating_mul(100) })
+        })
+        .collect())
 }
 
 pub async fn summary(
