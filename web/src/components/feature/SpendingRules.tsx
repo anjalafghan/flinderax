@@ -3,12 +3,14 @@ import { Trash2 } from "lucide-react";
 import { ingestApi } from "@/services/api";
 import { keys, useIngestRules, usePlannerMutation } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { categoryLabel } from "@/utils/spending";
 
 /** Merchants you've told the app about ("Remember for ..."). New alerts from them are categorised automatically. */
 export function SpendingRules() {
   const { data: rules, isLoading, isError } = useIngestRules();
   const remove = usePlannerMutation(ingestApi.deleteRule, [keys.ingestRules], { success: "Rule removed" });
+  const clearAll = usePlannerMutation(ingestApi.clearRules, [keys.ingestRules], { success: "All rules forgotten" });
 
   return (
     <div className="space-y-3">
@@ -42,6 +44,14 @@ export function SpendingRules() {
             ))}
           </ul>
         ))}
+      {rules && rules.length > 0 && (
+        <ResetButton
+          label="Reset: forget all rules"
+          disabled={clearAll.isPending}
+          confirm="Forget every category you taught? Transactions already sorted keep their category; new ones go back to automatic."
+          onReset={() => clearAll.mutate()}
+        />
+      )}
     </div>
   );
 }

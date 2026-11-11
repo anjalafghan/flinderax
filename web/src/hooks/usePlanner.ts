@@ -171,6 +171,8 @@ function useTaxMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>, s
 
 export const useAddTaxEntry = () =>
   useTaxMutation((e: NewTaxEntry) => reviewApi.addTaxEntry(e), "Deduction added");
+export const useClearTaxEntries = () =>
+  useTaxMutation((fy: string | undefined) => reviewApi.clearTaxEntries(fy), "Deductions cleared");
 export const useDeleteTaxEntry = () =>
   useTaxMutation((entry_id: string) => reviewApi.deleteTaxEntry(entry_id), "Deduction removed");
 export const useSetCommitmentTaxSection = () =>

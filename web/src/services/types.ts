@@ -393,6 +393,8 @@ export interface Txn {
   last4: string | null;
   source: TxnSource;
   created_at: string;
+  /** The category was set by hand, so automatic re-checks leave it alone. */
+  category_locked: boolean;
 }
 
 export interface NewTxn {

@@ -6,6 +6,7 @@ import { decodeCardList } from "@/proto/decoder";
 import type { SignRule, StatementMapping, StatementNeedsMapping, StatementPreview, StatementResult, StatementTarget } from "@/services/types";
 import { INGEST_INVALIDATE, useAccounts, usePlannerMutation } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -448,6 +449,7 @@ export function StatementImport() {
   const saveNames = usePlannerMutation((next: string[]) => ingestApi.saveHolderNames(next), [HOLDER_NAMES_KEY], {
     success: "Names saved",
   });
+  const forgetLayouts = usePlannerMutation(() => ingestApi.clearLayouts(), [], { success: "Saved column layouts forgotten" });
   const confirmSelf = usePlannerMutation(
     async (next: string[]) => {
       await ingestApi.saveHolderNames(next);
@@ -649,6 +651,15 @@ export function StatementImport() {
         />
       )}
 
+      <div>
+        <ResetButton
+          label="Forget saved column layouts"
+          disabled={forgetLayouts.isPending}
+          confirm="Forget the column layouts saved for your statements? The next upload of each is read afresh."
+          onReset={() => forgetLayouts.mutate(undefined)}
+        />
+      </div>
+
       <section className="space-y-3 border-t border-border pt-4" aria-labelledby="holder-names-heading">
         <div className="field">
           <p id="holder-names-heading" className="text-sm font-medium">
@@ -677,6 +688,14 @@ export function StatementImport() {
           </ul>
         ) : (
           <p className="empty-note">No names saved yet.</p>
+        )}
+        {saved.length > 0 && (
+          <ResetButton
+            label="Clear all names"
+            disabled={saveNames.isPending}
+            confirm="Remove every saved name? Transfers to and from them will count as spending again after the next re-check."
+            onReset={() => saveNames.mutate([])}
+          />
         )}
         <form onSubmit={addName} className="flex flex-wrap gap-2">
           <Input

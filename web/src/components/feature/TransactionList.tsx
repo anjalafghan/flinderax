@@ -22,6 +22,7 @@ import {
   sourceLabel,
 } from "@/utils/spending";
 import { cn } from "@/utils/cn";
+import { ResetButton } from "@/components/ui/reset-button";
 import { SwipeSorter } from "@/components/feature/SwipeSorter";
 import { useAnimatedList } from "@/hooks/useAnimatedList";
 
@@ -35,11 +36,13 @@ function TransactionRow({
   saving,
   onSave,
   onDelete,
+  onAutomatic,
 }: {
   txn: Txn;
   saving: boolean;
   onSave: (category: string, remember: boolean) => void;
   onDelete: () => void;
+  onAutomatic: () => void;
 }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const name = txn.merchant ?? "Unknown";
@@ -88,6 +91,10 @@ function TransactionRow({
           </option>
         ))}
       </Select>
+
+      {!draft && txn.category_locked && (
+        <ResetButton label="Back to automatic" disabled={saving} onReset={onAutomatic} />
+      )}
 
       {draft && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2 text-sm">
@@ -162,6 +169,11 @@ export function TransactionList({
       { onError: () => undo() },
     );
   };
+  const unlock = usePlannerMutation(ingestApi.unlock, INGEST_INVALIDATE);
+  const automatic = (txn: Txn) =>
+    unlock.mutate(txn.txn_id, {
+      onSuccess: (res) => toast.success(res.category === "uncategorized" ? "Back to automatic. It has no category yet." : `Back to automatic: ${categoryLabel(res.category)}`),
+    });
   const unsorted = (txns ?? []).filter((t) => t.category === "uncategorized");
 
   const shown = (txns ?? []).filter((t) => !uncategorizedOnly || t.category === "uncategorized");
@@ -226,6 +238,7 @@ export function TransactionList({
                 saving={update.isPending && update.variables?.txn_id === t.txn_id}
                 onSave={(category, remember) => save(t, category, remember)}
                 onDelete={() => setToDelete(t)}
+                onAutomatic={() => automatic(t)}
               />
             ))}
           </ul>

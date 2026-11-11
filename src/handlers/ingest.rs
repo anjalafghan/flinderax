@@ -50,6 +50,8 @@ pub struct TxnRow {
     pub last4: Option<String>,
     pub source: String,
     pub created_at: String,
+    /// The category was set by hand, so automatic re-checks leave it alone.
+    pub category_locked: bool,
 }
 
 #[derive(Serialize)]
@@ -94,7 +96,7 @@ async fn load_txn(db: &sqlx::SqlitePool, user_id: &str, txn_id: &str) -> Result<
         TxnRow,
         r#"SELECT t.txn_id AS "txn_id!", t.occurred_on, t.direction, t.amount_paise, t.merchant, t.category,
                   t.card_id, t.account_id, COALESCE(c.card_name, a.name) AS "source_name?: String", t.last4, t.source,
-                  t.created_at AS "created_at!: String"
+                  t.created_at AS "created_at!: String", t.category_locked AS "category_locked: bool"
            FROM transactions t
            LEFT JOIN cards c ON c.card_id = t.card_id
            LEFT JOIN accounts a ON a.account_id = t.account_id
@@ -361,7 +363,7 @@ pub async fn list(
             TxnRow,
             r#"SELECT t.txn_id AS "txn_id!", t.occurred_on, t.direction, t.amount_paise, t.merchant, t.category,
                       t.card_id, t.account_id, COALESCE(c.card_name, a.name) AS "source_name?: String", t.last4, t.source,
-                      t.created_at AS "created_at!: String"
+                      t.created_at AS "created_at!: String", t.category_locked AS "category_locked: bool"
                FROM transactions t
                LEFT JOIN cards c ON c.card_id = t.card_id
                LEFT JOIN accounts a ON a.account_id = t.account_id

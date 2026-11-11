@@ -230,6 +230,12 @@ export const ingestApi = {
   rotateKey: () => data(api.post<{ key: string }>("/api/ingest/key/rotate", {})),
   rules: () => data(api.get<IngestRule[]>("/api/ingest/rules")),
   deleteRule: (pattern: string) => data(api.post<Ok>("/api/ingest/rules/delete", { pattern })),
+  /** Forgets every taught category. Rows already sorted keep the category they have. */
+  clearRules: () => data(api.post<{ status: boolean; removed: number }>("/api/ingest/rules/clear", {})),
+  /** Forgets the column layouts saved for statements. */
+  clearLayouts: () => data(api.post<{ status: boolean; removed: number }>("/api/ingest/statement/layouts/clear", {})),
+  /** Hands a hand-set category back to the automatic one. */
+  unlock: (txn_id: string) => data(api.post<{ status: boolean; category: string }>("/api/ingest/transactions/unlock", { txn_id })),
 };
 
 // ---------- Joy (shared date jar) ----------
@@ -277,6 +283,8 @@ export const reviewApi = {
   tax: (fy?: string) => data(api.get<TaxReview>(`/api/review/tax${query({ fy })}`)),
   addTaxEntry: (e: NewTaxEntry) => data(api.post<{ entry_id: string }>("/api/review/tax/entry", e)),
   deleteTaxEntry: (entry_id: string) => data(api.post<Ok>("/api/review/tax/entry/delete", { entry_id })),
+  /** Removes every manual deduction for a financial year (the current one by default). */
+  clearTaxEntries: (fy?: string) => data(api.post<{ status: boolean; removed: number }>("/api/review/tax/entries/clear", { fy })),
   setCommitmentTaxSection: (commitment_id: string, tax_section: TaxSectionId | null) =>
     data(api.post<Ok>("/api/review/tax/commitment", { commitment_id, tax_section })),
 };

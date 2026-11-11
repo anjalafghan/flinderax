@@ -17,6 +17,7 @@ const txn = (id: string, merchant: string | null, category: string, direction: T
   last4: null,
   source: "sms",
   created_at: "2026-11-05 10:00:00",
+  category_locked: false,
 });
 
 const sorted = [txn("s1", "Swiggy", "food"), txn("s2", "Swiggy", "food")];

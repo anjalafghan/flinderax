@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT t.txn_id AS \"txn_id!\", t.occurred_on, t.direction, t.amount_paise, t.merchant, t.category,\n                      t.card_id, t.account_id, COALESCE(c.card_name, a.name) AS \"source_name?: String\", t.last4, t.source,\n                      t.created_at AS \"created_at!: String\"\n               FROM transactions t\n               LEFT JOIN cards c ON c.card_id = t.card_id\n               LEFT JOIN accounts a ON a.account_id = t.account_id\n               WHERE t.user_id = ? AND t.occurred_on >= ? AND t.occurred_on < ?\n               ORDER BY t.occurred_on DESC, t.created_at DESC",
+  "query": "SELECT t.txn_id AS \"txn_id!\", t.occurred_on, t.direction, t.amount_paise, t.merchant, t.category,\n                  t.card_id, t.account_id, COALESCE(c.card_name, a.name) AS \"source_name?: String\", t.last4, t.source,\n                  t.created_at AS \"created_at!: String\", t.category_locked AS \"category_locked: bool\"\n           FROM transactions t\n           LEFT JOIN cards c ON c.card_id = t.card_id\n           LEFT JOIN accounts a ON a.account_id = t.account_id\n           WHERE t.user_id = ? AND t.txn_id = ?",
   "describe": {
     "columns": [
       {
@@ -62,10 +62,15 @@
         "name": "created_at!: String",
         "ordinal": 11,
         "type_info": "Datetime"
+      },
+      {
+        "name": "category_locked: bool",
+        "ordinal": 12,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 2
     },
     "nullable": [
       true,
@@ -79,8 +84,9 @@
       null,
       true,
       false,
+      false,
       false
     ]
   },
-  "hash": "40d192e44c5aebc42938c35c68def345b2610b5de1e0e9fb1e5a713083e4d430"
+  "hash": "52929cb427d34de5b52119d79d02a956ddfb06847aad53cfbfc56231f8f80d32"
 }

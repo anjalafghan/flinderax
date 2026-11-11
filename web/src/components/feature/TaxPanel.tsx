@@ -11,11 +11,13 @@ import type {
 } from "@/services/types";
 import {
   useAddTaxEntry,
+  useClearTaxEntries,
   useDeleteTaxEntry,
   useSetCommitmentTaxSection,
   useTaxReview,
 } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
+import { ResetButton } from "@/components/ui/reset-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -222,6 +224,15 @@ function AddDeductionForm() {
       </div>
       {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
       <div className="form-actions">
+        <ResetButton
+          label="Clear"
+          onReset={() => {
+            setSection("80C");
+            setLabel("");
+            setAmount("");
+            setError(null);
+          }}
+        />
         <Button type="submit" disabled={add.isPending}>
           Add deduction
         </Button>
@@ -230,10 +241,12 @@ function AddDeductionForm() {
   );
 }
 
-function DeductionList({ entries }: { entries: TaxEntry[] }) {
+function DeductionList({ entries, fy }: { entries: TaxEntry[]; fy: string }) {
   const del = useDeleteTaxEntry();
+  const clearAll = useClearTaxEntries();
   if (entries.length === 0) return <p className="empty-note">No deductions added yet.</p>;
   return (
+    <>
     <ul className="ledger">
       {entries.map((e) => (
         <li key={e.entry_id} className="ledger-row text-sm">
@@ -259,6 +272,13 @@ function DeductionList({ entries }: { entries: TaxEntry[] }) {
         </li>
       ))}
     </ul>
+    <ResetButton
+      label="Reset: clear all deductions"
+      disabled={clearAll.isPending}
+      confirm="Remove every deduction you added for this financial year? This cannot be undone."
+      onReset={() => clearAll.mutate(fy)}
+    />
+    </>
   );
 }
 
@@ -327,7 +347,7 @@ export function TaxPanel() {
           <div className="space-y-4">
             <h3 className="font-semibold">Add a deduction</h3>
             <AddDeductionForm />
-            <DeductionList entries={tax.entries} />
+            <DeductionList entries={tax.entries} fy={tax.fy} />
           </div>
 
           {tax.interest_income_paise > 0 && (
