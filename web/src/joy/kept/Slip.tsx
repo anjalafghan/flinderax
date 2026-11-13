@@ -693,7 +693,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
                           type="button"
                           disabled={photoDel.busy}
                           aria-label={`Remove photo ${i + 1} of ${pics.length}`}
-                          onClick={() => void photoDel.act(async () => finish(await deletePhoto(h.id, p.id), { focus: `#k${h.id} .k-photo-del > summary` }))}
+                          onClick={() => window.confirm("Remove this photo? This can't be undone.") && void photoDel.act(async () => finish(await deletePhoto(h.id, p.id), { focus: `#k${h.id} .k-photo-del > summary` }))}
                         >
                           Remove
                         </button>
@@ -706,6 +706,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
+                    if (!window.confirm("Remove this photo? This can't be undone.")) return;
                     void photoDel.act(async () => finish(await deletePhoto(h.id, cover.id), { focus: `#p${h.id}` }));
                   }}
                 >
@@ -725,6 +726,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                if (!window.confirm("Remove this date from Kept, with its photos? This can't be undone.")) return;
                 void dateDel.act(async () => finish(await deleteDate(h.id), { focus: "#k-title, #k-empty-h" }));
               }}
             >

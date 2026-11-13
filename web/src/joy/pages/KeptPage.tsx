@@ -12,7 +12,8 @@ import { Defs } from "../kept/Defs";
 import { dateWord, flatIds, moveFor, sinceLabel, splitTo, stepIndex } from "../kept/helpers";
 import { behavior, nextFrame, useDealIn } from "../kept/motion";
 import { SealedSlip, Slip } from "../kept/Slip";
-import { RegularNights } from "../kept/RegularNights";
+import { NightItem, mergeMonths } from "../kept/RegularNights";
+import { getNights, nightsKey } from "../regulars/api";
 import "../kept/kept.css";
 
 const KEPT_PATH = "/joy/kept";
@@ -36,6 +37,7 @@ export default function KeptPage() {
   const navigate = useNavigate();
   const { hash } = useLocation();
   const q = useQuery({ queryKey: keptKey, queryFn: getKept });
+  const nq = useQuery({ queryKey: nightsKey, queryFn: getNights });
   const [revealed, setRevealed] = useState<number | null>(null);
   const book = useRef<HTMLDivElement>(null);
   const handled = useRef("");
@@ -128,6 +130,7 @@ export default function KeptPage() {
   }
 
   const v = q.data;
+  const merged = mergeMonths(v.months, nq.data?.nights ?? []);
   const first = sinceLabel(v.months);
   const showMoney = v.kept > 0 || !!v.budget.budget;
   return (
@@ -148,7 +151,7 @@ export default function KeptPage() {
               </p>
             </>
           )}
-          {v.months.length > 0 && (
+          {merged.length > 0 && (
           <p className="k-add">
             <button type="button" className="btn" onClick={openAdd}>
               + Add a date we had
@@ -173,7 +176,7 @@ export default function KeptPage() {
           <CustomDateFold fold={addFold} />
         </header>
 
-        {v.months.length === 0 ? (
+        {merged.length === 0 ? (
           <section className="k-empty" aria-labelledby="k-empty-h">
             <div className="k-empty-page grain">
               <span className="k-corner k-corner-tl" aria-hidden="true" />
@@ -202,14 +205,14 @@ export default function KeptPage() {
               Press J or K to move between dates. With a date focused, the arrow keys, Home and End also move.
             </p>
             <div ref={book} className="k-book" id="k-book" role="group" aria-label="Kept dates" aria-describedby="k-keys" onKeyDown={onKey}>
-              {v.months.map((m, mi) => (
+              {merged.map((m, mi) => (
                 <section key={m.label + mi} className="k-month" aria-labelledby={`k-m${mi + 1}`} style={{ "--m": mi } as React.CSSProperties}>
                   <h2 className="k-month-h" id={`k-m${mi + 1}`}>
                     <Link className="k-month-a" to={m.href}>
                       {m.label}
                     </Link>
                     <span className="k-month-n hand" aria-hidden="true">
-                      {m.items.length} {dateWord(m.items.length)}
+                      {m.items.length + m.nights.length} {dateWord(m.items.length + m.nights.length)}
                     </span>
                     <Link className="k-month-open" to={m.href} tabIndex={-1} aria-hidden="true">
                       Open →
@@ -217,6 +220,7 @@ export default function KeptPage() {
                   </h2>
                   <ol className="k-spread" role="list">
                     {m.items.map((h, i) => (h.sealed ? <SealedSlip key={h.id} h={h} index={i} /> : <Slip key={h.id} h={h} index={i} />))}
+                    {m.nights.map((n) => <NightItem key={`n${n.visit_id}`} n={n} />)}
                   </ol>
                 </section>
               ))}
@@ -261,7 +265,6 @@ export default function KeptPage() {
         {showMoney && (
           <section className="k-money-sec" aria-labelledby="k-money-h">
             <h2 id="k-money-h">Money</h2>
-            <RegularNights />
             <Budget v={v} hash={hash} />
           </section>
         )}

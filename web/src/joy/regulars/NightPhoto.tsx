@@ -49,7 +49,7 @@ export function NightPhoto({ visitId, hasPhoto, addLabel = "Add a photo", remove
     });
 
   const remove = () =>
-    run(async () => {
+    window.confirm("Remove this photo? This can't be undone.") && run(async () => {
       setError("");
       try {
         await deletePhoto(visitId);

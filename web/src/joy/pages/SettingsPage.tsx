@@ -249,7 +249,7 @@ function SettleCard({ partner, currency }: { partner: string | null; currency: s
                       {s.note ? `, ${s.note}` : ""}
                     </span>
                     <span className="soft">{s.on_day}</span>
-                    <button type="button" className="btn" disabled={busy} onClick={() => removeOne(s.id)} aria-label={`Remove the repayment of ${rupees(s.amount_paise, currency)} on ${s.on_day}`}>
+                    <button type="button" className="btn" disabled={busy} onClick={() => window.confirm("Remove this repayment?") && removeOne(s.id)} aria-label={`Remove the repayment of ${rupees(s.amount_paise, currency)} on ${s.on_day}`}>
                       Remove
                     </button>
                   </li>

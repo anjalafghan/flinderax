@@ -54,7 +54,7 @@ export function RegularCard({ card, onChange }: { card: RegularCardData; onChang
               <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => setEditing(w.visit_id)}>
                 Edit price
               </button>{" "}
-              <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => void act(() => deleteNight(w.visit_id))}>
+              <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => window.confirm("Undo this night? It and its photo will be removed.") && void act(() => deleteNight(w.visit_id))}>
                 Undo
               </button>
             </div>

@@ -281,7 +281,7 @@ function OtherSpendFold({ v }: { v: HistoryView }) {
                 type="button"
                 disabled={busy}
                 aria-label={`Remove ${o.amount}`}
-                onClick={() => void act(async () => finish(await deleteSpend(o.id), { focus: "#k-spend-list, #k-budget" }))}
+                onClick={() => window.confirm("Delete this spend?") && void act(async () => finish(await deleteSpend(o.id), { focus: "#k-spend-list, #k-budget" }))}
               >
                 Remove
               </button>
@@ -430,7 +430,7 @@ function Savings({ s }: { s: SavingsState }) {
                     type="button"
                     disabled={putAct.busy}
                     aria-label={`Take back ${m.amount}`}
-                    onClick={() => void putAct.act(async () => finish(await deleteSaving(m.id), { focus: "#k-saving-list, #k-savings-h" }))}
+                    onClick={() => window.confirm("Delete this saving?") && void putAct.act(async () => finish(await deleteSaving(m.id), { focus: "#k-saving-list, #k-savings-h" }))}
                   >
                     Take back
                   </button>
