@@ -86,6 +86,8 @@ export interface YearView {
   jar_slips: JarSlip[];
   month_blots: MonthBlot[];
   year_total: string;
+  /** "12 regular nights, ₹3,600 of it", or empty. */
+  nights_line: string;
   budget_note: string;
   share: ShareData;
 }

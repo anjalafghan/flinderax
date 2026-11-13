@@ -78,6 +78,7 @@ export interface WentTonight {
   title: string;
   place: string;
   amount: string;
+  amount_raw: number;
   photo: string;
 }
 
@@ -115,3 +116,21 @@ export const uploadPhoto = (visitId: number, jpeg: Blob, onProgress?: (f: number
   form.append("photo", jpeg, "night.jpg");
   return upload<PhotoSaved>(`${BASE}/nights/${visitId}/photo`, form, onProgress);
 };
+
+export interface NightRow {
+  visit_id: number;
+  regular_id: number;
+  title: string;
+  place: string;
+  day: string;
+  day_label: string;
+  year: string;
+  amount: string;
+  amount_raw: number;
+}
+
+export const nightsKey = ["joy", "nights"] as const;
+/** Every regular night we went to, newest first. */
+export const getNights = () => get<{ nights: NightRow[] }>(`${BASE}/nights`);
+/** Fix what a night cost. */
+export const setNightAmount = (visitId: number, amount: string) => post<Go>(`${BASE}/nights/${visitId}/amount`, { amount });

@@ -6,11 +6,13 @@ import { useBusy } from "../components/useBusy";
 import { deleteNight, skipTo, wentTo, type RegularCardData } from "./api";
 import { apiMessage, skipBody, wentElse, wentUsual } from "./days";
 import { NightPhoto } from "./NightPhoto";
+import { EditAmount } from "./EditAmount";
 import "./regulars.css";
 
 export function RegularCard({ card, onChange }: { card: RegularCardData; onChange: () => void }) {
   const { busy, run } = useBusy();
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState<number | null>(null);
   const [elseFor, setElseFor] = useState<Record<string, { place: string; amount: string }>>({});
 
   if (!card.show) return null;
@@ -45,11 +47,18 @@ export function RegularCard({ card, onChange }: { card: RegularCardData; onChang
           </p>
           {w.photo && <img className="reg-thumb" src={w.photo} alt="Photo from tonight" width={96} height={120} loading="lazy" />}
           <NightPhoto visitId={w.visit_id} hasPhoto={!!w.photo} addLabel="Got a photo?" removeLabel="Remove photo" onChange={onChange} />
-          <div>
-            <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => void act(() => deleteNight(w.visit_id))}>
-              Undo
-            </button>
-          </div>
+          {editing === w.visit_id ? (
+            <EditAmount visitId={w.visit_id} initial={w.amount_raw} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); onChange(); }} />
+          ) : (
+            <div>
+              <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => setEditing(w.visit_id)}>
+                Edit price
+              </button>{" "}
+              <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => void act(() => deleteNight(w.visit_id))}>
+                Undo
+              </button>
+            </div>
+          )}
         </div>
       ))}
       {card.open.map((n) => {

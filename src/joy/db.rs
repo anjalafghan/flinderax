@@ -1689,6 +1689,41 @@ pub async fn record_visit(db: &SqlitePool, couple: &str, regular_id: i64, day: &
     Ok(true)
 }
 
+/// The nights we went, newest first, across every regular (stopped ones too) with the regular's
+/// name; at most `limit`.
+pub async fn went_nights(db: &SqlitePool, couple: &str, limit: i64) -> sqlx::Result<Vec<(Visit, String)>> {
+    let rows: Vec<Visit> = sqlx::query_as(
+        "SELECT v.* FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id
+          WHERE r.couple_id = ? AND v.status = 'went' ORDER BY v.day DESC, v.id DESC LIMIT ?",
+    )
+    .bind(couple)
+    .bind(limit)
+    .fetch_all(db)
+    .await?;
+    let mut out = vec![];
+    for v in rows {
+        let title = regular(db, couple, v.regular_id).await?.map(|r| r.title).unwrap_or_default();
+        out.push((v, title));
+    }
+    Ok(out)
+}
+
+/// Changes what a night we went to cost, and where (blank = the regular's own place). False when
+/// there is no such night of ours that we went to.
+pub async fn set_visit_amount(db: &SqlitePool, couple: &str, id: i64, place: &str, amount: i64) -> sqlx::Result<bool> {
+    let res = sqlx::query(
+        "UPDATE joy_regular_visits SET amount = ?, place = ? WHERE id = ? AND status = 'went'
+            AND regular_id IN (SELECT id FROM joy_regulars WHERE couple_id = ?)",
+    )
+    .bind(amount.max(0))
+    .bind(place.trim())
+    .bind(id)
+    .bind(couple)
+    .execute(db)
+    .await?;
+    Ok(res.rows_affected() > 0)
+}
+
 pub async fn visit(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Option<Visit>> {
     sqlx::query_as(
         "SELECT v.* FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id WHERE r.couple_id = ? AND v.id = ?",

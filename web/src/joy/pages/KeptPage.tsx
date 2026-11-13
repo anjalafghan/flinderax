@@ -12,6 +12,7 @@ import { Defs } from "../kept/Defs";
 import { dateWord, flatIds, moveFor, sinceLabel, splitTo, stepIndex } from "../kept/helpers";
 import { behavior, nextFrame, useDealIn } from "../kept/motion";
 import { SealedSlip, Slip } from "../kept/Slip";
+import { RegularNights } from "../kept/RegularNights";
 import "../kept/kept.css";
 
 const KEPT_PATH = "/joy/kept";
@@ -260,6 +261,7 @@ export default function KeptPage() {
         {showMoney && (
           <section className="k-money-sec" aria-labelledby="k-money-h">
             <h2 id="k-money-h">Money</h2>
+            <RegularNights />
             <Budget v={v} hash={hash} />
           </section>
         )}

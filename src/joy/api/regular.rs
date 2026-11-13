@@ -55,6 +55,8 @@ pub struct WentTonight {
     pub title: String,
     pub place: String,
     pub amount: String,
+    /// What it cost, in whole rupees (for the edit box).
+    pub amount_raw: i64,
     /// Signed photo link, or empty.
     pub photo: String,
 }
@@ -99,6 +101,7 @@ pub async fn card(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Card, AppE
             title: r.title.clone(),
             place: if v.place.is_empty() { String::new() } else { v.place.clone() },
             amount: ctx.money(v.amount),
+            amount_raw: v.amount,
             photo: if v.has_photo { visit_photo_url(ctx, v.id) } else { String::new() },
         })
         .collect();
@@ -145,6 +148,8 @@ pub fn router() -> Router<AppState> {
         .route("/regulars/{id}/skip", post(skip))
         .route("/regulars/{id}/skips/clear", post(clear_skips))
         .route("/regulars/{id}/restore", post(restore_regular))
+        .route("/nights", get(nights))
+        .route("/nights/{id}/amount", post(set_amount))
         .route("/nights/{id}/delete", post(delete_night))
         .route("/nights/{id}/photo", post(upload_photo).layer(DefaultBodyLimit::max(photos::MAX_UPLOAD_BYTES + 64 * 1024)))
         .route("/nights/{id}/photo/delete", post(delete_photo))
@@ -212,9 +217,11 @@ pub async fn went(
     let place = f.place.trim().chars().take(80).collect::<String>();
     // Typing the regular's own name as "somewhere else" is just the regular.
     let place = if place.eq_ignore_ascii_case(&r.title) || place.eq_ignore_ascii_case(&r.place) { String::new() } else { place };
-    // `record_visit` is false (and saves nothing) for a day in the future or over a month back;
-    // that is the intended guard, so it still answers ok.
-    db::record_visit(&s.db, &j.couple, id, &f.day, "went", &place, amount).await?;
+    // `record_visit` is false (and saves nothing) for a day in the future or over a month back:
+    // say so (422) rather than answering as if it was saved.
+    if !db::record_visit(&s.db, &j.couple, id, &f.day, "went", &place, amount).await? {
+        return Ok(refuse(REFUSED_DAY));
+    }
     Ok(back_to(&f.back, "/joy").into_response())
 }
 
@@ -226,6 +233,8 @@ pub struct SkipBody {
     back: String,
 }
 
+const REFUSED_DAY: &str = "That day can't be saved: it's in the future or more than a month back.";
+
 /// `POST /regulars/{id}/skip`
 pub async fn skip(
     State(s): State<AppState>,
@@ -235,8 +244,86 @@ pub async fn skip(
 ) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     db::regular(&s.db, &j.couple, id).await?.ok_or_else(|| not_found("No such regular"))?;
-    db::record_visit(&s.db, &j.couple, id, &f.day, "skipped", "", 0).await?;
+    if !db::record_visit(&s.db, &j.couple, id, &f.day, "skipped", "", 0).await? {
+        return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, REFUSED_DAY.into()));
+    }
     Ok(back_to(&f.back, "/joy"))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AmountBody {
+    /// What it cost: "300", "1,200" or "₹300". Blank is refused (use Undo to remove the night).
+    #[serde(default, deserialize_with = "flex")]
+    amount: String,
+    /// Blank = the regular's own place.
+    #[serde(default)]
+    place: Option<String>,
+}
+
+/// `POST /nights/{id}/amount`: fix what a night we went to cost (and, if sent, where).
+pub async fn set_amount(
+    State(s): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(vid): Path<i64>,
+    Json(f): Json<AmountBody>,
+) -> Result<Response, AppError> {
+    let j = joy(&s, &user_id).await?;
+    let v = db::visit(&s.db, &j.couple, vid).await?.ok_or_else(|| not_found("No such night"))?;
+    if f.amount.trim().is_empty() {
+        return Ok(refuse("Type what it cost."));
+    }
+    let amount = match typed_rupees(&f.amount, &j.ctx.currency) {
+        Ok(a) => a,
+        Err(e) => return Ok(refuse(e)),
+    };
+    let place = match f.place {
+        Some(p) => p.trim().chars().take(80).collect::<String>(),
+        None => v.place.clone(),
+    };
+    if !db::set_visit_amount(&s.db, &j.couple, vid, &place, amount).await? {
+        return Err(not_found("No such night"));
+    }
+    Ok(go(spread_path(v.regular_id)).into_response())
+}
+
+#[derive(Debug, Serialize)]
+pub struct NightRow {
+    pub visit_id: i64,
+    pub regular_id: i64,
+    pub title: String,
+    pub place: String,
+    pub day: String,
+    pub day_label: String,
+    pub year: String,
+    pub amount: String,
+    pub amount_raw: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct NightsView {
+    pub nights: Vec<NightRow>,
+}
+
+/// `GET /nights`: every regular night we went to, newest first (the last 300), for the Kept page.
+pub async fn nights(State(s): State<AppState>, Extension((user_id, _)): User) -> Result<Json<NightsView>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    let rows = db::went_nights(&s.db, &j.couple, 300).await?;
+    Ok(Json(NightsView {
+        nights: rows
+            .into_iter()
+            .map(|(v, title)| NightRow {
+                visit_id: v.id,
+                regular_id: v.regular_id,
+                title,
+                place: v.place,
+                day_label: month::day_label(&v.day),
+                year: v.day.get(..4).unwrap_or("").to_string(),
+                day: v.day,
+                amount: j.ctx.money(v.amount),
+                amount_raw: v.amount,
+            })
+            .collect(),
+    }))
 }
 
 #[derive(Debug, Default, Deserialize)]

@@ -264,6 +264,7 @@ function Year({ v }: { v: YearView }) {
                             <>
                               <p className="y-ticket-k">Spent in {year}</p>
                               <p className="y-ticket-big">{v.year_total}</p>
+                              {v.nights_line && <p className="y-ticket-line">incl. {v.nights_line}</p>}
                               {v.budget_note && <p className="y-ticket-line">on a budget of {v.budget_note}</p>}
                             </>
                           ) : (

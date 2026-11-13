@@ -544,3 +544,52 @@ async fn skipped_nights_can_be_forgotten_and_a_stopped_regular_restored() {
     // Restoring one that is already active is a 404, not a silent success.
     assert_eq!(t.post(&format!("/api/dates/regulars/{id}/restore"), &rohit, json!({})).await.status, StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn a_night_we_went_to_can_be_repriced_and_shows_in_the_list_and_the_year() {
+    let t = setup().await;
+    let (rohit, neha, _) = t.couple().await;
+    let loner = t.loner().await.0;
+    let id = add_regular(&t, &rohit).await;
+    let day = today(&t, -1).await;
+    t.post(&format!("/api/dates/regulars/{id}/went"), &rohit, json!({"day": day, "amount": 300})).await;
+    let vid = t.scalar("SELECT id FROM joy_regular_visits").await;
+
+    // The list of nights carries the raw amount for the edit box.
+    let list = t.get("/api/dates/nights", &neha).await;
+    assert_eq!(list.status, StatusCode::OK, "{}", list.text);
+    assert_eq!((list.json["nights"][0]["amount_raw"].clone(), list.json["nights"][0]["title"].clone()), (json!(300), json!("Blue Tokai")));
+
+    // Repricing takes commas, refuses blanks, junk and huge amounts, and changes nothing then.
+    let ok = t.post(&format!("/api/dates/nights/{vid}/amount"), &neha, json!({"amount": "1,250"})).await;
+    assert_eq!(ok.status, StatusCode::OK, "{}", ok.text);
+    assert_eq!(t.scalar("SELECT amount FROM joy_regular_visits").await, 1250);
+    for bad in [json!(""), json!("lots"), json!("-5"), json!("9999999999999999")] {
+        let r = t.post(&format!("/api/dates/nights/{vid}/amount"), &neha, json!({"amount": bad})).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{bad}: {}", r.text);
+    }
+    assert_eq!(t.scalar("SELECT amount FROM joy_regular_visits").await, 1250);
+
+    // Someone outside the couple can neither see nor change it.
+    assert_eq!(t.post(&format!("/api/dates/nights/{vid}/amount"), &loner, json!({"amount": 1})).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.get("/api/dates/nights", &loner).await.json["nights"].as_array().unwrap().len(), 0);
+
+    // The year says how many regular nights it holds and how much of the total.
+    let year = day[..4].to_string();
+    let page = t.get(&format!("/api/dates/year/{year}"), &rohit).await;
+    assert_eq!(page.json["nights_line"], json!("1 regular night, ₹1,250 of it"), "{}", page.text);
+}
+
+#[tokio::test]
+async fn a_day_that_cannot_be_saved_is_refused_not_pretended() {
+    let t = setup().await;
+    let (rohit, _, _) = t.couple().await;
+    let id = add_regular(&t, &rohit).await;
+    for day in [today(&t, 3).await, today(&t, -60).await] {
+        let r = t.post(&format!("/api/dates/regulars/{id}/went"), &rohit, json!({"day": day})).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{day}: {}", r.text);
+        let r = t.post(&format!("/api/dates/regulars/{id}/skip"), &rohit, json!({"day": day})).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{day}: {}", r.text);
+    }
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_regular_visits").await, 0);
+}

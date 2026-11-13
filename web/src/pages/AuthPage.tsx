@@ -49,7 +49,7 @@ export default function AuthPage() {
       return res.data;
     },
     onSuccess: (data) => {
-      toast.success("Welcome back!");
+      toast.success("Welcome back!", { duration: 1200 });
       login(data.access_token, data.expires_at);
       navigate("/");
     },

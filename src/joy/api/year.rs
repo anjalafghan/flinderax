@@ -252,6 +252,8 @@ pub struct YearView {
     pub month_blots: Vec<MonthBlot>,
     /// Everything spent this year, slips or not; empty when nothing was.
     pub year_total: String,
+    /// "12 regular nights, ₹3,600 of it", or empty when none were had this year.
+    pub nights_line: String,
     /// "₹6,000 a month", when a monthly budget is set.
     pub budget_note: String,
     /// What the share picture is drawn from (the page's `year-share` JSON).
@@ -398,6 +400,19 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
         });
     }
     let year_spent: i64 = spent.iter().sum();
+    let (night_count, night_total): (i64, i64) = sqlx::query_as(
+        "SELECT COUNT(*), COALESCE(SUM(v.amount), 0) FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id
+          WHERE r.couple_id = ? AND v.status = 'went' AND CAST(strftime('%Y', v.day) AS INTEGER) = ?",
+    )
+    .bind(couple)
+    .bind(year)
+    .fetch_one(&s.db)
+    .await?;
+    let nights_line = match (night_count, night_total) {
+        (0, _) => String::new(),
+        (n, 0) => format!("{n} regular {}", if n == 1 { "night" } else { "nights" }),
+        (n, t) => format!("{n} regular {}, {} of it", if n == 1 { "night" } else { "nights" }, ctx.money(t)),
+    };
     Ok(Json(YearView {
         busiest_n,
         tally_more: rows.len().saturating_sub(120),
@@ -408,6 +423,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
         rating_rows,
         jar_slips,
         month_blots,
+        nights_line,
         year_total: if year_spent > 0 { ctx.money(year_spent) } else { String::new() },
         budget_note: standing.map(|b| format!("{} a month", ctx.money(b))).unwrap_or_default(),
         me_name: Me::new(ctx, Some(j.who)).name,

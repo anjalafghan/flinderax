@@ -220,7 +220,7 @@ function App() {
       </div>
       {showTabs && <TabBar />}
       <Suspense fallback={null}>
-        <Toaster position="top-center" />
+        <Toaster position="top-center" duration={2500} />
       </Suspense>
     </>
   )
