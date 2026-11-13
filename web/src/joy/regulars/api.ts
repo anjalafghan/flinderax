@@ -127,6 +127,7 @@ export interface NightRow {
   year: string;
   amount: string;
   amount_raw: number;
+  photo: string;
 }
 
 export const nightsKey = ["joy", "nights"] as const;

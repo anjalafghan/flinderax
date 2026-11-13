@@ -297,6 +297,8 @@ pub struct NightRow {
     pub year: String,
     pub amount: String,
     pub amount_raw: i64,
+    /// Signed photo link, or empty.
+    pub photo: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -321,6 +323,7 @@ pub async fn nights(State(s): State<AppState>, Extension((user_id, _)): User) ->
                 day: v.day,
                 amount: j.ctx.money(v.amount),
                 amount_raw: v.amount,
+                photo: if v.has_photo { visit_photo_url(&j.ctx, v.id) } else { String::new() },
             })
             .collect(),
     }))

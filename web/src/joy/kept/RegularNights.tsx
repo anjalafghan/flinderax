@@ -18,6 +18,7 @@ export function RegularNights() {
       <ul className="k-nights-list">
         {nights.map((n) => (
           <li key={n.visit_id}>
+            {n.photo && <img className="reg-thumb" src={n.photo} alt={`Photo from ${n.title}`} width={96} height={120} loading="lazy" />}
             <p>
               <strong>{n.place || n.title}</strong> · {n.day_label} {n.year} · {n.amount}{" "}
               <Link to={`/joy/regulars/${n.regular_id}`}>{n.title}</Link>
