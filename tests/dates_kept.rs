@@ -305,7 +305,7 @@ async fn a_surprise_is_hidden_from_the_partner_who_cannot_reveal_or_touch_it() {
     assert_eq!(item["title"], "");
     assert!(item["photo_url"].is_null(), "no photo link for a sealed date");
     assert!(item["photos"].as_array().unwrap().is_empty(), "no photos for a sealed date");
-    assert!(item["hints"].as_array().unwrap().len() >= 3);
+    assert_eq!(item["hints"].as_array().unwrap().len(), 4);
     assert_eq!(item["can_reveal"], false);
 
     let mine = t.item(&rohit, hid).await;
@@ -321,7 +321,7 @@ async fn a_surprise_is_hidden_from_the_partner_who_cannot_reveal_or_touch_it() {
         (format!("/api/dates/history/{hid}/delete"), json!({})),
         (format!("/api/dates/history/{hid}/photos/{pid}/delete"), json!({})),
         (format!("/api/dates/history/{hid}/plan-b"), json!({})),
-        ("/api/dates/history/when".to_string(), json!({"ids": hid, "at": "2030-01-02T19:00"})),
+        ("/api/dates/history/when".to_string(), json!({"ids": hid, "at": "2080-01-02T19:00"})),
         ("/api/dates/budget/spend".to_string(), json!({"amount": 100, "history_id": hid})),
         ("/api/dates/savings/add".to_string(), json!({"amount": 100, "history_id": hid.to_string()})),
     ] {
@@ -550,9 +550,9 @@ async fn the_ics_comes_back_and_is_sealed_for_the_partner_of_a_surprise() {
     // Set the time: a bad one is refused; a good one gives signed links for both of us.
     let bad = t.post("/api/dates/history/when", &rohit, json!({"ids": open, "at": "tomorrow"})).await;
     assert_eq!(bad.status, StatusCode::UNPROCESSABLE_ENTITY);
-    let r = t.post("/api/dates/history/when", &rohit, json!({"ids": open.to_string(), "at": "2030-03-02T19:00"})).await;
+    let r = t.post("/api/dates/history/when", &rohit, json!({"ids": open.to_string(), "at": "2080-03-02T19:00"})).await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
-    assert_eq!((r.json["label"].as_str(), r.json["input"].as_str()), (Some("Sat 2 Mar, 7:00 pm"), Some("2030-03-02T19:00")));
+    assert_eq!((r.json["label"].as_str(), r.json["input"].as_str()), (Some("Sat 2 Mar, 7:00 pm"), Some("2080-03-02T19:00")));
     assert!(r.json["ics_url"].as_str().unwrap().starts_with("/api/public/dates/history/"));
     assert!(r.json["send_url"].as_str().unwrap().contains("invite.ics?who=1&exp="));
     assert!(r.json["partner"].as_str().unwrap().starts_with("neha"));
@@ -563,7 +563,7 @@ async fn the_ics_comes_back_and_is_sealed_for_the_partner_of_a_surprise() {
     assert_eq!(res.status, StatusCode::OK, "{}", res.text);
     assert_eq!(res.headers["content-type"], "text/calendar; charset=utf-8");
     assert!(res.text.starts_with("BEGIN:VCALENDAR") && res.text.contains(COOK), "{}", res.text);
-    assert!(res.text.contains("DTSTART:2030030"), "{}", res.text);
+    assert!(res.text.contains("DTSTART:2080030"), "{}", res.text);
     // Tampered, missing or someone else's signature: no calendar.
     assert_eq!(t.public(&public_url(&ics).replace("who=1", "who=0")).await.status, StatusCode::FORBIDDEN);
     assert_eq!(t.public(&format!("/api/public/dates/history/{open}/invite.ics")).await.status, StatusCode::FORBIDDEN);
@@ -571,8 +571,8 @@ async fn the_ics_comes_back_and_is_sealed_for_the_partner_of_a_surprise() {
     assert_ne!(t.call(Method::GET, &ics.replacen("/api/public", "/api", 1), None, None).await.status, StatusCode::OK);
 
     // A surprise: the planner's invite spells it out, the partner's keeps it sealed.
-    t.post("/api/dates/history/when", &rohit, json!({"ids": [secret], "at": "2030-03-09T18:30"})).await;
-    let theirs = t.post("/api/dates/history/when", &rohit, json!({"ids": secret, "at": "2030-03-09T18:30"})).await;
+    t.post("/api/dates/history/when", &rohit, json!({"ids": [secret], "at": "2080-03-09T18:30"})).await;
+    let theirs = t.post("/api/dates/history/when", &rohit, json!({"ids": secret, "at": "2080-03-09T18:30"})).await;
     let send = theirs.json["send_url"].as_str().unwrap().to_string();
     let sealed = t.public(&public_url(&send)).await;
     assert_eq!(sealed.status, StatusCode::OK, "{}", sealed.text);
@@ -642,7 +642,7 @@ async fn another_couple_gets_404_for_everything() {
         (format!("/api/dates/history/{hid}/photos/1/delete"), json!({})),
         (format!("/api/dates/history/{hid}/plan-b"), json!({})),
         (format!("/api/dates/tasks/{task}/done"), json!({"done": "1"})),
-        ("/api/dates/history/when".to_string(), json!({"ids": hid, "at": "2030-01-02T19:00"})),
+        ("/api/dates/history/when".to_string(), json!({"ids": hid, "at": "2080-01-02T19:00"})),
         ("/api/dates/budget/spend".to_string(), json!({"amount": 5, "history_id": hid})),
         ("/api/dates/savings/add".to_string(), json!({"amount": 5, "history_id": hid})),
     ] {

@@ -580,13 +580,13 @@ async fn a_slip_can_be_planned_for_a_day_and_sent() {
     assert_eq!(t.call(Method::POST, &format!("/api/dates/slips/{id}/plan"), Some(&neha), None).await.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_history WHERE activity_id = {id}")).await, 0);
 
-    let r = t.post(&format!("/api/dates/slips/{id}/plan"), &neha, json!({"at": "2026-11-02T19:00"})).await;
+    let r = t.post(&format!("/api/dates/slips/{id}/plan"), &neha, json!({"at": "2065-11-02T19:00"})).await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
     assert_eq!(r.json["label"], "Mon 2 Nov, 7:00 pm");
     assert!(r.json["partner"].as_str().unwrap().starts_with("rohit"));
     let hid = r.json["history_id"].as_i64().unwrap();
     assert_eq!(r.json["to"], format!("/joy/kept#k{hid}"));
-    assert_eq!(t.text(&format!("SELECT strftime('%Y-%m-%d %H:%M', planned_at, 'unixepoch', 'localtime') FROM joy_history WHERE id = {hid}")).await, "2026-11-02 19:00");
+    assert_eq!(t.text(&format!("SELECT strftime('%Y-%m-%d %H:%M', planned_at, 'unixepoch', 'localtime') FROM joy_history WHERE id = {hid}")).await, "2065-11-02 19:00");
     // What goes to WhatsApp is an envelope link, not the date spelled out.
     let token = t.text(&format!("SELECT share_token FROM joy_history WHERE id = {hid}")).await;
     let share = r.json["share_text"].as_str().unwrap();
@@ -705,7 +705,7 @@ async fn another_couple_cannot_see_or_touch_these_slips() {
     for action in ["archive", "restore", "delete", "unveto"] {
         assert_eq!(t.post(&format!("/api/dates/slips/{mine}/{action}"), &carol, json!({})).await.status, StatusCode::NOT_FOUND, "{action}");
     }
-    assert_eq!(t.post(&format!("/api/dates/slips/{mine}/plan"), &carol, json!({"at": "2026-11-02T19:00"})).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.post(&format!("/api/dates/slips/{mine}/plan"), &carol, json!({"at": "2065-11-02T19:00"})).await.status, StatusCode::NOT_FOUND);
     assert_eq!(t.post(&format!("/api/dates/accept/{mine}"), &carol, json!({})).await.status, StatusCode::NOT_FOUND);
 
     // A card that names one of our slips as "current" can't put it back, pass on it or pair it.
