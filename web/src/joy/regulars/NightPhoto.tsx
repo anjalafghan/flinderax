@@ -2,12 +2,15 @@
 import { useRef, useState } from "react";
 import { useBusy } from "../components/useBusy";
 import { deletePhoto, uploadPhoto } from "./api";
+import { uploadPhoto as uploadKeptPhoto } from "../kept/api";
 import { apiMessage } from "./days";
 import { shrinkToJpeg } from "./photo";
 import "./regulars.css";
 
 interface Props {
   visitId: number;
+  /** When the night is a kept date, photos go to that date (and are removed there). */
+  historyId?: number | null;
   hasPhoto: boolean;
   /** Label for the add control, e.g. "Add a photo" or "Got a photo?" */
   addLabel?: string;
@@ -16,7 +19,7 @@ interface Props {
   onChange: () => void;
 }
 
-export function NightPhoto({ visitId, hasPhoto, addLabel = "Add a photo", removeLabel = "Remove photo", onChange }: Props) {
+export function NightPhoto({ visitId, historyId, hasPhoto, addLabel = "Add a photo", removeLabel = "Remove photo", onChange }: Props) {
   const { busy, run } = useBusy();
   const [stage, setStage] = useState<"" | "shrink" | "up">("");
   const [pct, setPct] = useState(0);
@@ -38,7 +41,8 @@ export function NightPhoto({ visitId, hasPhoto, addLabel = "Add a photo", remove
           return;
         }
         setStage("up");
-        await uploadPhoto(visitId, jpeg, (f) => setPct(Math.round(f * 100)));
+        if (historyId) await uploadKeptPhoto(historyId, jpeg, (loaded, total) => setPct(total > 0 ? Math.round((loaded / total) * 100) : 0));
+        else await uploadPhoto(visitId, jpeg, (f) => setPct(Math.round(f * 100)));
         onChange();
       } catch (e) {
         setError(apiMessage(e, "The photo didn’t go up. Try again."));
@@ -66,7 +70,7 @@ export function NightPhoto({ visitId, hasPhoto, addLabel = "Add a photo", remove
           <span>{stage === "shrink" ? "Getting the photo ready…" : `Uploading… ${pct}%`}</span>
           <progress max={100} value={stage === "up" ? pct : undefined} aria-label="Photo upload" />
         </div>
-      ) : hasPhoto ? (
+      ) : hasPhoto && !historyId ? (
         <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => void remove()}>
           {removeLabel}
         </button>

@@ -402,7 +402,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
     let year_spent: i64 = spent.iter().sum();
     let (night_count, night_total): (i64, i64) = sqlx::query_as(
         "SELECT COUNT(*), COALESCE(SUM(v.amount), 0) FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id
-          WHERE r.couple_id = ? AND v.status = 'went' AND CAST(strftime('%Y', v.day) AS INTEGER) = ?",
+          WHERE r.couple_id = ? AND v.status = 'went' AND v.history_id IS NULL AND CAST(strftime('%Y', v.day) AS INTEGER) = ?",
     )
     .bind(couple)
     .bind(year)

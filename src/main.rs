@@ -87,6 +87,12 @@ async fn main() -> Result<(), sqlx::Error> {
         .await?;
     sqlx::migrate!().run(&pool).await?;
     optimize(&pool).await;
+    {
+        let root = joy::import_joy::photos_root();
+        if let Err(e) = joy::joy::db::backfill_visit_history(&pool, &root).await {
+            tracing::warn!("could not link regular nights to kept dates: {e}");
+        }
+    }
     info!("Database connected successfully");
 
     // `joy import-joy <joy.db> <user name> [--as a|b] [--photos <dir>] [--dry-run]`

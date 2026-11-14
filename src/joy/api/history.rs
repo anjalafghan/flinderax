@@ -712,6 +712,10 @@ pub async fn set_cost(State(s): State<AppState>, Extension((user_id, _)): User, 
         (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => return Err(unprocessable(&e)),
     };
     db::set_actual(db, couple, id, actual, f.update_estimate == "1").await?;
+    // A regular night is this same date: its own record of the cost follows.
+    if let Some(a) = actual {
+        sqlx::query("UPDATE joy_regular_visits SET amount = ? WHERE history_id = ?").bind(a).bind(id).execute(db).await?;
+    }
     // Each real fare is saved next to what the model would have said for that trip (uncalibrated),
     // so later changes to rates or home locations can't skew what we learn.
     let km = ctx.distances(row.lat.zip(row.lng));

@@ -532,7 +532,7 @@ pub async fn keep_custom(
     .last_insert_rowid();
     let id = sqlx::query(
         "INSERT INTO joy_history (couple_id, activity_id, picked_at, outcome, drawn_by, est_cost, actual_cost)
-         VALUES (?, ?, CAST(strftime('%s', ? || ' 12:00:00', 'utc') AS INTEGER), 'did_it', ?, ?, ?)",
+         VALUES (?, ?, MIN(CAST(strftime('%s', ? || ' 12:00:00', 'utc') AS INTEGER), unixepoch()), 'did_it', ?, ?, ?)",
     )
     .bind(couple)
     .bind(activity)
@@ -890,7 +890,7 @@ pub async fn spent_in_month(db: &SqlitePool, couple: &str, month: &str) -> sqlx:
                AND strftime('%Y-%m', COALESCE(planned_at, picked_at), 'unixepoch', 'localtime') = ?1)
          + (SELECT COALESCE(SUM(amount), 0) FROM joy_other_spending WHERE couple_id = ?2 AND strftime('%Y-%m', spent_on) = ?1)
          + (SELECT COALESCE(SUM(v.amount), 0) FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id
-             WHERE r.couple_id = ?2 AND v.status = 'went' AND strftime('%Y-%m', v.day) = ?1)",
+             WHERE r.couple_id = ?2 AND v.status = 'went' AND v.history_id IS NULL AND strftime('%Y-%m', v.day) = ?1)",
     )
     .bind(month)
     .bind(couple)
@@ -916,7 +916,7 @@ pub async fn spent_by_month(db: &SqlitePool, couple: &str, year: i32) -> sqlx::R
            UNION ALL
            SELECT CAST(strftime('%m', v.day) AS INTEGER), v.amount FROM joy_regular_visits v
               JOIN joy_regulars r ON r.id = v.regular_id
-            WHERE r.couple_id = ?2 AND v.status = 'went' AND CAST(strftime('%Y', v.day) AS INTEGER) = ?1
+            WHERE r.couple_id = ?2 AND v.status = 'went' AND v.history_id IS NULL AND CAST(strftime('%Y', v.day) AS INTEGER) = ?1
          ) GROUP BY m",
     )
     .bind(year)
@@ -965,7 +965,7 @@ pub async fn past_months(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(Str
            SELECT strftime('%Y-%m', spent_on), amount FROM joy_other_spending WHERE couple_id = ?1
            UNION ALL
            SELECT strftime('%Y-%m', v.day), v.amount FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id
-            WHERE r.couple_id = ?1 AND v.status = 'went'
+            WHERE r.couple_id = ?1 AND v.status = 'went' AND v.history_id IS NULL
          ) WHERE m < strftime('%Y-%m', 'now', 'localtime') GROUP BY m HAVING SUM(a) > 0 ORDER BY m DESC LIMIT 12",
     )
     .bind(couple)
@@ -1594,6 +1594,8 @@ pub struct Visit {
     pub place: String,
     pub amount: i64,
     pub has_photo: bool,
+    /// The kept date this night is (a night we went to always has one).
+    pub history_id: Option<i64>,
 }
 
 pub async fn regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Option<Regular>> {
@@ -1686,7 +1688,79 @@ pub async fn record_visit(db: &SqlitePool, couple: &str, regular_id: i64, day: &
     .bind(amount)
     .execute(db)
     .await?;
+    sync_visit_history(db, couple, regular_id, day).await?;
     Ok(true)
+}
+
+/// Keeps the kept date behind a regular night in step with the visit: going creates it (or updates
+/// its cost and place), skipping the night removes it. After this the night is an ordinary kept
+/// date that takes photos, a rating and lines.
+pub async fn sync_visit_history(db: &SqlitePool, couple: &str, regular_id: i64, day: &str) -> sqlx::Result<()> {
+    let Some(v): Option<Visit> = sqlx::query_as("SELECT * FROM joy_regular_visits WHERE regular_id = ? AND day = ?")
+        .bind(regular_id)
+        .bind(day)
+        .fetch_optional(db)
+        .await?
+    else {
+        return Ok(());
+    };
+    if v.status != "went" {
+        if let Some(h) = v.history_id {
+            delete_history(db, couple, h).await?;
+            sqlx::query("UPDATE joy_regular_visits SET history_id = NULL WHERE id = ?").bind(v.id).execute(db).await?;
+        }
+        return Ok(());
+    }
+    let Some(r) = regular(db, couple, regular_id).await? else { return Ok(()) };
+    let place = if v.place.is_empty() { r.place.clone() } else { v.place.clone() };
+    match v.history_id {
+        Some(h) => {
+            sqlx::query("UPDATE joy_history SET actual_cost = ?1, est_cost = ?1 WHERE id = ?2 AND couple_id = ?3")
+                .bind(v.amount)
+                .bind(h)
+                .bind(couple)
+                .execute(db)
+                .await?;
+            sqlx::query("UPDATE joy_activities SET venue = ? WHERE id = (SELECT activity_id FROM joy_history WHERE id = ? AND couple_id = ?)")
+                .bind(&place)
+                .bind(h)
+                .bind(couple)
+                .execute(db)
+                .await?;
+        }
+        None => {
+            let h = keep_custom(db, couple, None, &r.title, &place, "local", day, Some(v.amount)).await?;
+            sqlx::query("UPDATE joy_regular_visits SET history_id = ? WHERE id = ?").bind(h).bind(v.id).execute(db).await?;
+        }
+    }
+    Ok(())
+}
+
+/// Start-up, once and safe to repeat: gives every night we went to that has no kept date one,
+/// copying its photo across so nothing is lost.
+pub async fn backfill_visit_history(db: &SqlitePool, photos_root: &std::path::Path) -> sqlx::Result<()> {
+    let rows: Vec<(i64, String, i64, String, bool)> = sqlx::query_as(
+        "SELECT v.id, r.couple_id, v.regular_id, v.day, v.has_photo FROM joy_regular_visits v
+           JOIN joy_regulars r ON r.id = v.regular_id WHERE v.status = 'went' AND v.history_id IS NULL",
+    )
+    .fetch_all(db)
+    .await?;
+    for (vid, couple, regular_id, day, has_photo) in rows {
+        sync_visit_history(db, &couple, regular_id, &day).await?;
+        if !has_photo {
+            continue;
+        }
+        let h: Option<i64> = sqlx::query_scalar("SELECT history_id FROM joy_regular_visits WHERE id = ?").bind(vid).fetch_one(db).await?;
+        let Some(h) = h else { continue };
+        let dir = photos_root.join(&couple);
+        let file = crate::joy::photos::new_date_file(h);
+        if let Some(dest) = crate::joy::photos::date_path(&dir, &file) {
+            if tokio::fs::copy(crate::joy::photos::visit_path(&dir, vid), &dest).await.is_ok() {
+                add_photo(db, &couple, h, &file).await?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// The nights we went, newest first, across every regular (stopped ones too) with the regular's
@@ -1721,6 +1795,14 @@ pub async fn set_visit_amount(db: &SqlitePool, couple: &str, id: i64, place: &st
     .bind(couple)
     .execute(db)
     .await?;
+    let _ = sqlx::query(
+        "UPDATE joy_history SET actual_cost = ?1, est_cost = ?1 WHERE id IN (SELECT history_id FROM joy_regular_visits WHERE id = ?2) AND couple_id = ?3",
+    )
+    .bind(amount.max(0))
+    .bind(id)
+    .bind(couple)
+    .execute(db)
+    .await?;
     Ok(res.rows_affected() > 0)
 }
 
@@ -1735,6 +1817,11 @@ pub async fn visit(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Optio
 }
 
 pub async fn delete_visit(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<()> {
+    if let Some(v) = visit(db, couple, id).await? {
+        if let Some(h) = v.history_id {
+            delete_history(db, couple, h).await?;
+        }
+    }
     sqlx::query(
         "DELETE FROM joy_regular_visits WHERE id = ? AND regular_id IN (SELECT id FROM joy_regulars WHERE couple_id = ?)",
     )
@@ -1773,7 +1860,7 @@ pub async fn went_visits(db: &SqlitePool, couple: &str, regular_id: i64) -> sqlx
 pub async fn visits_in_month(db: &SqlitePool, couple: &str, month: &str) -> sqlx::Result<Vec<(Visit, String)>> {
     let rows: Vec<Visit> = sqlx::query_as(
         "SELECT v.* FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id
-          WHERE r.couple_id = ? AND v.status = 'went' AND strftime('%Y-%m', v.day) = ? ORDER BY v.day, v.id",
+          WHERE r.couple_id = ? AND v.status = 'went' AND v.history_id IS NULL AND strftime('%Y-%m', v.day) = ? ORDER BY v.day, v.id",
     )
     .bind(couple)
     .bind(month)

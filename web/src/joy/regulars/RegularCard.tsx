@@ -45,8 +45,8 @@ export function RegularCard({ card, onChange }: { card: RegularCardData; onChang
           <p className="reg-line">
             <span className="reg-tick" aria-hidden="true">✓</span> <strong>{w.place || w.title}</strong> · {w.amount}
           </p>
-          {w.photo && <img className="reg-thumb" src={w.photo} alt="Photo from tonight" width={96} height={120} loading="lazy" />}
-          <NightPhoto visitId={w.visit_id} hasPhoto={!!w.photo} addLabel="Got a photo?" removeLabel="Remove photo" onChange={onChange} />
+          {w.photo && !w.history_id && <img className="reg-thumb" src={w.photo} alt="Photo from tonight" width={96} height={120} loading="lazy" />}
+          <NightPhoto visitId={w.visit_id} historyId={w.history_id} hasPhoto={!!w.photo} addLabel="Got a photo?" removeLabel="Remove photo" onChange={onChange} />
           {editing === w.visit_id ? (
             <EditAmount visitId={w.visit_id} initial={w.amount_raw} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); onChange(); }} />
           ) : (
@@ -54,6 +54,7 @@ export function RegularCard({ card, onChange }: { card: RegularCardData; onChang
               <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => setEditing(w.visit_id)}>
                 Edit price
               </button>{" "}
+              {w.history_id && <Link className="btn btn-quiet" to="/joy/kept">In Kept</Link>}{" "}
               <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => window.confirm("Undo this night? It and its photo will be removed.") && void act(() => deleteNight(w.visit_id))}>
                 Undo
               </button>

@@ -79,6 +79,7 @@ export interface WentTonight {
   place: string;
   amount: string;
   amount_raw: number;
+  history_id: number | null;
   photo: string;
 }
 

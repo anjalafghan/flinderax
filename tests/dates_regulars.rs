@@ -355,18 +355,18 @@ async fn the_month_page_lists_the_night() {
     assert_eq!(page.status, StatusCode::OK, "{}", page.text);
     let v = &page.json;
     assert_eq!(v["year"].to_string(), y);
-    assert_eq!(v["entries"].as_array().unwrap().len(), 1);
-    assert_eq!(v["entries"][0]["title"], "Dinner at home");
-    assert_eq!((v["entries"][0]["est"].as_str(), v["entries"][0]["diff"].as_str()), (Some("₹500"), Some("₹400 over our guess")));
-    assert_eq!(v["entries"][0]["note"], "Lovely evening");
+    // The night is an ordinary kept date: it sits in the entries beside the other one.
+    assert_eq!(v["entries"].as_array().unwrap().len(), 2);
+    assert!(v["entries"].as_array().unwrap().iter().any(|e| e["title"] == "Blue Tokai"));
+    assert_eq!(v["nights"].as_array().unwrap().len(), 0);
+    let entries: Vec<_> = v["entries"].as_array().unwrap().iter().filter(|e| e["title"] == "Dinner at home").collect();
+    assert_eq!(entries.len(), 1);
+    let dinner = entries[0];
+    assert_eq!(dinner["note"], "Lovely evening");
+    assert_eq!((dinner["est"].as_str(), dinner["diff"].as_str()), (Some("₹500"), Some("₹400 over our guess")));
     assert_eq!(v["best"]["rating"], 5);
     assert_eq!(v["avg_rating"], "5.0");
     assert_eq!(v["others"][0]["note"], "Ice cream");
-    let nights = &v["nights"][0];
-    assert_eq!((nights["title"].as_str(), nights["count"].as_u64(), nights["total"].as_str()), (Some("Blue Tokai"), Some(1), Some("₹450")));
-    assert_eq!(nights["href"], format!("/joy/regulars/{id}"));
-    let photo = nights["nights"][0]["photo"].as_str().unwrap();
-    assert_eq!(t.call(Method::GET, photo, None, None).await.status, StatusCode::OK, "{photo}");
     // Dates + slips-free spending + the regular's nights, all in the month's spend.
     assert_eq!(v["spent"], "₹1,470");
 
@@ -393,17 +393,17 @@ async fn the_year_page_adds_up_and_its_share_data_carries_no_names() {
     let page = t.get(&format!("/api/dates/year/{year}"), &rohit).await;
     assert_eq!(page.status, StatusCode::OK, "{}", page.text);
     let v = &page.json;
-    assert_eq!(v["dates"], 1);
+    assert_eq!(v["dates"], 2, "the regular's night is a date too");
     assert_eq!(v["years"][0].to_string(), year);
     assert_eq!(v["best"]["title"], "Dinner with Rohit and Neha", "the page itself may use names");
     assert_eq!((v["best"]["rating"].clone(), v["avg_rating"].clone(), v["rated"].clone()), (json!(5), json!("5.0"), json!(1)));
-    assert_eq!(v["money"]["spent"], "₹900");
+    assert_eq!(v["money"]["spent"], "₹1,200", "the night is a date with a cost too");
     assert_eq!(v["money"]["diff"], "₹400 over what we guessed");
     assert_eq!(v["money"]["over"], true);
     assert_eq!(v["year_total"], "₹1,200", "the date plus the regular's night");
     assert_eq!(v["streak_weeks"], 1);
     let m: usize = day[5..7].parse().unwrap();
-    assert_eq!(v["months"][m - 1]["n"], 1);
+    assert_eq!(v["months"][m - 1]["n"], 2);
     assert_eq!(v["rating_line"], "1 5-star");
 
     let share = serde_json::to_string(&v["share"]).unwrap();
@@ -456,7 +456,7 @@ async fn another_couples_regulars_nights_and_years_stay_theirs() {
     let month = t.get(&format!("/api/dates/year/{y}/{m}"), &carol).await.json;
     assert_eq!((month["entries"].clone(), month["nights"].clone(), month["spent"].clone()), (json!([]), json!([]), json!("")));
     // Both of us see it.
-    assert_eq!(t.get(&format!("/api/dates/year/{y}"), &neha).await.json["dates"], 1);
+    assert_eq!(t.get(&format!("/api/dates/year/{y}"), &neha).await.json["dates"], 2);
 
     // Logged out, or without a couple, none of it opens.
     let lonely = t.user("dave").await;
@@ -574,10 +574,22 @@ async fn a_night_we_went_to_can_be_repriced_and_shows_in_the_list_and_the_year()
     assert_eq!(t.post(&format!("/api/dates/nights/{vid}/amount"), &loner, json!({"amount": 1})).await.status, StatusCode::NOT_FOUND);
     assert_eq!(t.get("/api/dates/nights", &loner).await.json["nights"].as_array().unwrap().len(), 0);
 
-    // The year says how many regular nights it holds and how much of the total.
+    // It is the same thing as a kept date: one kept date exists, at the new cost, counted once in the year.
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'did_it'").await, 1);
+    assert_eq!(t.scalar("SELECT actual_cost FROM joy_history").await, 1250);
     let year = day[..4].to_string();
     let page = t.get(&format!("/api/dates/year/{year}"), &rohit).await;
-    assert_eq!(page.json["nights_line"], json!("1 regular night, ₹1,250 of it"), "{}", page.text);
+    assert_eq!(page.json["year_total"], json!("₹1,250"), "{}", page.text);
+    assert_eq!(page.json["dates"], json!(1), "{}", page.text);
+    let kept = t.get("/api/dates/kept", &rohit).await;
+    assert_eq!(kept.json["kept"], json!(1), "{}", kept.text);
+
+    // Changing the cost on the kept date changes the night's too; undoing the night removes the date.
+    let hid = t.scalar("SELECT id FROM joy_history").await;
+    t.post(&format!("/api/dates/history/{hid}/cost"), &rohit, json!({"actual": "400"})).await;
+    assert_eq!(t.scalar("SELECT amount FROM joy_regular_visits").await, 400);
+    t.post(&format!("/api/dates/nights/{vid}/delete"), &rohit, json!({})).await;
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_history").await, 0);
 }
 
 #[tokio::test]

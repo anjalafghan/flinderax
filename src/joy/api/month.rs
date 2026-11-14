@@ -198,7 +198,7 @@ pub async fn page(
         let id: i64 = g.href.rsplit('/').next().and_then(|i| i.parse().ok()).unwrap_or(0);
         let total: i64 = sqlx::query_scalar(
             "SELECT COALESCE(SUM(v.amount), 0) FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id
-              WHERE r.couple_id = ? AND v.regular_id = ? AND v.status = 'went' AND strftime('%Y-%m', v.day) = ?",
+              WHERE r.couple_id = ? AND v.regular_id = ? AND v.status = 'went' AND v.history_id IS NULL AND strftime('%Y-%m', v.day) = ?",
         )
         .bind(couple)
         .bind(id)

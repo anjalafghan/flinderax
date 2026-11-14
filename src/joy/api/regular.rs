@@ -57,6 +57,8 @@ pub struct WentTonight {
     pub amount: String,
     /// What it cost, in whole rupees (for the edit box).
     pub amount_raw: i64,
+    /// The kept date this night is: photos, rating and lines are added there.
+    pub history_id: Option<i64>,
     /// Signed photo link, or empty.
     pub photo: String,
 }
@@ -102,6 +104,7 @@ pub async fn card(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Card, AppE
             place: if v.place.is_empty() { String::new() } else { v.place.clone() },
             amount: ctx.money(v.amount),
             amount_raw: v.amount,
+            history_id: v.history_id,
             photo: if v.has_photo { visit_photo_url(ctx, v.id) } else { String::new() },
         })
         .collect();
