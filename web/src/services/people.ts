@@ -342,3 +342,54 @@ export function dateTitle(name: string, kind: DateKind, label: string): string {
 export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
+
+// ---------- follow-ups ----------
+
+export type FollowState = "overdue" | "today" | "soon" | "later" | "undated" | "done";
+
+export interface FollowUp {
+  id: string;
+  person_id: string;
+  person_name: string;
+  text: string;
+  due_on: string | null;
+  done_on: string | null;
+  state: FollowState;
+  /** Days until it is due; negative when overdue. */
+  days_away: number | null;
+}
+
+export interface FollowUpsOut {
+  open: FollowUp[];
+  done: FollowUp[];
+}
+
+/** Under ["people"], so any people write refreshes follow-ups too. */
+export const followUpsKey = ["people", "followups"] as const;
+
+export const getFollowUps = () => api.get<FollowUpsOut>("/api/people/followups").then((r) => r.data);
+export const addFollowUp = (a: { personId: string; text: string; due_on?: string }) =>
+  api.post<FollowUp>(`/api/people/${a.personId}/followups`, { text: a.text, due_on: a.due_on }).then((r) => r.data);
+export const patchFollowUp = (a: { id: string; done?: boolean; text?: string; due_on?: string | null }) =>
+  request<FollowUp>("PATCH", `/api/people/followups/${a.id}`, { done: a.done, text: a.text, due_on: a.due_on });
+export const deleteFollowUp = (id: string) => request<void>("DELETE", `/api/people/followups/${id}`);
+
+export const useFollowUps = () => useQuery({ queryKey: followUpsKey, queryFn: getFollowUps, retry: 1 });
+
+/** "3 days overdue", "Today", "In 5 days", "No date". */
+export function followUpWhen(f: Pick<FollowUp, "state" | "days_away">): string {
+  const n = f.days_away ?? 0;
+  switch (f.state) {
+    case "overdue":
+      return `${-n} ${-n === 1 ? "day" : "days"} overdue`;
+    case "today":
+      return "Today";
+    case "soon":
+    case "later":
+      return n === 1 ? "Tomorrow" : `In ${n} days`;
+    case "done":
+      return "Done";
+    default:
+      return "No date";
+  }
+}

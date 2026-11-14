@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { CatchUpActions } from "@/components/feature/people/CatchUpActions";
 import { PersonDates } from "@/components/feature/people/PersonDates";
 import { PersonEditForm } from "@/components/feature/people/PersonEditForm";
+import { PersonFollowUps } from "@/components/feature/people/PersonFollowUps";
 import { PersonGifts } from "@/components/feature/people/PersonGifts";
 import { PersonTouches } from "@/components/feature/people/PersonTouches";
 import { Retry } from "@/components/feature/people/Retry";
@@ -62,6 +63,7 @@ export default function PersonPage() {
             </section>
 
             <div className={PANEL}>
+              <PersonFollowUps personId={data.person.id} />
               <PersonDates personId={data.person.id} personName={data.person.name} dates={data.dates} />
               <PersonGifts personId={data.person.id} gifts={data.gifts} dates={data.dates} />
               <PersonTouches touches={data.touches} personId={data.person.id} />

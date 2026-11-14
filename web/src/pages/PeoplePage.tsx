@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/Header";
 import { AddPersonForm } from "@/components/feature/people/AddPersonForm";
 import { CatchUpSection } from "@/components/feature/people/CatchUpSection";
 import { CircleList } from "@/components/feature/people/CircleList";
+import { FollowUpsCard } from "@/components/feature/people/FollowUpsCard";
 import { GiftPlanCard } from "@/components/feature/people/GiftPlanCard";
 import { PeopleSettingsCard } from "@/components/feature/people/PeopleSettingsCard";
 import { PeopleUpcoming } from "@/components/feature/people/PeopleUpcoming";
@@ -33,6 +34,7 @@ export default function PeoplePage() {
           <>
             <PeopleUpcoming upcoming={data.upcoming} />
             <CatchUpSection people={data.catch_up} />
+            <FollowUpsCard />
             <CircleList people={data.people} archived={data.archived} />
             <AddPersonForm />
             <GiftPlanCard />
