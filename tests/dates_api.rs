@@ -663,7 +663,9 @@ async fn keeping_a_scheduled_date_plans_the_day() {
     let mine = tasks.iter().filter(|x| x["mine"] == true && x["done"] == false).count();
     assert_eq!(plan["my_open_tasks"].as_u64().unwrap() as usize, mine);
 
-    // Rohit's jar shows the next plan too, with his own side of the jobs.
+    // Rohit's jar shows the next plan too, with his own side of the jobs. Today's evening slot may
+    // already be behind us when the test runs, so make sure the plan is still to come (within the hour).
+    t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch() + 3600 WHERE id = {hid}")).await;
     let r = t.get("/api/dates/jar", &rohit).await.json;
     assert_eq!(r["next_plan"]["history_id"].as_str().map(str::to_owned).unwrap_or_else(|| r["next_plan"]["history_id"].to_string()), hid);
     assert!(r["nudge"].as_str().unwrap().contains(": Coffee by the creek"), "{}", r["nudge"]);
