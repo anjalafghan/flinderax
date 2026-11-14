@@ -151,7 +151,6 @@ pub fn router() -> Router<AppState> {
         .route("/regulars/{id}/skip", post(skip))
         .route("/regulars/{id}/skips/clear", post(clear_skips))
         .route("/regulars/{id}/restore", post(restore_regular))
-        .route("/nights", get(nights))
         .route("/nights/{id}/amount", post(set_amount))
         .route("/nights/{id}/delete", post(delete_night))
         .route("/nights/{id}/photo", post(upload_photo).layer(DefaultBodyLimit::max(photos::MAX_UPLOAD_BYTES + 64 * 1024)))
@@ -289,49 +288,6 @@ pub async fn set_amount(
     Ok(go(spread_path(v.regular_id)).into_response())
 }
 
-#[derive(Debug, Serialize)]
-pub struct NightRow {
-    pub visit_id: i64,
-    pub regular_id: i64,
-    pub title: String,
-    pub place: String,
-    pub day: String,
-    pub day_label: String,
-    pub year: String,
-    pub amount: String,
-    pub amount_raw: i64,
-    /// Signed photo link, or empty.
-    pub photo: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct NightsView {
-    pub nights: Vec<NightRow>,
-}
-
-/// `GET /nights`: every regular night we went to, newest first (the last 300), for the Kept page.
-pub async fn nights(State(s): State<AppState>, Extension((user_id, _)): User) -> Result<Json<NightsView>, AppError> {
-    let j = joy(&s, &user_id).await?;
-    let rows = db::went_nights(&s.db, &j.couple, 300).await?;
-    Ok(Json(NightsView {
-        nights: rows
-            .into_iter()
-            .map(|(v, title)| NightRow {
-                visit_id: v.id,
-                regular_id: v.regular_id,
-                title,
-                place: v.place,
-                day_label: month::day_label(&v.day),
-                year: v.day.get(..4).unwrap_or("").to_string(),
-                day: v.day,
-                amount: j.ctx.money(v.amount),
-                amount_raw: v.amount,
-                photo: if v.has_photo { visit_photo_url(&j.ctx, v.id) } else { String::new() },
-            })
-            .collect(),
-    }))
-}
-
 #[derive(Debug, Default, Deserialize)]
 pub struct BackBody {
     #[serde(default, deserialize_with = "flex")]
@@ -348,7 +304,17 @@ pub async fn delete_night(
     let j = joy(&s, &user_id).await?;
     let v = db::visit(&s.db, &j.couple, vid).await?.ok_or_else(|| not_found("No such night"))?;
     let _ = tokio::fs::remove_file(photos::visit_path(&j.ctx.photos_dir, vid)).await;
+    // The kept date behind the night goes with it, and so do its photo files.
+    let files = match v.history_id {
+        Some(h) => db::photos_of(&s.db, &j.couple, h).await?,
+        None => vec![],
+    };
     db::delete_visit(&s.db, &j.couple, vid).await?;
+    for p in files {
+        if let Some(path) = photos::date_path(&j.ctx.photos_dir, &p.file) {
+            let _ = tokio::fs::remove_file(path).await;
+        }
+    }
     Ok(back_to(&body.unwrap_or_default().0.back, &spread_path(v.regular_id)))
 }
 

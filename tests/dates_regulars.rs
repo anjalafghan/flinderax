@@ -555,11 +555,6 @@ async fn a_night_we_went_to_can_be_repriced_and_shows_in_the_list_and_the_year()
     t.post(&format!("/api/dates/regulars/{id}/went"), &rohit, json!({"day": day, "amount": 300})).await;
     let vid = t.scalar("SELECT id FROM joy_regular_visits").await;
 
-    // The list of nights carries the raw amount for the edit box.
-    let list = t.get("/api/dates/nights", &neha).await;
-    assert_eq!(list.status, StatusCode::OK, "{}", list.text);
-    assert_eq!((list.json["nights"][0]["amount_raw"].clone(), list.json["nights"][0]["title"].clone()), (json!(300), json!("Blue Tokai")));
-
     // Repricing takes commas, refuses blanks, junk and huge amounts, and changes nothing then.
     let ok = t.post(&format!("/api/dates/nights/{vid}/amount"), &neha, json!({"amount": "1,250"})).await;
     assert_eq!(ok.status, StatusCode::OK, "{}", ok.text);
@@ -572,7 +567,6 @@ async fn a_night_we_went_to_can_be_repriced_and_shows_in_the_list_and_the_year()
 
     // Someone outside the couple can neither see nor change it.
     assert_eq!(t.post(&format!("/api/dates/nights/{vid}/amount"), &loner, json!({"amount": 1})).await.status, StatusCode::NOT_FOUND);
-    assert_eq!(t.get("/api/dates/nights", &loner).await.json["nights"].as_array().unwrap().len(), 0);
 
     // It is the same thing as a kept date: one kept date exists, at the new cost, counted once in the year.
     assert_eq!(t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'did_it'").await, 1);
