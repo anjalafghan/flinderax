@@ -727,6 +727,31 @@ pub async fn set_cost(State(s): State<AppState>, Extension((user_id, _)): User, 
 }
 
 #[derive(Deserialize)]
+pub struct DayBody {
+    /// "YYYY-MM-DD": the day it really happened. Never in the future.
+    #[serde(default, deserialize_with = "flex")]
+    on: String,
+}
+
+/// `POST /history/{id}/day`: backdate (or re-date) a kept date, like a journal entry.
+pub async fn set_day(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>, Json(f): Json<DayBody>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    let on = time::Date::parse(f.on.trim(), time::macros::format_description!("[year]-[month]-[day]"))
+        .map_err(|_| unprocessable("That date didn't look right."))?;
+    if on > crate::handlers::common::today_local() {
+        return Err(unprocessable("Pick a day that has already happened."));
+    }
+    if on.year() < 2000 {
+        return Err(unprocessable("That date is too far back."));
+    }
+    if !db::set_kept_day(&s.db, &j.couple, id, &on.to_string()).await? {
+        return Err(unprocessable("That date can't move there: it may already have a night on that day."));
+    }
+    Ok(go(kept_to(id)))
+}
+
+#[derive(Deserialize)]
 pub struct LineBody {
     #[serde(default, deserialize_with = "flex")]
     line: String,
@@ -1042,6 +1067,7 @@ pub fn router() -> Router<AppState> {
         .route("/history/{id}/delete", post(delete))
         .route("/putbacks/clear", post(clear_putbacks))
         .route("/history/{id}/cost", post(set_cost))
+        .route("/history/{id}/day", post(set_day))
         .route("/history/{id}/line", post(set_line))
         .route("/history/{id}/photo", post(upload_photo).layer(DefaultBodyLimit::max(photos::MAX_UPLOAD_BYTES + UPLOAD_SLACK)))
         .route("/history/{id}/photos/{photo_id}/delete", post(delete_photo))

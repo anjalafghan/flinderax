@@ -1,3 +1,4 @@
+import { PastNight } from "../regulars/PastNight";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -82,6 +83,8 @@ export default function RegularPage() {
           </p>
         )}
       </header>
+
+      {!editing && <PastNight regularId={v.regular_id} usualRaw={v.usual_raw} />}
 
       {editing ? (
         <EditRegular regular={v} onDone={() => setEditing(false)} />

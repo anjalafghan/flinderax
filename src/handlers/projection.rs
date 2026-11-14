@@ -163,15 +163,22 @@ pub async fn afford_handler(
             target_paise: None,
             target_date: None,
         };
-        let baseline_short: std::collections::HashSet<String> =
-            project(&input, &[]).baseline.stress.iter().map(|s| format!("{}:{}", s.month, s.kind)).collect();
+        let baseline_short: std::collections::HashMap<String, i64> = project(&input, &[])
+            .baseline
+            .stress
+            .iter()
+            .map(|s| (format!("{}:{}", s.month, s.kind), s.amount_paise))
+            .collect();
         project(&input, &[item])
             .scenario
             .into_iter()
             .flat_map(|s| s.stress)
-            // Only shortfalls the purchase causes, not ones already in the plan.
-            .filter(|s| !baseline_short.contains(&format!("{}:{}", s.month, s.kind)))
-            .map(|s| s.amount_paise)
+            // Only the part of a shortfall the purchase causes: new ones in full, existing ones by
+            // how much worse they get.
+            .filter_map(|s| {
+                let was = baseline_short.get(&format!("{}:{}", s.month, s.kind)).copied().unwrap_or(0);
+                (s.amount_paise > was).then(|| s.amount_paise - was)
+            })
             .max()
     };
     Ok(Json(afford::afford(

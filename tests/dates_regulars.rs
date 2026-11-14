@@ -411,9 +411,9 @@ async fn the_year_page_adds_up_and_its_share_data_carries_no_names() {
         assert!(!share.contains(secret), "{secret} leaked into {share}");
     }
     assert_eq!(v["share"]["best_title"], "Dinner with us and us");
-    assert_eq!(v["share"]["places"], json!(["us's Kitchen in"]));
-    assert_eq!(v["share"]["dates"], 1);
-    assert_eq!(v["share"]["spent"], "₹900");
+    assert_eq!(v["share"]["places"], json!(["us's Kitchen in", "Goregaon East"]), "the night's place is a place like any other");
+    assert_eq!(v["share"]["dates"], 2);
+    assert_eq!(v["share"]["spent"], "₹1,200");
     assert!(v["share"].get("note").is_none() && v["share"].get("me_name").is_none());
 
     // /year points at this year (or last, in January); the range is 2000-2100.
@@ -597,11 +597,40 @@ async fn a_day_that_cannot_be_saved_is_refused_not_pretended() {
     let t = setup().await;
     let (rohit, _, _) = t.couple().await;
     let id = add_regular(&t, &rohit).await;
-    for day in [today(&t, 3).await, today(&t, -60).await] {
+    for day in [today(&t, 3).await, "1999-12-31".to_string()] {
         let r = t.post(&format!("/api/dates/regulars/{id}/went"), &rohit, json!({"day": day})).await;
         assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{day}: {}", r.text);
         let r = t.post(&format!("/api/dates/regulars/{id}/skip"), &rohit, json!({"day": day})).await;
         assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{day}: {}", r.text);
     }
     assert_eq!(t.scalar("SELECT count(*) FROM joy_regular_visits").await, 0);
+}
+
+#[tokio::test]
+async fn nights_and_kept_dates_can_be_backdated_like_a_journal() {
+    let t = setup().await;
+    let (rohit, _, _) = t.couple().await;
+    let id = add_regular(&t, &rohit).await;
+
+    // A night months ago is fine, and is a kept date on that day.
+    let old = today(&t, -120).await;
+    let r = t.post(&format!("/api/dates/regulars/{id}/went"), &rohit, json!({"day": old, "amount": 250})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'did_it'").await, 1);
+    let hid = t.scalar("SELECT id FROM joy_history").await;
+
+    // Moving it to another past day moves the night too; the future and nonsense are refused.
+    let other = today(&t, -200).await;
+    let moved = t.post(&format!("/api/dates/history/{hid}/day"), &rohit, json!({"on": other})).await;
+    assert_eq!(moved.status, StatusCode::OK, "{}", moved.text);
+    assert_eq!(t.text("SELECT day FROM joy_regular_visits").await, other);
+    for bad in [today(&t, 2).await, "1999-01-01".into(), "soon".into(), String::new()] {
+        let r = t.post(&format!("/api/dates/history/{hid}/day"), &rohit, json!({"on": bad})).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{bad}: {}", r.text);
+    }
+    assert_eq!(t.text("SELECT day FROM joy_regular_visits").await, other);
+
+    // A plain date we had can be added on any past day too, and re-dated.
+    let added = t.post("/api/dates/history/custom", &rohit, json!({"title": "Sunset walk", "on": today(&t, -400).await})).await;
+    assert_eq!(added.status, StatusCode::OK, "{}", added.text);
 }

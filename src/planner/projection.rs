@@ -324,7 +324,7 @@ fn tenure_of(it: &ScenarioItem) -> i64 {
 }
 
 /// Runs the simulation with the plan's own commitments plus `items`.
-fn simulate(inp: &ProjectionInput, items: &[ScenarioItem]) -> (Series, HashMap<String, i64>) {
+fn simulate(inp: &ProjectionInput, items: &[ScenarioItem]) -> (Series, HashMap<usize, i64>) {
     let plan = &inp.plan;
     let today = plan.today;
     let months = inp.months.clamp(1, MAX_MONTHS);
@@ -378,12 +378,12 @@ fn simulate(inp: &ProjectionInput, items: &[ScenarioItem]) -> (Series, HashMap<S
     }
     let mut flows: Vec<Flow> = Vec::new();
     let mut item_accounts: HashMap<String, i64> = HashMap::new(); // name -> peak balance, filled later
-    let mut item_ids: Vec<(String, String)> = Vec::new();
+    let mut item_ids: Vec<(usize, String)> = Vec::new();
     for (n, it) in items.iter().enumerate() {
         let from = it.funded_from.clone().unwrap_or_else(|| sim.first_spend.clone());
         let payout = it.payout_to.clone().or_else(|| sim.first_reserve.clone()).or_else(|| Some(sim.first_spend.clone()));
         match it.kind {
-            ItemKind::OneOff => flows.push(Flow { date: it.start, from, to: None, amount: it.amount_paise }),
+            ItemKind::OneOff => flows.push(Flow { date: it.start.max(today), from, to: None, amount: it.amount_paise }),
             ItemKind::Fd | ItemKind::Rd => {
                 let id = format!("__scenario_{n}");
                 let tenure = tenure_of(it);
@@ -392,19 +392,19 @@ fn simulate(inp: &ProjectionInput, items: &[ScenarioItem]) -> (Series, HashMap<S
                     id: id.clone(),
                     is_rd: it.kind == ItemKind::Rd,
                     rate_bps: it.rate_bps.unwrap_or(0),
-                    maturity: Some(plus_months(it.start, tenure)),
+                    maturity: Some(plus_months(it.start, tenure).max(today)),
                     renewal: it.renewal.unwrap_or_default(),
                     payout_to: payout,
                     principal: 0,
                 });
                 if it.kind == ItemKind::Fd {
-                    flows.push(Flow { date: it.start, from, to: Some(id.clone()), amount: it.amount_paise });
+                    flows.push(Flow { date: it.start.max(today), from, to: Some(id.clone()), amount: it.amount_paise });
                 } else {
                     for k in 0..tenure {
-                        flows.push(Flow { date: plus_months(it.start, k), from: from.clone(), to: Some(id.clone()), amount: it.amount_paise });
+                        flows.push(Flow { date: plus_months(it.start, k).max(today), from: from.clone(), to: Some(id.clone()), amount: it.amount_paise });
                     }
                 }
-                item_ids.push((it.name.clone(), id));
+                item_ids.push((n, id));
             }
         }
     }
@@ -471,7 +471,9 @@ fn simulate(inp: &ProjectionInput, items: &[ScenarioItem]) -> (Series, HashMap<S
             if c.due_now > 0 && d == c.due_date.map_or(today, |x| x.max(today)) {
                 sim.add(&reserve, -c.due_now);
             }
-            if c.next_bill_est > 0 && Some(d) == c.next_due_date {
+            // A missing or already-passed due date still has to be paid: assume a month out / today.
+            let next_due = c.next_due_date.map_or(plus_months(today, 1), |x| x.max(today));
+            if c.next_bill_est > 0 && d == next_due {
                 sim.add(&reserve, -c.next_bill_est);
             }
         }
@@ -561,12 +563,12 @@ fn simulate(inp: &ProjectionInput, items: &[ScenarioItem]) -> (Series, HashMap<S
         d = next;
     }
 
-    // peak value reached by each scenario deposit, keyed by item name
-    let mut by_name: HashMap<String, i64> = HashMap::new();
-    for (name, id) in item_ids {
-        by_name.insert(name, item_accounts.get(&id).copied().unwrap_or(0));
+    // peak value reached by each scenario deposit, keyed by the item's position (names can repeat)
+    let mut by_index: HashMap<usize, i64> = HashMap::new();
+    for (n, id) in item_ids {
+        by_index.insert(n, item_accounts.get(&id).copied().unwrap_or(0));
     }
-    (Series { points, stress }, by_name)
+    (Series { points, stress }, by_index)
 }
 
 /// Baseline projection, plus the same projection with `items` applied and what each item does.
@@ -594,7 +596,8 @@ pub fn project(inp: &ProjectionInput, items: &[ScenarioItem]) -> Projection {
 
     let impacts = items
         .iter()
-        .map(|it| {
+        .enumerate()
+        .map(|(idx, it)| {
             let tenure = tenure_of(it);
             let monthly =if it.kind == ItemKind::Rd { it.amount_paise } else { 0 };
             let (rest, sip, spend) = (budget.rest_savings_paise, budget.sip_paise, budget.spending_paise);
@@ -610,7 +613,7 @@ pub fn project(inp: &ProjectionInput, items: &[ScenarioItem]) -> Projection {
             } else {
                 Vec::new()
             };
-            let maturity = peaks.get(&it.name).copied().unwrap_or(0);
+            let maturity = peaks.get(&idx).copied().unwrap_or(0);
             let goal = match (it.target_paise, it.target_date) {
                 (Some(target), Some(target_date)) => {
                     let projected = match it.kind {
@@ -922,5 +925,36 @@ mod tests {
         // Starting right at the top of the representable calendar must not panic either.
         let late = project(&input(), &[item(ItemKind::Rd, 1200, date!(9999 - 12 - 01))]);
         assert!(late.scenario.is_some());
+    }
+
+    fn fd(name: &str, amount: i64, start: Date) -> ScenarioItem {
+        ScenarioItem {
+            name: name.into(),
+            kind: ItemKind::Fd,
+            amount_paise: amount,
+            start,
+            tenure_months: Some(12),
+            rate_bps: Some(710),
+            funded_from: Some(KOTAK.into()),
+            payout_to: None,
+            renewal: Some(Renewal::Payout),
+            target_paise: None,
+            target_date: None,
+        }
+    }
+
+    #[test]
+    fn items_with_the_same_name_keep_their_own_maturity_value() {
+        let out = project(&input(), &[fd("FD", 1_000_000, date!(2026 - 11 - 15)), fd("FD", 4_000_000, date!(2026 - 11 - 15))]);
+        let (a, b) = (out.impacts[0].maturity_value_paise, out.impacts[1].maturity_value_paise);
+        assert!(a > 1_000_000 && b > 4_000_000 && b > 3 * a, "{a} vs {b}");
+    }
+
+    #[test]
+    fn an_item_dated_in_the_past_still_counts() {
+        let out = project(&input(), &[fd("Old FD", 3_000_000, date!(2026 - 01 - 01))]);
+        let sc = out.scenario.unwrap();
+        assert!(at(&sc, "2026-12").total_paise != at(&out.baseline, "2026-12").total_paise || out.impacts[0].maturity_value_paise > 0);
+        assert!(out.impacts[0].maturity_value_paise > 0);
     }
 }

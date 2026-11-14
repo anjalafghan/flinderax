@@ -17,6 +17,8 @@ export const setCost = (id: number, actual: string, updateEstimate: boolean, cab
   post(`/history/${id}/cost`, costBody(actual, updateEstimate, cabs));
 export const setLine = (id: number, line: string) => post(`/history/${id}/line`, lineBody(line));
 export const reveal = (id: number) => post(`/history/${id}/reveal`);
+/** Backdate (or re-date) a kept date: the day it really happened, "YYYY-MM-DD". */
+export const setDay = (id: number, on: string) => post(`/history/${id}/day`, { on });
 export const deleteDate = (id: number) => post(`/history/${id}/delete`);
 export const deletePhoto = (id: number, photoId: number) => post(`/history/${id}/photos/${photoId}/delete`);
 /** Signed `ics_url` / `send_url` in the answer are public links: use them as an href as they are. */

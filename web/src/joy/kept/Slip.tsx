@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type AnimationEvent, type ChangeEvent, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../api";
+import { DayEditor } from "./DayEditor";
 import { deleteDate, deletePhoto, rate, reveal, setCost, setLine, setWhen, uploadPhoto } from "./api";
 import { CalLink } from "./CalLink";
 import { Icon } from "./Defs";
@@ -605,6 +606,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
           </form>
           <details className="k-more">
             <summary className="k-tool k-tool-quiet">More</summary>
+          <DayEditor id={h.id} day={h.day} />
           <details className="k-when-edit" {...whenFold.props}>
             <summary ref={whenSummary} className="k-tool">
               <Icon id="k-clock" size={18} />

@@ -547,6 +547,34 @@ pub async fn keep_custom(
     Ok(id)
 }
 
+/// Moves a kept date to the day it really happened (`on`, "YYYY-MM-DD"). False when it isn't this
+/// couple's kept date, or it is a regular night and that regular already has a night on `on`.
+pub async fn set_kept_day(db: &SqlitePool, couple: &str, id: i64, on: &str) -> sqlx::Result<bool> {
+    let mut tx = db.begin().await?;
+    let moved = sqlx::query(
+        "UPDATE joy_history SET picked_at = MIN(CAST(strftime('%s', ?1 || ' 12:00:00', 'utc') AS INTEGER), unixepoch()), planned_at = NULL
+          WHERE id = ?2 AND couple_id = ?3 AND outcome = 'did_it'",
+    )
+    .bind(on)
+    .bind(id)
+    .bind(couple)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    if moved == 0 {
+        tx.rollback().await?;
+        return Ok(false);
+    }
+    // A regular night keeps its day in step; two nights of one regular can't share a day.
+    let clash = sqlx::query("UPDATE joy_regular_visits SET day = ?1 WHERE history_id = ?2").bind(on).bind(id).execute(&mut *tx).await;
+    if clash.is_err() {
+        tx.rollback().await?;
+        return Ok(false);
+    }
+    tx.commit().await?;
+    Ok(true)
+}
+
 /// Today's local date for the "it's a date" stamp, e.g. "14 · 10 · 2026".
 pub async fn today(db: &SqlitePool) -> sqlx::Result<String> {
     sqlx::query_scalar("SELECT strftime('%d · %m · %Y', 'now', 'localtime')").fetch_one(db).await
@@ -1660,12 +1688,12 @@ pub async fn went_today(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(Regu
 }
 
 /// Say whether we went on `day`. `status` is "went" or "skipped"; a blank `place` means the
-/// regular's own place. Days in the future, or more than a month back, are refused (false).
+/// regular's own place. Days in the future (or before 2000) are refused (false); any past day is fine, so a journal can be filled in later.
 /// Answering again changes the answer; a photo already on the night is kept.
 pub async fn record_visit(db: &SqlitePool, couple: &str, regular_id: i64, day: &str, status: &str, place: &str, amount: i64) -> sqlx::Result<bool> {
     let ok: i64 = sqlx::query_scalar(
         "SELECT date(?1) IS NOT NULL AND date(?1) = ?1
-            AND date(?1) <= date('now', 'localtime') AND date(?1) >= date('now', 'localtime', '-31 days')
+            AND date(?1) <= date('now', 'localtime') AND date(?1) >= '2000-01-01'
             AND EXISTS (SELECT 1 FROM joy_regulars WHERE id = ?2 AND couple_id = ?3 AND active = 1)",
     )
     .bind(day)

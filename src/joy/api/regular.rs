@@ -220,7 +220,7 @@ pub async fn went(
     let place = f.place.trim().chars().take(80).collect::<String>();
     // Typing the regular's own name as "somewhere else" is just the regular.
     let place = if place.eq_ignore_ascii_case(&r.title) || place.eq_ignore_ascii_case(&r.place) { String::new() } else { place };
-    // `record_visit` is false (and saves nothing) for a day in the future or over a month back:
+    // `record_visit` is false (and saves nothing) for a day in the future:
     // say so (422) rather than answering as if it was saved.
     if !db::record_visit(&s.db, &j.couple, id, &f.day, "went", &place, amount).await? {
         return Ok(refuse(REFUSED_DAY));
@@ -236,7 +236,7 @@ pub struct SkipBody {
     back: String,
 }
 
-const REFUSED_DAY: &str = "That day can't be saved: it's in the future or more than a month back.";
+const REFUSED_DAY: &str = "That day can't be saved: pick a day that has already happened.";
 
 /// `POST /regulars/{id}/skip`
 pub async fn skip(
