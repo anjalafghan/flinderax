@@ -483,6 +483,9 @@
 .closeout-err { color: var(--stamp); font-size: var(--step--1); }
 .slip-budget { margin: 8px 0 0; font-size: var(--step--1); color: var(--ink-soft); }
 .slip-why { margin: 10px 0 0; font: 600 1.3rem/1.1 var(--font-hand); color: var(--ink-soft); }
+.slip-want { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.slip-want .btn-why[aria-pressed="true"] { color: var(--ink); border-style: solid; border-color: var(--ink-soft); }
+.slip-both { margin: 6px 0 0; font: 600 1.3rem/1.1 var(--font-hand); color: var(--stamp); }
 .putback-why { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 12px; }
 .putback-why-label { font: 600 1.3rem/1.1 var(--font-hand); color: var(--ink-soft); margin-right: 2px; }
 .btn-why {

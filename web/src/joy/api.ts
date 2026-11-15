@@ -32,6 +32,10 @@ export interface ActivityView {
   url: string;
   /** "Checked 8 months ago", or empty for slips nobody has saved. */
   checked: string;
+  /** What I privately marked this slip: "want", "fine", "no" or "". Never my partner's. */
+  my_want: "" | "want" | "fine" | "no";
+  /** We both marked it "want": the only thing either of us learns about the other's mark. */
+  both_want: boolean;
 }
 
 export interface Group {
@@ -345,6 +349,7 @@ export async function saveSlip(id: string | null, body: SlipBody): Promise<SaveR
 export const archiveSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/archive`);
 export const restoreSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/restore`);
 export const deleteSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/delete`);
+export const wantSlip = (id: number, level: "" | "want" | "fine" | "no") => post<Go>(`/api/dates/slips/${id}/want`, { level });
 export const unvetoSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/unveto`);
 export const clearVetoes = () => post<Go>("/api/dates/slips/vetoes/clear");
 export const restoreAllSlips = () => post<Go>("/api/dates/slips/restore-all");

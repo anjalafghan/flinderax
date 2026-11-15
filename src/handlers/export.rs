@@ -119,6 +119,10 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         let photos = format!(
             "SELECT p.* FROM joy_history_photos p JOIN joy_history h ON h.id = p.history_id WHERE h.couple_id = ? AND p.history_id NOT IN ({sealed})"
         );
+        // Only your own quiet marks: your partner's are theirs.
+        let my_wants = format!(
+            "SELECT w.* FROM joy_wants w JOIN joy_activities a ON a.id = w.activity_id WHERE a.couple_id = ? AND w.person = {who}"
+        );
         let dates: &[(&str, &str)] = &[
             ("memories", &memories),
             ("tasks", &tasks),
@@ -134,6 +138,7 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
             ("savings", "SELECT * FROM joy_savings WHERE couple_id = ?"),
             ("regulars", "SELECT * FROM joy_regulars WHERE couple_id = ?"),
             ("nights", "SELECT v.* FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id WHERE r.couple_id = ?"),
+            ("wants", &my_wants),
             ("peeks", "SELECT * FROM joy_peeks WHERE couple_id = ?"),
             ("settlements", "SELECT * FROM joy_settlements WHERE couple_id = ?"),
         ];

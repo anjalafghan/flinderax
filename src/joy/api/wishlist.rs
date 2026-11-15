@@ -56,8 +56,11 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
     let pairs = db::pairs(db, couple).await?;
     let vetoes = db::vetoes(db, couple).await?;
     let learned = learned(db, couple).await?;
+    let wants = db::wants(db, couple).await?;
     let view = |a: &Activity| {
         let mut v = ActivityView::new(ctx, a, &learned);
+        v.my_want = wants.iter().find(|(id, p, _)| *id == a.id && *p == j.who as i64).map(|(_, _, l)| l.clone()).unwrap_or_default();
+        v.both_want = (0..2).all(|p| wants.iter().any(|(id, person, l)| *id == a.id && *person == p && l == "want"));
         v.vetoed_by = vetoes
             .iter()
             .filter(|(act, _)| *act == a.id)
@@ -516,6 +519,30 @@ pub async fn archive(State(s): State<AppState>, Extension((user_id, _)): User, P
     unsealed(&s.db, &j, id).await?;
     mine(&s.db, &j.couple, id).await?;
     db::set_archived(&s.db, &j.couple, id, true).await?;
+    Ok(go(SLIPS))
+}
+
+#[derive(Deserialize)]
+pub struct WantBody {
+    #[serde(default)]
+    level: String,
+}
+
+/// `POST /slips/{id}/want`: quietly mark a slip "want", "fine" or "no" (or "" to take it back). Only
+/// the caller's own mark changes, and the other one never sees it.
+pub async fn want(
+    State(s): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(id): Path<i64>,
+    Json(b): Json<WantBody>,
+) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
+    mine(&s.db, &j.couple, id).await?;
+    if !matches!(b.level.as_str(), "" | "want" | "fine" | "no") {
+        return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, "Pick want, fine or no.".into()));
+    }
+    db::set_want(&s.db, &j.couple, id, j.who, &b.level).await?;
     Ok(go(SLIPS))
 }
 

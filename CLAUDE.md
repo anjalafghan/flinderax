@@ -33,6 +33,7 @@ A private life-planning app for one household: money (Flinderax) plus the date j
 - A slip can be kept or planned only through `db::drawable_get` (not archived, not passed on, not sealed).
 - Envelope links expire (`share_expires_at`); `unshare` clears them.
 - Money-changing POSTs accept an `idempotency_key` (moves do now); add it to new ones.
+- Quiet marks (`joy_wants`): a person only ever sees their own, plus `both_want`. Never return or export the partner's level; the draw only turns them into weights.
 - Bank texts the parser can't read are kept 30 days in `unrecognized_alerts`.
 
 ## SQL, offline data and local databases

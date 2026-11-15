@@ -1092,3 +1092,46 @@ async fn a_slip_keeps_its_link_and_the_day_it_was_last_checked() {
     let s = page["groups"].as_array().unwrap().iter().flat_map(|g| g["items"].as_array().unwrap()).find(|i| i["id"] == seeded).unwrap();
     assert_eq!(s["checked"], "");
 }
+
+// ── quiet "want / fine / no" marks (E2) ───────────────────────────────────
+
+fn slip_item(page: &Value, id: i64) -> Value {
+    page["groups"].as_array().unwrap().iter().flat_map(|g| g["items"].as_array().unwrap()).find(|i| i["id"] == id).unwrap().clone()
+}
+
+#[tokio::test]
+async fn a_quiet_mark_is_only_ever_shown_to_whoever_made_it_until_you_both_want_it() {
+    let t = setup().await;
+    let (rohit, neha, couple) = t.couple().await;
+    let cook = t.id_of(&couple, "Cook together").await;
+    let url = format!("/api/dates/slips/{cook}/want");
+
+    // Rohit wants it. Neha sees nothing about that.
+    assert_eq!(t.post(&url, &rohit, json!({"level": "want"})).await.status, StatusCode::OK);
+    assert_eq!(slip_item(&t.get("/api/dates/slips", &rohit).await.json, cook)["my_want"], "want");
+    let hers = slip_item(&t.get("/api/dates/slips", &neha).await.json, cook);
+    assert_eq!((hers["my_want"].as_str(), hers["both_want"].as_bool()), (Some(""), Some(false)), "{hers}");
+
+    // Neha says no: Rohit still learns nothing of it, anywhere.
+    t.post(&url, &neha, json!({"level": "no"})).await;
+    let his = t.get("/api/dates/slips", &rohit).await;
+    let item = slip_item(&his.json, cook);
+    assert_eq!((item["my_want"].as_str(), item["both_want"].as_bool()), (Some("want"), Some(false)));
+    assert!(!his.text.contains("\"no\""), "her no is not in his page");
+    let export = t.get("/api/export", &rohit).await;
+    let mine: Vec<&Value> = export.json["data"]["dates"]["wants"].as_array().unwrap().iter().collect();
+    assert!(mine.iter().all(|w| w["person"] == 0), "his export holds only his own marks: {mine:?}");
+
+    // She changes her mind to want: now it is a mutual want, and both are told so.
+    t.post(&url, &neha, json!({"level": "want"})).await;
+    for who in [&rohit, &neha] {
+        assert_eq!(slip_item(&t.get("/api/dates/slips", who).await.json, cook)["both_want"], true);
+    }
+
+    // Taking a mark back, a bad level, and a slip that is not ours.
+    assert_eq!(t.post(&url, &neha, json!({"level": ""})).await.status, StatusCode::OK);
+    assert_eq!(slip_item(&t.get("/api/dates/slips", &neha).await.json, cook)["my_want"], "");
+    assert_eq!(t.post(&url, &neha, json!({"level": "adore"})).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let (loner, _) = t.loner().await;
+    assert_eq!(t.post(&url, &loner, json!({"level": "want"})).await.status, StatusCode::NOT_FOUND);
+}

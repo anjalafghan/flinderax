@@ -217,6 +217,10 @@ pub struct ActivityView {
     pub door: String,
     /// The slip's own link (booking page, menu), or empty.
     pub url: String,
+    /// What I privately marked this slip: "want", "fine", "no", or empty. Never the other one's.
+    pub my_want: String,
+    /// We both marked it "want". The only thing either of us learns about the other's mark.
+    pub both_want: bool,
     /// "Checked 8 months ago": how old its hours and cost might be. Empty for slips nobody has saved.
     pub checked: String,
 }
@@ -327,6 +331,8 @@ impl ActivityView {
                 _ => String::new(),
             },
             url: a.url.clone(),
+            my_want: String::new(),
+            both_want: false,
             checked: checked_label(a.verified_at, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)),
             uber_url: a.latlng().map(|(lat, lng)| {
                 format!(

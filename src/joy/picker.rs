@@ -93,7 +93,15 @@ pub struct Candidate {
     pub outdoor: bool,
     /// Same setting and main tag as one of the last two dates we had.
     pub like_recent: bool,
+    /// Both of us marked it "want" (privately).
+    pub both_want: bool,
+    /// At least one of us marked it "no" (privately). Nobody is told which.
+    pub any_no: bool,
 }
+
+/// A slip we both want comes up this much more often; one either of us ruled out, much less.
+pub const BOTH_WANT_BOOST: f64 = 2.0;
+pub const ANY_NO_DAMP: f64 = 0.3;
 
 /// How much a kind of date we just had is damped, so the jar does not hand out the same evening twice.
 pub const VARIETY_DAMP: f64 = 0.6;
@@ -209,6 +217,11 @@ pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
     }
     if c.like_recent {
         w *= VARIETY_DAMP;
+    }
+    if c.any_no {
+        w *= ANY_NO_DAMP;
+    } else if c.both_want {
+        w *= BOTH_WANT_BOOST;
     }
     // Rain doesn't rule outdoor plans out, it just lets the cozy ones float up.
     if rain_likely && c.outdoor {
@@ -336,6 +349,8 @@ mod tests {
             taste: 1.0,
             outdoor: false,
             like_recent: false,
+            both_want: false,
+            any_no: false,
         }
     }
 
@@ -518,6 +533,19 @@ mod tests {
         assert_eq!(old, 3.0, "capped");
         c.last_skipped_at = Some(NOW - DAY);
         assert_eq!(weight(&c, NOW, false), 1.5);
+    }
+
+    #[test]
+    fn what_we_both_want_rises_and_what_either_ruled_out_sinks() {
+        let mut c = cand(1, 0, "local", Duration::Short);
+        let plain = weight(&c, NOW, false);
+        c.both_want = true;
+        assert_eq!(weight(&c, NOW, false), plain * BOTH_WANT_BOOST);
+        c.both_want = false;
+        c.any_no = true;
+        assert_eq!(weight(&c, NOW, false), plain * ANY_NO_DAMP);
+        c.both_want = true;
+        assert_eq!(weight(&c, NOW, false), plain * ANY_NO_DAMP, "a no outweighs the other's want");
     }
 
     #[test]

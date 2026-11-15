@@ -445,6 +445,8 @@ pub struct JarData {
     pub slot: Option<Slot>,
     /// (setting, main tag) of the last two dates that happened.
     pub recent: Vec<(String, String)>,
+    /// Quiet marks: (slip, person, level). Only ever turned into weights and "you both want this".
+    pub wants: Vec<(i64, i64, String)>,
 }
 
 pub async fn jar_data(db: &SqlitePool, couple: &str, _ctx: &Ctx, who: usize, slot: Option<Slot>) -> Result<JarData, AppError> {
@@ -458,10 +460,15 @@ pub async fn jar_data(db: &SqlitePool, couple: &str, _ctx: &Ctx, who: usize, slo
             Today { weekday, month }
         }
     };
-    Ok(JarData { acts, learned: learned(db, couple).await?, today, slot, recent: db::recent_kinds(db, couple).await? })
+    Ok(JarData { acts, learned: learned(db, couple).await?, today, slot, recent: db::recent_kinds(db, couple).await?, wants: db::wants(db, couple).await? })
 }
 
 impl JarData {
+    /// Both of us marked this slip "want".
+    pub fn both_want(&self, id: i64) -> bool {
+        (0..2).all(|p| self.wants.iter().any(|(i, person, l)| *i == id && *person == p && l == "want"))
+    }
+
     fn candidates(&self, ctx: &Ctx, f: &PickForm) -> Vec<Candidate> {
         self.acts
             .iter()
@@ -472,6 +479,8 @@ impl JarData {
                 };
                 let mut c = a.candidate(km, self.learned.cost);
                 c.taste = self.learned.taste.factor(&c.tags);
+                c.both_want = self.both_want(a.id);
+                c.any_no = self.wants.iter().any(|(id, _, l)| *id == a.id && l == "no");
                 c.like_recent = self.recent.iter().any(|(setting, tag)| *setting == c.setting && !tag.is_empty() && c.tags.first() == Some(tag));
                 // "The time we have" is door to door: two hours in Andheri is most of a day from
                 // home. An evening from the office has its own clock (the fit above).
@@ -774,6 +783,7 @@ async fn card(
                 km: distance_from(ctx, a, f.from()),
                 max_km: f.filters().max_km,
                 taste: learned.taste.factor(&a.tag_list()),
+                both_want: db::wants(db, couple).await?.iter().filter(|(id, _, l)| *id == a.id && l == "want").count() == 2,
                 money: &money,
             })
         }
@@ -1034,6 +1044,7 @@ pub(crate) struct WhyInput<'a> {
     pub km: Option<f64>,
     pub max_km: Option<f64>,
     pub taste: f64,
+    pub both_want: bool,
     pub money: &'a dyn Fn(i64) -> String,
 }
 
@@ -1049,6 +1060,9 @@ pub(crate) fn why(i: &WhyInput) -> Vec<String> {
         && km <= max {
             out.push(format!("About {} km away", km.round() as i64));
         }
+    if i.both_want {
+        out.push("You both want this".to_string());
+    }
     if i.taste >= 1.1 {
         out.push("Like dates you've enjoyed".to_string());
     }
@@ -1064,7 +1078,7 @@ mod why_tests {
     }
 
     fn input(f: impl FnOnce(&mut WhyInput)) -> Vec<String> {
-        let mut i = WhyInput { times_done: 3, cost: 500, budget: i64::MAX, km: None, max_km: None, taste: 1.0, money: &money };
+        let mut i = WhyInput { times_done: 3, cost: 500, budget: i64::MAX, km: None, max_km: None, taste: 1.0, both_want: false, money: &money };
         f(&mut i);
         why(&i)
     }
@@ -1082,6 +1096,7 @@ mod why_tests {
         assert_eq!(input(|i| { i.km = Some(12.4); i.max_km = Some(20.0) }), ["About 12 km away"]);
         assert!(input(|i| { i.km = Some(30.0); i.max_km = Some(20.0) }).is_empty(), "too far is not a reason");
         assert_eq!(input(|i| i.taste = 1.2), ["Like dates you've enjoyed"]);
+        assert_eq!(input(|i| i.both_want = true), ["You both want this"]);
         assert_eq!(input(|i| { i.times_done = 0; i.taste = 1.3 }), ["Never done", "Like dates you've enjoyed"]);
     }
 }

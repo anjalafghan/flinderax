@@ -115,6 +115,8 @@ impl Activity {
             taste: 1.0,
             outdoor: self.outdoor(),
             like_recent: false,
+            both_want: false,
+            any_no: false,
         }
     }
 }
@@ -233,6 +235,43 @@ pub async fn get(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Option<
         .bind(id)
         .fetch_optional(db)
         .await
+}
+
+/// Mark a slip "want", "fine" or "no" for `person`; "" takes the mark back. Quietly: it never
+/// touches the other one's mark.
+pub async fn set_want(db: &SqlitePool, couple: &str, id: i64, person: usize, level: &str) -> sqlx::Result<()> {
+    if level.is_empty() {
+        sqlx::query("DELETE FROM joy_wants WHERE activity_id = ? AND person = ? AND activity_id IN (SELECT id FROM joy_activities WHERE couple_id = ?)")
+            .bind(id)
+            .bind(person as i64)
+            .bind(couple)
+            .execute(db)
+            .await?;
+        return Ok(());
+    }
+    sqlx::query(
+        "INSERT INTO joy_wants (activity_id, person, level)
+         SELECT id, ?2, ?3 FROM joy_activities WHERE id = ?1 AND couple_id = ?4
+         ON CONFLICT(activity_id, person) DO UPDATE SET level = excluded.level",
+    )
+    .bind(id)
+    .bind(person as i64)
+    .bind(level)
+    .bind(couple)
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+/// Every mark in the couple's jar: (slip id, person, level). Callers must only ever show a person
+/// their own marks, plus "we both want it".
+pub async fn wants(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(i64, i64, String)>> {
+    sqlx::query_as(
+        "SELECT w.activity_id, w.person, w.level FROM joy_wants w JOIN joy_activities a ON a.id = w.activity_id WHERE a.couple_id = ?",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await
 }
 
 /// Another slip in the jar with the same title (ignoring case and spacing), if any.
