@@ -31,9 +31,9 @@ export interface KeptView {
   planned_label: string;
   planned_input: string;
   ics_url: string;
-  /** The cover (first) photo's signed link. */
+  /** The cover's signed link: the main photo we chose, else the oldest. */
   photo_url: string | null;
-  /** Every photo, oldest first; the first is the cover. */
+  /** Every photo: the main one first (the cover), then oldest first. */
   photos: KeptPhoto[];
   /** Room for more photos on this date. */
   can_add_photo: boolean;

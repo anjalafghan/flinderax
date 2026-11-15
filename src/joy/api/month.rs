@@ -30,6 +30,8 @@ pub struct Entry {
     /// "home", "local", … for the ticket's colour.
     pub kind: String,
     pub kind_label: String,
+    /// The slip's tags ("foodie", "music", …): with `kind`, they pick the keepsake it is drawn as.
+    pub tags: Vec<String>,
     /// "16 Oct"
     pub day: String,
     /// "16·10·26"
@@ -161,6 +163,7 @@ pub async fn page(
                 place: ctx.personalize(&r.place),
                 kind: r.setting.clone(),
                 kind_label: picker::setting_label(&r.setting).to_string(),
+                tags: r.tag_list(),
                 day: r.day_label.clone(),
                 stamp: r.stamp.clone(),
                 photo: r.cover_url(),

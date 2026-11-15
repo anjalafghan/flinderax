@@ -517,6 +517,60 @@ async fn a_date_takes_several_photos_each_served_through_its_own_signed_link() {
 }
 
 #[tokio::test]
+async fn the_main_photo_we_choose_leads_in_kept_and_on_the_month_page() {
+    let t = setup().await;
+    let (rohit, neha, couple) = t.couple().await;
+    let hid = t.keep(&couple, &rohit, COOK, false).await;
+    for who in [&rohit, &neha] {
+        assert_eq!(t.upload(&format!("/api/dates/history/{hid}/photo"), who, &tiny_jpeg()).await.status, StatusCode::OK);
+    }
+    let pics = t.item(&rohit, hid).await["photos"].as_array().unwrap().clone();
+    let (first, second) = (pics[0]["id"].as_i64().unwrap(), pics[1]["id"].as_i64().unwrap());
+
+    // Choosing the second makes it the cover for both of us, first in the list.
+    let r = t.post(&format!("/api/dates/history/{hid}/hero"), &neha, json!({"photo_id": second.to_string()})).await;
+    assert_eq!((r.status, r.json["to"].as_str()), (StatusCode::OK, Some(format!("/joy/kept#k{hid}").as_str())), "{}", r.text);
+    for who in [&rohit, &neha] {
+        let item = t.item(who, hid).await;
+        let ids: Vec<i64> = item["photos"].as_array().unwrap().iter().map(|p| p["id"].as_i64().unwrap()).collect();
+        assert_eq!(ids, vec![second, first]);
+        assert!(item["photo_url"].as_str().unwrap().contains(&format!("/photos/{second}?")));
+    }
+
+    // The Month page shows the hero for that date.
+    let ym: String = sqlx::query_scalar(&format!(
+        "SELECT strftime('%Y/', COALESCE(planned_at, picked_at), 'unixepoch', 'localtime') || CAST(strftime('%m', COALESCE(planned_at, picked_at), 'unixepoch', 'localtime') AS INTEGER) FROM joy_history WHERE id = {hid}"
+    ))
+    .fetch_one(&t.db)
+    .await
+    .unwrap();
+    let month = t.get(&format!("/api/dates/year/{ym}"), &rohit).await;
+    assert_eq!(month.status, StatusCode::OK, "{}", month.text);
+    assert!(month.json["entries"][0]["photo"].as_str().unwrap().contains(&format!("/photos/{second}?")), "{}", month.text);
+
+    // A photo id that isn't this date's (or isn't a number) is a 404 and changes nothing.
+    let other = t.keep(&couple, &rohit, PLAY, false).await;
+    assert_ne!(other, hid);
+    assert_eq!(t.upload(&format!("/api/dates/history/{other}/photo"), &rohit, &tiny_jpeg()).await.status, StatusCode::OK);
+    let foreign = t.item(&rohit, other).await["photos"][0]["id"].as_i64().unwrap();
+    assert_eq!(t.post(&format!("/api/dates/history/{hid}/hero"), &rohit, json!({"photo_id": foreign.to_string()})).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.post(&format!("/api/dates/history/{hid}/hero"), &rohit, json!({"photo_id": "nope"})).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.scalar(&format!("SELECT hero_photo_id FROM joy_history WHERE id = {hid}")).await, second);
+
+    // Someone else's date is a 404 too.
+    let (stranger, _, _) = t.couple().await;
+    assert_eq!(t.post(&format!("/api/dates/history/{hid}/hero"), &stranger, json!({"photo_id": first.to_string()})).await.status, StatusCode::NOT_FOUND);
+
+    // Removing the hero falls back to the oldest; blank goes back to the oldest too.
+    t.post(&format!("/api/dates/history/{hid}/photos/{second}/delete"), &rohit, json!({})).await;
+    assert_eq!(t.scalar(&format!("SELECT COUNT(*) FROM joy_history WHERE id = {hid} AND hero_photo_id IS NULL")).await, 1);
+    assert!(t.item(&rohit, hid).await["photo_url"].as_str().unwrap().contains(&format!("/photos/{first}?")));
+    t.post(&format!("/api/dates/history/{hid}/hero"), &rohit, json!({"photo_id": first.to_string()})).await;
+    assert_eq!(t.post(&format!("/api/dates/history/{hid}/hero"), &rohit, json!({"photo_id": ""})).await.status, StatusCode::OK);
+    assert_eq!(t.scalar(&format!("SELECT COUNT(*) FROM joy_history WHERE id = {hid} AND hero_photo_id IS NULL")).await, 1);
+}
+
+#[tokio::test]
 async fn a_sealed_surprise_photo_is_a_404_even_with_a_good_signature() {
     let t = setup().await;
     let (rohit, neha, couple) = t.couple().await;

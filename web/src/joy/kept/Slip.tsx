@@ -3,7 +3,7 @@ import { thumbOf } from "../photo";
 import { Link } from "react-router-dom";
 import { ApiError } from "../api";
 import { DayEditor } from "./DayEditor";
-import { deleteDate, deletePhoto, rate, reveal, setCost, setLine, setWhen, uploadPhoto } from "./api";
+import { deleteDate, deletePhoto, rate, setHeroPhoto, reveal, setCost, setLine, setWhen, uploadPhoto } from "./api";
 import { CalLink } from "./CalLink";
 import { Icon } from "./Defs";
 import { useKept } from "./ctx";
@@ -331,6 +331,8 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
 
   const photoDel = useAction();
   const photoFold = useFold();
+  const heroAct = useAction();
+  const heroFold = useFold();
   const dateDel = useAction();
   const dateFold = useFold();
 
@@ -683,6 +685,35 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
               <Err text={costAct.err} />
             </form>
           </details>
+          {pics.length > 1 && (
+            <details className="k-photo-del k-photo-hero" {...heroFold.props}>
+              <summary className="k-tool k-tool-quiet">Choose the main photo</summary>
+              <div>
+                <p>The main photo is the one on our Month and Year pages, and it leads here.</p>
+                <ul className="k-photo-pick">
+                  {pics.map((p, i) => (
+                    <li key={p.id}>
+                      <img src={thumbOf(p.url)} alt="" width={96} height={72} loading="lazy" decoding="async" />
+                      {i === 0 ? (
+                        <span className="k-hero-now">Main photo</span>
+                      ) : (
+                        <button
+                          className="k-btn"
+                          type="button"
+                          disabled={heroAct.busy}
+                          aria-label={`Make photo ${i + 1} of ${pics.length} the main photo`}
+                          onClick={() => void heroAct.act(async () => finish(await setHeroPhoto(h.id, p.id), { focus: `#k${h.id} .k-photo-hero > summary` }))}
+                        >
+                          Make it the main one
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <Err text={heroAct.err} />
+              </div>
+            </details>
+          )}
           {hasPhoto && (
             <details className="k-photo-del" {...photoFold.props}>
               <summary className="k-tool k-tool-quiet">{pics.length > 1 ? "Remove a photo" : "Remove photo"}</summary>

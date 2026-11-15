@@ -31,7 +31,7 @@ pub struct YearRow {
     pub rating: Option<i64>,
     pub note: String,
     pub has_photo: bool,
-    /// The date's photo ids, oldest first, comma-separated ("" for none). The first is the cover.
+    /// The date's photo ids, comma-separated ("" for none): the hero we chose first (the cover), then oldest first.
     pub photo_ids: String,
     pub est: i64,
     pub actual: Option<i64>,
@@ -52,7 +52,7 @@ pub(crate) async fn rows(db: &sqlx::SqlitePool, couple: &str, year: i32) -> sqlx
         "SELECT h.id, a.title, a.setting, a.tags,
                 CASE WHEN a.venue != '' THEN a.venue ELSE a.area END AS place,
                 h.rating, h.note, h.has_photo,
-                COALESCE((SELECT group_concat(id) FROM (SELECT p.id FROM joy_history_photos p WHERE p.history_id = h.id ORDER BY p.id)), '') AS photo_ids,
+                COALESCE((SELECT group_concat(id) FROM (SELECT p.id, COALESCE(p.id = h.hero_photo_id, 0) AS hero FROM joy_history_photos p WHERE p.history_id = h.id ORDER BY hero DESC, p.id)), '') AS photo_ids,
                 COALESCE(h.est_cost, a.est_cost) AS est, h.actual_cost AS actual, h.cab_fare_0 AS cab_0, h.cab_fare_1 AS cab_1,
                 CAST(strftime('%m', COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime') AS INTEGER) AS month,
                 CAST(julianday(date(COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime')) AS INTEGER) AS jd,
@@ -212,6 +212,23 @@ pub struct ShareData {
 }
 
 /// `GET /year/{year}`
+/// One kept date on the Year page's shelf: drawn as its keepsake, linking to its month.
+#[derive(Debug, Serialize)]
+pub struct YearDate {
+    pub title: String,
+    pub place: String,
+    /// The slip's setting ("home", "local", …).
+    pub kind: String,
+    pub kind_label: String,
+    pub tags: Vec<String>,
+    /// "16 Oct"
+    pub day: String,
+    /// 0 when not rated.
+    pub rating: i64,
+    /// The month page it lives on.
+    pub href: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct YearView {
     pub me_name: String,
@@ -234,6 +251,8 @@ pub struct YearView {
     /// "₹2,400 in cabs", when any real fares were logged.
     pub cabs: String,
     pub photos: Vec<YearPhoto>,
+    /// Every date of the year, oldest first, for the keepsake shelf.
+    pub keepsakes: Vec<YearDate>,
     /// How many dates the busiest month held.
     pub busiest_n: i64,
     /// Tally marks: groups of five (the last group may be shorter), at most 24 groups.
@@ -308,6 +327,19 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
         .iter()
         .flat_map(|x| {
             x.photos().into_iter().map(move |pid| YearPhoto { id: pid, date_id: x.id, url: history_photo_url(x.id, pid), title: ctx.personalize(&x.title), when: x.day_label.clone() })
+        })
+        .collect();
+    let keepsakes: Vec<YearDate> = rows
+        .iter()
+        .map(|x| YearDate {
+            title: ctx.personalize(&x.title),
+            place: ctx.personalize(&x.place),
+            kind: x.setting.clone(),
+            kind_label: picker::setting_label(&x.setting).to_string(),
+            tags: x.tag_list(),
+            day: x.day_label.clone(),
+            rating: x.rating.unwrap_or(0),
+            href: format!("/joy/year/{year}/{}", x.month),
         })
         .collect();
     let best = r.best.map(|(i, more)| {
@@ -432,6 +464,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
         money,
         cabs: if r.cabs > 0 { format!("{} in cabs", ctx.money(r.cabs)) } else { String::new() },
         photos,
+        keepsakes,
         share,
     }))
 }
@@ -445,6 +478,11 @@ impl YearRow {
     /// Photo ids, oldest first.
     pub fn photos(&self) -> Vec<i64> {
         self.photo_ids.split(',').filter_map(|p| p.trim().parse().ok()).collect()
+    }
+
+    /// The slip's tags ("foodie", "music", …), lower case, blanks dropped.
+    pub fn tag_list(&self) -> Vec<String> {
+        self.tags.split(',').map(|t| t.trim().to_lowercase()).filter(|t| !t.is_empty()).collect()
     }
 
     /// The cover photo's signed link, or empty.
