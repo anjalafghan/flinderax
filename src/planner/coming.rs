@@ -93,7 +93,8 @@ mod tests {
             item(date!(2026 - 11 - 16), Kind::Bill, "Rent"),
             item(date!(2026 - 11 - 16), Kind::Date, "Dinner at Saltt"),
         ];
-        let got: Vec<&str> = merge(items.clone(), TODAY, 14).iter().map(|e| e.item.title.as_str()).collect::<Vec<_>>().into_iter().collect();
+        let merged = merge(items.clone(), TODAY, 14);
+        let got: Vec<&str> = merged.iter().map(|e| e.item.title.as_str()).collect();
         assert_eq!(got, ["Rent", "Dinner at Saltt", "Ask about the move", "Asha"]);
         let again: Vec<String> = merge(items, TODAY, 14).iter().map(|e| e.when.clone()).collect();
         assert_eq!(again, ["Tomorrow", "Tomorrow", "Tomorrow", "In 2 days"]);
