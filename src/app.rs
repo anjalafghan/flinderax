@@ -116,6 +116,7 @@ pub fn build_router(state: AppState) -> Router {
                     .with_state(state.clone()),
             ),
         )
+        .nest("/api/coming-up", protected(&state, Router::new().route("/", axum::routing::get(crate::handlers::coming::get)).with_state(state.clone())))
         .nest("/api/review", protected(&state, routes::review::routes(state.clone())))
         .nest("/api/hook", routes::ingest::hook_routes(state.clone()).layer(trace_layer()))
         // Unknown API paths must 404 instead of falling through to the SPA's index.html.

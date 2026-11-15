@@ -6,6 +6,7 @@ pub mod calibration;
 pub mod card;
 pub mod card_cycle;
 pub mod checkin;
+pub mod coming;
 pub mod common;
 pub mod couple;
 pub mod dashboard;

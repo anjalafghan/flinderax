@@ -1101,3 +1101,32 @@ async fn an_export_can_be_loaded_back_and_exports_the_same_again() {
     }
     assert_eq!(authed_get(&app, &t, "/api/export").await["data"], before["data"]);
 }
+
+#[tokio::test]
+async fn coming_up_puts_bills_birthdays_and_follow_ups_in_one_list() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.1.2", "upcomer").await;
+    let today = joy::handlers::common::today_local();
+    let tomorrow = today + time::Duration::days(1);
+    let in3 = today + time::Duration::days(3);
+
+    let (_, b) = authed_post(&app, &t, "/api/people", json!({"name": "Asha", "circle": "close"})).await;
+    let pid = serde_json::from_str::<Value>(&b).unwrap()["id"].as_str().unwrap().to_string();
+    let (s, b) = authed_post(&app, &t, &format!("/api/people/{pid}/dates"), json!({"kind": "birthday", "month": in3.month() as u8, "day": in3.day()})).await;
+    assert!(s.is_success(), "{b}");
+    let (s, b) = authed_post(&app, &t, &format!("/api/people/{pid}/followups"), json!({"text": "Ask about the move", "due_on": tomorrow.to_string()})).await;
+    assert!(s.is_success(), "{b}");
+
+    let v = authed_get(&app, &t, "/api/coming-up?days=14").await;
+    let items = v["items"].as_array().unwrap();
+    let kinds: Vec<(&str, &str)> = items.iter().map(|i| (i["kind"].as_str().unwrap(), i["when"].as_str().unwrap())).collect();
+    assert_eq!(kinds, [("follow_up", "Tomorrow"), ("birthday", "In 3 days")], "{v}");
+    assert!(items[0]["title"].as_str().unwrap().contains("Ask about the move"));
+    assert!(items[1]["title"].as_str().unwrap().contains("Asha"));
+
+    // A short window leaves the birthday out; someone else sees none of it.
+    let short = authed_get(&app, &t, "/api/coming-up?days=2").await;
+    assert_eq!(short["items"].as_array().unwrap().len(), 1);
+    let other = new_user(&app, "10.0.1.3", "nosy").await;
+    assert_eq!(authed_get(&app, &other, "/api/coming-up").await["items"], json!([]));
+}

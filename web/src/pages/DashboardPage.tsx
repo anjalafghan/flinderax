@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import api from "@/services/api";
 import { Header } from "@/components/layout/Header";
 import { CardCarousel } from "@/components/feature/CardCarousel";
+import { ComingUpCard } from "@/components/feature/ComingUpCard";
 import { PlannerSummary } from "@/components/feature/PlannerSummary";
 import { NetWorthPanel } from "@/components/feature/NetWorthPanel";
 import { CardUtilization } from "@/components/feature/CardUtilization";
@@ -141,6 +142,7 @@ function MoneyDashboard() {
       <main className="page flex-1">
         <div className="mb-6 w-full">
           <PlannerSummary />
+          <ComingUpCard />
           <StreaksCard />
           <LifeLineCard />
           <InsightsNudge />
