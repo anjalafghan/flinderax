@@ -88,6 +88,8 @@ export interface DecideView {
   my_turn: boolean;
   rain: number | null;
   memory: { title: string; when: string } | null;
+  /** A kept date whose day has passed and nobody has said how it went. */
+  to_close: { id: number; title: string; when: string } | null;
   budget: BudgetView;
   nudge: string;
   nudge_soon: boolean;
@@ -143,13 +145,13 @@ export interface PickCard {
   relax: PickForm | null;
   done: boolean;
   stamp_date: string;
-  rerolls_left: number;
-  max_rerolls: number;
-  free_putback: boolean;
   pairs: PairOffer[];
+  /** Why this slip came up: "Never done", "Fits ₹1,500", "About 12 km away". */
+  why: string[];
+  /** "₹2,300 left for dates this month", or how far over this one would go. Empty without a budget. */
+  budget_note: string;
   paired: ActivityView | null;
   state: PickForm | null;
-  bonus_peek: boolean;
   can_surprise: boolean;
   can_veto: boolean;
   partner: string;

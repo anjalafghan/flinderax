@@ -128,12 +128,12 @@ pub async fn login(
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let Some(user) = user else {
-        let _ = verify_user(dummy_hash().to_string(), login_payload.user_password);
+        let _ = verify_user_async(dummy_hash().to_string(), login_payload.user_password).await;
         ratelimit::hit(&name_key);
         return Err(invalid_login());
     };
 
-    if let Err(e) = verify_user(user.user_password, login_payload.user_password) {
+    if let Err(e) = verify_user_async(user.user_password, login_payload.user_password).await {
         ratelimit::hit(&name_key);
         return Err(e);
     }
@@ -147,7 +147,7 @@ pub async fn login(
         ))?
         .to_string();
 
-    let expiration = OffsetDateTime::now_utc() + Duration::hours(24);
+    let expiration = OffsetDateTime::now_utc() + SESSION_LIFETIME;
     let version: i64 = sqlx::query_scalar("SELECT token_version FROM users WHERE user_id = ?")
         .bind(&user_id)
         .fetch_one(&state.db)
@@ -159,6 +159,10 @@ pub async fn login(
         expires_at: expiration.unix_timestamp(),
     }))
 }
+/// How long a sign-in lasts. A session that is being used renews itself (see the token middleware),
+/// so someone who opens the app every few weeks never signs in again.
+pub const SESSION_LIFETIME: Duration = Duration::days(30);
+
 pub fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
     let parsed_hash = PasswordHash::new(&database_password)
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -258,7 +262,7 @@ pub async fn register(
     let user_role = "user";
     validate_credentials(&user_name, &user_password)?;
 
-    let password_hash = get_password_hash(user_password)?;
+    let password_hash = get_password_hash_async(user_password).await?;
 
     sqlx::query!(
         "INSERT INTO users (user_id, user_name, user_password, user_role) VALUES (?, ?, ?, ?)",
@@ -280,6 +284,20 @@ pub async fn register(
     })?;
 
     Ok(Json(CreateUserResponse { status: true }))
+}
+
+/// Argon2 takes tens of milliseconds of CPU on purpose. Run on the async worker it stalls every other
+/// request on a one-CPU machine, so handlers use these, which move the work to the blocking pool.
+pub async fn verify_user_async(database_password: String, user_input_password: String) -> Result<(), AppError> {
+    tokio::task::spawn_blocking(move || verify_user(database_password, user_input_password))
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+}
+
+pub async fn get_password_hash_async(user_password: String) -> Result<String, AppError> {
+    tokio::task::spawn_blocking(move || get_password_hash(user_password))
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
 }
 
 pub fn get_password_hash(user_password: String) -> Result<String, AppError> {

@@ -721,3 +721,54 @@ async fn deleting_a_hand_added_date_takes_its_one_off_slip_with_it() {
     assert_eq!(t.post(&format!("/api/dates/history/{hid}/delete"), &rohit, json!({})).await.status, StatusCode::OK);
     assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE id = {slip}")).await, 1);
 }
+
+#[tokio::test]
+async fn a_deposit_that_has_already_been_spent_cannot_be_deleted() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    t.post("/api/dates/savings/add", &rohit, json!({"amount": 500})).await;
+    let dep = t.scalar(&format!("SELECT id FROM joy_savings WHERE couple_id = '{couple}' AND kind = 'add'")).await;
+    // 300 of it has gone on a date.
+    t.exec(&format!("INSERT INTO joy_savings (couple_id, amount, kind, note) VALUES ('{couple}', -300, 'kept', 'dinner')")).await;
+
+    let r = t.post(&format!("/api/dates/savings/{dep}/delete"), &rohit, json!({})).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", r.text);
+    assert_eq!(t.scalar(&format!("SELECT sum(amount) FROM joy_savings WHERE couple_id = '{couple}'")).await, 200, "nothing changed");
+
+    // Once the jar can cover it, it can go.
+    t.post("/api/dates/savings/add", &rohit, json!({"amount": 400})).await;
+    let r = t.post(&format!("/api/dates/savings/{dep}/delete"), &rohit, json!({})).await;
+    assert_eq!(r.status, StatusCode::OK);
+    assert_eq!(t.scalar(&format!("SELECT sum(amount) FROM joy_savings WHERE couple_id = '{couple}'")).await, 100);
+}
+
+#[tokio::test]
+async fn a_photo_has_a_small_copy_for_lists_that_goes_with_it() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let hid = t.keep(&couple, &rohit, COOK, false).await;
+    let mut big = Vec::new();
+    image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(1600, 1000, image::Rgb([10, 120, 200])))
+        .write_to(&mut Cursor::new(&mut big), image::ImageFormat::Jpeg)
+        .unwrap();
+    assert_eq!(t.upload(&format!("/api/dates/history/{hid}/photo"), &rohit, &big).await.status, StatusCode::OK);
+    let pic = &t.item(&rohit, hid).await["photos"][0];
+    let (pid, url) = (pic["id"].as_i64().unwrap(), public_url(pic["url"].as_str().unwrap()));
+
+    let full = t.public(&url).await;
+    assert_eq!(image::load_from_memory(&full.bytes).unwrap().width(), 1600);
+    let small = t.public(&format!("{url}&thumb=1")).await;
+    assert_eq!(small.status, StatusCode::OK, "{}", small.text);
+    let d = image::load_from_memory(&small.bytes).unwrap();
+    assert_eq!((d.width(), d.height()), (400, 250));
+    assert!(small.bytes.len() < full.bytes.len());
+    // Still needs a valid signature: asking for the small one is not a way around it.
+    assert_eq!(t.public(&format!("{}&thumb=1", url.replace("sig=", "sig=0"))).await.status, StatusCode::FORBIDDEN);
+
+    // Taking the photo away takes its small copy too.
+    let file: String = sqlx::query_scalar("SELECT file FROM joy_history_photos WHERE id = ?").bind(pid).fetch_one(&t.db).await.unwrap();
+    let dir = std::path::PathBuf::from(std::env::var("JOY_PHOTOS_DIR").unwrap()).join(&couple);
+    assert!(dir.join(format!("{file}.t.jpg")).exists());
+    t.post(&format!("/api/dates/history/{hid}/photos/{pid}/delete"), &rohit, json!({})).await;
+    assert!(!dir.join(format!("{file}.t.jpg")).exists() && !dir.join(&file).exists());
+}

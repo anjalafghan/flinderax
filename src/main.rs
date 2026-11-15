@@ -64,7 +64,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    info!("Starting Flinderax application");
+    info!("Starting joy");
     dotenvy::dotenv().ok();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL missing");

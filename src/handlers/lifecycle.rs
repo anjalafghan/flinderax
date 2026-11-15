@@ -6,7 +6,7 @@ use time::{Duration, OffsetDateTime};
 
 use crate::{
     handlers::{
-        common::{bad_request, get_password_hash, get_paseto_token, validate_password, verify_user, AppError},
+        common::{bad_request, get_password_hash_async, get_paseto_token, validate_password, verify_user, AppError},
         couple::{leave_in_tx, remove_couple_photos},
     },
     models::{AppState, LoginResponse},
@@ -75,7 +75,7 @@ pub async fn change_password(
 ) -> Result<Json<LoginResponse>, AppError> {
     check_password(&state, &user_id, p.current_password).await?;
     validate_password(&p.new_password)?;
-    let new_hash = get_password_hash(p.new_password)?;
+    let new_hash = get_password_hash_async(p.new_password).await?;
     let version: i64 = sqlx::query_scalar(
         "UPDATE users SET user_password = ?, token_version = token_version + 1 WHERE user_id = ? RETURNING token_version",
     )

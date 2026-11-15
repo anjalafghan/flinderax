@@ -107,6 +107,21 @@ pub async fn apply(db: &sqlx::SqlitePool, user_id: &str, today: Date) -> Result<
     let mut tx = db.begin().await?;
     for p in due {
         let (kind, on) = (p.kind.as_str(), p.on.to_string());
+        // One posting per source, account and month. If its day was moved after this month's was
+        // taken, the new day must not take it a second time. (A runtime query, so `.sqlx` is unchanged.)
+        let this_month = &on[..7];
+        let already: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM auto_postings WHERE source_id = ? AND account_id = ? AND substr(occurs_on, 1, 7) = ? AND occurs_on <> ?",
+        )
+        .bind(&p.source_id)
+        .bind(&p.account_id)
+        .bind(this_month)
+        .bind(&on)
+        .fetch_one(&mut *tx)
+        .await?;
+        if already > 0 {
+            continue;
+        }
         let inserted = sqlx::query!(
             "INSERT OR IGNORE INTO auto_postings (user_id, source_kind, source_id, account_id, occurs_on, label, amount_paise)
              VALUES (?, ?, ?, ?, ?, ?, ?)",

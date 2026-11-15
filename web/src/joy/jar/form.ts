@@ -11,7 +11,7 @@ export interface PickForm {
   max_km?: string;
   from?: string;
   excluded?: string;
-  used?: string;
+  reason?: string;
   current?: string;
   reroll?: string;
   veto?: string;
@@ -79,8 +79,18 @@ export function toggleStart(current: Filters["start"], value: "office" | "home")
 }
 
 /** The server's `state` is the kept filters plus where the draw has got to, WITHOUT reroll/veto set. */
-export const putBackForm = (state: PickForm): PickForm => compact({ ...state, reroll: "1", veto: "" });
-/** "Not for me": out of the draw for both of us; costs no peek. */
+export const putBackForm = (state: PickForm, reason?: PutBackReason): PickForm =>
+  compact({ ...state, reroll: "1", veto: "", reason: PUT_BACK_REASONS.some((r) => r.value === reason) ? reason : "" });
+
+/** The optional one-tap why. Only "not my thing" teaches the jar what you like. */
+export type PutBackReason = "not_tonight" | "too_far" | "too_pricey" | "not_my_thing";
+export const PUT_BACK_REASONS: { value: PutBackReason; label: string }[] = [
+  { value: "not_tonight", label: "Not tonight" },
+  { value: "too_far", label: "Too far" },
+  { value: "too_pricey", label: "Too pricey" },
+  { value: "not_my_thing", label: "Not my thing" },
+];
+/** "Not for me": out of the draw for both of us; there is no limit on putting back. */
 export const vetoForm = (state: PickForm): PickForm => compact({ ...state, veto: "1", reroll: "" });
 
 /** The sentence after a relax: write the loosened filters back so it tells the truth. */

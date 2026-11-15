@@ -167,6 +167,7 @@ pub async fn summary(
 ) -> Result<Json<Summary>, AppError> {
     let today = today_local();
     crate::backup::maybe_backup(&state.db, today).await;
+    crate::housekeeping::daily_once(&state.db, today).await;
     autopost::apply(&state.db, &user_id, today).await?;
     let input = load_input(&state.db, &user_id, today).await?;
     Ok(Json(planner::compute(&input)))

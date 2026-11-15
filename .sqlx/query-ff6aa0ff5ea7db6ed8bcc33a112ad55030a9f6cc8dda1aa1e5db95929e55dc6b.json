@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE card_running_state SET last_total_due_paise = ?, last_delta_paise = ? WHERE card_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "ff6aa0ff5ea7db6ed8bcc33a112ad55030a9f6cc8dda1aa1e5db95929e55dc6b"
+}

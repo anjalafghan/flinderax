@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { FormView, Opt } from "./api";
-import { errorField, formToState, tidyTitle, toPayload } from "./form";
+import { errorField, formToState, isDuplicateWarning, tidyTitle, toPayload } from "./form";
 import { rupees, standing, toPaise } from "./money";
 import { daysLeftInMonth, nudgeFor } from "./nudge";
 import { mapGoTo, navFor, pageKey } from "./paths";
@@ -160,7 +160,7 @@ const view = (over: Partial<FormView> = {}): FormView => ({
   people: [opt("A", true), opt("B")], pair_opts: [opt("7", true), opt("9")], me_name: "A",
   closed_opts: [opt("mon", true), opt("tue")], season_from_opts: [opt("11", true)], season_to_opts: [opt("5", true)],
   hours: "", hours_today: "", best_times: [opt("evening")], minutes: "", bookings: [opt("walk_in")], book_ahead_days: "",
-  covers: [opt("covered")], cover_unknown: true, bring: "", station: "", station_walk_min: "", details_open: false, ...over,
+  covers: [opt("covered")], cover_unknown: true, bring: "", station: "", station_walk_min: "", url: "", details_open: false, ...over,
 });
 
 describe("slip form", () => {
@@ -206,5 +206,12 @@ describe("slip search", () => {
     expect(filterGroups(groups, "").shown.length).toBe(2);
     expect(filterGroups(groups, "zzz").shown.length).toBe(0);
     expect(filterGroups(groups, "cafe").total).toBe(1);
+  });
+});
+
+describe("duplicate warning", () => {
+  test("recognises the server's question", () => {
+    expect(isDuplicateWarning("A slip like this is already in the jar. Save it anyway?")).toBe(true);
+    expect(isDuplicateWarning("Give it a name.")).toBe(false);
   });
 });

@@ -96,6 +96,47 @@ fn crosses_midnight(hours: &str) -> bool {
     })
 }
 
+impl Fill {
+    /// What was filled, in words, for the note after a save.
+    pub fn describe(&self) -> String {
+        match self {
+            Fill::Coords(..) => "Location copied from another slip at the same venue".into(),
+            Fill::Station(s) => format!("Nearest station: {s} (from a slip nearby)"),
+            Fill::ClosedDays(d) => {
+                let names: Vec<&str> = d
+                    .split(',')
+                    .filter_map(|k| WEEKDAYS.iter().find(|(key, _)| key == &k).map(|(_, n)| &n[..3]))
+                    .collect();
+                format!("Closed {} (worked out from the hours)", names.join(", "))
+            }
+            Fill::BestTime(t) => format!("Best time: {t} (it mentions the sunset)"),
+        }
+    }
+}
+
+/// Fills the blanks of one slip from what its couple's other slips know. Returns what was filled.
+pub async fn run_one(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Vec<Fill>> {
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT id, title, notes, venue, lat, lng, hours, closed_days, best_time, station, duration
+         FROM joy_activities WHERE archived = 0 AND couple_id = ?",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await?;
+    let fills: Vec<Fill> = plan(&rows).into_iter().filter(|(i, _)| *i == id).map(|(_, f)| f).collect();
+    for fill in &fills {
+        match fill {
+            Fill::Coords(lat, lng) => sqlx::query("UPDATE joy_activities SET lat = ?, lng = ? WHERE id = ? AND lat IS NULL").bind(lat).bind(lng).bind(id),
+            Fill::Station(s) => sqlx::query("UPDATE joy_activities SET station = ? WHERE id = ? AND station = ''").bind(s).bind(id),
+            Fill::ClosedDays(d) => sqlx::query("UPDATE joy_activities SET closed_days = ? WHERE id = ? AND closed_days = ''").bind(d).bind(id),
+            Fill::BestTime(t) => sqlx::query("UPDATE joy_activities SET best_time = ? WHERE id = ? AND best_time = ''").bind(t).bind(id),
+        }
+        .execute(db)
+        .await?;
+    }
+    Ok(fills)
+}
+
 /// Applies the plan to every slip. Returns how many fills were made (or would be, when `dry`).
 pub async fn run(db: &SqlitePool, dry: bool) -> sqlx::Result<Vec<(i64, String, Fill)>> {
     let rows: Vec<Row> = sqlx::query_as(

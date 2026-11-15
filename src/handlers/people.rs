@@ -326,7 +326,7 @@ async fn gift_marks(db: &SqlitePool, user_id: &str) -> Result<Vec<(String, i32, 
 }
 
 /// Dates of people who are not archived, with the years that already have a gift bought or given.
-async fn dates_in(db: &SqlitePool, user_id: &str) -> Result<(Vec<DateIn>, Vec<(String, i32, GiftStatus)>), AppError> {
+pub(crate) async fn dates_in(db: &SqlitePool, user_id: &str) -> Result<(Vec<DateIn>, Vec<(String, i32, GiftStatus)>), AppError> {
     let rows = sqlx::query_as::<_, (String, String, String, String, String, String, i64, i64, Option<i64>, i64, Option<i64>)>(
         "SELECT d.date_id, d.person_id, p.name, p.circle, d.kind, d.label, d.month, d.day, d.year, d.remind_days, d.gift_budget_paise \
          FROM person_dates d JOIN people p ON p.person_id = d.person_id AND p.user_id = d.user_id \

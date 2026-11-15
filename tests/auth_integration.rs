@@ -872,3 +872,307 @@ async fn learned_rules_hand_set_categories_and_layouts_can_be_reset() {
     let (st, b) = authed_post(&app, &t, "/api/ingest/statement/layouts/clear", json!({})).await;
     assert!(st.is_success(), "{b}");
 }
+
+#[tokio::test]
+async fn a_move_with_the_same_idempotency_key_moves_the_money_once() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.91", "mover").await;
+    let mut ids = vec![];
+    for (name, role) in [("Spending", "spending"), ("Reserve", "reserve")] {
+        let (s, b) = authed_post(&app, &t, "/api/account/create", json!({"name": name, "kind": "bank", "balance_paise": 1_000_000, "role": role})).await;
+        assert_eq!(s, StatusCode::OK, "{b}");
+        ids.push(serde_json::from_str::<Value>(&b).unwrap()["account_id"].as_str().unwrap().to_string());
+    }
+    let body = |key: &str, amount: i64| json!({"kind": "allocation", "key": "2026-11-01", "amount_paise": amount, "mode": "moved",
+        "from_account_id": ids[0], "to_account_id": ids[1], "idempotency_key": key});
+    let (s, first) = authed_post(&app, &t, "/api/moves/record", body("k-1", 100_000)).await;
+    assert_eq!(s, StatusCode::OK, "{first}");
+    // A retry long after the 10-second window, e.g. from an offline queue, with the same key.
+    sqlx::query("UPDATE moves SET created_at = datetime('now', '-1 hours')").execute(&db).await.unwrap();
+    let (s, again) = authed_post(&app, &t, "/api/moves/record", body("k-1", 100_000)).await;
+    assert_eq!(s, StatusCode::OK, "{again}");
+    assert_eq!(
+        serde_json::from_str::<Value>(&first).unwrap()["move_id"],
+        serde_json::from_str::<Value>(&again).unwrap()["move_id"],
+        "same move comes back"
+    );
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM moves").fetch_one(&db).await.unwrap();
+    assert_eq!(count, 1);
+    let bal: i64 = sqlx::query_scalar("SELECT balance_paise FROM accounts WHERE account_id = ?").bind(&ids[0]).fetch_one(&db).await.unwrap();
+    assert_eq!(bal, 900_000, "moved once");
+
+    // A different key is a different move.
+    let (s, _) = authed_post(&app, &t, "/api/moves/record", body("k-2", 100_000)).await;
+    assert_eq!(s, StatusCode::OK);
+    let bal: i64 = sqlx::query_scalar("SELECT balance_paise FROM accounts WHERE account_id = ?").bind(&ids[0]).fetch_one(&db).await.unwrap();
+    assert_eq!(bal, 800_000);
+}
+
+#[tokio::test]
+async fn an_alert_the_parser_cannot_read_is_kept_in_an_inbox() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.92", "inboxer").await;
+    let (_, b) = authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
+    let key = serde_json::from_str::<Value>(&b).unwrap()["key"].as_str().unwrap().to_string();
+
+    let odd = "A/c XX9 has been settled for the sum of seven hundred rupees at SOME SHOP";
+    let (_, v) = hook_post(&app, &key, odd).await;
+    assert_eq!(v["status"], "unrecognized");
+    // The same text again does not pile up.
+    hook_post(&app, &key, odd).await;
+
+    let inbox = authed_get(&app, &t, "/api/ingest/unrecognized").await;
+    assert_eq!(inbox["count"], 1, "{inbox}");
+    assert_eq!(inbox["items"][0]["text"], odd);
+    let id = inbox["items"][0]["alert_id"].as_str().unwrap().to_string();
+
+    // Pasting by hand shows the answer right there, so it is not kept.
+    authed_post(&app, &t, "/api/ingest/parse", json!({"text": "another odd one"})).await;
+    assert_eq!(authed_get(&app, &t, "/api/ingest/unrecognized").await["count"], 1);
+
+    // Someone else cannot dismiss it; the owner can.
+    let other = new_user(&app, "10.0.0.93", "snoop").await;
+    authed_post(&app, &other, "/api/ingest/unrecognized/dismiss", json!({"alert_id": id})).await;
+    assert_eq!(authed_get(&app, &t, "/api/ingest/unrecognized").await["count"], 1);
+    let (s, _) = authed_post(&app, &t, "/api/ingest/unrecognized/dismiss", json!({"alert_id": id})).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(authed_get(&app, &t, "/api/ingest/unrecognized").await["count"], 0);
+
+    // Old ones are dropped after 30 days.
+    hook_post(&app, &key, "yet another unreadable message").await;
+    sqlx::query("UPDATE unrecognized_alerts SET received_at = datetime('now', '-31 days')").execute(&db).await.unwrap();
+    hook_post(&app, &key, "a fresh unreadable message").await;
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM unrecognized_alerts").fetch_one(&db).await.unwrap();
+    assert_eq!(n, 1, "the old one was cleaned up");
+}
+
+#[tokio::test]
+async fn an_old_pending_charge_is_flagged_not_silently_dropped() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.94", "pender").await;
+    let (s, b) = authed_post(&app, &t, "/api/card/create", json!({
+        "card_name": "Visa", "card_bank": "HDFC", "card_primary_color": [0, 0, 0], "card_secondary_color": [9, 9, 9],
+        "last_4_digits": "4321", "statement_day": 5, "due_day": 25})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let card = serde_json::from_str::<Value>(&b).unwrap()["card_id"].as_str().unwrap().to_string();
+    authed_post(&app, &t, "/api/card/pending/create", json!({"card_id": card, "label": "Fresh", "amount_paise": 10_000})).await;
+    authed_post(&app, &t, "/api/card/pending/create", json!({"card_id": card, "label": "Old", "amount_paise": 25_000})).await;
+    sqlx::query("UPDATE pending_charges SET created_at = datetime('now', '-45 days') WHERE label = 'Old'").execute(&db).await.unwrap();
+
+    let (s, b) = authed_post(&app, &t, "/api/card/breakdown", json!({"card_id": card})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let v: Value = serde_json::from_str(&b).unwrap();
+    let rows = v["pending_charges"].as_array().unwrap();
+    assert_eq!(rows.len(), 2, "the old one is still listed: {v}");
+    let old = rows.iter().find(|r| r["label"] == "Old").unwrap();
+    let fresh = rows.iter().find(|r| r["label"] == "Fresh").unwrap();
+    assert_eq!((old["stale"].as_bool(), fresh["stale"].as_bool()), (Some(true), Some(false)));
+    assert_eq!(v["stale_pending_paise"], 25_000, "and the card says how much is being left out");
+    assert_eq!(v["next_bill_est_paise"], 10_000, "the estimate still counts only the recent one");
+}
+
+#[tokio::test]
+async fn card_totals_are_exact_to_the_paisa() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.0.95", "exact").await;
+    let (_, b) = authed_post(&app, &t, "/api/card/create", json!({
+        "card_name": "Big", "card_bank": "HDFC", "card_primary_color": [0, 0, 0], "card_secondary_color": [9, 9, 9]})).await;
+    let card = serde_json::from_str::<Value>(&b).unwrap()["card_id"].as_str().unwrap().to_string();
+    // ₹1,23,45,678.91 is more than an f32 can hold to the paisa.
+    let (s, b) = authed_post(&app, &t, "/api/card/snapshot", json!({"card_id": card, "total_due_paise": 0,
+        "outstanding_paise": 1_234_567_891_i64, "unbilled_spent_paise": 0, "unbilled_credit_paise": 0})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let (_, b) = authed_post(&app, &t, "/api/card/snapshot", json!({"card_id": card, "total_due_paise": 0,
+        "outstanding_paise": 1_234_567_890_i64, "unbilled_spent_paise": 0, "unbilled_credit_paise": 0})).await;
+    assert!(b.contains("transaction_id"), "{b}");
+
+    let cards = authed_get(&app, &t, "/api/card/get_all_cards").await;
+    assert_eq!(cards["cards"][0]["last_total_due"], 12_345_678.90);
+    assert_eq!(cards["cards"][0]["last_delta"], -0.01);
+    let (_, h) = authed_post(&app, &t, "/api/card/history", json!({"card_id": card})).await;
+    let h: Value = serde_json::from_str(&h).unwrap();
+    assert_eq!(h["histories"][1]["total_due_input"], 12_345_678.91);
+}
+
+/// What a protected GET answers with, headers included.
+async fn get_with_headers(app: &Router, path: &str, token: &str) -> (StatusCode, axum::http::HeaderMap) {
+    let req = Request::get(path).header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap();
+    let res = app.clone().oneshot(req).await.unwrap();
+    (res.status(), res.headers().clone())
+}
+
+#[tokio::test]
+async fn a_session_in_use_renews_itself_before_it_runs_out() {
+    let (app, db) = test_app_with_db().await;
+    let fresh = new_user(&app, "10.0.0.96", "renewer").await;
+    // A just-issued token has plenty of life left: nothing to renew.
+    let (s, h) = get_with_headers(&app, "/api/account/list", &fresh).await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(h.get("x-refreshed-token").is_none(), "no renewal needed yet");
+
+    // The same person, with a token that has two days left, is handed a new long one.
+    let (id, role, version): (String, String, i64) =
+        sqlx::query_as("SELECT user_id, user_role, token_version FROM users WHERE user_name = 'renewer'").fetch_one(&db).await.unwrap();
+    let key = Arc::new(PasetoSymmetricKey::from(Key::from(&[7u8; 32])));
+    let old = joy::handlers::common::get_paseto_token(&id, role, version, &key, time::OffsetDateTime::now_utc() + time::Duration::days(2)).ok().unwrap();
+    let (s, h) = get_with_headers(&app, "/api/account/list", &old).await;
+    assert_eq!(s, StatusCode::OK);
+    let renewed = h.get("x-refreshed-token").expect("renewed").to_str().unwrap().to_string();
+    let exp: i64 = h.get("x-token-expires-at").expect("expiry").to_str().unwrap().parse().unwrap();
+    assert!(exp > time::OffsetDateTime::now_utc().unix_timestamp() + 20 * 86_400, "a month, not two days");
+    assert_eq!(get(&app, "/api/account/list", Some(&renewed)).await, StatusCode::OK, "the new token works");
+
+    // A revoked session is not renewed: signing out everywhere still ends old tokens.
+    authed_post(&app, &renewed, "/api/common/logout-everywhere", json!({})).await;
+    let (s, h) = get_with_headers(&app, "/api/account/list", &old).await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+    assert!(h.get("x-refreshed-token").is_none());
+}
+
+#[tokio::test]
+async fn what_if_scenarios_follow_the_person_and_stay_private() {
+    let (app, db) = test_app_with_db().await;
+    let a = new_user(&app, "10.0.0.97", "scenarioa").await;
+    let b = new_user(&app, "10.0.0.98", "scenariob").await;
+    assert_eq!(authed_get(&app, &a, "/api/plan/scenarios").await["drafts"], json!([]), "none yet");
+
+    let drafts = json!([{"id": "d1", "kind": "sip", "amount": "5000"}, {"id": "d2", "kind": "emi", "amount": "12000"}]);
+    let (s, body) = authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": drafts})).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    assert_eq!(authed_get(&app, &a, "/api/plan/scenarios").await["drafts"], drafts);
+    assert_eq!(authed_get(&app, &b, "/api/plan/scenarios").await["drafts"], json!([]), "someone else's are theirs");
+
+    // Saving again replaces, and an empty list clears.
+    authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": [{"id": "d3"}]})).await;
+    assert_eq!(authed_get(&app, &a, "/api/plan/scenarios").await["drafts"], json!([{"id": "d3"}]));
+    authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": []})).await;
+    assert_eq!(authed_get(&app, &a, "/api/plan/scenarios").await["drafts"], json!([]));
+
+    // Not a list, or far too much, is refused.
+    let (s, _) = authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": {"nope": 1}})).await;
+    assert_eq!(s, StatusCode::UNPROCESSABLE_ENTITY);
+    let many: Vec<Value> = (0..60).map(|i| json!({"id": i})).collect();
+    let (s, _) = authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": many})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let big = json!([{"note": "x".repeat(70_000)}]);
+    let (s, _) = authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": big})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM whatif_scenarios").fetch_one(&db).await.unwrap();
+    assert_eq!(n, 1, "one row per person");
+}
+
+#[tokio::test]
+async fn an_export_can_be_loaded_back_and_exports_the_same_again() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.99", "restorer").await;
+    let (s, b) = authed_post(&app, &t, "/api/account/create", json!({"name": "HDFC", "kind": "bank", "balance_paise": 5_000_000, "role": "spending", "last_4_digits": "1234"})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    authed_post(&app, &t, "/api/card/create", json!({"card_name": "Visa", "card_bank": "HDFC", "card_primary_color": [1, 2, 3], "card_secondary_color": [4, 5, 6]})).await;
+    let today = joy::handlers::common::today_local().to_string();
+    authed_post(&app, &t, "/api/ingest/transactions/create",
+        json!({"occurred_on": today, "direction": "debit", "amount_paise": 25_000, "merchant": "Chai", "category": "food"})).await;
+    authed_post(&app, &t, "/api/plan/scenarios", json!({"drafts": [{"id": "d1"}]})).await;
+
+    let before = authed_get(&app, &t, "/api/export").await;
+    assert!(!before["data"]["accounts"].as_array().unwrap().is_empty());
+
+    // Lose it all (and add something that was never in the backup).
+    sqlx::query("DELETE FROM transactions").execute(&db).await.unwrap();
+    sqlx::query("DELETE FROM cards").execute(&db).await.unwrap();
+    sqlx::query("DELETE FROM accounts").execute(&db).await.unwrap();
+    sqlx::query("DELETE FROM whatif_scenarios").execute(&db).await.unwrap();
+    authed_post(&app, &t, "/api/account/create", json!({"name": "Junk", "kind": "cash", "balance_paise": 1})).await;
+
+    let (s, b) = authed_post(&app, &t, "/api/import", before.clone()).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let after = authed_get(&app, &t, "/api/export").await;
+    assert_eq!(after["data"], before["data"], "export -> wipe -> import -> export is the same file");
+
+    // Someone else's backup is not loadable into your account: ids are theirs.
+    let other = new_user(&app, "10.0.1.1", "intruder").await;
+    let (s, _) = authed_post(&app, &other, "/api/import", before.clone()).await;
+    assert_eq!(s, StatusCode::CONFLICT, "those rows already belong to another account");
+    assert_eq!(authed_get(&app, &other, "/api/export").await["data"]["accounts"], json!([]));
+
+    // Not an export at all, or a table we don't know: refused, and nothing changes.
+    for bad in [json!({"nope": 1}), json!({"data": {"users": [{"user_id": "x"}]}}), json!({"data": {"accounts": "no"}})] {
+        let (s, _) = authed_post(&app, &t, "/api/import", bad).await;
+        assert_eq!(s, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+    assert_eq!(authed_get(&app, &t, "/api/export").await["data"], before["data"]);
+}
+
+#[tokio::test]
+async fn coming_up_puts_bills_birthdays_and_follow_ups_in_one_list() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.1.2", "upcomer").await;
+    let today = joy::handlers::common::today_local();
+    let tomorrow = today + time::Duration::days(1);
+    let in3 = today + time::Duration::days(3);
+
+    let (_, b) = authed_post(&app, &t, "/api/people", json!({"name": "Asha", "circle": "close"})).await;
+    let pid = serde_json::from_str::<Value>(&b).unwrap()["id"].as_str().unwrap().to_string();
+    let (s, b) = authed_post(&app, &t, &format!("/api/people/{pid}/dates"), json!({"kind": "birthday", "month": in3.month() as u8, "day": in3.day()})).await;
+    assert!(s.is_success(), "{b}");
+    let (s, b) = authed_post(&app, &t, &format!("/api/people/{pid}/followups"), json!({"text": "Ask about the move", "due_on": tomorrow.to_string()})).await;
+    assert!(s.is_success(), "{b}");
+
+    let v = authed_get(&app, &t, "/api/coming-up?days=14").await;
+    let items = v["items"].as_array().unwrap();
+    let kinds: Vec<(&str, &str)> = items.iter().map(|i| (i["kind"].as_str().unwrap(), i["when"].as_str().unwrap())).collect();
+    assert_eq!(kinds, [("follow_up", "Tomorrow"), ("birthday", "In 3 days")], "{v}");
+    assert!(items[0]["title"].as_str().unwrap().contains("Ask about the move"));
+    assert!(items[1]["title"].as_str().unwrap().contains("Asha"));
+
+    // A short window leaves the birthday out; someone else sees none of it.
+    let short = authed_get(&app, &t, "/api/coming-up?days=2").await;
+    assert_eq!(short["items"].as_array().unwrap().len(), 1);
+    let other = new_user(&app, "10.0.1.3", "nosy").await;
+    assert_eq!(authed_get(&app, &other, "/api/coming-up").await["items"], json!([]));
+}
+
+#[tokio::test]
+async fn a_refund_is_not_counted_as_income() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.1.4", "refunded").await;
+    authed_post(&app, &t, "/api/account/create", json!({"name": "HDFC", "kind": "bank", "balance_paise": 100, "last_4_digits": "1234"})).await;
+    let (_, b) = authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
+    let key = serde_json::from_str::<Value>(&b).unwrap()["key"].as_str().unwrap().to_string();
+
+    let (_, v) = hook_post(&app, &key, "Refund of INR 1,299.00 credited to HDFC Bank A/c XX1234 from AMAZON PAY on 12-11-26. Ref 55501.").await;
+    assert_eq!(v["status"], "created", "{v}");
+    assert_eq!(v["transaction"]["category"], "refund", "{v}");
+
+    // Salary still reads as income.
+    let (_, v) = hook_post(&app, &key, "Update! INR 90,000.00 deposited in HDFC Bank A/c XX1234 for NEFT Cr-ACME CORP. Ref 77712.").await;
+    assert_eq!(v["transaction"]["category"], "income", "{v}");
+}
+
+#[tokio::test]
+async fn moving_a_payments_day_does_not_post_that_month_twice() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.1.5", "mover2").await;
+    let (_, b) = authed_post(&app, &t, "/api/account/create", json!({"name": "HDFC", "kind": "bank", "balance_paise": 10_000_000, "role": "spending"})).await;
+    let acct = serde_json::from_str::<Value>(&b).unwrap()["account_id"].as_str().unwrap().to_string();
+    let uid: String = sqlx::query_scalar("SELECT user_id FROM users WHERE user_name = 'mover2'").fetch_one(&db).await.unwrap();
+    sqlx::query("UPDATE accounts SET balance_set_on = '2026-11-01'").execute(&db).await.unwrap();
+    let (s, b) = authed_post(&app, &t, "/api/plan/commitment/create",
+        json!({"label": "Rent", "amount_paise": 2_000_000, "day_of_month": 5, "account_id": acct})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let cid = serde_json::from_str::<Value>(&b).unwrap()["id"].as_str().unwrap().to_string();
+    let balance = || async { sqlx::query_scalar::<_, i64>("SELECT balance_paise FROM accounts").fetch_one(&db).await.unwrap() };
+
+    joy::handlers::autopost::apply(&db, &uid, time::macros::date!(2026 - 11 - 06)).await.ok().unwrap();
+    assert_eq!(balance().await, 8_000_000, "rent posted on the 5th");
+
+    // The day is moved to the 20th; when the 20th comes, November's rent is not taken again.
+    let (s, b) = authed_post(&app, &t, "/api/plan/commitment/update",
+        json!({"commitment_id": cid, "label": "Rent", "amount_paise": 2_000_000, "day_of_month": 20, "account_id": acct})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    joy::handlers::autopost::apply(&db, &uid, time::macros::date!(2026 - 11 - 21)).await.ok().unwrap();
+    assert_eq!(balance().await, 8_000_000, "still taken once for November");
+
+    // December's rent is a new month and does post, on the new day.
+    joy::handlers::autopost::apply(&db, &uid, time::macros::date!(2026 - 12 - 21)).await.ok().unwrap();
+    assert_eq!(balance().await, 6_000_000);
+}

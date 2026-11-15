@@ -76,6 +76,10 @@ pub struct LifeProfile {
     pub partner_raise_bps: i64,
     /// The age the life line runs to.
     pub live_to_age: i64,
+    /// Your own guess at yearly return on equity (bps); `None` uses the default. Life line only.
+    pub equity_return_bps: Option<i64>,
+    /// Your own guess at yearly general inflation (bps); `None` uses the default. Life line only.
+    pub inflation_bps: Option<i64>,
 }
 
 impl Default for LifeProfile {
@@ -101,6 +105,8 @@ impl Default for LifeProfile {
             raise_bps: DEFAULT_RAISE_BPS,
             partner_raise_bps: DEFAULT_RAISE_BPS,
             live_to_age: DEFAULT_LIVE_TO_AGE,
+            equity_return_bps: None,
+            inflation_bps: None,
         }
     }
 }
@@ -778,6 +784,8 @@ mod tests {
             raise_bps: i64::MAX,
             partner_raise_bps: i64::MIN,
             live_to_age: i64::MAX,
+            equity_return_bps: Some(i64::MAX),
+            inflation_bps: Some(i64::MIN),
         };
         let plan = plan(&profile, i64::MAX, today());
         for g in &plan.goals {

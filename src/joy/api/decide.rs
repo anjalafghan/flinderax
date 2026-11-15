@@ -1,5 +1,6 @@
 //! The jar page and the draw: pick, live match counts, and "it's a date". The server works out
-//! the peek cap, whose turn it is, and what a sealed surprise may show, every time.
+//! whose turn it is and what a sealed surprise may show, every time. Putting a slip back is
+//! unlimited; each one is a row in `joy_peeks`, never in the history.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -12,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
 use super::{
-    budget_view, dayplan, distance_from, door_minutes, duration_opts, envelope, flex, flex_list, internal, joy,
+    budget_left, budget_note, budget_view, dayplan, distance_from, door_minutes, duration_opts, envelope, flex, flex_list, internal, joy,
     learned, middle::{self, Middle}, regular, weather_for, ActivityView, AppError, BudgetView, Learned, Me, Opt,
 };
 use crate::{
@@ -20,7 +21,7 @@ use crate::{
     joy::{
         ctx::{road_km, Ctx},
         db,
-        picker::{self, Candidate, Duration, Filters, Hint, PickResult, Today, ENERGIES, MAX_REROLLS, SETTINGS},
+        picker::{self, Candidate, Duration, Filters, Hint, PickResult, Today, ENERGIES, SETTINGS},
         schedule::{self, Slot},
         weather,
     },
@@ -60,7 +61,7 @@ pub struct DecideView {
     pub me_name: String,
     /// Whose turn it is to draw ("Neha"), empty when it's anyone's.
     pub turn_name: String,
-    /// It's the asker's turn: they get a bonus peek.
+    /// It's the asker's turn to draw.
     pub my_turn: bool,
     /// Tonight's rain chance (%) when rain is likely.
     pub rain: Option<u8>,
@@ -75,6 +76,8 @@ pub struct DecideView {
     pub middle: middle::MiddleView,
     /// The dates we could draw for ("Thursday evening"), the next one selected; empty without a schedule.
     pub whens: Vec<Opt>,
+    /// A kept date whose day has passed and nobody has said how it went: "did it happen?".
+    pub to_close: Option<ToClose>,
     /// The next kept date's day-of plan, until it's over.
     pub next_plan: Option<dayplan::DayPlan>,
     /// Tonight's question for a regular ("Blue Tokai?"), and what we could still spend on them.
@@ -123,6 +126,14 @@ async fn nudge(db: &SqlitePool, couple: &str, ctx: &Ctx, who: Option<usize>) -> 
 }
 
 #[derive(Debug, Serialize)]
+pub struct ToClose {
+    pub id: i64,
+    pub title: String,
+    /// "14 Oct"
+    pub when: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct Memory {
     pub title: String,
     /// "14 Oct 2025"
@@ -143,6 +154,15 @@ pub fn sealed_for(row: &db::HistoryRow, me: Option<usize>) -> bool {
 /// Tonight's rain chance, only when it's likely.
 async fn rain(ctx: &Ctx) -> Option<u8> {
     weather_for(ctx).tonight().await.filter(|p| *p >= weather::LIKELY_PERCENT)
+}
+
+/// Rain for the draw: tonight's forecast says nothing about next Saturday, so a draw for another
+/// day isn't damped by it.
+pub(crate) async fn rain_for(ctx: &Ctx, slot: Option<&Slot>) -> Option<u8> {
+    if slot.is_some_and(|sl| !sl.today) {
+        return None;
+    }
+    rain(ctx).await
 }
 
 /// `GET /jar`
@@ -172,6 +192,11 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
         .find(|r| !sealed_for(r, who))
         .map(|r| Memory { title: ctx.personalize(&r.title), when: format!("{} {}", r.day_label(), r.day.get(..4).unwrap_or("")) });
     let nudge = nudge(db, couple, ctx, who).await?;
+    let to_close = db::to_close(db, couple)
+        .await?
+        .into_iter()
+        .find(|r| !sealed_for(r, who))
+        .map(|r| ToClose { id: r.id, title: ctx.personalize(&r.title), when: r.day_label() });
     let middle = middle::view(db, couple, ctx, who, &me.partner).await?;
     let jar = jar_data(db, couple, ctx, j.who, None).await?;
     let acts = &jar.acts;
@@ -197,7 +222,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
             id: a.id,
             title: ctx.personalize(&a.title),
             setting: a.setting.clone(),
-            outdoor: a.tag_list().iter().any(|t| t == "outdoors"),
+            outdoor: a.outdoor(),
         })
         .collect();
     Ok(Json(DecideView {
@@ -234,6 +259,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
         nudge_soon: nudge.1,
         middle,
         whens,
+        to_close,
         next_plan,
         regulars: regular::card(db, couple, ctx).await?,
     }))
@@ -263,11 +289,12 @@ pub struct PickForm {
     #[serde(deserialize_with = "flex_list", skip_serializing_if = "String::is_empty")]
     pub excluded: String,
     #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
-    pub used: String,
-    #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
     pub current: String,
     #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
     pub reroll: String,
+    /// Why the current slip was put back (one of `db::PUT_BACK_REASONS`), or empty.
+    #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
+    pub reason: String,
     /// "1": the asker passes on the current slip for good ("Not for me").
     #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
     pub veto: String,
@@ -371,10 +398,9 @@ impl PickForm {
         h
     }
 
-    fn hidden(&self, excluded: &[i64], used: u32, current: i64) -> Vec<(String, String)> {
+    fn hidden(&self, excluded: &[i64], current: i64) -> Vec<(String, String)> {
         let mut h = self.filter_fields();
         h.push(("excluded".into(), excluded.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(",")));
-        h.push(("used".into(), used.to_string()));
         h.push(("current".into(), current.to_string()));
         h
     }
@@ -399,10 +425,9 @@ impl PickForm {
     }
 
     /// The form to post back for the next peek: the kept filters plus where the draw has got to.
-    fn state(&self, excluded: &[i64], used: u32, current: i64) -> PickForm {
+    fn state(&self, excluded: &[i64], current: i64) -> PickForm {
         PickForm {
             excluded: excluded.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(","),
-            used: used.to_string(),
             current: current.to_string(),
             ..self.kept()
         }
@@ -418,6 +443,10 @@ pub struct JarData {
     pub today: Today,
     /// The date we're drawing for, when we have a schedule and didn't say "any time".
     pub slot: Option<Slot>,
+    /// (setting, main tag) of the last two dates that happened.
+    pub recent: Vec<(String, String)>,
+    /// Quiet marks: (slip, person, level). Only ever turned into weights and "you both want this".
+    pub wants: Vec<(i64, i64, String)>,
 }
 
 pub async fn jar_data(db: &SqlitePool, couple: &str, _ctx: &Ctx, who: usize, slot: Option<Slot>) -> Result<JarData, AppError> {
@@ -431,10 +460,15 @@ pub async fn jar_data(db: &SqlitePool, couple: &str, _ctx: &Ctx, who: usize, slo
             Today { weekday, month }
         }
     };
-    Ok(JarData { acts, learned: learned(db, couple).await?, today, slot })
+    Ok(JarData { acts, learned: learned(db, couple).await?, today, slot, recent: db::recent_kinds(db, couple).await?, wants: db::wants(db, couple).await? })
 }
 
 impl JarData {
+    /// Both of us marked this slip "want".
+    pub fn both_want(&self, id: i64) -> bool {
+        (0..2).all(|p| self.wants.iter().any(|(i, person, l)| *i == id && *person == p && l == "want"))
+    }
+
     fn candidates(&self, ctx: &Ctx, f: &PickForm) -> Vec<Candidate> {
         self.acts
             .iter()
@@ -445,6 +479,9 @@ impl JarData {
                 };
                 let mut c = a.candidate(km, self.learned.cost);
                 c.taste = self.learned.taste.factor(&c.tags);
+                c.both_want = self.both_want(a.id);
+                c.any_no = self.wants.iter().any(|(id, _, l)| *id == a.id && l == "no");
+                c.like_recent = self.recent.iter().any(|(setting, tag)| *setting == c.setting && !tag.is_empty() && c.tags.first() == Some(tag));
                 // "The time we have" is door to door: two hours in Andheri is most of a day from
                 // home. An evening from the office has its own clock (the fit above).
                 let from_office = self.slot.is_some_and(|sl| sl.kind == schedule::Kind::Weeknight);
@@ -483,7 +520,7 @@ pub async fn matching(
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
     let jar = jar_data(db, couple, ctx, j.who, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
     let cands = jar.candidates(ctx, &f);
-    let filters = jar.filters(&f, rain(ctx).await.is_some());
+    let filters = jar.filters(&f, rain_for(ctx, jar.slot.as_ref()).await.is_some());
     let ids: Vec<i64> = cands.iter().filter(|c| picker::matches(c, &filters)).map(|c| c.id).collect();
     Ok(Json(MatchCount { count: ids.len(), total: cands.len(), ids }))
 }
@@ -516,19 +553,17 @@ pub struct PickCard {
     pub done: bool,
     /// For the stamp on an accepted pick, e.g. "14 · 10 · 2026".
     pub stamp_date: String,
-    pub rerolls_left: u32,
-    pub max_rerolls: u32,
-    /// The drawn slip was generated for us, so putting it back is free.
-    pub free_putback: bool,
     pub pairs: Vec<PairOffer>,
+    /// "₹2,300 left for dates this month", or how far over this one would go. Empty without a budget.
+    pub budget_note: String,
+    /// Why this slip came up: "Never done", "Fits ₹1,500", "About 12 km away".
+    pub why: Vec<String>,
     /// On an accepted pair: the second slip.
     pub paired: Option<ActivityView>,
     /// Joy's hidden fields for a reroll.
     pub hidden: Vec<Hidden>,
     /// The form to post to `/pick` (with `reroll`/`veto` set) to peek again; None on a done card.
     pub state: Option<PickForm>,
-    /// This draw has a bonus peek because it's this person's turn.
-    pub bonus_peek: bool,
     /// The slip can be kept as a surprise for the other.
     pub can_surprise: bool,
     /// They can pass on this slip ("Not for me").
@@ -570,15 +605,13 @@ impl PickCard {
             relax: None,
             done: false,
             stamp_date: String::new(),
-            rerolls_left: 0,
-            max_rerolls: MAX_REROLLS,
-            free_putback: false,
             middle: false,
             pairs: vec![],
+            why: vec![],
+            budget_note: String::new(),
             paired: None,
             hidden: vec![],
             state: None,
-            bonus_peek: false,
             can_surprise: false,
             can_veto: false,
             partner: String::new(),
@@ -597,15 +630,13 @@ impl PickCard {
     }
 }
 
-/// Who's drawing and how many peeks they get. Worked out on the server every time.
+/// Who's drawing. Worked out on the server every time.
 struct Drawer {
     me: Me,
-    max: u32,
 }
 
-async fn drawer(db: &SqlitePool, couple: &str, ctx: &Ctx, who: usize) -> Result<Drawer, AppError> {
-    let turn = turn(db, couple).await?;
-    Ok(Drawer { me: Me::new(ctx, Some(who)), max: picker::max_peeks(turn == Some(who)) })
+fn drawer(ctx: &Ctx, who: usize) -> Drawer {
+    Drawer { me: Me::new(ctx, Some(who)) }
 }
 
 /// `POST /pick`: draw a slip, peek again (`reroll`), or pass on one for good (`veto`).
@@ -617,7 +648,7 @@ pub async fn pick(
     let f = body.map(|j| j.0).unwrap_or_default();
     let j = joy(&s, &user_id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
-    let d = drawer(db, couple, ctx, j.who).await?;
+    let d = drawer(ctx, j.who);
     let middle = if f.is_middle() { middle::tonight(db, couple).await? } else { None };
     if f.is_middle() && middle.is_none() {
         return Ok(Json(PickCard {
@@ -630,9 +661,8 @@ pub async fn pick(
         None => f,
     };
     let mut excluded = f.excluded();
-    let mut used: u32 = f.used.parse().unwrap_or(0);
 
-    // "Not for me": out of the draw for both of us, and it doesn't cost a peek. A slip that
+    // "Not for me": out of the draw for both of us. A slip that
     // isn't ours does nothing (the veto is scoped to the couple).
     if f.veto == "1" {
         if let Ok(cur) = f.current.parse::<i64>() {
@@ -643,22 +673,8 @@ pub async fn pick(
     } else if f.reroll == "1"
         && let Ok(cur) = f.current.parse::<i64>() {
             super::unsealed(db, couple, j.who, cur).await?;
-            let current = db::get(db, couple, cur).await?;
-            match picker::put_back(used, current.as_ref().is_some_and(|a| a.generated), d.max) {
-                Some(next) => {
-                    db::record(db, couple, cur, false).await?;
-                    excluded.push(cur);
-                    used = next;
-                }
-                // Out of peeks: the card already hides the button, so just show it again.
-                None => {
-                    if let Some(a) = current {
-                        let learned = learned(db, couple).await?;
-                        let slot = dayplan::slot_for(db, ctx, &f.when, f.start()).await?;
-                        return Ok(Json(card(db, couple, ctx, &d, &f, Some(&a), &excluded, used, &learned, slot).await?));
-                    }
-                }
-            }
+            db::put_back(db, couple, cur, j.who, &f.reason).await?;
+            excluded.push(cur);
         }
 
     let jar = jar_data(db, couple, ctx, j.who, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
@@ -666,17 +682,17 @@ pub async fn pick(
     if let Some(m) = &middle {
         cands.retain(|c| m.allows(&c.energy, &c.tags));
     }
-    let filters = jar.filters(&f, rain(ctx).await.is_some());
+    let filters = jar.filters(&f, rain_for(ctx, jar.slot.as_ref()).await.is_some());
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map_err(internal)?.as_secs() as i64;
     let result = picker::pick(&cands, &filters, &excluded, now, &mut thread_rng());
 
     let card_out = match result {
         PickResult::Pick(id) => {
-            card(db, couple, ctx, &d, &f, jar.acts.iter().find(|a| a.id == id), &excluded, used, &jar.learned, jar.slot).await?
+            card(db, couple, ctx, &d, &f, jar.acts.iter().find(|a| a.id == id), &excluded, &jar.learned, jar.slot).await?
         }
         PickResult::NoMatch(Hint::OutsideWindow { title, why }) if middle.is_none() => {
             let label = jar.slot.map(|sl| sl.label()).unwrap_or_default();
-            let relax = PickForm { when: "any".into(), excluded: String::new(), used: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
+            let relax = PickForm { when: "any".into(), excluded: String::new(), reason: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
             PickCard {
                 message: format!("Nothing in the jar fits {label}. Closest: {title}, but it's {why}."),
                 relax_label: "Draw for any day".into(),
@@ -688,7 +704,7 @@ pub async fn pick(
         // Saying which filter to loosen would give away one of our answers.
         PickResult::NoMatch(h) if middle.is_some() => PickCard {
             message: match h {
-                Hint::Exhausted => "You've peeked at every slip that fits you both. One of you could change your check-in.".into(),
+                Hint::Exhausted => "You've been through every slip that fits you both. One of you could change your check-in.".into(),
                 _ => "Nothing in the jar fits you both tonight. One of you could change your check-in, or draw on your own.".into(),
             },
             ..PickCard::blank()
@@ -716,7 +732,6 @@ async fn card(
     f: &PickForm,
     a: Option<&db::Activity>,
     excluded: &[i64],
-    used: u32,
     learned: &Learned,
     slot: Option<Slot>,
 ) -> Result<PickCard, AppError> {
@@ -758,19 +773,37 @@ async fn card(
         _ => (vec![], String::new()),
     };
     let current = a.map_or(0, |a| a.id);
+    let why = match a {
+        Some(a) => {
+            let money = |n: i64| ctx.money(n);
+            why(&WhyInput {
+                times_done: a.times_done,
+                cost: a.effective_cost(learned.cost),
+                budget: f.filters().budget,
+                km: distance_from(ctx, a, f.from()),
+                max_km: f.filters().max_km,
+                taste: learned.taste.factor(&a.tag_list()),
+                both_want: db::wants(db, couple).await?.iter().filter(|(id, _, l)| *id == a.id && l == "want").count() == 2,
+                money: &money,
+            })
+        }
+        None => vec![],
+    };
+    let budget_note = match a {
+        Some(a) => budget_note(budget_left(db, couple).await?, a.effective_cost(learned.cost), |n| ctx.money(n)),
+        None => String::new(),
+    };
     Ok(PickCard {
+        why,
+        budget_note,
         when: slot.map(|sl| sl.key()).unwrap_or_else(|| "any".into()),
         start: f.start().into(),
         route,
         route_note,
         when_label: slot.map(|sl| sl.label()).unwrap_or_default(),
         plan_line,
-        hidden: hidden_of(f.hidden(excluded, used, current)),
-        state: Some(f.state(excluded, used, current)),
-        rerolls_left: picker::rerolls_left(used, d.max),
-        max_rerolls: d.max,
-        bonus_peek: d.max > MAX_REROLLS,
-        free_putback: a.is_some_and(|a| a.generated),
+        hidden: hidden_of(f.hidden(excluded, current)),
+        state: Some(f.state(excluded, current)),
         can_surprise: d.me.who.is_some(),
         can_veto: d.me.who.is_some(),
         partner: d.me.partner.clone(),
@@ -842,7 +875,7 @@ async fn pair_offers(db: &SqlitePool, couple: &str, ctx: &Ctx, who: Option<usize
 fn hint_text(ctx: &Ctx, form: &PickForm, f: &Filters, h: Hint) -> String {
     match h {
         Hint::EmptyWishlist => "The jar is empty. Write the first slip.".into(),
-        Hint::Exhausted => "You've peeked at every slip that fits. Loosen something, or go with one you put back.".into(),
+        Hint::Exhausted => "You've been through every slip that fits. Start over, or loosen something.".into(),
         Hint::OverBudget { title, cost } if f.budget == 0 => {
             format!("Nothing in the jar is free. Closest: {title} at {}.", ctx.money(cost))
         }
@@ -881,7 +914,7 @@ fn hint_text(ctx: &Ctx, form: &PickForm, f: &Filters, h: Hint) -> String {
 
 /// The smallest change to the filters that would make the hinted slip fit.
 fn relax(ctx: &Ctx, f: &PickForm, h: &Hint) -> (String, Option<PickForm>) {
-    let mut r = PickForm { excluded: String::new(), used: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
+    let mut r = PickForm { excluded: String::new(), reason: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
     let label = match h {
         Hint::OverBudget { cost, .. } => {
             r.budget = cost.to_string();
@@ -961,14 +994,15 @@ pub async fn accept(
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
     let who = Some(j.who);
     // A slip that isn't ours isn't here.
-    let Some(a) = db::visible_get(db, couple, j.who, id).await? else { return Err(not_found("No such slip")) };
+    let Some(a) = db::drawable_get(db, couple, j.who, id).await? else { return Err(not_found("No such slip")) };
     let surprise = q.surprise == "1";
     let learned = learned(db, couple).await?;
     let mut ids = vec![db::accept(db, couple, id, who, surprise).await?];
     let mut paired = None;
+    let db_partner_ids: Vec<i64> = db::visible_partners(db, couple, j.who, id).await?.into_iter().map(|p| p.id).collect();
     if let Ok(with) = q.with.trim().parse::<i64>() {
         // Only a real partner of this slip can ride along.
-        if let Some(p) = db::visible_partners(db, couple, j.who, id).await?.into_iter().find(|p| p.id == with) {
+        if let Some(p) = db::drawable_get(db, couple, j.who, with).await?.filter(|p| db_partner_ids.contains(&p.id)) {
             ids.push(db::accept(db, couple, p.id, who, surprise).await?);
             paired = Some(ActivityView::new(ctx, &p, &learned));
         }
@@ -1000,6 +1034,71 @@ pub async fn accept(
         activity: view,
         ..PickCard::blank()
     }))
+}
+
+/// Why this slip came up, in a few plain words (the inputs the picker already weighs).
+pub(crate) struct WhyInput<'a> {
+    pub times_done: i64,
+    pub cost: i64,
+    pub budget: i64,
+    pub km: Option<f64>,
+    pub max_km: Option<f64>,
+    pub taste: f64,
+    pub both_want: bool,
+    pub money: &'a dyn Fn(i64) -> String,
+}
+
+pub(crate) fn why(i: &WhyInput) -> Vec<String> {
+    let mut out = vec![];
+    if i.times_done == 0 {
+        out.push("Never done".to_string());
+    }
+    if i.budget != i64::MAX {
+        out.push(if i.cost == 0 { "Free".to_string() } else { format!("Fits {}", (i.money)(i.budget)) });
+    }
+    if let (Some(km), Some(max)) = (i.km, i.max_km)
+        && km <= max {
+            out.push(format!("About {} km away", km.round() as i64));
+        }
+    if i.both_want {
+        out.push("You both want this".to_string());
+    }
+    if i.taste >= 1.1 {
+        out.push("Like dates you've enjoyed".to_string());
+    }
+    out
+}
+
+#[cfg(test)]
+mod why_tests {
+    use super::*;
+
+    fn money(n: i64) -> String {
+        format!("₹{n}")
+    }
+
+    fn input(f: impl FnOnce(&mut WhyInput)) -> Vec<String> {
+        let mut i = WhyInput { times_done: 3, cost: 500, budget: i64::MAX, km: None, max_km: None, taste: 1.0, both_want: false, money: &money };
+        f(&mut i);
+        why(&i)
+    }
+
+    #[test]
+    fn says_nothing_when_there_is_nothing_to_say() {
+        assert!(input(|_| {}).is_empty());
+    }
+
+    #[test]
+    fn names_what_the_draw_used() {
+        assert_eq!(input(|i| i.times_done = 0), ["Never done"]);
+        assert_eq!(input(|i| i.budget = 1500), ["Fits ₹1500"]);
+        assert_eq!(input(|i| { i.budget = 1500; i.cost = 0 }), ["Free"]);
+        assert_eq!(input(|i| { i.km = Some(12.4); i.max_km = Some(20.0) }), ["About 12 km away"]);
+        assert!(input(|i| { i.km = Some(30.0); i.max_km = Some(20.0) }).is_empty(), "too far is not a reason");
+        assert_eq!(input(|i| i.taste = 1.2), ["Like dates you've enjoyed"]);
+        assert_eq!(input(|i| i.both_want = true), ["You both want this"]);
+        assert_eq!(input(|i| { i.times_done = 0; i.taste = 1.3 }), ["Never done", "Like dates you've enjoyed"]);
+    }
 }
 
 #[cfg(test)]

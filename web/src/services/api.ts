@@ -1,3 +1,4 @@
+import { adoptRenewedToken } from "@/services/renew";
 import type {
   Account,
   AccountUpdate,
@@ -77,6 +78,7 @@ async function send(method: Method, url: string, body?: unknown): Promise<Respon
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
+  adoptRenewedToken(response);
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
     if (response.status === 401 && token && !isAuthEndpoint(url)) {
@@ -133,6 +135,8 @@ export const accountApi = {
 };
 
 export const planApi = {
+  scenarios: () => data(api.get<{ drafts: unknown[] }>("/api/plan/scenarios")),
+  saveScenarios: (drafts: unknown[]) => data(api.post<Ok>("/api/plan/scenarios", { drafts })),
   commitments: () => data(api.get<Commitment[]>("/api/plan/commitment/list")),
   createCommitment: (c: NewCommitment) => data(api.post<Id>("/api/plan/commitment/create", c)),
   updateCommitment: (c: Commitment) => data(api.post<Ok>("/api/plan/commitment/update", c)),
@@ -163,7 +167,8 @@ export const cardPlanApi = {
 };
 
 export const movesApi = {
-  record: (m: RecordMove) => data(api.post<{ move_id: string; status: boolean }>("/api/moves/record", m)),
+  record: (m: RecordMove) =>
+    data(api.post<{ move_id: string; status: boolean }>("/api/moves/record", { idempotency_key: crypto.randomUUID(), ...m })),
   undo: (move_id: string) => data(api.post<Ok>("/api/moves/undo", { move_id })),
   list: () => data(api.get<MoveRow[]>("/api/moves/list")),
 };
@@ -186,6 +191,8 @@ async function postStatement<T>(url: string, form: FormData): Promise<T> {
 }
 
 export const ingestApi = {
+  unrecognized: () => data(api.get<{ count: number; items: { alert_id: string; text: string; source: string; received_at: string }[] }>("/api/ingest/unrecognized")),
+  dismissUnrecognized: (alert_id: string) => data(api.post<Ok>("/api/ingest/unrecognized/dismiss", { alert_id })),
   transactions: (month?: string) =>
     data(api.get<Txn[]>(`/api/ingest/transactions${month ? `?month=${encodeURIComponent(month)}` : ""}`)),
   updateCategory: (u: UpdateTxnCategory) =>

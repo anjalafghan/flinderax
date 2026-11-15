@@ -117,18 +117,7 @@ pub async fn create(State(state): State<AppState>, Extension((user_id, _)): User
     sqlx::query!("INSERT INTO joy_settings (couple_id, key, value) VALUES (?, 'PERSON_A', ?)", couple, name)
         .execute(&mut *tx)
         .await?;
-    sqlx::query!(
-        "INSERT INTO joy_activities (couple_id, title, notes, est_cost, setting, area, venue, lat, lng, duration, tags, energy,
-                added_by, generated, closed_days, season_from, season_to, hours, best_time, minutes, booking, book_ahead_days,
-                cover, bring, station, station_walk_min)
-         SELECT ?, title, notes, est_cost, setting, area, venue, lat, lng, duration, tags, energy,
-                added_by, generated, closed_days, season_from, season_to, hours, best_time, minutes, booking, book_ahead_days,
-                cover, bring, station, station_walk_min
-         FROM joy_seed_activities ORDER BY id",
-        couple
-    )
-    .execute(&mut *tx)
-    .await?;
+    crate::joy::db::seed_new_couple_in(&mut tx, &couple).await?;
     tx.commit().await?;
     Ok(Json(Done { status: true }))
 }

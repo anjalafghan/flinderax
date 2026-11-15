@@ -159,6 +159,11 @@ fn find_merchant(text: &str, direction: Direction) -> Option<String> {
     None
 }
 
+/// Does the text say this credit is money coming back (a refund, reversal or cashback)?
+pub fn is_refund_text(text: &str) -> bool {
+    regex!(r"(?i)\b(refund(ed)?|reversed|reversal|cashback)\b").is_match(text)
+}
+
 /// Reads one alert. `None` when the text is not a completed transaction.
 pub fn parse(raw: &str) -> Option<Alert> {
     let text = regex!(r"\s+").replace_all(raw, " ").trim().to_string();
@@ -168,8 +173,17 @@ pub fn parse(raw: &str) -> Option<Alert> {
     let reject = regex!(
         r"(?i)\botp\b|one[\s-]?time[\s-]?password|verification code|\bwill be (debited|charged|deducted)|has requested|\brequest(ed)? (of|for)\b|\bdue (date|on|by)\b|minimum (amount )?due|\bpre-?approved\b|\boffer\b|\bapply now\b|\bfailed\b|\bdeclined\b|\bunsuccessful\b"
     );
+    // "offer" alone is advert copy that banks tack onto real alerts, so it only rejects a text
+    // that does not also say a transaction was completed.
+    let completed = regex!(r"(?i)\b(debited|credited|spent|paid|withdrawn|received|deposited)\b");
+    let only_offer = regex!(r"(?i)\boffer\b");
     if reject.is_match(&text) {
-        return None;
+        let hard = regex!(
+            r"(?i)\botp\b|one[\s-]?time[\s-]?password|verification code|\bwill be (debited|charged|deducted)|has requested|\brequest(ed)? (of|for)\b|\bdue (date|on|by)\b|minimum (amount )?due|\bpre-?approved\b|\bapply now\b|\bfailed\b|\bdeclined\b|\bunsuccessful\b"
+        );
+        if hard.is_match(&text) || !(only_offer.is_match(&text) && completed.is_match(&text)) {
+            return None;
+        }
     }
 
     // Available balance / limit first, so their amounts aren't mistaken for the transaction.
@@ -489,9 +503,23 @@ mod tests {
             "Rs 499 will be debited from your account on 05-11-26 for Netflix mandate.",
             "Txn of Rs 2000 on card 1234 declined due to insufficient limit.",
             "Hello, how are you?",
+            // A promotion with no completed transaction in it.
+            "Special offer: use your card at partner stores this week and win rewards.",
         ] {
             assert!(parse(s).is_none(), "should reject: {s}");
         }
+    }
+
+    #[test]
+    fn a_real_debit_is_not_dropped_because_the_bank_added_an_offer() {
+        let a = parse("Rs 450.00 debited from A/c XX1234 on 12-11-26 to SWIGGY. Avl bal Rs 5,000.00. Check out our offer on personal loans.")
+            .expect("a completed debit with an advert tacked on is still a debit");
+        assert_eq!(a.amount_paise, 45_000);
+        assert_eq!(a.direction, Direction::Debit);
+        // Still refused when the same words come with a loan pitch rather than a transaction.
+        assert!(parse("Pre-approved offer: loan of Rs 5,00,000, nothing debited. Apply now!").is_none());
+        // A failed or declined payment stays refused even if it says "debited" somewhere.
+        assert!(parse("Payment of Rs 450 failed. If any amount is debited it will be reversed in 3 days.").is_none());
     }
 
     #[test]

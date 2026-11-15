@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { archiveSlip, clearVetoes, deleteSlip, getSlips, keys, restoreAllSlips, restoreSlip, unvetoSlip, type ActivityView } from "../api";
+import { archiveSlip, clearVetoes, deleteSlip, getSlips, keys, restoreAllSlips, restoreSlip, unvetoSlip, wantSlip, type ActivityView } from "../api";
 import { filterGroups, slipsWord } from "../slips";
 import { createUndoTimer } from "../undo";
 import { ErrorState } from "../components/ErrorState";
@@ -312,6 +312,32 @@ export default function SlipsPage() {
                         )}
                       </p>
                       {a.closed_label && <p className="slip-closed">{a.closed_label}</p>}
+                      {a.both_want && <p className="slip-both">You both want this</p>}
+                      <div className="slip-want" role="group" aria-label={`Your mark on ${a.title}`}>
+                        {(["want", "fine", "no"] as const).map((lv) => (
+                          <button
+                            key={lv}
+                            type="button"
+                            className="btn-why"
+                            aria-pressed={a.my_want === lv}
+                            disabled={busy}
+                            onClick={() => void simple(() => wantSlip(a.id, a.my_want === lv ? "" : lv))}
+                          >
+                            {lv === "want" ? "I want this" : lv === "fine" ? "Fine" : "Not for me"}
+                          </button>
+                        ))}
+                      </div>
+                      {(a.url || a.checked) && (
+                        <p className="slip-closed">
+                          {a.url && (
+                            <a href={a.url} target="_blank" rel="noopener noreferrer">
+                              Open link<span className="visually-hidden">: {a.title}</span>
+                            </a>
+                          )}
+                          {a.url && a.checked && " · "}
+                          {a.checked}
+                        </p>
+                      )}
                       {a.vetoed_by && (
                         <div className="slip-veto">
                           <span>{a.vetoed_by} passed on this, so it’s out of the draw.</span>

@@ -86,7 +86,7 @@ pub async fn snapshot(
     .execute(&mut *tx)
     .await?;
     let (transaction_id, _) =
-        record_total(&mut tx, &p.card_id, (p.outstanding_paise as f64 / 100.0) as f32).await?;
+        record_total(&mut tx, &p.card_id, p.outstanding_paise).await?;
     tx.commit().await?;
 
     Ok(Json(SnapshotResponse { snapshot_id, transaction_id, status: true }))
@@ -108,6 +108,9 @@ pub struct PendingRow {
     pub charge_id: String,
     pub label: String,
     pub amount_paise: i64,
+    /// Older than 30 days: it no longer counts toward the next-bill estimate. It is still listed
+    /// so it can be cleared once the bank has billed it.
+    pub stale: bool,
 }
 
 #[derive(Serialize, Clone)]
@@ -136,6 +139,8 @@ pub struct BreakdownResponse {
     pub breakdown: CardBreakdown,
     pub emis: Vec<EmiRow>,
     pub pending_charges: Vec<PendingRow>,
+    /// Total of the stale pending charges, which the estimate leaves out.
+    pub stale_pending_paise: i64,
 }
 
 #[derive(Deserialize)]
@@ -292,16 +297,18 @@ pub async fn breakdown(
     .collect();
     let pending_charges = sqlx::query_as!(
         PendingRow,
-        r#"SELECT charge_id AS "charge_id!", label, amount_paise
+        r#"SELECT charge_id AS "charge_id!", label, amount_paise,
+                  created_at < datetime('now', '-30 days') AS "stale!: bool"
            FROM pending_charges
-           WHERE card_id = ? AND cleared_at IS NULL AND created_at >= datetime('now', '-30 days')
+           WHERE card_id = ? AND cleared_at IS NULL
            ORDER BY created_at"#,
         p.card_id
     )
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(BreakdownResponse { breakdown, emis, pending_charges }))
+    let stale_pending_paise = pending_charges.iter().filter(|c| c.stale).map(|c| c.amount_paise).sum();
+    Ok(Json(BreakdownResponse { breakdown, emis, pending_charges, stale_pending_paise }))
 }
 
 // ---------- EMIs ----------

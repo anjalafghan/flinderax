@@ -450,6 +450,8 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
     let (db, couple, ctx, who) = (&s.db, j.couple.as_str(), &j.ctx, Some(j.who));
     let rain = super::weather_for(ctx).tonight().await.is_some_and(|p| p >= weather::LIKELY_PERCENT);
     let (done, skipped): (Vec<_>, Vec<_>) = db::history(db, couple).await?.into_iter().partition(|r| r.outcome == "did_it");
+    // A cancelled date is neither done nor a put-back.
+    let skipped: Vec<_> = skipped.into_iter().filter(|r| r.outcome != "cancelled").collect();
     // A slip that's now a sealed surprise for this viewer mustn't show up in the
     // "put back" footnote either, or it would give the surprise away.
     let sealed_titles: Vec<&str> = done.iter().filter(|r| sealed_for(r, who)).map(|r| r.title.as_str()).collect();
@@ -587,6 +589,8 @@ pub struct SignedQuery {
     who: Option<usize>,
     exp: Option<i64>,
     sig: Option<String>,
+    /// "1": a 400px copy for lists. The signature covers the photo, not its size.
+    thumb: Option<String>,
 }
 
 /// The couple a history row belongs to (the signed public endpoints have no login to ask).
@@ -664,6 +668,37 @@ pub async fn reveal(State(s): State<AppState>, Extension((user_id, _)): User, Pa
     Ok(go(kept_to(id)))
 }
 
+#[derive(Deserialize)]
+pub struct HappenedBody {
+    #[serde(deserialize_with = "flex")]
+    happened: String,
+}
+
+/// `POST /history/{id}/happened`: "did it happen?" for a kept date whose day has passed. Yes
+/// confirms it; no cancels it. A date still to come can't be closed.
+pub async fn happened(
+    State(s): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(id): Path<i64>,
+    Json(b): Json<HappenedBody>,
+) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    let yes = matches!(b.happened.as_str(), "1" | "true" | "yes");
+    if !db::set_happened(&s.db, &j.couple, id, yes).await? {
+        return Err(unprocessable("That date hasn't happened yet."));
+    }
+    Ok(go(kept_to(id)))
+}
+
+/// `POST /history/{id}/unshare`: the envelope link stops opening.
+pub async fn unshare(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    db::unshare(&s.db, &j.couple, "joy_history", id).await?;
+    Ok(go(kept_to(id)))
+}
+
 /// `POST /history/{id}/delete`
 pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
@@ -673,6 +708,9 @@ pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Pa
     db::delete_history(&s.db, &j.couple, id).await?;
     for p in pics {
         if let Some(path) = photos::date_path(&j.ctx.photos_dir, &p.file) {
+            let _ = tokio::fs::remove_file(path).await;
+        }
+        if let Some(path) = photos::thumb_path(&j.ctx.photos_dir, &p.file) {
             let _ = tokio::fs::remove_file(path).await;
         }
     }
@@ -827,10 +865,10 @@ pub async fn delete_photo(
 ) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     open_row(&s.db, &j.couple, id, Some(j.who)).await?;
-    if let Some(file) = db::remove_photo(&s.db, &j.couple, id, photo_id).await?
-        && let Some(path) = photos::date_path(&j.ctx.photos_dir, &file)
-    {
-        let _ = tokio::fs::remove_file(path).await;
+    if let Some(file) = db::remove_photo(&s.db, &j.couple, id, photo_id).await? {
+        for path in [photos::date_path(&j.ctx.photos_dir, &file), photos::thumb_path(&j.ctx.photos_dir, &file)].into_iter().flatten() {
+            let _ = tokio::fs::remove_file(path).await;
+        }
     }
     Ok(go(kept_to(id)))
 }
@@ -851,7 +889,22 @@ pub async fn photo(State(s): State<AppState>, Path((id, photo_id)): Path<(i64, i
     }
     let ctx = load_ctx(&s.db, &couple).await?;
     let Some(path) = photos::date_path(&ctx.photos_dir, &pic.file) else { return Err(missing()) };
-    let Ok(bytes) = tokio::fs::read(path).await else { return Err(missing()) };
+    let bytes = if q.thumb.as_deref() == Some("1") {
+        let tp = photos::thumb_path(&ctx.photos_dir, &pic.file).ok_or_else(missing)?;
+        match tokio::fs::read(&tp).await {
+            Ok(b) => b,
+            Err(_) => {
+                // First look: make it once, keep it next to the photo.
+                let Ok(full) = tokio::fs::read(&path).await else { return Err(missing()) };
+                let Ok(Ok(small)) = tokio::task::spawn_blocking(move || photos::thumb(&full)).await else { return Err(missing()) };
+                let _ = tokio::fs::write(&tp, &small).await;
+                small
+            }
+        }
+    } else {
+        let Ok(bytes) = tokio::fs::read(path).await else { return Err(missing()) };
+        bytes
+    };
     // A photo id always means the same picture, so it may be cached for as long as the link lives.
     Ok(([(header::CONTENT_TYPE, "image/jpeg"), (header::CACHE_CONTROL, "private, max-age=3000")], bytes).into_response())
 }
@@ -1036,7 +1089,9 @@ pub async fn add_saving(State(s): State<AppState>, Extension((user_id, _)): User
 /// `POST /savings/{id}/delete`
 pub async fn delete_saving(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    db::delete_saving(&s.db, &j.couple, id).await?;
+    if !db::delete_saving(&s.db, &j.couple, id).await? {
+        return Err(unprocessable("Part of that money has already paid for a date, so it can't be taken back out."));
+    }
     Ok(go(SAVINGS_TO))
 }
 
@@ -1065,6 +1120,8 @@ pub fn router() -> Router<AppState> {
         .route("/history/{id}", post(rate))
         .route("/history/{id}/reveal", post(reveal))
         .route("/history/{id}/delete", post(delete))
+        .route("/history/{id}/unshare", post(unshare))
+        .route("/history/{id}/happened", post(happened))
         .route("/putbacks/clear", post(clear_putbacks))
         .route("/history/{id}/cost", post(set_cost))
         .route("/history/{id}/day", post(set_day))

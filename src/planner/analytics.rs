@@ -536,7 +536,7 @@ fn sips(rows: &[Row]) -> Vec<SipOut> {
         })
         .flatten()
         .collect();
-    out.sort_by(|a, b| b.amount_paise.cmp(&a.amount_paise));
+    out.sort_by_key(|a| std::cmp::Reverse(a.amount_paise));
     out
 }
 

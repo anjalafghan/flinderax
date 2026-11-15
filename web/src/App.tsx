@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { RouteBoundary } from '@/components/ui/route-boundary'
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import { TabBar } from './components/layout/Header'
@@ -58,7 +59,9 @@ function App() {
           <Route
             element={
               <ProtectedRoute>
-                <Outlet />
+                <RouteBoundary resetKey={pathname}>
+                  <Outlet />
+                </RouteBoundary>
               </ProtectedRoute>
             }
           >

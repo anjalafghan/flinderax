@@ -20,6 +20,8 @@ pub fn routes(state: AppState) -> Router {
         .route("/transactions/update", post(ingest::update))
         .route("/transactions/delete", post(ingest::delete))
         .route("/transactions/unlock", post(ingest::unlock))
+        .route("/unrecognized", get(ingest::unrecognized))
+        .route("/unrecognized/dismiss", post(ingest::unrecognized_dismiss))
         .route("/summary", get(ingest::summary))
         .route("/rules", get(ingest::rules))
         .route("/rules/delete", post(ingest::rule_delete))

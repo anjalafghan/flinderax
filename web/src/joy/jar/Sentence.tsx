@@ -188,7 +188,7 @@ export default function Sentence({ view: v, filters: f, onChange, busy, onDraw, 
             <path d="M36 20C26 21 14 17 8 6" />
             <path d="M4.6 10.4 7.6 5l5.6 2.2" />
           </svg>
-          {v.my_turn ? <span>Your turn to draw, {v.me_name}. You get a bonus peek tonight.</span> : <span>It's {v.turn_name}'s turn to draw.</span>}
+          {v.my_turn ? <span>Your turn to draw, {v.me_name}.</span> : <span>It's {v.turn_name}'s turn to draw.</span>}
         </p>
       )}
       {v.nudge && (

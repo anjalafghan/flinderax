@@ -151,6 +151,77 @@ async fn match_instrument(
     })
 }
 
+/// How long an unreadable alert stays in the inbox, and how many a person can have at once.
+const INBOX_DAYS: i64 = 30;
+const INBOX_MAX: i64 = 200;
+
+async fn keep_unrecognized(db: &sqlx::SqlitePool, user_id: &str, text: &str, source: &str) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM unrecognized_alerts WHERE received_at < datetime('now', ?)")
+        .bind(format!("-{INBOX_DAYS} days"))
+        .execute(db)
+        .await?;
+    let held: i64 = sqlx::query_scalar("SELECT count(*) FROM unrecognized_alerts WHERE user_id = ?").bind(user_id).fetch_one(db).await?;
+    if held >= INBOX_MAX {
+        return Ok(());
+    }
+    sqlx::query("INSERT OR IGNORE INTO unrecognized_alerts (alert_id, user_id, text, source) VALUES (?, ?, ?, ?)")
+        .bind(nanoid!())
+        .bind(user_id)
+        .bind(text)
+        .bind(source)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
+#[derive(Serialize)]
+pub struct InboxItem {
+    pub alert_id: String,
+    pub text: String,
+    pub source: String,
+    pub received_at: String,
+}
+
+#[derive(Serialize)]
+pub struct Inbox {
+    pub count: usize,
+    pub items: Vec<InboxItem>,
+}
+
+/// `GET /api/ingest/unrecognized`: alert texts the parser could not read, newest first.
+pub async fn unrecognized(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Inbox>, AppError> {
+    let rows: Vec<(String, String, String, String)> = sqlx::query_as(
+        "SELECT alert_id, text, source, received_at FROM unrecognized_alerts
+         WHERE user_id = ? AND received_at >= datetime('now', ?) ORDER BY received_at DESC, rowid DESC",
+    )
+    .bind(&user_id)
+    .bind(format!("-{INBOX_DAYS} days"))
+    .fetch_all(&state.db)
+    .await?;
+    let items: Vec<InboxItem> =
+        rows.into_iter().map(|(alert_id, text, source, received_at)| InboxItem { alert_id, text, source, received_at }).collect();
+    Ok(Json(Inbox { count: items.len(), items }))
+}
+
+#[derive(Deserialize)]
+pub struct DismissAlert {
+    pub alert_id: String,
+}
+
+/// `POST /api/ingest/unrecognized/dismiss`: done with it (added by hand, or not a transaction).
+pub async fn unrecognized_dismiss(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<DismissAlert>,
+) -> Result<Json<Done>, AppError> {
+    sqlx::query("DELETE FROM unrecognized_alerts WHERE alert_id = ? AND user_id = ?")
+        .bind(&p.alert_id)
+        .bind(&user_id)
+        .execute(&state.db)
+        .await?;
+    Ok(Json(Done { status: true }))
+}
+
 /// Reads `text` and stores it for `user_id`.
 pub async fn ingest_text(
     db: &sqlx::SqlitePool,
@@ -163,6 +234,11 @@ pub async fn ingest_text(
         return Err(bad_request("text is too long"));
     }
     let Some(alert) = alerts::parse(text) else {
+        // Texts from the phone are kept for a month so the transaction is not silently missing.
+        // A paste shows its answer on the spot, so it is not kept.
+        if source != "paste" {
+            keep_unrecognized(db, user_id, text, source).await?;
+        }
         return Ok(IngestResult { status: "unrecognized", transaction: None, balance_updated: None });
     };
     let mentions_card = alert.card_payment || text.to_ascii_lowercase().contains("card");
@@ -171,7 +247,11 @@ pub async fn ingest_text(
         .date
         .filter(|d| *d <= today && *d >= today - Duration::days(MAX_ALERT_AGE_DAYS))
         .unwrap_or(today);
-    let category = categorize(alert.merchant.as_deref(), alert.direction, alert.card_payment, &load_rules(db, user_id).await?);
+    let mut category = categorize(alert.merchant.as_deref(), alert.direction, alert.card_payment, &load_rules(db, user_id).await?);
+    // Money coming back for something you bought is not income.
+    if category == "income" && alert.direction == alerts::Direction::Credit && alerts::is_refund_text(text) {
+        category = "refund".into();
+    }
     let direction = alert.direction.as_str();
     let dedupe_key = match &alert.reference {
         Some(r) => format!("ref:{r}:{direction}"),
@@ -186,9 +266,10 @@ pub async fn ingest_text(
     let txn_id = nanoid!();
     let on_s = on.to_string();
     let inserted = sqlx::query!(
-        "INSERT OR IGNORE INTO transactions
+        "INSERT INTO transactions
             (txn_id, user_id, occurred_on, direction, amount_paise, merchant, category, card_id, account_id, last4, source, raw_text, dedupe_key)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, dedupe_key) DO NOTHING",
         txn_id,
         user_id,
         on_s,
@@ -593,13 +674,13 @@ pub async fn summary(
         .map(|(month, cats)| {
             let mut by_category: Vec<CategoryAmount> =
                 cats.into_iter().map(|(category, amount_paise)| CategoryAmount { category, amount_paise }).collect();
-            by_category.sort_by(|a, b| b.amount_paise.cmp(&a.amount_paise));
+            by_category.sort_by_key(|a| std::cmp::Reverse(a.amount_paise));
             MonthSpend { spent_paise: by_category.iter().map(|c| c.amount_paise).sum(), month, by_category }
         })
         .collect();
     let mut top_merchants: Vec<MerchantSpend> =
         merchants.into_values().map(|(merchant, amount_paise, count)| MerchantSpend { merchant, amount_paise, count }).collect();
-    top_merchants.sort_by(|a, b| b.amount_paise.cmp(&a.amount_paise));
+    top_merchants.sort_by_key(|a| std::cmp::Reverse(a.amount_paise));
     top_merchants.truncate(8);
 
     let uncategorized_count = sqlx::query_scalar!(

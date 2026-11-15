@@ -127,6 +127,12 @@ fn validate_profile(p: &LifeProfile, today: Date) -> Result<(), AppError> {
             return Err(bad_request(format!("{label} must be between 0% and 30%.")));
         }
     }
+    if p.equity_return_bps.is_some_and(|b| !(0..=2500).contains(&b)) {
+        return Err(bad_request("Expected return must be between 0% and 25%."));
+    }
+    if p.inflation_bps.is_some_and(|b| !(0..=2000).contains(&b)) {
+        return Err(bad_request("Inflation must be between 0% and 20%."));
+    }
     if !(p.retirement_age..=110).contains(&p.live_to_age) {
         return Err(bad_request("Plan-to age must be between your retirement age and 110."));
     }
@@ -223,6 +229,22 @@ mod tests {
         assert_eq!(read.profile, profile);
         let keys: Vec<&str> = read.plan.goals.iter().map(|g| g.key).collect();
         assert_eq!(keys, vec!["emergency", "wedding", "child_birth", "child_education", "retirement"]);
+    }
+
+    #[tokio::test]
+    async fn your_own_return_and_inflation_are_saved_and_kept_sensible() {
+        let st = state().await;
+        let mine = LifeProfile { equity_return_bps: Some(1000), inflation_bps: Some(550), ..Default::default() };
+        ok(save(State(st.clone()), user(), Json(mine.clone())).await);
+        assert_eq!(ok(get(State(st.clone()), user()).await).profile, mine);
+        for bad in [
+            LifeProfile { equity_return_bps: Some(4000), ..Default::default() },
+            LifeProfile { equity_return_bps: Some(-1), ..Default::default() },
+            LifeProfile { inflation_bps: Some(2500), ..Default::default() },
+        ] {
+            assert!(save(State(st.clone()), user(), Json(bad)).await.is_err());
+        }
+        assert_eq!(ok(get(State(st), user()).await).profile, mine, "a refused save changes nothing");
     }
 
     #[tokio::test]

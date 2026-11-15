@@ -3,14 +3,14 @@
 //!
 //! Three things keep it cheap and honest: the cache is per calendar day (an answer from last night
 //! is never "tonight"); one fetch at a time, so a burst of requests after the cache expires makes
-//! one call, not many; and when the API is down we keep showing the last good answer from today
-//! instead of dropping the hint.
+//! one call, not many, and nobody waits on it once there is an answer from today to give; and when
+//! the API is down we keep showing the last good answer from today instead of dropping the hint.
 
+use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use time::Date;
-use tokio::sync::Mutex;
 
 /// Rain counts as "likely" at or above this chance.
 pub const LIKELY_PERCENT: u8 = 60;
@@ -35,7 +35,10 @@ pub struct Weather {
     /// Where to look: between our two homes. None turns the feature off.
     at: Option<(f64, f64)>,
     client: reqwest::Client,
+    /// Held only for a moment, never across the network call.
     cache: Mutex<Option<Entry>>,
+    /// A refresh is in flight; others keep serving what they have.
+    refreshing: AtomicBool,
     /// WEATHER_FAKE_PERCENT, for design work: pretend tonight's rain chance is this.
     fake: Option<u8>,
 }
@@ -57,22 +60,41 @@ impl Weather {
             .timeout(Duration::from_secs(2))
             .build()
             .expect("http client");
-        Self { at, client, cache: Mutex::new(None), fake }
+        Self { at, client, cache: Mutex::new(None), refreshing: AtomicBool::new(false), fake }
     }
 
     /// Highest rain chance between 17:00 and 23:00 local time today, if we know it.
-    pub async fn tonight(&self) -> Option<u8> {
+    ///
+    /// Never makes a caller wait on the network when it has anything to say: a fresh answer is
+    /// returned as is; an expired one from today is returned at once while one background task
+    /// refreshes it; and with nothing at all (first look of the day) the one caller who gets there
+    /// first fetches while everyone else carries on without a forecast.
+    pub async fn tonight(self: &Arc<Self>) -> Option<u8> {
         if self.fake.is_some() {
             return self.fake;
         }
         let (lat, lng) = self.at?;
         let today = crate::handlers::common::today_local();
-        // Held across the fetch on purpose: concurrent callers wait for the one in flight.
-        let mut cache = self.cache.lock().await;
-        if let Some(hit) = cache.as_ref().and_then(|e| fresh(e, today, Instant::now())) {
+        let held = *self.cache.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(hit) = held.as_ref().and_then(|e| fresh(e, today, Instant::now())) {
             return hit;
         }
+        let last_good = held.filter(|e| e.day == today).and_then(|e| e.value);
+        if self.refreshing.swap(true, Ordering::AcqRel) {
+            return last_good; // someone is already on it
+        }
+        if held.is_some_and(|e| e.day == today) {
+            let me = Arc::clone(self);
+            tokio::spawn(async move { me.refresh(lat, lng, today).await });
+            return last_good;
+        }
+        self.refresh(lat, lng, today).await
+    }
+
+    /// Fetch, store, and let the next caller start a refresh again. Returns the new answer.
+    async fn refresh(&self, lat: f64, lng: f64, today: Date) -> Option<u8> {
         let fetched = self.fetch(lat, lng).await;
+        let mut cache = self.cache.lock().unwrap_or_else(|e| e.into_inner());
         let value = match fetched {
             Some(v) => Some(v),
             None => {
@@ -82,6 +104,8 @@ impl Weather {
             }
         };
         *cache = Some(Entry { day: today, at: Instant::now(), value });
+        drop(cache);
+        self.refreshing.store(false, Ordering::Release);
         value
     }
 

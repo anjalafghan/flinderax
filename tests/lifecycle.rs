@@ -126,7 +126,7 @@ impl T {
         let sql = [
             format!("INSERT INTO accounts (account_id, user_id, name, kind) VALUES ('acc-{id}', '{id}', 'Salary', 'bank')"),
             format!("INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color) VALUES ('card-{id}', '{id}', 'Everyday', 'ACME', 1, 2)"),
-            format!("INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES ('ev-{id}', 'card-{id}', 1200.0)"),
+            format!("INSERT INTO card_events (transaction_id, card_id, total_due_input_paise) VALUES ('ev-{id}', 'card-{id}', 120000)"),
             format!("INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, merchant, source, raw_text, dedupe_key) VALUES ('t-{id}', '{id}', '2026-11-01', 'debit', 25000, 'ASHA STORES', 'sms', 'Rs 250 spent at ASHA STORES', 'k-{id}')"),
             format!("INSERT INTO merchant_rules (user_id, pattern, category) VALUES ('{id}', 'asha', 'groceries')"),
             format!("INSERT INTO ingest_keys (user_id, key_hash) VALUES ('{id}', 'hash-secret-{id}')"),
@@ -292,8 +292,9 @@ async fn export_has_the_new_tables_and_no_secrets() {
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
     let data = &r.json["data"];
     for k in [
-        "card_events", "card_running_state", "deferred_payment_batches", "deferred_payment_items", "pending_charges", "auto_postings",
+        "card_events", "card_running_state", "pending_charges", "auto_postings",
         "dismissed_recurring", "statement_imports", "statement_profiles", "tax_entries", "life_profiles", "transactions",
+        "followups", "person_facts", "rewards", "reward_claims", "reward_settings",
     ] {
         assert!(data[k].is_array(), "missing {k}");
     }
@@ -350,4 +351,39 @@ async fn deleting_an_account_cleans_up_the_couple_and_its_photos() {
     assert!(t.leftovers(&id).await.is_empty());
     assert_eq!(t.scalar(&format!("SELECT COUNT(*) FROM couples WHERE couple_id = '{couple}'")).await, 0);
     assert!(!dir.exists());
+}
+
+#[tokio::test]
+async fn healthz_answers_200_without_a_token_and_503_when_the_database_is_gone() {
+    let t = setup().await;
+    let r = t.call(Method::GET, "/healthz", None, None, "10.9.9.1").await;
+    assert_eq!(r.status, StatusCode::OK);
+    t.db.close().await;
+    let r = t.call(Method::GET, "/healthz", None, None, "10.9.9.1").await;
+    assert_eq!(r.status, StatusCode::SERVICE_UNAVAILABLE);
+}
+
+/// A table that holds a user's or couple's rows must be in the export or on this list of tables
+/// kept out on purpose. Adding a table without deciding which fails here.
+#[tokio::test]
+async fn every_user_table_is_exported_or_deliberately_left_out() {
+    // Secrets, sessions and bookkeeping that must never leave in a download.
+    const DENIED: &[&str] = &[
+        "users", "ingest_keys", "reminder_feeds", "signup_codes", "_sqlx_migrations",
+        "joy_seed_activities", "couples", "couple_invites",
+    ];
+    let t = setup().await;
+    let source = include_str!("../src/handlers/export.rs");
+    let tables: Vec<(String,)> = sqlx::query_as("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+        .fetch_all(&t.db).await.unwrap();
+    let mut missing = vec![];
+    for (name,) in tables {
+        let cols: Vec<(String,)> = sqlx::query_as(&format!("SELECT name FROM pragma_table_info('{name}')")).fetch_all(&t.db).await.unwrap();
+        let owned = cols.iter().any(|(c,)| c == "user_id" || c == "couple_id");
+        let exported = source.contains(&format!("FROM {name} ")) || source.contains(&format!("JOIN {name} "));
+        if owned && !exported && !DENIED.contains(&name.as_str()) {
+            missing.push(name);
+        }
+    }
+    assert!(missing.is_empty(), "tables neither exported nor denied: {missing:?}");
 }

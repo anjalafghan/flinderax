@@ -82,6 +82,15 @@ pub enum Choice {
         start: String,
         months: i64,
     },
+    /// A hospital stay in `year`: the bill (in today's money) less what health cover pays.
+    Hospital {
+        year: i64,
+        bill_paise: i64,
+    },
+    /// The user's pay stops for good from `year` (illness or death). Term cover, if any, pays out.
+    LoseEarner {
+        year: i64,
+    },
     /// Spend this much less each month while working; it is invested instead.
     SaveMore {
         monthly_paise: i64,
@@ -237,6 +246,17 @@ pub fn validate(choice: &Choice, today: Date) -> Result<(), String> {
         Choice::SaveMore { monthly_paise } => {
             positive_amount(*monthly_paise)?;
         }
+        Choice::Hospital { year, bill_paise } => {
+            if !year_ok(*year) {
+                return Err("The year must be this year or later.".into());
+            }
+            positive_amount(*bill_paise)?;
+        }
+        Choice::LoseEarner { year } => {
+            if !year_ok(*year) {
+                return Err("The year must be this year or later.".into());
+            }
+        }
         Choice::StayActive { medical_cut_bps } => {
             if medical_cut_bps.is_some_and(|b| !bps_ok(b, 9_000)) {
                 return Err("The saving on medical costs must be between 0% and 90%.".into());
@@ -283,7 +303,61 @@ fn emi(loan: f64, monthly_rate: f64, months: i64) -> f64 {
 }
 
 /// Runs the line for one input.
+/// A rough effective tax on investment gains, as a share of each month's growth. An estimate.
+pub const GAINS_TAX_BPS: i64 = 1_000;
+/// The cautious and hopeful lines shift every return by this much either way.
+pub const BAND_SHIFT_BPS: i64 = 200;
+
+/// Ways to bend the line without changing the household's facts.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Tweaks {
+    /// Added to every investment return (negative: cautious, positive: hopeful).
+    pub return_shift_bps: i64,
+    /// Share of each month's gain that is lost to tax. Losses are not taxed back.
+    pub gains_tax_bps: i64,
+}
+
+/// One year of the band: net worth in today's money on three assumptions about returns.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub struct BandRow {
+    pub year: i64,
+    pub age: i64,
+    pub cautious_today_paise: i64,
+    pub expected_today_paise: i64,
+    pub hopeful_today_paise: i64,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub struct Band {
+    pub shift_bps: i64,
+    pub gains_tax_bps: i64,
+    pub rows: Vec<BandRow>,
+}
+
+/// The same household on cautious, expected and hopeful returns, all after estimated tax on gains.
+pub fn band(input: &LineInput, today: Date) -> Band {
+    let run = |shift: i64| simulate_with(input, today, &Tweaks { return_shift_bps: shift, gains_tax_bps: GAINS_TAX_BPS });
+    let (low, mid, high) = (run(-BAND_SHIFT_BPS), run(0), run(BAND_SHIFT_BPS));
+    let rows = mid
+        .rows
+        .iter()
+        .zip(low.rows.iter().zip(high.rows.iter()))
+        .map(|(m, (l, h))| BandRow {
+            year: m.year,
+            age: m.age,
+            cautious_today_paise: l.net_worth_today_paise,
+            expected_today_paise: m.net_worth_today_paise,
+            hopeful_today_paise: h.net_worth_today_paise,
+        })
+        .collect();
+    Band { shift_bps: BAND_SHIFT_BPS, gains_tax_bps: GAINS_TAX_BPS, rows }
+}
+
 pub fn simulate(input: &LineInput, today: Date) -> Line {
+    simulate_with(input, today, &Tweaks::default())
+}
+
+pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
     let p = &input.profile;
     let ty = today.year() as i64;
     let age0 = p.my_age.clamp(MIN_AGE, 100);
@@ -292,7 +366,10 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
     // Rows are calendar years, so the first one is what is left of this year.
     let offset = today.month() as i64 - 1;
     let total_months = (end_age - age0 + 1) * MONTHS_PER_YEAR - offset;
-    let inflation = rate(GENERAL_INFLATION_BPS);
+    // Your own guesses, held to a sane range.
+    let infl_bps = p.inflation_bps.map_or(GENERAL_INFLATION_BPS, |b| b.clamp(0, 2_000));
+    let equity_bps = p.equity_return_bps.map_or(EQUITY_RETURN_BPS, |b| b.clamp(0, 2_500));
+    let inflation = rate(infl_bps);
     let grow = |today_cost: f64, bps: i64, month: i64| today_cost * (1.0 + rate(bps)).powf(month as f64 / 12.0);
 
     let mut children: Vec<i64> = p.child_birth_year.into_iter().collect();
@@ -301,6 +378,7 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
     let mut homes: Vec<Home> = Vec::new();
     let mut lumps: Vec<Lump> = Vec::new();
     let mut save_more = 0.0;
+    let mut earner_lost: Option<i64> = None;
     let mut medical_keep = 1.0;
     let my_raise = rate(p.raise_bps.clamp(0, 3_000));
     let partner_raise = rate(p.partner_raise_bps.clamp(0, 3_000));
@@ -318,7 +396,7 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
             }
             Choice::House { year, price_paise, down_bps, loan_bps, tenure_years, rent_saved_paise } => {
                 let from = months_from(today, (*year).clamp(ty, ty + 80), 1);
-                let price = grow((*price_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, GENERAL_INFLATION_BPS, from);
+                let price = grow((*price_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, infl_bps, from);
                 let down = price * rate((*down_bps).clamp(0, 10_000));
                 let months = (*tenure_years).clamp(1, 40) * MONTHS_PER_YEAR;
                 let monthly_rate = rate((*loan_bps).clamp(0, 3_000)) / 12.0;
@@ -348,7 +426,7 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
                 let step = every_years.map(|n| n.clamp(1, 50) * MONTHS_PER_YEAR);
                 let mut month = months_from(today, (*year).clamp(ty, ty + 80), 1);
                 while month < total_months {
-                    let amount = grow((*amount_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, GENERAL_INFLATION_BPS, month);
+                    let amount = grow((*amount_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, infl_bps, month);
                     lumps.push(Lump { month, amount, label: label.clone() });
                     match step {
                         Some(s) => month += s,
@@ -359,6 +437,25 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
             Choice::Break { start, months } => {
                 let Some(from) = month_index(start, today) else { continue };
                 breaks.push((from, from + (*months).clamp(1, 60)));
+            }
+            Choice::Hospital { year, bill_paise } => {
+                let from = months_from(today, (*year).clamp(ty, ty + 80), 6);
+                let net = ((*bill_paise).clamp(0, MAX_AMOUNT_PAISE) - p.health_cover_paise.clamp(0, MAX_AMOUNT_PAISE)).max(0) as f64;
+                if net > 0.0 {
+                    lumps.push(Lump { month: from, amount: grow(net, MEDICAL_INFLATION_BPS, from), label: "Hospital bill".into() });
+                } else {
+                    // Covered in full: nothing to pay, but the year still notes it.
+                    lumps.push(Lump { month: from, amount: 0.0, label: "Hospital bill".into() });
+                }
+            }
+            Choice::LoseEarner { year } => {
+                let from = months_from(today, (*year).clamp(ty, ty + 80), 6);
+                earner_lost = Some(earner_lost.map_or(from, |e: i64| e.min(from)));
+                let cover = p.term_cover_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
+                if cover > 0.0 {
+                    // A payout is money coming in, which is a negative cost in that month.
+                    lumps.push(Lump { month: from, amount: -cover, label: "Term cover pays out".into() });
+                }
             }
             Choice::SaveMore { monthly_paise } => save_more += (*monthly_paise).clamp(0, MAX_AMOUNT_PAISE) as f64,
             Choice::StayActive { medical_cut_bps } => {
@@ -425,25 +522,28 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
         if breaks.iter().any(|(from, to)| (*from..*to).contains(&m)) {
             mine = 0.0;
         }
+        if earner_lost.is_some_and(|from| m >= from) {
+            mine = 0.0;
+        }
         let income = if working { mine + partner_base * (1.0 + partner_raise).powi(years_in) } else { 0.0 };
 
-        let mut spend = grow(expenses, GENERAL_INFLATION_BPS, m);
+        let mut spend = grow(expenses, infl_bps, m);
         if working {
-            spend = (spend - grow(save_more, GENERAL_INFLATION_BPS, m)).max(0.0);
+            spend = (spend - grow(save_more, infl_bps, m)).max(0.0);
         }
         if age >= MEDICAL_FROM_AGE {
             spend += grow(LATER_MEDICAL_TODAY as f64 / 12.0, MEDICAL_INFLATION_BPS, m) * medical_keep;
         }
         for (from, to) in &child_spans {
             if (*from..*to).contains(&m) {
-                spend += grow(CHILD_MONTHLY_TODAY as f64, GENERAL_INFLATION_BPS, m);
+                spend += grow(CHILD_MONTHLY_TODAY as f64, infl_bps, m);
             }
         }
         for (home, loan) in homes.iter().zip(loans.iter_mut()) {
             if m < home.from {
                 continue;
             }
-            spend = (spend - grow(home.rent_saved, GENERAL_INFLATION_BPS, m)).max(0.0);
+            spend = (spend - grow(home.rent_saved, infl_bps, m)).max(0.0);
             if m < home.from + home.months && *loan > 0.0 {
                 let interest = *loan * home.monthly_rate;
                 *loan = (*loan + interest - home.emi).max(0.0);
@@ -474,14 +574,15 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
         // Grow what is there, then add the month's pay and take its costs.
         let months_to_retire = retire_month - m;
         let return_bps = if months_to_retire > EQUITY_MIN_MONTHS {
-            EQUITY_RETURN_BPS
+            equity_bps
         } else if months_to_retire > 0 {
             HYBRID_RETURN_BPS
         } else {
             RETIRED_RETURN_BPS
         };
         if wealth > 0.0 {
-            wealth *= 1.0 + rate(return_bps) / 12.0;
+            let gain = wealth * rate(return_bps + tweaks.return_shift_bps) / 12.0;
+            wealth += if gain > 0.0 { gain * (1.0 - rate(tweaks.gains_tax_bps.clamp(0, 9_000))) } else { gain };
         }
         wealth += income - spend;
         let mut short = 0.0;
@@ -504,13 +605,13 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
 
         if (offset + m) % MONTHS_PER_YEAR == MONTHS_PER_YEAR - 1 {
             let i = year_index;
-            let home_value: f64 = homes.iter().filter(|h| h.from <= m).map(|h| grow(h.price, GENERAL_INFLATION_BPS, m - h.from)).sum();
+            let home_value: f64 = homes.iter().filter(|h| h.from <= m).map(|h| grow(h.price, infl_bps, m - h.from)).sum();
             let owed: f64 = homes.iter().zip(&loans).filter(|(h, _)| h.from <= m).map(|(_, l)| *l).sum();
             let net = wealth + home_value - owed;
             let deflate = (1.0 + inflation).powf((m + 1) as f64 / 12.0);
             let net_today = to_paise(net / deflate);
             // Free: savings alone would pay a year of today's costs for good, and nothing is short.
-            let yearly_need = spend_regular(expenses, m, age, medical_keep, &grow) * 12.0;
+            let yearly_need = spend_regular(expenses, m, age, medical_keep, infl_bps, &grow) * 12.0;
             if marks.free_at_age.is_none() && short_year == 0.0 && yearly_need > 0.0 && wealth * swr >= yearly_need {
                 marks.free_at_age = Some(age);
             }
@@ -540,6 +641,12 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
             inr(LATER_MEDICAL_TODAY)
         ),
     ];
+    if tweaks.gains_tax_bps > 0 {
+        notes.push(format!(
+            "Estimate: about {}% of each year's investment gains goes to tax. Your real rate depends on what you hold.",
+            tweaks.gains_tax_bps / 100
+        ));
+    }
     if !children.is_empty() {
         notes.push(format!(
             "Estimate: raising a child costs {} a month in today's money until 18, plus education.",
@@ -556,8 +663,8 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
 }
 
 /// The monthly living cost at month `m`, without one-offs, loans or children: what retirement must pay.
-fn spend_regular(expenses: f64, m: i64, age: i64, medical_keep: f64, grow: &impl Fn(f64, i64, i64) -> f64) -> f64 {
-    let mut spend = grow(expenses, GENERAL_INFLATION_BPS, m);
+fn spend_regular(expenses: f64, m: i64, age: i64, medical_keep: f64, infl_bps: i64, grow: &impl Fn(f64, i64, i64) -> f64) -> f64 {
+    let mut spend = grow(expenses, infl_bps, m);
     if age >= MEDICAL_FROM_AGE {
         spend += grow(LATER_MEDICAL_TODAY as f64 / 12.0, MEDICAL_INFLATION_BPS, m) * medical_keep;
     }
@@ -706,6 +813,109 @@ mod tests {
 
     fn line(choices: Vec<Choice>) -> Line {
         simulate(&input(choices), today())
+    }
+
+    fn end_today(l: &Line) -> i64 {
+        l.marks.at_end_today_paise
+    }
+
+    fn covered(health: i64, term: i64, choices: Vec<Choice>) -> Line {
+        let mut i = input(choices);
+        i.profile.health_cover_paise = health;
+        i.profile.term_cover_paise = term;
+        i.profile.partner_take_home_paise = 12_000_000; // someone is still earning when the other is lost
+        simulate(&i, today())
+    }
+
+    #[test]
+    fn a_hospital_bill_costs_what_health_cover_does_not() {
+        let bill = Choice::Hospital { year: 2030, bill_paise: 50_000_000 };
+        let none = end_today(&covered(0, 0, vec![]));
+        let uncovered = end_today(&covered(0, 0, vec![bill.clone()]));
+        let part = end_today(&covered(20_000_000, 0, vec![bill.clone()]));
+        let all = end_today(&covered(60_000_000, 0, vec![bill]));
+        assert!(uncovered < part && part < all, "{uncovered} {part} {all}");
+        assert_eq!(all, none, "fully covered, it costs nothing");
+        let l = covered(0, 0, vec![Choice::Hospital { year: 2030, bill_paise: 50_000_000 }]);
+        assert!(l.rows.iter().any(|r| r.year == 2030 && r.events.iter().any(|e| e == "Hospital bill")));
+    }
+
+    #[test]
+    fn losing_an_earner_stops_their_pay_and_term_cover_softens_it() {
+        let lose = || Choice::LoseEarner { year: 2030 };
+        let base = end_today(&covered(0, 0, vec![]));
+        let bare = end_today(&covered(0, 0, vec![lose()]));
+        let insured = end_today(&covered(0, 500_000_000, vec![lose()]));
+        assert!(bare < base, "less income");
+        assert!(insured > bare, "term cover pays out");
+        let l = covered(0, 500_000_000, vec![lose()]);
+        assert!(l.rows.iter().any(|r| r.year == 2030 && r.events.iter().any(|e| e.contains("Term cover"))));
+        assert!(l.rows.last().unwrap().income_paise > 0 || l.marks.retire_age > 0);
+    }
+
+    #[test]
+    fn shocks_are_checked() {
+        assert!(validate(&Choice::Hospital { year: 2030, bill_paise: 1_000_000 }, today()).is_ok());
+        assert!(validate(&Choice::Hospital { year: 2001, bill_paise: 1_000_000 }, today()).is_err());
+        assert!(validate(&Choice::Hospital { year: 2030, bill_paise: 0 }, today()).is_err());
+        assert!(validate(&Choice::LoseEarner { year: 2030 }, today()).is_ok());
+        assert!(validate(&Choice::LoseEarner { year: 1999 }, today()).is_err());
+        let json = serde_json::to_string(&Choice::LoseEarner { year: 2031 }).unwrap();
+        assert_eq!(json, r#"{"kind":"lose_earner","year":2031}"#);
+    }
+
+    #[test]
+    fn your_own_return_and_inflation_move_the_line() {
+        let base = input(vec![]);
+        let with = |f: &dyn Fn(&mut LifeProfile)| {
+            let mut i = input(vec![]);
+            f(&mut i.profile);
+            end_today(&simulate(&i, today()))
+        };
+        let plain = end_today(&simulate(&base, today()));
+        assert_eq!(with(&|p| { p.equity_return_bps = Some(EQUITY_RETURN_BPS); p.inflation_bps = Some(GENERAL_INFLATION_BPS); }), plain, "the defaults, spelled out");
+        assert!(with(&|p| p.equity_return_bps = Some(900)) < plain, "lower returns, less money");
+        assert!(with(&|p| p.equity_return_bps = Some(1400)) > plain);
+        assert!(with(&|p| p.inflation_bps = Some(900)) < plain, "higher inflation, less in today's money");
+        // Wild values are held to a sane range rather than breaking the line.
+        let _ = with(&|p| { p.equity_return_bps = Some(i64::MAX); p.inflation_bps = Some(-5); });
+    }
+
+    #[test]
+    fn no_tweaks_is_the_plain_line() {
+        let i = input(vec![]);
+        assert_eq!(simulate_with(&i, today(), &Tweaks::default()), simulate(&i, today()));
+    }
+
+    #[test]
+    fn tax_on_gains_lowers_the_line_and_says_so() {
+        let i = input(vec![]);
+        let free = simulate(&i, today());
+        let taxed = simulate_with(&i, today(), &Tweaks { gains_tax_bps: GAINS_TAX_BPS, ..Default::default() });
+        assert!(end_today(&taxed) < end_today(&free), "{} vs {}", end_today(&taxed), end_today(&free));
+        assert!(taxed.notes.iter().any(|n| n.contains("tax") && n.starts_with("Estimate")), "{:?}", taxed.notes);
+        assert!(!free.notes.iter().any(|n| n.to_lowercase().contains("gains")), "an untaxed line does not claim to be taxed");
+    }
+
+    #[test]
+    fn a_loss_is_not_taxed_back() {
+        let i = input(vec![]);
+        let cautious = Tweaks { return_shift_bps: -2_000, ..Default::default() };
+        let with_tax = Tweaks { return_shift_bps: -2_000, gains_tax_bps: 5_000 };
+        // Returns this low are negative in the retired years: tax must not make a loss smaller.
+        assert!(end_today(&simulate_with(&i, today(), &with_tax)) <= end_today(&simulate_with(&i, today(), &cautious)));
+    }
+
+    #[test]
+    fn the_band_runs_cautious_to_hopeful_around_the_expected_line() {
+        let b = band(&input(vec![]), today());
+        assert_eq!((b.shift_bps, b.rows.len()), (BAND_SHIFT_BPS, 62));
+        for r in &b.rows {
+            assert!(r.cautious_today_paise <= r.expected_today_paise && r.expected_today_paise <= r.hopeful_today_paise, "{r:?}");
+        }
+        let last = b.rows.last().unwrap();
+        assert!(last.hopeful_today_paise > last.cautious_today_paise);
+        assert_eq!(last.expected_today_paise, end_today(&simulate_with(&input(vec![]), today(), &Tweaks { gains_tax_bps: GAINS_TAX_BPS, ..Default::default() })));
     }
 
     #[test]

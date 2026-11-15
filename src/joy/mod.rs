@@ -8,6 +8,7 @@ pub mod ics;
 pub mod photos;
 pub mod picker;
 pub mod schedule;
+pub mod tags;
 pub mod travel;
 pub mod enrich;
 pub mod taste;

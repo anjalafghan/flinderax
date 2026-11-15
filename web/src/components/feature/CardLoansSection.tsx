@@ -122,7 +122,10 @@ export function CardLoansSection({ cardId, breakdown }: { cardId: string; breakd
               <li key={c.charge_id} className="ledger-row text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{c.label}</p>
-                  <p className="text-xs text-muted-foreground">{formatINR(c.amount_paise)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatINR(c.amount_paise)}
+                    {c.stale && " · over 30 days old, not counted in the next bill"}
+                  </p>
                 </div>
                 <Button
                   variant="ghost"

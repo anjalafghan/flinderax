@@ -3,7 +3,6 @@
 
 use rand::Rng;
 
-pub const MAX_REROLLS: u32 = 3;
 const DAY: i64 = 86_400;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -90,7 +89,22 @@ pub struct Candidate {
     pub window_miss: Option<String>,
     /// Learned liking for this kind of date (see `taste`): about 0.7 to 1.3, 1.0 = no opinion.
     pub taste: f64,
+    /// Would rain spoil it? From the slip's cover, falling back to the "outdoors" tag.
+    pub outdoor: bool,
+    /// Same setting and main tag as one of the last two dates we had.
+    pub like_recent: bool,
+    /// Both of us marked it "want" (privately).
+    pub both_want: bool,
+    /// At least one of us marked it "no" (privately). Nobody is told which.
+    pub any_no: bool,
 }
+
+/// A slip we both want comes up this much more often; one either of us ruled out, much less.
+pub const BOTH_WANT_BOOST: f64 = 2.0;
+pub const ANY_NO_DAMP: f64 = 0.3;
+
+/// How much a kind of date we just had is damped, so the jar does not hand out the same evening twice.
+pub const VARIETY_DAMP: f64 = 0.6;
 
 #[derive(Debug, Clone, Default)]
 pub struct Filters {
@@ -201,8 +215,16 @@ pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
     if c.last_skipped_at.is_some_and(|t| now - t < 3 * DAY) {
         w *= 0.5;
     }
+    if c.like_recent {
+        w *= VARIETY_DAMP;
+    }
+    if c.any_no {
+        w *= ANY_NO_DAMP;
+    } else if c.both_want {
+        w *= BOTH_WANT_BOOST;
+    }
     // Rain doesn't rule outdoor plans out, it just lets the cozy ones float up.
-    if rain_likely && c.tags.iter().any(|t| t == "outdoors") {
+    if rain_likely && c.outdoor {
         w *= 0.3;
     }
     w
@@ -301,24 +323,6 @@ fn hint(all: &[Candidate], f: &Filters) -> Hint {
     Hint::NoMoodMatch
 }
 
-/// Peeks for this draw: whoever's turn it is gets one extra.
-pub fn max_peeks(my_turn: bool) -> u32 {
-    MAX_REROLLS + u32::from(my_turn)
-}
-
-pub fn rerolls_left(used: u32, max: u32) -> u32 {
-    max.saturating_sub(used)
-}
-
-/// Peeks used after putting the current slip back, or `None` when it has to stay.
-/// Slips the app generated go back for free, so you can browse them without limit.
-pub fn put_back(used: u32, generated: bool, max: u32) -> Option<u32> {
-    match (generated, used < max) {
-        (true, _) => Some(used),
-        (false, true) => Some(used + 1),
-        (false, false) => None,
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -343,6 +347,10 @@ mod tests {
             season: None,
             window_miss: None,
             taste: 1.0,
+            outdoor: false,
+            like_recent: false,
+            both_want: false,
+            any_no: false,
         }
     }
 
@@ -528,33 +536,43 @@ mod tests {
     }
 
     #[test]
-    fn generated_slips_go_back_for_free() {
-        assert_eq!(put_back(0, false, MAX_REROLLS), Some(1));
-        assert_eq!(put_back(MAX_REROLLS - 1, false, MAX_REROLLS), Some(MAX_REROLLS));
-        assert_eq!(put_back(MAX_REROLLS, false, MAX_REROLLS), None);
-        assert_eq!(put_back(0, true, MAX_REROLLS), Some(0));
-        assert_eq!(put_back(MAX_REROLLS, true, MAX_REROLLS), Some(MAX_REROLLS), "free even when out of peeks");
+    fn what_we_both_want_rises_and_what_either_ruled_out_sinks() {
+        let mut c = cand(1, 0, "local", Duration::Short);
+        let plain = weight(&c, NOW, false);
+        c.both_want = true;
+        assert_eq!(weight(&c, NOW, false), plain * BOTH_WANT_BOOST);
+        c.both_want = false;
+        c.any_no = true;
+        assert_eq!(weight(&c, NOW, false), plain * ANY_NO_DAMP);
+        c.both_want = true;
+        assert_eq!(weight(&c, NOW, false), plain * ANY_NO_DAMP, "a no outweighs the other's want");
     }
 
     #[test]
-    fn reroll_cap() {
-        assert_eq!(rerolls_left(0, MAX_REROLLS), MAX_REROLLS);
-        assert_eq!(rerolls_left(MAX_REROLLS, MAX_REROLLS), 0);
-        assert_eq!(rerolls_left(MAX_REROLLS + 5, MAX_REROLLS), 0);
+    fn a_kind_of_date_we_just_had_is_damped_so_the_jar_does_not_repeat_itself() {
+        let mut c = cand(1, 0, "local", Duration::Short);
+        let plain = weight(&c, NOW, false);
+        c.like_recent = true;
+        assert!(weight(&c, NOW, false) < plain);
+        assert_eq!(weight(&c, NOW, false), plain * VARIETY_DAMP);
     }
 
     #[test]
-    fn whoever_s_turn_it_is_gets_a_bonus_peek() {
-        assert_eq!(max_peeks(false), MAX_REROLLS);
-        assert_eq!(max_peeks(true), MAX_REROLLS + 1);
-        assert_eq!(put_back(MAX_REROLLS, false, max_peeks(true)), Some(MAX_REROLLS + 1));
-        assert_eq!(put_back(MAX_REROLLS, false, max_peeks(false)), None);
+    fn an_outdoor_slip_is_damped_in_rain_whether_or_not_it_carries_the_tag() {
+        let mut c = cand(1, 0, "local", Duration::Short);
+        c.tags = vec!["chill".into()]; // no "outdoors" tag...
+        c.outdoor = true; // ...but its cover says outdoor
+        assert!(weight(&c, NOW, true) < weight(&c, NOW, false));
+        let mut indoor = cand(2, 0, "local", Duration::Short);
+        indoor.tags = vec!["outdoors".into()]; // tagged, but its cover says indoor
+        indoor.outdoor = false;
+        assert_eq!(weight(&indoor, NOW, true), weight(&indoor, NOW, false), "the cover wins over the tag");
     }
 
     #[test]
     fn rain_sinks_outdoor_slips_but_never_removes_them() {
         let mut out = cand(1, 0, "local", Duration::Short);
-        out.tags = vec!["outdoors".into()];
+        out.outdoor = true;
         let cozy = cand(2, 0, "home", Duration::Short);
         assert_eq!(weight(&out, NOW, false), weight(&cozy, NOW, false));
         assert!(weight(&out, NOW, true) < weight(&cozy, NOW, true));

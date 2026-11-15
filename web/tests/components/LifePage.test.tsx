@@ -23,6 +23,7 @@ const line: Line = {
 const lifeline: LifelineOut = {
   saved_profile: true,
   line,
+  band: { shift_bps: 200, gains_tax_bps: 1000, rows: line.rows.map((r) => ({ year: r.year, age: r.age, cautious_today_paise: r.net_worth_today_paise / 2, expected_today_paise: r.net_worth_today_paise, hopeful_today_paise: r.net_worth_today_paise * 2 })) },
   choices: [{ id: "c1", label: "Retire at 55", in_plan: false, choice: { kind: "retire_at", age: 55 } }],
   working: { accounts_paise: 40_000_000, plan_saved_paise: 0, loans_paise: 0, wealth_paise: 40_000_000, expenses_paise: 9_000_000, income_paise: 25_000_000, note: "Starts from your account balances, less loans." },
 };

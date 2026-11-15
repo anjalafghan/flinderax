@@ -25,7 +25,7 @@ use crate::{
     models::AppState,
     planner::{
         life::LifeProfile,
-        lifeline::{compare, note, simulate, validate, Choice, Consequences, LifelineNote, Line, LineInput, MAX_CHOICES},
+        lifeline::{band, compare, note, simulate_with, validate, Band, Tweaks, GAINS_TAX_BPS, Choice, Consequences, LifelineNote, Line, LineInput, MAX_CHOICES},
     },
     validate::MAX_AMOUNT_PAISE,
 };
@@ -60,6 +60,8 @@ pub struct Working {
 pub struct LifelineOut {
     pub saved_profile: bool,
     pub line: Line,
+    /// The same line on cautious and hopeful returns.
+    pub band: Band,
     pub choices: Vec<SavedChoice>,
     pub working: Working,
 }
@@ -102,16 +104,22 @@ struct Basis {
 }
 
 impl Basis {
+    fn input(&self, choices: Vec<Choice>) -> LineInput {
+        LineInput {
+            profile: self.profile.clone(),
+            expenses_paise: self.working.expenses_paise,
+            wealth_paise: self.working.wealth_paise,
+            choices,
+        }
+    }
+
+    /// The expected line, after an estimated tax on investment gains.
     fn line(&self, choices: Vec<Choice>, today: Date) -> Line {
-        simulate(
-            &LineInput {
-                profile: self.profile.clone(),
-                expenses_paise: self.working.expenses_paise,
-                wealth_paise: self.working.wealth_paise,
-                choices,
-            },
-            today,
-        )
+        simulate_with(&self.input(choices), today, &Tweaks { gains_tax_bps: GAINS_TAX_BPS, ..Default::default() })
+    }
+
+    fn band(&self, choices: Vec<Choice>, today: Date) -> Band {
+        band(&self.input(choices), today)
     }
 }
 
@@ -210,8 +218,9 @@ pub async fn get(State(state): State<AppState>, Extension((user_id, _)): User) -
     let today = today_local();
     let basis = basis(&state.db, &user_id, today).await?;
     let choices = saved_choices(&state.db, &user_id).await?;
-    let in_plan = choices.iter().filter(|c| c.in_plan).map(|c| c.choice.clone()).collect();
-    Ok(Json(LifelineOut { saved_profile: basis.saved_profile, line: basis.line(in_plan, today), choices, working: basis.working }))
+    let in_plan: Vec<Choice> = choices.iter().filter(|c| c.in_plan).map(|c| c.choice.clone()).collect();
+    let band = basis.band(in_plan.clone(), today);
+    Ok(Json(LifelineOut { saved_profile: basis.saved_profile, line: basis.line(in_plan, today), band, choices, working: basis.working }))
 }
 
 pub async fn try_choices(
@@ -365,6 +374,18 @@ mod tests {
         assert_eq!(out.line.rows.last().unwrap().age, 90);
         assert!(out.choices.is_empty());
         assert_eq!(out.working.wealth_paise, 0);
+    }
+
+    #[tokio::test]
+    async fn the_line_comes_with_a_band_and_counts_tax_on_gains() {
+        let s = state().await;
+        save_profile(&s, r#"{"my_age":29,"my_take_home_paise":15000000,"monthly_expenses_paise":7000000,"retirement_saved_paise":20000000}"#).await;
+        let out = ok(get(State(s), user("u")).await).0;
+        assert_eq!(out.band.rows.len(), out.line.rows.len());
+        let last = out.band.rows.last().unwrap();
+        assert!(last.cautious_today_paise < last.expected_today_paise && last.expected_today_paise < last.hopeful_today_paise);
+        assert_eq!(last.expected_today_paise, out.line.marks.at_end_today_paise, "the band's middle is the line itself");
+        assert!(out.line.notes.iter().any(|n| n.contains("tax")), "{:?}", out.line.notes);
     }
 
     #[tokio::test]

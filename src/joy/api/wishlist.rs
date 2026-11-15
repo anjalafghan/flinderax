@@ -56,8 +56,11 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
     let pairs = db::pairs(db, couple).await?;
     let vetoes = db::vetoes(db, couple).await?;
     let learned = learned(db, couple).await?;
+    let wants = db::wants(db, couple).await?;
     let view = |a: &Activity| {
         let mut v = ActivityView::new(ctx, a, &learned);
+        v.my_want = wants.iter().find(|(id, p, _)| *id == a.id && *p == j.who as i64).map(|(_, _, l)| l.clone()).unwrap_or_default();
+        v.both_want = (0..2).all(|p| wants.iter().any(|(id, person, l)| *id == a.id && *person == p && l == "want"));
         v.vetoed_by = vetoes
             .iter()
             .filter(|(act, _)| *act == a.id)
@@ -136,9 +139,9 @@ pub async fn plan(
 ) -> Result<Json<SlipPlanned>, AppError> {
     let f = body.map(|j| j.0).unwrap_or(PlanForm { at: String::new() });
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
-    let a = mine(db, couple, id).await?;
+    // Only a slip that could be drawn can be planned: not archived, passed on or sealed.
+    let Some(a) = db::drawable_get(db, couple, j.who, id).await? else { return Err(not_found("No such slip")) };
     let Some(local) = parse_local(&f.at) else {
         return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, "Pick a day and a time.".into()));
     };
@@ -203,6 +206,7 @@ pub struct FormView {
     pub bring: String,
     pub station: String,
     pub station_walk_min: String,
+    pub url: String,
     /// Open "More details" when any of them is filled in or wrong.
     pub details_open: bool,
 }
@@ -264,8 +268,9 @@ async fn form(db: &SqlitePool, j: &Joy, id: Option<i64>, i: &ActivityInput, erro
         bring: i.bring.clone(),
         station: i.station.clone(),
         station_walk_min: i.station_walk_min.clone(),
+        url: i.url.clone(),
         details_open: error.contains("Hours")
-            || [&i.hours, &i.best_time, &i.minutes, &i.booking, &i.bring, &i.station].iter().any(|v| !v.trim().is_empty()),
+            || [&i.hours, &i.best_time, &i.minutes, &i.booking, &i.bring, &i.station, &i.url].iter().any(|v| !v.trim().is_empty()),
     })
 }
 
@@ -279,10 +284,22 @@ fn month_opts(selected: &str) -> Vec<Opt> {
         .collect()
 }
 
+/// What a saved slip answers with: where to go, and what was filled in on the way.
+#[derive(Debug, Serialize)]
+pub struct SlipSaved {
+    pub ok: bool,
+    pub to: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub filled: Vec<String>,
+}
+
 /// The JSON body of `POST /slips` and `POST /slips/{id}`. Converted to Joy's [`ActivityInput`].
 #[derive(Debug, Default, Deserialize)]
 pub struct SlipBody {
     pub title: String,
+    /// "Save anyway": the title is the same as another slip's and that is fine.
+    #[serde(default)]
+    pub allow_duplicate: bool,
     #[serde(default)]
     pub notes: String,
     #[serde(default, deserialize_with = "flex")]
@@ -329,6 +346,8 @@ pub struct SlipBody {
     pub station: String,
     #[serde(default, deserialize_with = "flex")]
     pub station_walk_min: String,
+    #[serde(default)]
+    pub url: String,
 }
 
 impl SlipBody {
@@ -369,6 +388,7 @@ impl SlipBody {
                 bring: self.bring,
                 station: self.station,
                 station_walk_min: self.station_walk_min,
+                url: self.url,
             },
             cost_ok,
         )
@@ -401,6 +421,7 @@ fn input_from(ctx: &Ctx, a: &Activity) -> ActivityInput {
         bring: a.bring.clone(),
         station: a.station.clone(),
         station_walk_min: a.station_walk_min.map(|m| m.to_string()).unwrap_or_default(),
+        url: a.url.clone(),
     }
 }
 
@@ -433,10 +454,25 @@ async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> 
     if let Some(id) = id {
         mine(&s.db, &j.couple, id).await?;
     }
+    let allow_duplicate = body.allow_duplicate;
     let (i, cost_ok) = body.input();
     let latlng = parse_latlng(&i.location);
     let error = if i.title.trim().is_empty() {
         "Give it a name."
+    } else if i.title.trim().chars().count() > db::MAX_TITLE {
+        "That name is too long: keep it under 120 characters."
+    } else if i.venue.trim().chars().count() > db::MAX_PLACE {
+        "That place is too long: keep it under 120 characters."
+    } else if i.area.trim().chars().count() > db::MAX_PLACE {
+        "That area is too long: keep it under 120 characters."
+    } else if i.notes.trim().chars().count() > db::MAX_NOTES {
+        "Those notes are too long: keep them under 2,000 characters."
+    } else if !db::tags_fit(&i.tags) {
+        "Use at most 12 tags of up to 24 characters each."
+    } else if !db::url_ok(&i.url) {
+        "That link should start with http:// or https:// and have no spaces."
+    } else if !ENERGIES.iter().any(|(k, _)| *k == i.energy) {
+        "Pick an energy: low, medium or high."
     } else if !cost_ok {
         "The cost should be a whole number."
     } else if !i.location.trim().is_empty() && latlng.is_none() {
@@ -448,12 +484,16 @@ async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> 
     } else {
         ""
     };
+    let dup = if error.is_empty() && !allow_duplicate { db::duplicate_of(&s.db, &j.couple, &i.title, id).await? } else { None };
+    let error = if dup.is_some() { "A slip like this is already in the jar. Save it anyway?" } else { error };
     if !error.is_empty() {
         let view = form(&s.db, &j, id, &i, error).await?;
         return Ok((StatusCode::UNPROCESSABLE_ENTITY, Json(view)).into_response());
     }
-    db::save(&s.db, &j.couple, id, &i, latlng).await?;
-    Ok(go(SLIPS).into_response())
+    let saved = db::save(&s.db, &j.couple, id, &i, latlng).await?;
+    // Blanks the rest of the jar can answer are filled, and the note says what, so it can be undone by editing.
+    let filled: Vec<String> = crate::joy::enrich::run_one(&s.db, &j.couple, saved).await?.iter().map(|f| f.describe()).collect();
+    Ok(Json(SlipSaved { ok: true, to: SLIPS.into(), filled }).into_response())
 }
 
 /// `POST /slips`
@@ -482,12 +522,48 @@ pub async fn archive(State(s): State<AppState>, Extension((user_id, _)): User, P
     Ok(go(SLIPS))
 }
 
+#[derive(Deserialize)]
+pub struct WantBody {
+    #[serde(default)]
+    level: String,
+}
+
+/// `POST /slips/{id}/want`: quietly mark a slip "want", "fine" or "no" (or "" to take it back). Only
+/// the caller's own mark changes, and the other one never sees it.
+pub async fn want(
+    State(s): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(id): Path<i64>,
+    Json(b): Json<WantBody>,
+) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
+    mine(&s.db, &j.couple, id).await?;
+    if !matches!(b.level.as_str(), "" | "want" | "fine" | "no") {
+        return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, "Pick want, fine or no.".into()));
+    }
+    db::set_want(&s.db, &j.couple, id, j.who, &b.level).await?;
+    Ok(go(SLIPS))
+}
+
+/// `POST /slips/{id}/unshare`: the envelope link stops opening.
+pub async fn unshare(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
+    mine(&s.db, &j.couple, id).await?;
+    db::unshare(&s.db, &j.couple, "joy_activities", id).await?;
+    Ok(go(SLIPS))
+}
+
 /// `POST /slips/{id}/restore`
 pub async fn restore(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     unsealed(&s.db, &j, id).await?;
     mine(&s.db, &j.couple, id).await?;
-    db::set_archived(&s.db, &j.couple, id, false).await?;
+    // A hand-added date's one-off slip has no place in the jar.
+    if !db::restore_one(&s.db, &j.couple, id).await? {
+        return Err(not_found("No such slip"));
+    }
     Ok(go(SLIPS))
 }
 
@@ -496,7 +572,7 @@ pub async fn unveto(State(s): State<AppState>, Extension((user_id, _)): User, Pa
     let j = joy(&s, &user_id).await?;
     unsealed(&s.db, &j, id).await?;
     mine(&s.db, &j.couple, id).await?;
-    db::unveto(&s.db, &j.couple, id).await?;
+    db::unveto(&s.db, &j.couple, id, j.who).await?;
     Ok(go(SLIPS))
 }
 

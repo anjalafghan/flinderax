@@ -340,6 +340,8 @@ type Draft = {
   raise: string;
   partner_raise: string;
   live_to_age: string;
+  equity_return: string;
+  inflation: string;
 };
 
 const money = (p: number | null) => (p === null ? "" : paiseToInput(p));
@@ -366,6 +368,8 @@ function toDraft(p: LifeProfile): Draft {
     raise: String((p.raise_bps ?? 800) / 100),
     partner_raise: String((p.partner_raise_bps ?? 800) / 100),
     live_to_age: String(p.live_to_age ?? 90),
+    equity_return: p.equity_return_bps == null ? "" : String(p.equity_return_bps / 100),
+    inflation: p.inflation_bps == null ? "" : String(p.inflation_bps / 100),
   };
 }
 
@@ -385,6 +389,14 @@ function whole(label: string, text: string, min: number, max: number): number {
   const n = Number(text.trim());
   if (!Number.isInteger(n) || n < min || n > max) throw new Error(`${label} must be a whole number from ${min} to ${max}.`);
   return n;
+}
+
+/** A percentage as basis points, or null when left blank (the default is used). */
+function optionalPercent(label: string, text: string, max: number): number | null {
+  if (text.trim() === "") return null;
+  const n = Number(text.trim());
+  if (!Number.isFinite(n) || n < 0 || n > max) throw new Error(`${label} must be between 0 and ${max}.`);
+  return Math.round(n * 100);
 }
 
 /** A percentage from 0 to 30, as basis points. */
@@ -421,6 +433,8 @@ function buildProfile(d: Draft): LifeProfile {
     raise_bps: percent("Your yearly raise", d.raise),
     partner_raise_bps: percent("Partner's yearly raise", d.partner_raise),
     live_to_age: whole("Plan to age", d.live_to_age, retirementAge, 110),
+    equity_return_bps: optionalPercent("Expected return", d.equity_return, 25),
+    inflation_bps: optionalPercent("Inflation", d.inflation, 20),
   };
 }
 
@@ -548,6 +562,12 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
           </Field>
           <Field id="partner_raise" label="Partner's yearly raise (%)">
             <Input id="partner_raise" inputMode="decimal" value={draft.partner_raise} onChange={set("partner_raise")} />
+          </Field>
+          <Field id="equity_return" label="Expected yearly return on investments (%)" hint="Blank uses 11.5. The life line also shows what 2 points lower and higher would do.">
+            <Input id="equity_return" inputMode="decimal" value={draft.equity_return} onChange={set("equity_return")} />
+          </Field>
+          <Field id="inflation" label="Yearly inflation (%)" hint="Blank uses 6.">
+            <Input id="inflation" inputMode="decimal" value={draft.inflation} onChange={set("inflation")} />
           </Field>
           <Field id="live_to_age" label="Plan to age" hint="The life line runs to this age.">
             <Input id="live_to_age" type="number" inputMode="numeric" min={60} max={110} value={draft.live_to_age} onChange={set("live_to_age")} />

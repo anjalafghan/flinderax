@@ -45,8 +45,6 @@
   overflow-wrap: anywhere;
 }
   .j-slip-title:focus:not(:focus-visible) { outline: none; }
-  .j-peek { width: 20px; height: 20px; }
-  .j-peek.is-full .peek-fill { transform: scale(1); }
   .j-slip.is-done { padding-top: 30px; }
   .j-slip.is-done .j-slip-meta { padding-right: 0; }
   .j-slip.is-done .never { display: none; }
@@ -89,9 +87,6 @@
   color: var(--ink-soft); background: var(--paper-2); border: 1px dashed var(--rule); border-radius: 999px;
 }
   .j-gen-tag svg { width: 12px; height: 12px; fill: var(--stamp); flex: none; }
-  .j-peek.is-bonus .peek-ring { stroke: var(--stamp); stroke-linejoin: round; }
-  .j-peek.is-bonus .peek-fill { fill: var(--stamp); transform-origin: 10px 10px; }
-  .peek-dots .j-peek.is-bonus { margin-left: 3px; }
   .j-slip .dayplan { box-shadow: none; }
   .j-slip-meta .door { color: var(--ink-soft); font-weight: 500; }
 }

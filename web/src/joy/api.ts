@@ -1,5 +1,6 @@
 // Every request the Dates section makes. Same bearer-token pattern as services/api.ts, but it keeps
 // the HTTP status and parsed body, because a refused slip save is a 422 that carries a FormView.
+import { adoptRenewedToken } from "@/services/renew";
 import type { JoySummary } from "@/services/types";
 import { clearSession } from "@/session";
 
@@ -27,6 +28,14 @@ export interface ActivityView {
   closed_label: string;
   vetoed_by: string;
   door: string;
+  /** The slip's own link (booking page, menu), or empty. */
+  url: string;
+  /** "Checked 8 months ago", or empty for slips nobody has saved. */
+  checked: string;
+  /** What I privately marked this slip: "want", "fine", "no" or "". Never my partner's. */
+  my_want: "" | "want" | "fine" | "no";
+  /** We both marked it "want": the only thing either of us learns about the other's mark. */
+  both_want: boolean;
 }
 
 export interface Group {
@@ -74,12 +83,17 @@ export interface FormView {
   bring: string;
   station: string;
   station_walk_min: string;
+  url: string;
   details_open: boolean;
 }
 
 /** The JSON body of POST /slips and POST /slips/{id}. */
 export interface SlipBody {
+  /** A booking page or menu: http(s) only. */
+  url?: string;
   title: string;
+  /** "Save anyway": another slip has the same title and that is fine. */
+  allow_duplicate?: boolean;
   notes: string;
   est_cost: string;
   setting: string;
@@ -254,6 +268,7 @@ export async function request<T>(method: "GET" | "POST", url: string, body?: unk
     headers: { "Content-Type": "application/json", ...(auth ? authHeaders() : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  adoptRenewedToken(res);
   if (res.status === 401 && auth) return toLogin<T>();
   const text = await res.text().catch(() => "");
   const data = parse(text);
@@ -318,11 +333,11 @@ export const getSlips = () => get<WishlistView>("/api/dates/slips");
 export const getSlipForm = (id: string | null) => get<FormView>(id ? `/api/dates/slips/${id}` : "/api/dates/slips/new");
 
 /** A save is either accepted (Go) or refused with the form echoed back and `error` set. */
-export type SaveResult = { ok: true; go: Go } | { ok: false; form: FormView };
+export type SaveResult = { ok: true; go: Go & { filled?: string[] } } | { ok: false; form: FormView };
 
 export async function saveSlip(id: string | null, body: SlipBody): Promise<SaveResult> {
   try {
-    return { ok: true, go: await post<Go>(id ? `/api/dates/slips/${id}` : "/api/dates/slips", body) };
+    return { ok: true, go: await post<Go & { filled?: string[] }>(id ? `/api/dates/slips/${id}` : "/api/dates/slips", body) };
   } catch (e) {
     if (e instanceof ApiError && e.status === 422 && e.data && typeof (e.data as FormView).error === "string") {
       return { ok: false, form: e.data as FormView };
@@ -334,6 +349,7 @@ export async function saveSlip(id: string | null, body: SlipBody): Promise<SaveR
 export const archiveSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/archive`);
 export const restoreSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/restore`);
 export const deleteSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/delete`);
+export const wantSlip = (id: number, level: "" | "want" | "fine" | "no") => post<Go>(`/api/dates/slips/${id}/want`, { level });
 export const unvetoSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/unveto`);
 export const clearVetoes = () => post<Go>("/api/dates/slips/vetoes/clear");
 export const restoreAllSlips = () => post<Go>("/api/dates/slips/restore-all");

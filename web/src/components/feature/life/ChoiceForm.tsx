@@ -80,6 +80,17 @@ const CHOICE_SPECS: Record<ChoiceKind, { title: string; fields: FieldSpec[] }> =
       { key: "months", label: "Months without your pay", type: "int", start: "6", min: 1, max: 60 },
     ],
   },
+  hospital: {
+    title: "What if: a hospital bill",
+    fields: [
+      { key: "year", label: "Year", type: "int", start: String(thisYear + 2), min: thisYear, max: thisYear + 80 },
+      { key: "bill_paise", label: "The bill, in today's rupees (₹)", type: "money", hint: "What your health cover pays is taken off." },
+    ],
+  },
+  lose_earner: {
+    title: "What if: my income stops",
+    fields: [{ key: "year", label: "Year", type: "int", start: String(thisYear + 2), min: thisYear, max: thisYear + 80, hint: "Illness or worse. Your term cover pays out if you have it." }],
+  },
   save_more: {
     title: "Spend less each month",
     fields: [{ key: "monthly_paise", label: "Less a month (₹)", type: "money", hint: "While you are working. It is invested instead." }],

@@ -7,6 +7,7 @@ import { Header } from "@/components/layout/Header";
 import { Link } from "react-router-dom";
 import { ManualTransaction } from "@/components/feature/ManualTransaction";
 import { PasteAlert } from "@/components/feature/PasteAlert";
+import { UnrecognizedInbox } from "@/components/feature/UnrecognizedInbox";
 import { StatementImport } from "@/components/feature/StatementImport";
 import { SpendingOverview } from "@/components/feature/SpendingOverview";
 import { SpendingRules } from "@/components/feature/SpendingRules";
@@ -61,6 +62,7 @@ export default function SpendingPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              <UnrecognizedInbox />
               {addMode === "paste" && (
                 <>
                   <p className="max-w-prose text-sm leading-snug text-muted-foreground">Missed one? Copy the bank's message and paste it here.</p>

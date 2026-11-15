@@ -215,6 +215,40 @@ pub struct ActivityView {
     pub uber_url: Option<String>,
     /// "about 6 h 30 min door to door", when getting there takes a while.
     pub door: String,
+    /// The slip's own link (booking page, menu), or empty.
+    pub url: String,
+    /// What I privately marked this slip: "want", "fine", "no", or empty. Never the other one's.
+    pub my_want: String,
+    /// We both marked it "want". The only thing either of us learns about the other's mark.
+    pub both_want: bool,
+    /// "Checked 8 months ago": how old its hours and cost might be. Empty for slips nobody has saved.
+    pub checked: String,
+}
+
+/// How long ago a person last saved a slip, in plain words.
+pub fn checked_label(verified_at: Option<i64>, now: i64) -> String {
+    let Some(at) = verified_at else { return String::new() };
+    let months = (now - at).max(0) / (30 * 86_400);
+    match months {
+        0 => "Checked this month".into(),
+        1 => "Checked last month".into(),
+        n => format!("Checked {n} months ago"),
+    }
+}
+
+#[cfg(test)]
+mod checked_tests {
+    use super::checked_label;
+
+    #[test]
+    fn says_how_old_the_details_are() {
+        let day = 86_400;
+        assert_eq!(checked_label(None, 1_000_000), "");
+        assert_eq!(checked_label(Some(1_000_000), 1_000_000 + 3 * day), "Checked this month");
+        assert_eq!(checked_label(Some(1_000_000), 1_000_000 + 40 * day), "Checked last month");
+        assert_eq!(checked_label(Some(1_000_000), 1_000_000 + 240 * day), "Checked 8 months ago");
+        assert_eq!(checked_label(Some(2_000_000), 1_000_000), "Checked this month", "a clock a little behind is not a negative age");
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -296,6 +330,10 @@ impl ActivityView {
                 }
                 _ => String::new(),
             },
+            url: a.url.clone(),
+            my_want: String::new(),
+            both_want: false,
+            checked: checked_label(a.verified_at, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)),
             uber_url: a.latlng().map(|(lat, lng)| {
                 format!(
                     "https://m.uber.com/ul/?action=setPickup&pickup=my_location\
@@ -463,6 +501,43 @@ pub async fn budget_view(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Bud
     })
 }
 
+/// What is left of this month's date budget (can be negative), or None when no budget is set.
+pub async fn budget_left(db: &SqlitePool, couple: &str) -> Result<Option<i64>, AppError> {
+    use crate::joy::db;
+    let spent = db::spent_this_month(db, couple).await?;
+    let standing = standing_budget(db::setting(db, couple, "monthly_budget").await?);
+    let this = db::month_offset(db, 0).await?;
+    let carry = db::month_budget(db, couple, &this).await?.map(|(_, c)| c).unwrap_or(0);
+    Ok(standing.map(|b| b + carry - spent))
+}
+
+/// The line on a pick card about the date budget: what is left, or by how much this one would go over.
+pub fn budget_note(left: Option<i64>, cost: i64, money: impl Fn(i64) -> String) -> String {
+    match left {
+        None => String::new(),
+        Some(left) if cost > left => format!("This one would take you {} over this month's date budget", money(cost - left.max(0))),
+        Some(left) => format!("{} left for dates this month", money(left)),
+    }
+}
+
+#[cfg(test)]
+mod budget_note_tests {
+    use super::budget_note;
+
+    fn m(n: i64) -> String {
+        format!("₹{n}")
+    }
+
+    #[test]
+    fn says_what_is_left_or_how_far_over() {
+        assert_eq!(budget_note(None, 500, m), "", "no budget, no note");
+        assert_eq!(budget_note(Some(2300), 500, m), "₹2300 left for dates this month");
+        assert_eq!(budget_note(Some(500), 500, m), "₹500 left for dates this month", "exactly fits");
+        assert_eq!(budget_note(Some(300), 500, m), "This one would take you ₹200 over this month's date budget");
+        assert_eq!(budget_note(Some(-100), 500, m), "This one would take you ₹500 over this month's date budget", "already over: all of it");
+    }
+}
+
 /// Finished months, newest first, each against the budget it had (or today's, if we never decided).
 pub async fn past_months(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Vec<PastMonth>, AppError> {
     use crate::joy::db as jdb;
@@ -503,11 +578,16 @@ pub async fn settle_month(db: &SqlitePool, couple: &str, choice: Leftover) -> Re
         Some((_, _, _, left)) if choice == Leftover::Roll => left,
         _ => 0,
     };
-    let settled = jdb::decide_month(db, couple, &this, base, carry).await?;
-    if let (true, Leftover::Save, Some((prev, _, _, left))) = (settled, choice, pending) {
-        let year = this.get(..4).unwrap_or_default();
-        jdb::add_saving(db, couple, left, "leftover", &format!("{}'s leftover", month_name(&prev, year))).await?;
-    }
+    let note;
+    let leftover = match (choice, pending) {
+        (Leftover::Save, Some((prev, _, _, left))) => {
+            let year = this.get(..4).unwrap_or_default();
+            note = format!("{}'s leftover", month_name(&prev, year));
+            Some((left, note.as_str()))
+        }
+        _ => None,
+    };
+    jdb::decide_month(db, couple, &this, base, carry, leftover).await?;
     Ok(())
 }
 
@@ -609,12 +689,25 @@ pub async fn learned(db: &SqlitePool, couple: &str) -> Result<Learned, AppError>
     let (cab_ratio, rides) = db::cab_ratio(db, couple).await?;
     let usable = |r: f64, n: i64| (n >= db::MIN_SAMPLES).then(|| r.clamp(FACTOR_RANGE.0, FACTOR_RANGE.1));
     let rows: Vec<(String, String, Option<i64>)> = sqlx::query_as(
-        "SELECT a.tags, h.outcome, h.rating FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id WHERE h.couple_id = ?",
+        // A date still to come has not been liked or disliked yet.
+        "SELECT a.tags, h.outcome, h.rating FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id
+         WHERE h.couple_id = ? AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()",
     )
     .bind(couple)
     .fetch_all(db)
     .await?;
-    let taste = crate::joy::taste::Taste::from_history(rows.iter().map(|(t, o, r)| (t.as_str(), o.as_str(), *r)));
+    // A put-back counts against a slip's tags only when it was "not my thing".
+    let passed: Vec<(String,)> = sqlx::query_as(
+        "SELECT a.tags FROM joy_peeks p JOIN joy_activities a ON a.id = p.activity_id WHERE p.couple_id = ? AND p.reason = 'not_my_thing'",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await?;
+    let taste = crate::joy::taste::Taste::from_history(
+        rows.iter()
+            .map(|(t, o, r)| (t.as_str(), o.as_str(), *r))
+            .chain(passed.iter().map(|(t,)| (t.as_str(), "skipped", None))),
+    );
     Ok(Learned { cost: usable(ratio, n), cost_ratio: ratio, cost_samples: n, cab: usable(cab_ratio, rides), rides, taste })
 }
 

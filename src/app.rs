@@ -12,6 +12,7 @@ use rusty_paseto::{
     prelude::{PasetoParser, PasetoSymmetricKey},
 };
 use std::sync::Arc;
+use time::OffsetDateTime;
 use tower_http::compression::{CompressionLayer, CompressionLevel};
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultOnResponse, TraceLayer};
@@ -58,6 +59,18 @@ fn protected(state: &AppState, router: Router) -> Router {
         ))
 }
 
+/// Liveness for Fly: answers 200 only when the database can be queried, so a machine whose
+/// migrations failed or whose volume is unreadable is never sent traffic.
+async fn healthz(State(state): State<AppState>) -> StatusCode {
+    match sqlx::query("SELECT 1").execute(&state.db).await {
+        Ok(_) => StatusCode::OK,
+        Err(e) => {
+            error!("healthz: database check failed: {e}");
+            StatusCode::SERVICE_UNAVAILABLE
+        }
+    }
+}
+
 async fn api_not_found() -> AppError {
     AppError(StatusCode::NOT_FOUND, "Not found".to_string())
 }
@@ -94,10 +107,21 @@ pub fn build_router(state: AppState) -> Router {
             "/api/export",
             protected(&state, Router::new().route("/", axum::routing::get(crate::handlers::export::export)).with_state(state.clone())),
         )
+        .nest(
+            "/api/import",
+            protected(
+                &state,
+                Router::new()
+                    .route("/", axum::routing::post(crate::handlers::import::import).layer(axum::extract::DefaultBodyLimit::max(20 * 1024 * 1024)))
+                    .with_state(state.clone()),
+            ),
+        )
+        .nest("/api/coming-up", protected(&state, Router::new().route("/", axum::routing::get(crate::handlers::coming::get)).with_state(state.clone())))
         .nest("/api/review", protected(&state, routes::review::routes(state.clone())))
         .nest("/api/hook", routes::ingest::hook_routes(state.clone()).layer(trace_layer()))
         // Unknown API paths must 404 instead of falling through to the SPA's index.html.
         .route("/api/{*rest}", any(api_not_found))
+        .route("/healthz", axum::routing::get(healthz).with_state(state.clone()))
         // Joy's envelope links were already sent on WhatsApp, so the old /e/{token} address still redirects.
         .route("/e/{token}", axum::routing::get(old_joy_envelope))
         // Static files come from the fallback. It must be set before the layers below: `Router::layer`
@@ -113,6 +137,12 @@ pub fn build_router(state: AppState) -> Router {
         // Level 4 instead of brotli's default (11): dynamic JSON gets compressed on every request, and
         // on a shared CPU the default costs far more than the few percent of size it saves.
         .layer(CompressionLayer::new().quality(CompressionLevel::Precise(4)))
+        // A stuck handler answers 504 instead of holding a connection (and a pool slot) forever.
+        // 60 s leaves room for photo and statement uploads on a slow phone connection.
+        .layer(tower_http::timeout::TimeoutLayer::with_status_code(
+            StatusCode::GATEWAY_TIMEOUT,
+            std::time::Duration::from_secs(60),
+        ))
         // Safety net: a panic in one request answers 500 instead of taking the server down.
         .layer(tower_http::catch_panic::CatchPanicLayer::new())
 }
@@ -143,9 +173,17 @@ pub async fn token_validator_middleware(
 ) -> Result<Response, AppError> {
     match get_token(&headers) {
         Some(token) => {
-            let (user_id, role) = authenticate(token, &state).await?;
+            let (user_id, role, version) = authenticate(token, &state).await?;
+            // Renew a session that is past its halfway point; the client swaps the token in.
+            let renewal = renewal(token, &user_id, &role, version, &state);
             request.extensions_mut().insert((user_id, role));
-            let response = next.run(request).await;
+            let mut response = next.run(request).await;
+            if let Some((new_token, expires_at)) = renewal
+                && let (Ok(t), Ok(e)) = (new_token.parse(), expires_at.to_string().parse())
+            {
+                response.headers_mut().insert("x-refreshed-token", t);
+                response.headers_mut().insert("x-token-expires-at", e);
+            }
             Ok(response)
         }
         _ => Err(AppError(StatusCode::UNAUTHORIZED, "error".to_string())),
@@ -159,16 +197,32 @@ fn sign_in_again() -> AppError {
 /// A valid token whose user still exists and whose version is still current. Password changes,
 /// "sign out everywhere" and account deletion all end older tokens this way. The role comes from
 /// the database, so a demotion applies at once.
-async fn authenticate(token: &str, state: &AppState) -> Result<(String, String), AppError> {
+async fn authenticate(token: &str, state: &AppState) -> Result<(String, String, i64), AppError> {
     let (user_id, _token_role, version) = parse_token(token, &state.paseto_key)?;
     let row: Option<(String, i64)> = sqlx::query_as("SELECT user_role, token_version FROM users WHERE user_id = ?")
         .bind(&user_id)
         .fetch_optional(&state.db)
         .await?;
     match row {
-        Some((role, current)) if version == Some(current) => Ok((user_id, role)),
+        Some((role, current)) if version == Some(current) => Ok((user_id, role, current)),
         _ => Err(sign_in_again()),
     }
+}
+
+/// A new token and its expiry (unix seconds) when `token` has less than half its life left.
+fn renewal(token: &str, user_id: &str, role: &str, version: i64, state: &AppState) -> Option<(String, i64)> {
+    let left = token_expiry(token, &state.paseto_key)? - OffsetDateTime::now_utc();
+    if left >= crate::handlers::common::SESSION_LIFETIME / 2 {
+        return None;
+    }
+    let expiry = OffsetDateTime::now_utc() + crate::handlers::common::SESSION_LIFETIME;
+    let new = crate::handlers::common::get_paseto_token(user_id, role.to_string(), version, &state.paseto_key, expiry).ok()?;
+    Some((new, expiry.unix_timestamp()))
+}
+
+fn token_expiry(token: &str, key: &Arc<PasetoSymmetricKey<V4, Local>>) -> Option<OffsetDateTime> {
+    let claims = PasetoParser::<V4, Local>::default().parse(token, key).ok()?;
+    OffsetDateTime::parse(claims["exp"].as_str()?, &time::format_description::well_known::Rfc3339).ok()
 }
 
 fn get_token(headers: &HeaderMap) -> Option<&str> {

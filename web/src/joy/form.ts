@@ -24,6 +24,7 @@ export interface FormState {
   bring: string;
   station: string;
   station_walk_min: string;
+  url: string;
   pairs: string[];
   added_by: string;
 }
@@ -56,6 +57,7 @@ export function formToState(v: FormView): FormState {
     bring: v.bring,
     station: v.station,
     station_walk_min: v.station_walk_min,
+    url: v.url,
     pairs: ticked(v.pair_opts),
     added_by: selected(v.people, v.people[0]?.value ?? ""),
   };
@@ -90,10 +92,14 @@ export function toPayload(s: FormState): SlipBody {
     bring: s.bring.trim(),
     station: s.station.trim(),
     station_walk_min: s.station_walk_min.trim(),
+    url: s.url.trim(),
   };
 }
 
 /** Which field an error message is about, so it can be marked invalid and focused. */
+/** The server asks before saving a second slip with the same title. */
+export const isDuplicateWarning = (error: string): boolean => error.includes("already in the jar");
+
 export function errorField(error: string): "title" | "est_cost" | "location" | "hours" | null {
   if (!error) return null;
   if (error.includes("name")) return "title";

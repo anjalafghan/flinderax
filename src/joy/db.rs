@@ -45,6 +45,10 @@ pub struct Activity {
     /// Nearest local or metro station, and the walk from it.
     pub station: String,
     pub station_walk_min: Option<i64>,
+    /// A booking page, menu or post: http(s) only.
+    pub url: String,
+    /// Unix seconds a person last saved this slip (None for starter slips nobody has touched).
+    pub verified_at: Option<i64>,
 }
 
 impl Activity {
@@ -109,6 +113,10 @@ impl Activity {
             season: self.season(),
             window_miss: None,
             taste: 1.0,
+            outdoor: self.outdoor(),
+            like_recent: false,
+            both_want: false,
+            any_no: false,
         }
     }
 }
@@ -164,6 +172,8 @@ pub struct ActivityInput {
     pub station: String,
     #[serde(default)]
     pub station_walk_min: String,
+    #[serde(default)]
+    pub url: String,
 }
 
 pub const BEST_TIMES: [(&str, &str); 4] = [("morning", "Morning"), ("afternoon", "Afternoon"), ("evening", "Evening"), ("night", "Late night")];
@@ -196,14 +206,22 @@ fn blank_as_zero<'de, D: serde::Deserializer<'de>>(d: D) -> Result<i64, D::Error
     s.parse().map_err(serde::de::Error::custom)
 }
 
+/// `times_done` counts kept dates whose day has passed. `last_done_at` is the latest kept date,
+/// planned or done, so a slip that is booked is not handed out again. Both are derived from the
+/// history; the stored columns of the same names are no longer read.
 const COLS: &str = "id, title, notes, est_cost, setting, area, venue, lat, lng, duration, tags, energy, \
-                    added_by, times_done, last_done_at, last_skipped_at, generated, \
+                    added_by, \
+                    (SELECT COUNT(*) FROM joy_history h WHERE h.activity_id = joy_activities.id AND h.outcome = 'did_it' \
+                       AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()) AS times_done, \
+                    (SELECT MAX(COALESCE(h.planned_at, h.picked_at)) FROM joy_history h \
+                      WHERE h.activity_id = joy_activities.id AND h.outcome = 'did_it') AS last_done_at, \
+                    last_skipped_at, generated, \
                     closed_days, season_from, season_to, est_from_actual, \
-                    hours, best_time, minutes, booking, book_ahead_days, cover, bring, station, station_walk_min";
+                    hours, best_time, minutes, booking, book_ahead_days, cover, bring, station, station_walk_min, url, verified_at";
 
 pub async fn list(db: &SqlitePool, couple: &str, archived: bool) -> sqlx::Result<Vec<Activity>> {
     sqlx::query_as(&format!(
-        "SELECT {COLS} FROM joy_activities WHERE couple_id = ? AND archived = ? ORDER BY est_cost, title"
+        "SELECT {COLS} FROM joy_activities WHERE couple_id = ? AND archived = ? AND (archived = 0 OR custom = 0) ORDER BY est_cost, title"
     ))
     .bind(couple)
     .bind(archived)
@@ -219,28 +237,70 @@ pub async fn get(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Option<
         .await
 }
 
+/// Mark a slip "want", "fine" or "no" for `person`; "" takes the mark back. Quietly: it never
+/// touches the other one's mark.
+pub async fn set_want(db: &SqlitePool, couple: &str, id: i64, person: usize, level: &str) -> sqlx::Result<()> {
+    if level.is_empty() {
+        sqlx::query("DELETE FROM joy_wants WHERE activity_id = ? AND person = ? AND activity_id IN (SELECT id FROM joy_activities WHERE couple_id = ?)")
+            .bind(id)
+            .bind(person as i64)
+            .bind(couple)
+            .execute(db)
+            .await?;
+        return Ok(());
+    }
+    sqlx::query(
+        "INSERT INTO joy_wants (activity_id, person, level)
+         SELECT id, ?2, ?3 FROM joy_activities WHERE id = ?1 AND couple_id = ?4
+         ON CONFLICT(activity_id, person) DO UPDATE SET level = excluded.level",
+    )
+    .bind(id)
+    .bind(person as i64)
+    .bind(level)
+    .bind(couple)
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+/// Every mark in the couple's jar: (slip id, person, level). Callers must only ever show a person
+/// their own marks, plus "we both want it".
+pub async fn wants(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(i64, i64, String)>> {
+    sqlx::query_as(
+        "SELECT w.activity_id, w.person, w.level FROM joy_wants w JOIN joy_activities a ON a.id = w.activity_id WHERE a.couple_id = ?",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await
+}
+
+/// Another slip in the jar with the same title (ignoring case and spacing), if any.
+pub async fn duplicate_of(db: &SqlitePool, couple: &str, title: &str, except: Option<i64>) -> sqlx::Result<Option<i64>> {
+    let norm = |t: &str| t.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+    let want = norm(title);
+    let rows: Vec<(i64, String)> = sqlx::query_as("SELECT id, title FROM joy_activities WHERE couple_id = ? AND archived = 0")
+        .bind(couple)
+        .fetch_all(db)
+        .await?;
+    Ok(rows.into_iter().find(|(id, t)| Some(*id) != except && norm(t) == want).map(|(id, _)| id))
+}
+
 /// Insert or update a slip and its pairs; returns its id.
 pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityInput, latlng: Option<(f64, f64)>) -> sqlx::Result<i64> {
-    let tags = a
-        .tags
-        .split(',')
-        .map(|t| t.trim().to_lowercase())
-        .filter(|t| !t.is_empty())
-        .collect::<Vec<_>>()
-        .join(",");
+    let tags = crate::joy::tags::normalise(&a.tags);
     let sql = match id {
         None => "INSERT INTO joy_activities (title, notes, est_cost, setting, duration, venue, area, lat, lng, tags, energy, added_by,
                  closed_days, season_from, season_to, hours, best_time, minutes, booking, book_ahead_days, cover, bring,
-                 station, station_walk_min, id, couple_id)
+                 station, station_walk_min, url, verified_at, id, couple_id)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?17, ?18, ?19, ?20, ?21, ?22, ?23,
-                 ?24, ?25, ?16, ?26)",
+                 ?24, ?25, ?27, unixepoch(), ?16, ?26)",
         // A hand-edited estimate is ours again, so the learned factor applies to it.
         Some(_) => "UPDATE joy_activities SET title = ?1, notes = ?2,
                     est_from_actual = CASE WHEN est_cost = ?3 THEN est_from_actual ELSE 0 END, est_cost = ?3,
                     setting = ?4, duration = ?5, venue = ?6, area = ?7, lat = ?8, lng = ?9, tags = ?10, energy = ?11,
                     added_by = ?12, closed_days = ?13, season_from = ?14, season_to = ?15, hours = ?17, best_time = ?18,
                     minutes = ?19, booking = ?20, book_ahead_days = ?21, cover = ?22, bring = ?23, station = ?24,
-                    station_walk_min = ?25 WHERE id = ?16 AND couple_id = ?26",
+                    station_walk_min = ?25, url = ?27, verified_at = unixepoch() WHERE id = ?16 AND couple_id = ?26",
     };
     let closed = crate::joy::picker::WEEKDAYS
         .iter()
@@ -250,6 +310,8 @@ pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityIn
         .join(",");
     let month = |s: &str| s.trim().parse::<i64>().ok().filter(|m| (1..=12).contains(m));
     let season = month(&a.season_from).zip(month(&a.season_to));
+    // The slip and its pairs are saved together or not at all.
+    let mut tx = db.begin().await?;
     let done = sqlx::query(sql)
         .bind(a.title.split_whitespace().collect::<Vec<_>>().join(" "))
         .bind(a.notes.trim())
@@ -277,7 +339,8 @@ pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityIn
         .bind(capped(&a.station.split_whitespace().collect::<Vec<_>>().join(" "), 60))
         .bind(small_number(&a.station_walk_min, 120))
         .bind(couple)
-        .execute(db)
+        .bind(a.url.trim())
+        .execute(&mut *tx)
         .await?;
     // Editing a slip that isn't this couple's matches nothing.
     if id.is_some() && done.rows_affected() == 0 {
@@ -285,7 +348,8 @@ pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityIn
     }
     // From this statement's own result: a separate query could run on another pool connection.
     let id = id.unwrap_or(done.last_insert_rowid());
-    set_pairs(db, couple, id, &a.pairs).await?;
+    set_pairs_in(&mut tx, couple, id, &a.pairs).await?;
+    tx.commit().await?;
     Ok(id)
 }
 
@@ -326,13 +390,18 @@ pub async fn visible_partners(db: &SqlitePool, couple: &str, who: usize, id: i64
 /// Both ends must be this couple's slips; anything else is skipped.
 pub async fn set_pairs(db: &SqlitePool, couple: &str, id: i64, with: &[i64]) -> sqlx::Result<()> {
     let mut tx = db.begin().await?;
+    set_pairs_in(&mut tx, couple, id, with).await?;
+    tx.commit().await
+}
+
+async fn set_pairs_in(tx: &mut sqlx::SqliteConnection, couple: &str, id: i64, with: &[i64]) -> sqlx::Result<()> {
     let mine: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM joy_activities WHERE id = ? AND couple_id = ?)")
         .bind(id)
         .bind(couple)
         .fetch_one(&mut *tx)
         .await?;
     if !mine {
-        return tx.rollback().await;
+        return Ok(());
     }
     sqlx::query("DELETE FROM joy_pairs WHERE a_id = ?1 OR b_id = ?1").bind(id).execute(&mut *tx).await?;
     for &other in with.iter().filter(|&&o| o != id) {
@@ -347,7 +416,16 @@ pub async fn set_pairs(db: &SqlitePool, couple: &str, id: i64, with: &[i64]) -> 
         .execute(&mut *tx)
         .await?;
     }
-    tx.commit().await
+    Ok(())
+}
+
+pub async fn restore_one(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
+    let done = sqlx::query("UPDATE joy_activities SET archived = 0 WHERE id = ? AND couple_id = ? AND custom = 0")
+        .bind(id)
+        .bind(couple)
+        .execute(db)
+        .await?;
+    Ok(done.rows_affected() > 0)
 }
 
 pub async fn set_archived(db: &SqlitePool, couple: &str, id: i64, archived: bool) -> sqlx::Result<()> {
@@ -424,6 +502,20 @@ pub async fn visible_list(db: &SqlitePool, couple: &str, who: Option<usize>) -> 
     Ok(acts)
 }
 
+/// A slip that can be drawn, kept or planned right now: in the jar (not archived), not passed on
+/// by either of us, and not sealed from `who`. Anything else is not found, the same as one that
+/// doesn't exist.
+pub async fn drawable_get(db: &SqlitePool, couple: &str, who: usize, id: i64) -> sqlx::Result<Option<Activity>> {
+    let Some(a) = visible_get(db, couple, who, id).await? else { return Ok(None) };
+    let archived: bool = sqlx::query_scalar("SELECT archived FROM joy_activities WHERE id = ? AND couple_id = ?")
+        .bind(id)
+        .bind(couple)
+        .fetch_one(db)
+        .await?;
+    let vetoed: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM joy_vetoes WHERE activity_id = ?)").bind(id).fetch_one(db).await?;
+    Ok((!archived && !vetoed).then_some(a))
+}
+
 /// `get`, but a slip sealed from `who` is not found, the same as one that doesn't exist.
 pub async fn visible_get(db: &SqlitePool, couple: &str, who: usize, id: i64) -> sqlx::Result<Option<Activity>> {
     if sealed_from(db, couple, who).await?.contains(&id) {
@@ -468,6 +560,56 @@ pub async fn record(db: &SqlitePool, couple: &str, id: i64, did_it: bool) -> sql
     tx.commit().await
 }
 
+/// Server-side limits on what a slip may hold (the form's `maxLength` is only a courtesy).
+pub const MAX_TITLE: usize = 120;
+pub const MAX_PLACE: usize = 120;
+pub const MAX_NOTES: usize = 2000;
+pub const MAX_URL: usize = 300;
+
+/// Empty, or an http(s) link of reasonable length.
+pub fn url_ok(u: &str) -> bool {
+    let u = u.trim();
+    u.is_empty() || (u.len() <= MAX_URL && (u.starts_with("https://") || u.starts_with("http://")) && !u.contains(char::is_whitespace))
+}
+const MAX_TAGS: usize = 12;
+const MAX_TAG_LEN: usize = 24;
+
+/// At most 12 tags of at most 24 characters each.
+pub fn tags_fit(tags: &str) -> bool {
+    let normalised = crate::joy::tags::normalise(tags);
+    let list: Vec<&str> = normalised.split(',').filter(|t| !t.is_empty()).collect();
+    list.len() <= MAX_TAGS && list.iter().all(|t| t.chars().count() <= MAX_TAG_LEN)
+}
+
+/// The one-tap reasons for putting a slip back. Anything else is stored as no reason.
+pub const PUT_BACK_REASONS: [&str; 4] = ["not_tonight", "too_far", "too_pricey", "not_my_thing"];
+
+/// Put a slip back while drawing. This is a peek, not a date: it never touches the history, and
+/// it only damps the slip for a few days (`last_skipped_at`).
+pub async fn put_back(db: &SqlitePool, couple: &str, id: i64, who: usize, reason: &str) -> sqlx::Result<()> {
+    let reason = if PUT_BACK_REASONS.contains(&reason) { reason } else { "" };
+    let mut tx = db.begin().await?;
+    let n = sqlx::query(
+        "INSERT INTO joy_peeks (couple_id, activity_id, who, reason)
+         SELECT ?1, id, ?3, ?4 FROM joy_activities WHERE id = ?2 AND couple_id = ?1",
+    )
+    .bind(couple)
+    .bind(id)
+    .bind(who as i64)
+    .bind(reason)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    if n > 0 {
+        sqlx::query("UPDATE joy_activities SET last_skipped_at = unixepoch() WHERE id = ? AND couple_id = ?")
+            .bind(id)
+            .bind(couple)
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await
+}
+
 /// Accept a pick and return its history row. A double-tap within a minute only counts once
 /// (the second tap gets the same row back).
 pub async fn accept(db: &SqlitePool, couple: &str, id: i64, drawn_by: Option<usize>, surprise: bool) -> sqlx::Result<i64> {
@@ -502,6 +644,48 @@ pub async fn accept(db: &SqlitePool, couple: &str, id: i64, drawn_by: Option<usi
     .await?;
     tx.commit().await?;
     Ok(row)
+}
+
+/// The (setting, main tag) of the last two dates that happened, newest first: what we just did.
+pub async fn recent_kinds(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(String, String)>> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT a.setting, a.tags FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id
+         WHERE h.couple_id = ? AND h.outcome = 'did_it' AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()
+         ORDER BY COALESCE(h.planned_at, h.picked_at) DESC, h.id DESC LIMIT 2",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await?;
+    Ok(rows.into_iter().map(|(s, t)| (s, t.split(',').next().unwrap_or("").trim().to_lowercase())).collect())
+}
+
+/// The most recent kept date whose day has passed and that nobody has confirmed, rated or priced:
+/// the "did it happen?" question. Sealed surprises are left to their planner (the caller filters).
+pub async fn to_close(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<HistoryRow>> {
+    sqlx::query_as(&format!(
+        "SELECT {HISTORY_COLS} FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id
+         WHERE h.couple_id = ? AND h.outcome = 'did_it' AND h.confirmed_at IS NULL
+           AND h.rating IS NULL AND h.actual_cost IS NULL AND a.custom = 0
+           AND COALESCE(h.planned_at, h.picked_at) <= unixepoch() - 3 * 3600
+         ORDER BY COALESCE(h.planned_at, h.picked_at) DESC LIMIT 5"
+    ))
+    .bind(couple)
+    .fetch_all(db)
+    .await
+}
+
+/// Close out a kept date whose day has passed. `true` confirms it; `false` cancels it (outcome
+/// 'cancelled'), which takes it out of Kept, the recap, the budget and what the jar has learned.
+/// Returns false when there is no such date, or its day has not come yet.
+pub async fn set_happened(db: &SqlitePool, couple: &str, id: i64, happened: bool) -> sqlx::Result<bool> {
+    let sql = if happened {
+        "UPDATE joy_history SET confirmed_at = unixepoch() WHERE id = ? AND couple_id = ? AND outcome = 'did_it'
+           AND COALESCE(planned_at, picked_at) <= unixepoch()"
+    } else {
+        "UPDATE joy_history SET outcome = 'cancelled' WHERE id = ? AND couple_id = ? AND outcome = 'did_it'
+           AND COALESCE(planned_at, picked_at) <= unixepoch()"
+    };
+    Ok(sqlx::query(sql).bind(id).bind(couple).execute(db).await?.rows_affected() == 1)
 }
 
 /// A date we had that never was a slip: kept straight into Kept on `on` ("YYYY-MM-DD", local
@@ -972,15 +1156,29 @@ pub async fn month_budget(db: &SqlitePool, couple: &str, month: &str) -> sqlx::R
 
 /// Settle a month's start: rolling over `carry` (0 = start fresh). Pressing twice changes nothing.
 /// True when this call was the one that settled it.
-pub async fn decide_month(db: &SqlitePool, couple: &str, month: &str, base: i64, carry: i64) -> sqlx::Result<bool> {
+/// `leftover` ((amount, note) for the savings jar) goes in with it in one transaction, so a failure
+/// in between can't lose the month's leftover.
+pub async fn decide_month(db: &SqlitePool, couple: &str, month: &str, base: i64, carry: i64, leftover: Option<(i64, &str)>) -> sqlx::Result<bool> {
+    let mut tx = db.begin().await?;
     let done = sqlx::query("INSERT OR IGNORE INTO joy_month_budget (couple_id, month, base, carry) VALUES (?, ?, ?, ?)")
         .bind(couple)
         .bind(month)
         .bind(base)
         .bind(carry)
-        .execute(db)
+        .execute(&mut *tx)
         .await?;
-    Ok(done.rows_affected() == 1)
+    let settled = done.rows_affected() == 1;
+    if let (true, Some((amount, note))) = (settled, leftover)
+        && amount != 0 {
+            sqlx::query("INSERT INTO joy_savings (couple_id, amount, kind, note) VALUES (?, ?, 'leftover', ?)")
+                .bind(couple)
+                .bind(amount)
+                .bind(note.trim())
+                .execute(&mut *tx)
+                .await?;
+        }
+    tx.commit().await?;
+    Ok(settled)
 }
 
 /// Finished months with anything spent, newest first: (month "YYYY-MM", spent).
@@ -1183,9 +1381,13 @@ pub async fn clear_putbacks(db: &SqlitePool, couple: &str) -> sqlx::Result<u64> 
     Ok(done.rows_affected())
 }
 
-pub async fn unveto(db: &SqlitePool, couple: &str, activity: i64) -> sqlx::Result<()> {
-    sqlx::query("DELETE FROM joy_vetoes WHERE activity_id = ? AND activity_id IN (SELECT id FROM joy_activities WHERE couple_id = ?)")
+/// Take back `person`'s own pass on a slip. The other one's pass, if there is one, stays.
+pub async fn unveto(db: &SqlitePool, couple: &str, activity: i64, person: usize) -> sqlx::Result<()> {
+    sqlx::query(
+        "DELETE FROM joy_vetoes WHERE activity_id = ? AND person = ? AND activity_id IN (SELECT id FROM joy_activities WHERE couple_id = ?)",
+    )
         .bind(activity)
+        .bind(person as i64)
         .bind(couple)
         .execute(db)
         .await?;
@@ -1310,9 +1512,27 @@ pub async fn savings_recent(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(
 }
 
 /// Undo money put in by hand. Leftovers and paid dates stay, so the jar's sums stay true.
-pub async fn delete_saving(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<()> {
-    sqlx::query("DELETE FROM joy_savings WHERE id = ? AND couple_id = ? AND kind = 'add'").bind(id).bind(couple).execute(db).await?;
-    Ok(())
+/// False (and nothing deleted) when the jar no longer holds that money: removing the deposit would
+/// leave it below zero because part of it has already paid for a date.
+pub async fn delete_saving(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
+    let done = sqlx::query(
+        "DELETE FROM joy_savings WHERE id = ?1 AND couple_id = ?2 AND kind = 'add'
+           AND (SELECT COALESCE(SUM(amount), 0) FROM joy_savings WHERE couple_id = ?2) - amount >= 0",
+    )
+    .bind(id)
+    .bind(couple)
+    .execute(db)
+    .await?;
+    if done.rows_affected() == 1 {
+        return Ok(true);
+    }
+    // Nothing deleted: either it isn't a deposit of ours (fine, nothing to do) or the jar can't spare it.
+    let is_deposit: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM joy_savings WHERE id = ? AND couple_id = ? AND kind = 'add')")
+        .bind(id)
+        .bind(couple)
+        .fetch_one(db)
+        .await?;
+    Ok(!is_deposit)
 }
 
 /// Keep the slip we were saving for, paid from the jar: stamps it as a date, takes `cost`
@@ -1548,7 +1768,20 @@ pub async fn next_planned(db: &SqlitePool, couple: &str) -> sqlx::Result<Option<
 async fn share_token(db: &SqlitePool, couple: &str, table: &str, id: i64) -> sqlx::Result<String> {
     use rand::{distributions::Alphanumeric, Rng};
     let fresh: String = rand::thread_rng().sample_iter(&Alphanumeric).take(24).map(char::from).collect();
-    sqlx::query(&format!("UPDATE {table} SET share_token = ? WHERE id = ? AND couple_id = ? AND share_token IS NULL"))
+    // Every share renews the link: 30 days for a slip, a week past the day for a kept date.
+    let expiry = if table == "joy_history" {
+        "MAX(COALESCE(planned_at, picked_at), unixepoch()) + 7 * 86400"
+    } else {
+        "unixepoch() + 30 * 86400"
+    };
+    sqlx::query(&format!("UPDATE {table} SET share_expires_at = {expiry} WHERE id = ? AND couple_id = ? AND share_token IS NOT NULL"))
+        .bind(id)
+        .bind(couple)
+        .execute(db)
+        .await?;
+    sqlx::query(&format!(
+        "UPDATE {table} SET share_token = ?, share_expires_at = {expiry} WHERE id = ? AND couple_id = ? AND share_token IS NULL"
+    ))
         .bind(&fresh)
         .bind(id)
         .bind(couple)
@@ -1559,6 +1792,17 @@ async fn share_token(db: &SqlitePool, couple: &str, table: &str, id: i64) -> sql
         .bind(couple)
         .fetch_one(db)
         .await
+}
+
+/// Stop sharing: the link stops opening and the next share makes a new one.
+pub async fn unshare(db: &SqlitePool, couple: &str, table: &str, id: i64) -> sqlx::Result<()> {
+    let table = if table == "joy_history" { "joy_history" } else { "joy_activities" };
+    sqlx::query(&format!("UPDATE {table} SET share_token = NULL, share_expires_at = NULL WHERE id = ? AND couple_id = ?"))
+        .bind(id)
+        .bind(couple)
+        .execute(db)
+        .await?;
+    Ok(())
 }
 
 pub async fn slip_token(db: &SqlitePool, couple: &str, activity_id: i64) -> sqlx::Result<String> {
@@ -1581,14 +1825,14 @@ pub async fn envelope(db: &SqlitePool, token: &str) -> sqlx::Result<Option<Envel
     if token.len() != 24 || !token.chars().all(|c| c.is_ascii_alphanumeric()) {
         return Ok(None);
     }
-    if let Some((couple, id)) = sqlx::query_as::<_, (String, i64)>("SELECT couple_id, id FROM joy_history WHERE share_token = ?")
+    if let Some((couple, id)) = sqlx::query_as::<_, (String, i64)>("SELECT couple_id, id FROM joy_history WHERE share_token = ? AND share_expires_at > unixepoch()")
         .bind(token)
         .fetch_optional(db)
         .await?
     {
         return Ok(history_row(db, &couple, id).await?.map(Envelope::Date));
     }
-    match sqlx::query_as::<_, (String, i64)>("SELECT couple_id, id FROM joy_activities WHERE share_token = ?")
+    match sqlx::query_as::<_, (String, i64)>("SELECT couple_id, id FROM joy_activities WHERE share_token = ? AND share_expires_at > unixepoch() AND archived = 0")
         .bind(token)
         .fetch_optional(db)
         .await?
@@ -1783,11 +2027,10 @@ pub async fn backfill_visit_history(db: &SqlitePool, photos_root: &std::path::Pa
         let Some(h) = h else { continue };
         let dir = photos_root.join(&couple);
         let file = crate::joy::photos::new_date_file(h);
-        if let Some(dest) = crate::joy::photos::date_path(&dir, &file) {
-            if tokio::fs::copy(crate::joy::photos::visit_path(&dir, vid), &dest).await.is_ok() {
+        if let Some(dest) = crate::joy::photos::date_path(&dir, &file)
+            && tokio::fs::copy(crate::joy::photos::visit_path(&dir, vid), &dest).await.is_ok() {
                 add_photo(db, &couple, h, &file).await?;
             }
-        }
     }
     Ok(())
 }
@@ -1827,11 +2070,10 @@ pub async fn visit(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Optio
 }
 
 pub async fn delete_visit(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<()> {
-    if let Some(v) = visit(db, couple, id).await? {
-        if let Some(h) = v.history_id {
+    if let Some(v) = visit(db, couple, id).await?
+        && let Some(h) = v.history_id {
             delete_history(db, couple, h).await?;
         }
-    }
     sqlx::query(
         "DELETE FROM joy_regular_visits WHERE id = ? AND regular_id IN (SELECT id FROM joy_regulars WHERE couple_id = ?)",
     )
@@ -1974,6 +2216,12 @@ pub async fn archive_regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Re
 /// Fill a new couple's jar: copies every starter slip in `joy_seed_activities` into their
 /// `joy_activities`. Returns how many slips were added.
 pub async fn seed_new_couple(db: &SqlitePool, couple: &str) -> sqlx::Result<u64> {
+    let mut conn = db.acquire().await?;
+    seed_new_couple_in(&mut conn, couple).await
+}
+
+/// The one copy of the starter-slip SQL, usable inside a larger transaction (creating a couple).
+pub async fn seed_new_couple_in(conn: &mut sqlx::SqliteConnection, couple: &str) -> sqlx::Result<u64> {
     let done = sqlx::query(
         "INSERT INTO joy_activities (couple_id, title, notes, est_cost, setting, area, venue, lat, lng, duration, tags, energy,
                 added_by, generated, closed_days, season_from, season_to, hours, best_time, minutes, booking,
@@ -1984,7 +2232,7 @@ pub async fn seed_new_couple(db: &SqlitePool, couple: &str) -> sqlx::Result<u64>
            FROM joy_seed_activities ORDER BY id",
     )
     .bind(couple)
-    .execute(db)
+    .execute(&mut *conn)
     .await?;
     Ok(done.rows_affected())
 }

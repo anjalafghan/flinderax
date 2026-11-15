@@ -88,8 +88,9 @@ pub struct ShowGetCardResponse {
     pub card_primary_color: (u8, u8, u8),
     pub card_secondary_color: (u8, u8, u8),
     pub last_4_digits: Option<String>,
-    pub last_total_due: Option<f32>,
-    pub last_delta: Option<f32>,
+    /// Rupees, worked out from the stored paise (the ledger itself is integer paise).
+    pub last_total_due: Option<f64>,
+    pub last_delta: Option<f64>,
     pub statement_day: Option<i64>,
     pub due_day: Option<i64>,
     pub credit_limit_paise: Option<i64>,
@@ -98,7 +99,7 @@ pub struct ShowGetCardResponse {
 #[derive(Deserialize, Serialize)]
 pub struct CardTransactionHistory {
     pub transaction_id: String,
-    pub total_due_input: f32,
+    pub total_due_input_paise: i64,
     pub timestamp: String,
 }
 
@@ -124,30 +125,3 @@ pub struct DeleteTransactionPayload {
     pub transaction_id: String,
 }
 
-#[derive(Serialize)]
-pub struct DeferredBatchStatus {
-    pub batch_id: String,
-    pub total_amount: f32,
-    pub status: String,
-    pub items: Vec<DeferredItemStatus>,
-}
-
-#[derive(Serialize)]
-pub struct DeferredItemStatus {
-    pub item_id: String,
-    pub card_id: String,
-    pub card_name: Option<String>,
-    pub amount: f32,
-}
-
-#[derive(Deserialize)]
-pub struct SettleDeferredPayload {
-    pub batch_id: String,
-}
-
-#[derive(Serialize)]
-pub struct SettleDeferredResponse {
-    pub batch_id: String,
-    pub total_settled: f32,
-    pub status: bool,
-}

@@ -47,10 +47,9 @@ async fn rows(db: &sqlx::SqlitePool, sql: &str, id: &str) -> Result<Vec<Value>, 
         .collect())
 }
 
-pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Extension<(String, String)>) -> Result<Response, AppError> {
-    let db = &state.db;
-    let mut out = Map::new();
-    let mine: &[(&str, &str)] = &[
+/// Every table of one person's money and people data, parents before children: the export key
+/// and the query that reads it. `import` loads them back in this order.
+pub(crate) const USER_TABLES: &[(&str, &str)] = &[
         ("accounts", "SELECT * FROM accounts WHERE user_id = ?"),
         ("balance_history", "SELECT h.* FROM balance_history h JOIN accounts a ON a.account_id = h.account_id WHERE a.user_id = ?"),
         ("cards", "SELECT * FROM cards WHERE user_id = ?"),
@@ -61,8 +60,6 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         ("moves", "SELECT * FROM moves WHERE user_id = ?"),
         ("card_events", "SELECT e.* FROM card_events e JOIN cards c ON c.card_id = e.card_id WHERE c.user_id = ?"),
         ("card_running_state", "SELECT s.* FROM card_running_state s JOIN cards c ON c.card_id = s.card_id WHERE c.user_id = ?"),
-        ("deferred_payment_batches", "SELECT * FROM deferred_payment_batches WHERE user_id = ?"),
-        ("deferred_payment_items", "SELECT i.* FROM deferred_payment_items i JOIN deferred_payment_batches b ON b.batch_id = i.batch_id WHERE b.user_id = ?"),
         ("pending_charges", "SELECT p.* FROM pending_charges p JOIN cards c ON c.card_id = p.card_id WHERE c.user_id = ?"),
         ("auto_postings", "SELECT * FROM auto_postings WHERE user_id = ?"),
         ("dismissed_recurring", "SELECT * FROM dismissed_recurring WHERE user_id = ?"),
@@ -88,7 +85,19 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         ("gifts", "SELECT * FROM gifts WHERE user_id = ?"),
         ("gift_seasons", "SELECT * FROM gift_seasons WHERE user_id = ?"),
         ("job_leads", "SELECT * FROM job_leads WHERE user_id = ?"),
+        ("unrecognized_alerts", "SELECT * FROM unrecognized_alerts WHERE user_id = ?"),
+        ("whatif_scenarios", "SELECT * FROM whatif_scenarios WHERE user_id = ?"),
+        ("followups", "SELECT * FROM followups WHERE user_id = ?"),
+        ("person_facts", "SELECT * FROM person_facts WHERE user_id = ?"),
+        ("rewards", "SELECT * FROM rewards WHERE user_id = ?"),
+        ("reward_claims", "SELECT * FROM reward_claims WHERE user_id = ?"),
+        ("reward_settings", "SELECT * FROM reward_settings WHERE user_id = ?"),
     ];
+
+pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Extension<(String, String)>) -> Result<Response, AppError> {
+    let db = &state.db;
+    let mut out = Map::new();
+    let mine = USER_TABLES;
     for (name, sql) in mine {
         out.insert((*name).into(), Value::Array(rows(db, sql, &user_id).await?));
     }
@@ -114,6 +123,10 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         let photos = format!(
             "SELECT p.* FROM joy_history_photos p JOIN joy_history h ON h.id = p.history_id WHERE h.couple_id = ? AND p.history_id NOT IN ({sealed})"
         );
+        // Only your own quiet marks: your partner's are theirs.
+        let my_wants = format!(
+            "SELECT w.* FROM joy_wants w JOIN joy_activities a ON a.id = w.activity_id WHERE a.couple_id = ? AND w.person = {who}"
+        );
         let dates: &[(&str, &str)] = &[
             ("memories", &memories),
             ("tasks", &tasks),
@@ -129,6 +142,8 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
             ("savings", "SELECT * FROM joy_savings WHERE couple_id = ?"),
             ("regulars", "SELECT * FROM joy_regulars WHERE couple_id = ?"),
             ("nights", "SELECT v.* FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id WHERE r.couple_id = ?"),
+            ("wants", &my_wants),
+            ("peeks", "SELECT * FROM joy_peeks WHERE couple_id = ?"),
             ("settlements", "SELECT * FROM joy_settlements WHERE couple_id = ?"),
         ];
         let mut d = Map::new();

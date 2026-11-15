@@ -30,6 +30,24 @@ pub fn new_date_file(history_id: i64) -> String {
     format!("{history_id}-{:016x}.jpg", rand::random::<u64>())
 }
 
+/// A small copy for lists and grids, so a screen of thumbnails doesn't download a screen of 1600px photos.
+const THUMB_SIDE: u32 = 400;
+
+pub fn thumb(jpeg: &[u8]) -> Result<Vec<u8>, PhotoError> {
+    let img = image::load_from_memory(jpeg).map_err(|_| PhotoError("That file doesn't look like a photo."))?;
+    let img = if img.width() > THUMB_SIDE || img.height() > THUMB_SIDE { img.thumbnail(THUMB_SIDE, THUMB_SIDE) } else { img };
+    let mut out = Vec::new();
+    JpegEncoder::new_with_quality(&mut out, 75)
+        .encode_image(&img.to_rgb8())
+        .map_err(|_| PhotoError("That photo couldn't be saved. Try another one."))?;
+    Ok(out)
+}
+
+/// Where a photo's thumbnail lives: the photo's own file name plus ".t.jpg", in the same folder.
+pub fn thumb_path(dir: &std::path::Path, file: &str) -> Option<PathBuf> {
+    date_path(dir, file).map(|p| p.with_file_name(format!("{file}.t.jpg")))
+}
+
 /// A night at a regular: <dir>/v<visit id>.jpg, so it can never collide with a kept date's file.
 pub fn visit_path(dir: &std::path::Path, visit_id: i64) -> PathBuf {
     dir.join(format!("v{visit_id}.jpg"))
@@ -96,10 +114,42 @@ fn looks_like_heic(b: &[u8]) -> bool {
     b.len() > 12 && &b[4..8] == b"ftyp" && matches!(&b[8..12], b"heic" | b"heix" | b"hevc" | b"hevx" | b"mif1" | b"msf1" | b"heim" | b"heis")
 }
 
+/// Where Dates photos live: `JOY_PHOTOS_DIR`, else `joy-photos` next to the database file.
+pub fn photos_root() -> std::path::PathBuf {
+    if let Ok(dir) = std::env::var("JOY_PHOTOS_DIR") {
+        return dir.into();
+    }
+    let url = std::env::var("DATABASE_URL").unwrap_or_default();
+    let file = url.trim_start_matches("sqlite:").trim_start_matches("//").split('?').next().unwrap_or("");
+    std::path::Path::new(file).parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(std::path::Path::new(".")).join("joy-photos")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use image::{ImageFormat, RgbImage};
+
+    #[test]
+    fn thumbnails_fit_400px_and_stay_jpegs() {
+        let mut png = Vec::new();
+        DynamicImage::ImageRgb8(RgbImage::new(1600, 1000)).write_to(&mut Cursor::new(&mut png), ImageFormat::Png).unwrap();
+        let full = process(&png).unwrap();
+        let small = thumb(&full).unwrap();
+        let back = image::load_from_memory(&small).unwrap();
+        assert_eq!((back.width(), back.height()), (400, 250));
+        assert!(small.len() < full.len());
+        // Already small: left alone in size.
+        let again = image::load_from_memory(&thumb(&small).unwrap()).unwrap();
+        assert_eq!((again.width(), again.height()), (400, 250));
+        assert!(thumb(b"nope").is_err());
+    }
+
+    #[test]
+    fn thumbnail_files_sit_next_to_the_photo_and_stay_inside_the_folder() {
+        let dir = std::path::Path::new("/photos/c1");
+        assert_eq!(thumb_path(dir, "9-ab.jpg").unwrap(), dir.join("9-ab.jpg.t.jpg"));
+        assert!(thumb_path(dir, "../9.jpg").is_none());
+    }
 
     #[test]
     fn shrinks_big_photos_to_a_jpeg() {
@@ -146,14 +196,4 @@ mod tests {
         assert!(process(&heic).unwrap_err().0.contains("HEIC"));
         assert!(process(b"definitely not a photo").is_err());
     }
-}
-
-/// Where Dates photos live: `JOY_PHOTOS_DIR`, else `joy-photos` next to the database file.
-pub fn photos_root() -> std::path::PathBuf {
-    if let Ok(dir) = std::env::var("JOY_PHOTOS_DIR") {
-        return dir.into();
-    }
-    let url = std::env::var("DATABASE_URL").unwrap_or_default();
-    let file = url.trim_start_matches("sqlite:").trim_start_matches("//").split('?').next().unwrap_or("");
-    std::path::Path::new(file).parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(std::path::Path::new(".")).join("joy-photos")
 }

@@ -12,6 +12,7 @@ import { ImpactCard } from "@/components/feature/ImpactCard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { formatINR } from "@/utils/money";
+import { reconcile } from "@/utils/scenarioSync";
 import { newDraft, toScenarioItem, type ScenarioDraft } from "@/utils/scenario";
 import { cn } from "@/utils/cn";
 import { ResetButton } from "@/components/ui/reset-button";
@@ -65,6 +66,19 @@ export default function WhatIfPage() {
   const [spendPct, setSpendPct] = useState(100);
   const [metric, setMetric] = useState<Metric>("spending");
 
+  // Saved on the server so they follow you to another device; this browser keeps a copy for a fast start.
+  const saved = useQuery({ queryKey: ["whatif-scenarios"], queryFn: planApi.scenarios, retry: 1 });
+  const [synced, setSynced] = useState(false);
+  // What the server is known to hold; a save is only needed when the settled drafts differ from it.
+  const [onServer, setOnServer] = useState<ScenarioDraft[]>([]);
+  // First answer from the server: adopt it (or keep this browser's older drafts, which the save below uploads).
+  if (!synced && saved.isSuccess) {
+    setDrafts(reconcile(saved.data.drafts as ScenarioDraft[], drafts).drafts);
+    setOnServer(saved.data.drafts as ScenarioDraft[]);
+    setSynced(true);
+  }
+
+  const debouncedDrafts = useDebounced(drafts, 600);
   useEffect(() => {
     try {
       localStorage.setItem(STORE, JSON.stringify(drafts));
@@ -72,6 +86,15 @@ export default function WhatIfPage() {
       /* private mode: the page works without it */
     }
   }, [drafts]);
+  useEffect(() => {
+    // Only once typing has settled, and only when it differs from what the server holds.
+    if (!synced || debouncedDrafts !== drafts || debouncedDrafts === onServer) return;
+    if (JSON.stringify(debouncedDrafts) === JSON.stringify(onServer)) return;
+    void planApi
+      .saveScenarios(debouncedDrafts)
+      .then(() => setOnServer(debouncedDrafts))
+      .catch(() => {});
+  }, [debouncedDrafts, drafts, onServer, synced]);
 
   const items = useMemo(() => drafts.map(toScenarioItem), [drafts]);
   const valid = useMemo(() => items.filter((i) => i !== null), [items]);
@@ -223,6 +246,11 @@ export default function WhatIfPage() {
                 <p>
                   Assumes salary and fixed payments continue, you spend {spendPct}% of your allowance, the SIP is not valued
                   (contributions only), and deposits compound quarterly.
+                </p>
+                <p>
+                  To keep it simple, a month's spending leaves your account all at once on the 15th, and card EMIs are
+                  paid on the day your first card's bill is due. Real days differ, so a dip in the middle of a month may
+                  be a little deeper or shallower than it will really be.
                 </p>
               </div>
             )}

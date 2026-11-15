@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { archiveSlip, getSlipForm, keys, saveSlip, type FormView } from "../api";
-import { errorField, formToState, tidyTitle, toPayload, type FormState } from "../form";
+import { toast } from "sonner";
+import { errorField, formToState, isDuplicateWarning, tidyTitle, toPayload, type FormState } from "../form";
 import { mapGoTo } from "../paths";
 import { parseMapLink } from "../maplink";
 import { ErrorState } from "../components/ErrorState";
@@ -73,6 +74,10 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    send(false);
+  };
+
+  const send = (allowDuplicate: boolean) => {
     void run(async () => {
       setError("");
       setFieldErr(null);
@@ -81,9 +86,11 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
       setFolding(true);
       try {
         await wait(reduced() ? 0 : 360);
-        const res = await saveSlip(id, toPayload({ ...s, title: clean }));
+        const res = await saveSlip(id, { ...toPayload({ ...s, title: clean }), ...(allowDuplicate ? { allow_duplicate: true } : {}) });
         if (res.ok) {
           void qc.invalidateQueries({ queryKey: keys.slips });
+          // "Closed Mon, Tue (worked out from the hours)": say what was filled in. Edit the slip to change it.
+          if (res.go.filled?.length) toast.info("Filled in for you", { description: res.go.filled.join(". ") });
           navigate(mapGoTo(res.go.to));
           return;
         }
@@ -124,6 +131,11 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
             <path d="M12 16.3v.3" />
           </svg>
           <p><strong>Almost.</strong> {error}</p>
+          {isDuplicateWarning(error) && (
+            <button type="button" className="btn btn-ink" disabled={busy} onClick={() => send(true)}>
+              Save it anyway
+            </button>
+          )}
         </div>
       )}
 
@@ -279,7 +291,12 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
 
         <div className="field">
           <label htmlFor="f-tags">Vibes</label>
-          <input id="f-tags" name="tags" value={s.tags} onChange={(e) => set("tags", e.target.value)} autoComplete="off" placeholder="romantic, foodie" aria-describedby="tags-hint" />
+          <input id="f-tags" name="tags" value={s.tags} onChange={(e) => set("tags", e.target.value)} autoComplete="off" placeholder="romantic, foodie" aria-describedby="tags-hint" list="tag-words" />
+          <datalist id="tag-words">
+            {["romantic", "chill", "foodie", "cozy", "games", "cultural", "outdoors", "creative", "adventurous", "music", "active", "nightlife"].map((w) => (
+              <option key={w} value={w} />
+            ))}
+          </datalist>
           <p className="hint" id="tags-hint">A few words, separated by commas.</p>
         </div>
 
@@ -395,6 +412,10 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
             <input id="f-bring" name="bring" value={s.bring} onChange={(e) => set("bring", e.target.value)} autoComplete="off" placeholder="closed shoes, cash" />
           </div>
           <div className="pair">
+            <div className="field">
+              <label htmlFor="f-url">Link</label>
+              <input id="f-url" type="url" name="url" value={s.url} onChange={(e) => set("url", e.target.value)} autoComplete="off" placeholder="https://… booking page or menu" maxLength={300} />
+            </div>
             <div className="field">
               <label htmlFor="f-station">Nearest station</label>
               <input id="f-station" name="station" value={s.station} onChange={(e) => set("station", e.target.value)} autoComplete="off" placeholder="Andheri" />
