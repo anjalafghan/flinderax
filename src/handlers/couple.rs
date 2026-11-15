@@ -105,8 +105,21 @@ pub struct Done {
     pub status: bool,
 }
 
-/// Starts Dates for this user: a new couple with the starter jar of slips.
-pub async fn create(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Done>, AppError> {
+#[derive(Deserialize, Default)]
+pub struct CreateBody {
+    /// Which starter packs to begin with ("home", "apart", "mumbai"). Leave it out for all of them
+    /// (older clients); the app sends `[]` and lets the couple choose.
+    pub packs: Option<Vec<String>>,
+}
+
+/// Starts Dates for this user: a new couple, with the starter packs asked for.
+pub async fn create(State(state): State<AppState>, Extension((user_id, _)): User, body: Option<Json<CreateBody>>) -> Result<Json<Done>, AppError> {
+    let packs = body.and_then(|b| b.0.packs);
+    if let Some(p) = &packs
+        && let Some(bad) = p.iter().find(|k| !crate::joy::db::PACKS.iter().any(|(key, _, _)| key == k))
+    {
+        return Err(bad_request(format!("Unknown starter pack “{bad}”.")));
+    }
     if couple_of(&state.db, &user_id).await?.is_some() {
         return Err(bad_request("You already have Dates set up"));
     }
@@ -117,7 +130,16 @@ pub async fn create(State(state): State<AppState>, Extension((user_id, _)): User
     sqlx::query!("INSERT INTO joy_settings (couple_id, key, value) VALUES (?, 'PERSON_A', ?)", couple, name)
         .execute(&mut *tx)
         .await?;
-    crate::joy::db::seed_new_couple_in(&mut tx, &couple).await?;
+    match packs {
+        None => {
+            crate::joy::db::seed_new_couple_in(&mut tx, &couple).await?;
+        }
+        Some(chosen) => {
+            for key in chosen {
+                crate::joy::db::add_pack_in(&mut tx, &couple, &key).await?;
+            }
+        }
+    }
     tx.commit().await?;
     Ok(Json(Done { status: true }))
 }

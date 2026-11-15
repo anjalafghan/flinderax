@@ -546,6 +546,31 @@ pub async fn want(
     Ok(go(SLIPS))
 }
 
+/// `GET /packs`: the starter packs, and how much of each this couple has.
+pub async fn packs(State(s): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Vec<db::PackView>>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    Ok(Json(db::starter_packs(&s.db, &j.couple).await?))
+}
+
+#[derive(Deserialize)]
+pub struct PackBody {
+    pack: String,
+}
+
+#[derive(Serialize)]
+pub struct PackAdded {
+    pub added: u64,
+}
+
+/// `POST /packs/add`: put a starter pack's slips in the jar (the ones not already there).
+pub async fn add_pack(State(s): State<AppState>, Extension((user_id, _)): User, Json(b): Json<PackBody>) -> Result<Json<PackAdded>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    match db::add_pack(&s.db, &j.couple, &b.pack).await? {
+        Some(added) => Ok(Json(PackAdded { added })),
+        None => Err(not_found("No such starter pack")),
+    }
+}
+
 /// `POST /slips/{id}/unshare`: the envelope link stops opening.
 pub async fn unshare(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;

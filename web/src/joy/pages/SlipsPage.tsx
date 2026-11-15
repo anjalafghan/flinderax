@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { StarterPacks } from "../components/StarterPacks";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { archiveSlip, clearVetoes, deleteSlip, getSlips, keys, restoreAllSlips, restoreSlip, unvetoSlip, wantSlip, type ActivityView } from "../api";
@@ -221,7 +222,9 @@ export default function SlipsPage() {
             </p>
             <Link className="btn btn-stamp" to="/joy/slips/new">Write the first slip</Link>
           </section>
-        ) : (
+        ) : null}
+        {total < 5 && <StarterPacks />}
+        {total === 0 ? null : (
           <>
             <nav className="group-index" aria-label="Jump to a group">
               <ul>

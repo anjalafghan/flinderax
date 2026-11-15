@@ -322,7 +322,8 @@ export const keys = {
 
 // ---- couple ----
 export const getCouple = () => get<CoupleStatus>("/api/couple");
-export const createCouple = () => post<{ status: boolean }>("/api/couple/create");
+/** Starts Dates with no slips in the jar; the couple adds starter packs (or writes their own). */
+export const createCouple = () => post<{ status: boolean }>("/api/couple/create", { packs: [] });
 export const inviteCode = () => post<Invite>("/api/couple/invite");
 export const joinCouple = (code: string) => post<{ status: boolean }>("/api/couple/join", { code });
 export const leaveCouple = () => post<{ status: boolean }>("/api/couple/leave");

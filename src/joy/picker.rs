@@ -97,7 +97,12 @@ pub struct Candidate {
     pub both_want: bool,
     /// At least one of us marked it "no" (privately). Nobody is told which.
     pub any_no: bool,
+    /// Came from a starter pack, not the couple's own pen.
+    pub starter: bool,
 }
+
+/// Starter slips are drawn a little less than ones the couple wrote.
+pub const STARTER_DAMP: f64 = 0.8;
 
 /// A slip we both want comes up this much more often; one either of us ruled out, much less.
 pub const BOTH_WANT_BOOST: f64 = 2.0;
@@ -217,6 +222,9 @@ pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
     }
     if c.like_recent {
         w *= VARIETY_DAMP;
+    }
+    if c.starter {
+        w *= STARTER_DAMP;
     }
     if c.any_no {
         w *= ANY_NO_DAMP;
@@ -351,6 +359,7 @@ mod tests {
             like_recent: false,
             both_want: false,
             any_no: false,
+            starter: false,
         }
     }
 
@@ -533,6 +542,15 @@ mod tests {
         assert_eq!(old, 3.0, "capped");
         c.last_skipped_at = Some(NOW - DAY);
         assert_eq!(weight(&c, NOW, false), 1.5);
+    }
+
+    #[test]
+    fn slips_the_couple_wrote_come_up_a_little_more_often_than_starter_ones() {
+        let mut c = cand(1, 0, "local", Duration::Short);
+        let own = weight(&c, NOW, false);
+        c.starter = true;
+        assert_eq!(weight(&c, NOW, false), own * STARTER_DAMP);
+        const { assert!(STARTER_DAMP < 1.0 && STARTER_DAMP > 0.5) } // a nudge, not a ban
     }
 
     #[test]

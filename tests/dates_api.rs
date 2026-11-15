@@ -1146,3 +1146,37 @@ async fn tags_are_saved_in_the_jars_own_words() {
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
     assert_eq!(t.text(&format!("SELECT tags FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Pottery night'")).await, "cozy,foodie,pottery");
 }
+
+// ── starter packs (S12) ───────────────────────────────────────────────────
+
+#[tokio::test]
+async fn a_couple_can_start_empty_and_choose_starter_packs() {
+    let t = setup().await;
+    let a = t.user("packa").await;
+    assert!(t.post("/api/couple/create", &a, json!({"packs": []})).await.status.is_success());
+    let couple = t.text("SELECT couple_id FROM couples ORDER BY created_at DESC, rowid DESC LIMIT 1").await;
+    let count = || async { t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE couple_id = '{couple}'")).await };
+    assert_eq!(count().await, 0, "nothing the couple did not choose");
+
+    let packs = t.get("/api/dates/packs", &a).await.json;
+    let keys: Vec<&str> = packs.as_array().unwrap().iter().map(|p| p["key"].as_str().unwrap()).collect();
+    assert_eq!(keys, ["home", "apart", "mumbai"]);
+    assert!(packs.as_array().unwrap().iter().all(|p| p["added"] == 0 && p["total"].as_i64().unwrap() > 0));
+
+    let r = t.post("/api/dates/packs/add", &a, json!({"pack": "home"})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    let added = r.json["added"].as_i64().unwrap();
+    assert!(added > 0);
+    assert_eq!(count().await, added);
+    assert_eq!(t.post("/api/dates/packs/add", &a, json!({"pack": "home"})).await.json["added"], 0, "again adds nothing");
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE couple_id = '{couple}' AND starter = 1")).await, added);
+    let after = t.get("/api/dates/packs", &a).await.json;
+    assert_eq!(after[0]["added"].as_i64().unwrap(), added);
+    assert_eq!(t.post("/api/dates/packs/add", &a, json!({"pack": "moon"})).await.status, StatusCode::NOT_FOUND);
+
+    // Slips the couple writes are not marked as starters; unknown packs at creation are refused.
+    t.post("/api/dates/slips", &a, json!({"title": "Our own idea", "est_cost": 0, "setting": "home", "duration": "short", "energy": "low"})).await;
+    assert_eq!(t.scalar(&format!("SELECT starter FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Our own idea'")).await, 0);
+    let b = t.user("packb").await;
+    assert_eq!(t.post("/api/couple/create", &b, json!({"packs": ["nope"]})).await.status, StatusCode::BAD_REQUEST);
+}
