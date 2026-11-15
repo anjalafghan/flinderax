@@ -33,3 +33,22 @@ jobs:
       - run: bun run typecheck
       - run: bun run --cwd web lint
       - run: bun run --cwd web test
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      SQLX_OFFLINE: "true"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bunx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: e2e/.tmp/results

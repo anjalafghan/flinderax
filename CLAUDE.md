@@ -54,6 +54,8 @@ bun run --cwd web lint
 bun run --cwd web test
 ```
 
+Browser tests: `bun run e2e` (Playwright; builds the web app and the server and drives them against a throw-away database). Each test gets its own client address because sign-ups are rate-limited per address.
+
 `cargo fmt` is not enforced: the code base is not rustfmt-formatted, so do not run it over files you are not otherwise changing.
 
 ## Release order
