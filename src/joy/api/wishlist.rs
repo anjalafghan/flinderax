@@ -203,6 +203,7 @@ pub struct FormView {
     pub bring: String,
     pub station: String,
     pub station_walk_min: String,
+    pub url: String,
     /// Open "More details" when any of them is filled in or wrong.
     pub details_open: bool,
 }
@@ -264,8 +265,9 @@ async fn form(db: &SqlitePool, j: &Joy, id: Option<i64>, i: &ActivityInput, erro
         bring: i.bring.clone(),
         station: i.station.clone(),
         station_walk_min: i.station_walk_min.clone(),
+        url: i.url.clone(),
         details_open: error.contains("Hours")
-            || [&i.hours, &i.best_time, &i.minutes, &i.booking, &i.bring, &i.station].iter().any(|v| !v.trim().is_empty()),
+            || [&i.hours, &i.best_time, &i.minutes, &i.booking, &i.bring, &i.station, &i.url].iter().any(|v| !v.trim().is_empty()),
     })
 }
 
@@ -341,6 +343,8 @@ pub struct SlipBody {
     pub station: String,
     #[serde(default, deserialize_with = "flex")]
     pub station_walk_min: String,
+    #[serde(default)]
+    pub url: String,
 }
 
 impl SlipBody {
@@ -381,6 +385,7 @@ impl SlipBody {
                 bring: self.bring,
                 station: self.station,
                 station_walk_min: self.station_walk_min,
+                url: self.url,
             },
             cost_ok,
         )
@@ -413,6 +418,7 @@ fn input_from(ctx: &Ctx, a: &Activity) -> ActivityInput {
         bring: a.bring.clone(),
         station: a.station.clone(),
         station_walk_min: a.station_walk_min.map(|m| m.to_string()).unwrap_or_default(),
+        url: a.url.clone(),
     }
 }
 
@@ -460,6 +466,8 @@ async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> 
         "Those notes are too long: keep them under 2,000 characters."
     } else if !db::tags_fit(&i.tags) {
         "Use at most 12 tags of up to 24 characters each."
+    } else if !db::url_ok(&i.url) {
+        "That link should start with http:// or https:// and have no spaces."
     } else if !ENERGIES.iter().any(|(k, _)| *k == i.energy) {
         "Pick an energy: low, medium or high."
     } else if !cost_ok {

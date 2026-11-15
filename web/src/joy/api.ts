@@ -28,6 +28,10 @@ export interface ActivityView {
   closed_label: string;
   vetoed_by: string;
   door: string;
+  /** The slip's own link (booking page, menu), or empty. */
+  url: string;
+  /** "Checked 8 months ago", or empty for slips nobody has saved. */
+  checked: string;
 }
 
 export interface Group {
@@ -75,11 +79,14 @@ export interface FormView {
   bring: string;
   station: string;
   station_walk_min: string;
+  url: string;
   details_open: boolean;
 }
 
 /** The JSON body of POST /slips and POST /slips/{id}. */
 export interface SlipBody {
+  /** A booking page or menu: http(s) only. */
+  url?: string;
   title: string;
   /** "Save anyway": another slip has the same title and that is fine. */
   allow_duplicate?: boolean;

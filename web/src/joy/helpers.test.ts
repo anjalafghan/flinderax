@@ -160,7 +160,7 @@ const view = (over: Partial<FormView> = {}): FormView => ({
   people: [opt("A", true), opt("B")], pair_opts: [opt("7", true), opt("9")], me_name: "A",
   closed_opts: [opt("mon", true), opt("tue")], season_from_opts: [opt("11", true)], season_to_opts: [opt("5", true)],
   hours: "", hours_today: "", best_times: [opt("evening")], minutes: "", bookings: [opt("walk_in")], book_ahead_days: "",
-  covers: [opt("covered")], cover_unknown: true, bring: "", station: "", station_walk_min: "", details_open: false, ...over,
+  covers: [opt("covered")], cover_unknown: true, bring: "", station: "", station_walk_min: "", url: "", details_open: false, ...over,
 });
 
 describe("slip form", () => {

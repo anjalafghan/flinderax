@@ -45,6 +45,10 @@ pub struct Activity {
     /// Nearest local or metro station, and the walk from it.
     pub station: String,
     pub station_walk_min: Option<i64>,
+    /// A booking page, menu or post: http(s) only.
+    pub url: String,
+    /// Unix seconds a person last saved this slip (None for starter slips nobody has touched).
+    pub verified_at: Option<i64>,
 }
 
 impl Activity {
@@ -166,6 +170,8 @@ pub struct ActivityInput {
     pub station: String,
     #[serde(default)]
     pub station_walk_min: String,
+    #[serde(default)]
+    pub url: String,
 }
 
 pub const BEST_TIMES: [(&str, &str); 4] = [("morning", "Morning"), ("afternoon", "Afternoon"), ("evening", "Evening"), ("night", "Late night")];
@@ -209,7 +215,7 @@ const COLS: &str = "id, title, notes, est_cost, setting, area, venue, lat, lng, 
                       WHERE h.activity_id = joy_activities.id AND h.outcome = 'did_it') AS last_done_at, \
                     last_skipped_at, generated, \
                     closed_days, season_from, season_to, est_from_actual, \
-                    hours, best_time, minutes, booking, book_ahead_days, cover, bring, station, station_walk_min";
+                    hours, best_time, minutes, booking, book_ahead_days, cover, bring, station, station_walk_min, url, verified_at";
 
 pub async fn list(db: &SqlitePool, couple: &str, archived: bool) -> sqlx::Result<Vec<Activity>> {
     sqlx::query_as(&format!(
@@ -252,16 +258,16 @@ pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityIn
     let sql = match id {
         None => "INSERT INTO joy_activities (title, notes, est_cost, setting, duration, venue, area, lat, lng, tags, energy, added_by,
                  closed_days, season_from, season_to, hours, best_time, minutes, booking, book_ahead_days, cover, bring,
-                 station, station_walk_min, id, couple_id)
+                 station, station_walk_min, url, verified_at, id, couple_id)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?17, ?18, ?19, ?20, ?21, ?22, ?23,
-                 ?24, ?25, ?16, ?26)",
+                 ?24, ?25, ?27, unixepoch(), ?16, ?26)",
         // A hand-edited estimate is ours again, so the learned factor applies to it.
         Some(_) => "UPDATE joy_activities SET title = ?1, notes = ?2,
                     est_from_actual = CASE WHEN est_cost = ?3 THEN est_from_actual ELSE 0 END, est_cost = ?3,
                     setting = ?4, duration = ?5, venue = ?6, area = ?7, lat = ?8, lng = ?9, tags = ?10, energy = ?11,
                     added_by = ?12, closed_days = ?13, season_from = ?14, season_to = ?15, hours = ?17, best_time = ?18,
                     minutes = ?19, booking = ?20, book_ahead_days = ?21, cover = ?22, bring = ?23, station = ?24,
-                    station_walk_min = ?25 WHERE id = ?16 AND couple_id = ?26",
+                    station_walk_min = ?25, url = ?27, verified_at = unixepoch() WHERE id = ?16 AND couple_id = ?26",
     };
     let closed = crate::joy::picker::WEEKDAYS
         .iter()
@@ -300,6 +306,7 @@ pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityIn
         .bind(capped(&a.station.split_whitespace().collect::<Vec<_>>().join(" "), 60))
         .bind(small_number(&a.station_walk_min, 120))
         .bind(couple)
+        .bind(a.url.trim())
         .execute(&mut *tx)
         .await?;
     // Editing a slip that isn't this couple's matches nothing.
@@ -524,6 +531,13 @@ pub async fn record(db: &SqlitePool, couple: &str, id: i64, did_it: bool) -> sql
 pub const MAX_TITLE: usize = 120;
 pub const MAX_PLACE: usize = 120;
 pub const MAX_NOTES: usize = 2000;
+pub const MAX_URL: usize = 300;
+
+/// Empty, or an http(s) link of reasonable length.
+pub fn url_ok(u: &str) -> bool {
+    let u = u.trim();
+    u.is_empty() || (u.len() <= MAX_URL && (u.starts_with("https://") || u.starts_with("http://")) && !u.contains(char::is_whitespace))
+}
 const MAX_TAGS: usize = 12;
 const MAX_TAG_LEN: usize = 24;
 

@@ -215,6 +215,36 @@ pub struct ActivityView {
     pub uber_url: Option<String>,
     /// "about 6 h 30 min door to door", when getting there takes a while.
     pub door: String,
+    /// The slip's own link (booking page, menu), or empty.
+    pub url: String,
+    /// "Checked 8 months ago": how old its hours and cost might be. Empty for slips nobody has saved.
+    pub checked: String,
+}
+
+/// How long ago a person last saved a slip, in plain words.
+pub fn checked_label(verified_at: Option<i64>, now: i64) -> String {
+    let Some(at) = verified_at else { return String::new() };
+    let months = (now - at).max(0) / (30 * 86_400);
+    match months {
+        0 => "Checked this month".into(),
+        1 => "Checked last month".into(),
+        n => format!("Checked {n} months ago"),
+    }
+}
+
+#[cfg(test)]
+mod checked_tests {
+    use super::checked_label;
+
+    #[test]
+    fn says_how_old_the_details_are() {
+        let day = 86_400;
+        assert_eq!(checked_label(None, 1_000_000), "");
+        assert_eq!(checked_label(Some(1_000_000), 1_000_000 + 3 * day), "Checked this month");
+        assert_eq!(checked_label(Some(1_000_000), 1_000_000 + 40 * day), "Checked last month");
+        assert_eq!(checked_label(Some(1_000_000), 1_000_000 + 240 * day), "Checked 8 months ago");
+        assert_eq!(checked_label(Some(2_000_000), 1_000_000), "Checked this month", "a clock a little behind is not a negative age");
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -296,6 +326,8 @@ impl ActivityView {
                 }
                 _ => String::new(),
             },
+            url: a.url.clone(),
+            checked: checked_label(a.verified_at, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)),
             uber_url: a.latlng().map(|(lat, lng)| {
                 format!(
                     "https://m.uber.com/ul/?action=setPickup&pickup=my_location\

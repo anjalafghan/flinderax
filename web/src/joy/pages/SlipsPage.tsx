@@ -312,6 +312,17 @@ export default function SlipsPage() {
                         )}
                       </p>
                       {a.closed_label && <p className="slip-closed">{a.closed_label}</p>}
+                      {(a.url || a.checked) && (
+                        <p className="slip-closed">
+                          {a.url && (
+                            <a href={a.url} target="_blank" rel="noopener noreferrer">
+                              Open link<span className="visually-hidden">: {a.title}</span>
+                            </a>
+                          )}
+                          {a.url && a.checked && " · "}
+                          {a.checked}
+                        </p>
+                      )}
                       {a.vetoed_by && (
                         <div className="slip-veto">
                           <span>{a.vetoed_by} passed on this, so it’s out of the draw.</span>

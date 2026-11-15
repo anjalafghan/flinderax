@@ -24,6 +24,7 @@ export interface FormState {
   bring: string;
   station: string;
   station_walk_min: string;
+  url: string;
   pairs: string[];
   added_by: string;
 }
@@ -56,6 +57,7 @@ export function formToState(v: FormView): FormState {
     bring: v.bring,
     station: v.station,
     station_walk_min: v.station_walk_min,
+    url: v.url,
     pairs: ticked(v.pair_opts),
     added_by: selected(v.people, v.people[0]?.value ?? ""),
   };
@@ -90,6 +92,7 @@ export function toPayload(s: FormState): SlipBody {
     bring: s.bring.trim(),
     station: s.station.trim(),
     station_walk_min: s.station_walk_min.trim(),
+    url: s.url.trim(),
   };
 }
 

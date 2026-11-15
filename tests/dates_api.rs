@@ -1054,3 +1054,41 @@ async fn envelope_links_expire_can_be_stopped_and_do_not_outlive_their_slip() {
     t.post(&format!("/api/dates/history/{hid}/unshare"), &rohit, json!({})).await;
     assert_eq!(status(&t, &dtok).await, StatusCode::NOT_FOUND);
 }
+
+// ── a slip can carry a link, and says when it was last checked (S13) ──────
+
+#[tokio::test]
+async fn a_slip_keeps_its_link_and_the_day_it_was_last_checked() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let body = |url: &str| json!({"title": "Pottery class", "est_cost": 900, "setting": "local", "duration": "short", "energy": "low", "url": url});
+
+    for bad in ["javascript:alert(1)", "not a link", "ftp://x.example/menu"] {
+        let r = t.post("/api/dates/slips", &rohit, body(bad)).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{bad}");
+        assert!(r.json["error"].as_str().unwrap().contains("link"), "{}", r.text);
+    }
+    let r = t.post("/api/dates/slips", &rohit, body(&format!("https://example.com/book/{}", "a".repeat(400)))).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "too long");
+
+    let ok = t.post("/api/dates/slips", &rohit, body("  https://example.com/book  ")).await;
+    assert_eq!(ok.status, StatusCode::OK, "{}", ok.text);
+    let id = t.id_of(&couple, "Pottery class").await;
+    assert_eq!(t.text(&format!("SELECT url FROM joy_activities WHERE id = {id}")).await, "https://example.com/book");
+    let now = t.scalar("SELECT unixepoch()").await;
+    let verified = t.scalar(&format!("SELECT verified_at FROM joy_activities WHERE id = {id}")).await;
+    assert!((now - 5..=now + 5).contains(&verified), "saving it counts as checking it");
+
+    // The edit form and the list show both.
+    let edit = t.get(&format!("/api/dates/slips/{id}"), &rohit).await.json;
+    assert_eq!(edit["url"], "https://example.com/book");
+    t.exec(&format!("UPDATE joy_activities SET verified_at = unixepoch() - 240 * 86400 WHERE id = {id}")).await;
+    let page = t.get("/api/dates/slips", &rohit).await.json;
+    let item = page["groups"].as_array().unwrap().iter().flat_map(|g| g["items"].as_array().unwrap()).find(|i| i["id"] == id).unwrap();
+    assert_eq!(item["url"], "https://example.com/book");
+    assert_eq!(item["checked"], "Checked 8 months ago");
+    // Starter slips were never checked by us: no claim either way.
+    let seeded = t.id_of(&couple, "Cook together").await;
+    let s = page["groups"].as_array().unwrap().iter().flat_map(|g| g["items"].as_array().unwrap()).find(|i| i["id"] == seeded).unwrap();
+    assert_eq!(s["checked"], "");
+}

@@ -408,6 +408,10 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
           </div>
           <div className="pair">
             <div className="field">
+              <label htmlFor="f-url">Link</label>
+              <input id="f-url" type="url" name="url" value={s.url} onChange={(e) => set("url", e.target.value)} autoComplete="off" placeholder="https://… booking page or menu" maxLength={300} />
+            </div>
+            <div className="field">
               <label htmlFor="f-station">Nearest station</label>
               <input id="f-station" name="station" value={s.station} onChange={(e) => set("station", e.target.value)} autoComplete="off" placeholder="Andheri" />
             </div>

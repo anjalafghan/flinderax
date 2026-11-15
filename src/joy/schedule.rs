@@ -572,6 +572,8 @@ mod tests {
             bring: String::new(),
             station: String::new(),
             station_walk_min: None,
+            url: String::new(),
+            verified_at: None,
         }
     }
 
