@@ -907,3 +907,41 @@ async fn a_move_with_the_same_idempotency_key_moves_the_money_once() {
     let bal: i64 = sqlx::query_scalar("SELECT balance_paise FROM accounts WHERE account_id = ?").bind(&ids[0]).fetch_one(&db).await.unwrap();
     assert_eq!(bal, 800_000);
 }
+
+#[tokio::test]
+async fn an_alert_the_parser_cannot_read_is_kept_in_an_inbox() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.92", "inboxer").await;
+    let (_, b) = authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
+    let key = serde_json::from_str::<Value>(&b).unwrap()["key"].as_str().unwrap().to_string();
+
+    let odd = "A/c XX9 has been settled for the sum of seven hundred rupees at SOME SHOP";
+    let (_, v) = hook_post(&app, &key, odd).await;
+    assert_eq!(v["status"], "unrecognized");
+    // The same text again does not pile up.
+    hook_post(&app, &key, odd).await;
+
+    let inbox = authed_get(&app, &t, "/api/ingest/unrecognized").await;
+    assert_eq!(inbox["count"], 1, "{inbox}");
+    assert_eq!(inbox["items"][0]["text"], odd);
+    let id = inbox["items"][0]["alert_id"].as_str().unwrap().to_string();
+
+    // Pasting by hand shows the answer right there, so it is not kept.
+    authed_post(&app, &t, "/api/ingest/parse", json!({"text": "another odd one"})).await;
+    assert_eq!(authed_get(&app, &t, "/api/ingest/unrecognized").await["count"], 1);
+
+    // Someone else cannot dismiss it; the owner can.
+    let other = new_user(&app, "10.0.0.93", "snoop").await;
+    authed_post(&app, &other, "/api/ingest/unrecognized/dismiss", json!({"alert_id": id})).await;
+    assert_eq!(authed_get(&app, &t, "/api/ingest/unrecognized").await["count"], 1);
+    let (s, _) = authed_post(&app, &t, "/api/ingest/unrecognized/dismiss", json!({"alert_id": id})).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(authed_get(&app, &t, "/api/ingest/unrecognized").await["count"], 0);
+
+    // Old ones are dropped after 30 days.
+    hook_post(&app, &key, "yet another unreadable message").await;
+    sqlx::query("UPDATE unrecognized_alerts SET received_at = datetime('now', '-31 days')").execute(&db).await.unwrap();
+    hook_post(&app, &key, "a fresh unreadable message").await;
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM unrecognized_alerts").fetch_one(&db).await.unwrap();
+    assert_eq!(n, 1, "the old one was cleaned up");
+}
