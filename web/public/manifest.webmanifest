@@ -1,0 +1,14 @@
+{
+  "name": "joy",
+  "short_name": "joy",
+  "description": "Your money and your dates, in one place.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F6F1E9",
+  "theme_color": "#16140F",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
