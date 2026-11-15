@@ -143,13 +143,9 @@ export interface PickCard {
   relax: PickForm | null;
   done: boolean;
   stamp_date: string;
-  rerolls_left: number;
-  max_rerolls: number;
-  free_putback: boolean;
   pairs: PairOffer[];
   paired: ActivityView | null;
   state: PickForm | null;
-  bonus_peek: boolean;
   can_surprise: boolean;
   can_veto: boolean;
   partner: string;

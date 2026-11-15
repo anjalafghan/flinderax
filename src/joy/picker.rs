@@ -3,7 +3,6 @@
 
 use rand::Rng;
 
-pub const MAX_REROLLS: u32 = 3;
 const DAY: i64 = 86_400;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -301,24 +300,6 @@ fn hint(all: &[Candidate], f: &Filters) -> Hint {
     Hint::NoMoodMatch
 }
 
-/// Peeks for this draw: whoever's turn it is gets one extra.
-pub fn max_peeks(my_turn: bool) -> u32 {
-    MAX_REROLLS + u32::from(my_turn)
-}
-
-pub fn rerolls_left(used: u32, max: u32) -> u32 {
-    max.saturating_sub(used)
-}
-
-/// Peeks used after putting the current slip back, or `None` when it has to stay.
-/// Slips the app generated go back for free, so you can browse them without limit.
-pub fn put_back(used: u32, generated: bool, max: u32) -> Option<u32> {
-    match (generated, used < max) {
-        (true, _) => Some(used),
-        (false, true) => Some(used + 1),
-        (false, false) => None,
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -525,30 +506,6 @@ mod tests {
         assert_eq!(old, 3.0, "capped");
         c.last_skipped_at = Some(NOW - DAY);
         assert_eq!(weight(&c, NOW, false), 1.5);
-    }
-
-    #[test]
-    fn generated_slips_go_back_for_free() {
-        assert_eq!(put_back(0, false, MAX_REROLLS), Some(1));
-        assert_eq!(put_back(MAX_REROLLS - 1, false, MAX_REROLLS), Some(MAX_REROLLS));
-        assert_eq!(put_back(MAX_REROLLS, false, MAX_REROLLS), None);
-        assert_eq!(put_back(0, true, MAX_REROLLS), Some(0));
-        assert_eq!(put_back(MAX_REROLLS, true, MAX_REROLLS), Some(MAX_REROLLS), "free even when out of peeks");
-    }
-
-    #[test]
-    fn reroll_cap() {
-        assert_eq!(rerolls_left(0, MAX_REROLLS), MAX_REROLLS);
-        assert_eq!(rerolls_left(MAX_REROLLS, MAX_REROLLS), 0);
-        assert_eq!(rerolls_left(MAX_REROLLS + 5, MAX_REROLLS), 0);
-    }
-
-    #[test]
-    fn whoever_s_turn_it_is_gets_a_bonus_peek() {
-        assert_eq!(max_peeks(false), MAX_REROLLS);
-        assert_eq!(max_peeks(true), MAX_REROLLS + 1);
-        assert_eq!(put_back(MAX_REROLLS, false, max_peeks(true)), Some(MAX_REROLLS + 1));
-        assert_eq!(put_back(MAX_REROLLS, false, max_peeks(false)), None);
     }
 
     #[test]

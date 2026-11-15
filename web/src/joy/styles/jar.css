@@ -207,13 +207,10 @@
 .btn-ink { border-color: color-mix(in srgb, var(--ink) 70%, transparent); }
 .btn-ink:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
 .btn-stamp:hover { background: color-mix(in srgb, var(--stamp) 88%, var(--ink)); }
-.peeks { display: flex; align-items: center; gap: 10px; margin-top: 12px; min-height: 30px; }
-.peek-dots { display: inline-flex; gap: 2px; }
 .peek { width: 20px; height: 20px; }
 .peek-ring { fill: none; stroke: var(--ink-soft); stroke-width: 1.5; }
 .peek-fill { fill: var(--ink); transform-origin: 10px 10px; transform: scale(0); transition: transform var(--t-medium) var(--ease-spring); }
 .peek.is-full .peek-fill { transform: scale(1); }
-.peek-label { font: 600 1.3rem/1.1 var(--font-hand); color: var(--ink-soft); }
 /* ── the stamp ───────────────────────────────────────────── */
 .slip.is-done { padding-top: 30px; }
 .stamp {
@@ -478,12 +475,15 @@
 .share .ico { margin: 0; }
 .share[disabled] { opacity: .55; pointer-events: none; }
 .f-surprise .share .ico { color: var(--stamp); }
+.putback-why { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 12px; }
+.putback-why-label { font: 600 1.3rem/1.1 var(--font-hand); color: var(--ink-soft); margin-right: 2px; }
+.btn-why {
+  font: inherit; font-size: var(--step--1); color: var(--ink-soft); background: none; cursor: pointer;
+  border: 1.5px dashed var(--rule); border-radius: 999px; padding: 4px 12px; min-height: 32px;
+}
+.btn-why:hover:not([disabled]) { color: var(--ink); border-color: var(--ink-soft); }
+.btn-why[disabled] { opacity: .55; cursor: default; }
 .share-row { margin: 2px 0 -6px; }
-/* the bonus peek: a little star you earned by taking turns */
-.peek.is-bonus .peek-ring { stroke: var(--stamp); stroke-linejoin: round; }
-.peek.is-bonus .peek-fill { fill: var(--stamp); transform-origin: 10px 10px; }
-.peek-dots .peek.is-bonus { margin-left: 3px; }
-.peek-bonus { color: var(--ink-soft); }
 /* done card: sealed surprise, when is it? */
 .sealed-line { display: flex; gap: 8px; align-items: flex-start; margin: 16px 0 0; font-size: var(--step--1); color: var(--ink); }
 .sealed-line .ico { margin-top: 1px; color: var(--stamp); }

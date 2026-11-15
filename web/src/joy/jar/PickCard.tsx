@@ -5,13 +5,14 @@ import { Link } from "react-router-dom";
 import { animated, type SpringValue } from "@react-spring/web";
 import type { ActivityView, PickCard } from "./api";
 import DayPlanView, { Route } from "./DayPlanView";
-import { peekView } from "./peeks";
+import { PUT_BACK_REASONS, type PutBackReason } from "./form";
 import { FOLLOW, YES } from "./swipe";
 import { pose } from "./motion";
 
 export interface CardActions {
   accept: (o: { with?: string; surprise?: boolean }) => void;
-  putBack: () => void;
+  /** Put the slip back; there is no limit. The reason is optional and only "not my thing" teaches taste. */
+  putBack: (reason?: PutBackReason) => void;
   veto: () => void;
   relax: () => void;
   back: () => void;
@@ -58,33 +59,6 @@ function Hints({ x, yes, back }: { x: SpringValue<number>; yes: boolean; back: b
         </animated.span>
       )}
     </span>
-  );
-}
-
-function Peeks({ card, spent }: { card: PickCard; spent: number }) {
-  const v = peekView(card);
-  return (
-    <div className="peeks" data-left={card.rerolls_left}>
-      <span className="peek-dots" aria-hidden="true">
-        {v.dots.map((d, i) =>
-          d.bonus ? (
-            <svg key={i} className={`j-peek is-bonus${d.full || i === spent ? " is-full" : ""}`} viewBox="0 0 20 20">
-              <path className="peek-ring" d="M10 1.6l2.3 5.3 5.8.6-4.4 3.8 1.3 5.7L10 14l-5 3 1.3-5.7-4.4-3.8 5.8-.6z" />
-              <path className="peek-fill" d="M10 5.4l1.3 3 3.3.3-2.5 2.2.8 3.2L10 12.4l-2.9 1.7.8-3.2-2.5-2.2 3.3-.3z" />
-            </svg>
-          ) : (
-            <svg key={i} className={`j-peek${d.full || i === spent ? " is-full" : ""}`} viewBox="0 0 20 20">
-              <path className="peek-ring" d="M10 2.6c4.3-.2 7.4 3.1 7.3 7.3-.1 4.2-3.3 7.4-7.5 7.4-4.1 0-7.2-3.3-7.1-7.5.1-4 3.2-7.1 7.3-7.2z" />
-              <circle className="peek-fill" cx="10" cy="10" r="4.6" />
-            </svg>
-          ),
-        )}
-      </span>
-      <span className="peek-label">
-        {v.label}
-        {v.bonusNote && <span className="peek-bonus"> · one's a bonus</span>}
-      </span>
-    </div>
   );
 }
 
@@ -194,19 +168,16 @@ interface SlipProps {
   actions: CardActions;
   /** The slip is still unfolding: blank paper over the text, no taps. */
   arriving: boolean;
-  /** Index of the try the put-back just spent (shown full, then empties). */
-  spent: number;
   /** "Sat 9 Nov, 7:00 pm" once a day has been picked for the stamped date. */
   planned?: string;
 }
 
-export function SlipView({ card, busy, actions, arriving, spent, planned }: SlipProps) {
+export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) {
   const a = card.activity!;
   const done = card.done;
   const [el, setEl] = useState<HTMLElement | null>(null);
-  const peeks = peekView(card);
   const canYes = !done;
-  const canBack = !done && peeks.canPutBack;
+  const canBack = !done;
   // A one-time line under the card about swiping. Shown on the first card only, then remembered.
   const [hint] = useState(() => !hintSeen());
   const showHint = hint && !done;
@@ -403,13 +374,18 @@ export function SlipView({ card, busy, actions, arriving, spent, planned }: Slip
             <button className="btn btn-stamp" type="button" disabled={busy} onClick={() => actions.accept({})}>
               It's a date
             </button>
-            {peeks.canPutBack && (
-              <button className="btn btn-ink" type="button" disabled={busy} onClick={actions.putBack}>
-                Put it back
-              </button>
-            )}
+            <button className="btn btn-ink" type="button" disabled={busy} onClick={() => actions.putBack()}>
+              Put it back
+            </button>
           </div>
-          <Peeks card={card} spent={spent} />
+          <div className="putback-why" role="group" aria-label="Put it back because">
+            <span className="putback-why-label">or put it back because</span>
+            {PUT_BACK_REASONS.map((r) => (
+              <button key={r.value} className="btn-why" type="button" disabled={busy} onClick={() => actions.putBack(r.value)}>
+                {r.label}
+              </button>
+            ))}
+          </div>
           {showHint && (
             <p className="swipe-hint">{canBack ? "Swipe right to say yes, left to put it back." : "Swipe right to say yes."}</p>
           )}

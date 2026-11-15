@@ -1,5 +1,6 @@
 //! The jar page and the draw: pick, live match counts, and "it's a date". The server works out
-//! the peek cap, whose turn it is, and what a sealed surprise may show, every time.
+//! whose turn it is and what a sealed surprise may show, every time. Putting a slip back is
+//! unlimited; each one is a row in `joy_peeks`, never in the history.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -20,7 +21,7 @@ use crate::{
     joy::{
         ctx::{road_km, Ctx},
         db,
-        picker::{self, Candidate, Duration, Filters, Hint, PickResult, Today, ENERGIES, MAX_REROLLS, SETTINGS},
+        picker::{self, Candidate, Duration, Filters, Hint, PickResult, Today, ENERGIES, SETTINGS},
         schedule::{self, Slot},
         weather,
     },
@@ -60,7 +61,7 @@ pub struct DecideView {
     pub me_name: String,
     /// Whose turn it is to draw ("Neha"), empty when it's anyone's.
     pub turn_name: String,
-    /// It's the asker's turn: they get a bonus peek.
+    /// It's the asker's turn to draw.
     pub my_turn: bool,
     /// Tonight's rain chance (%) when rain is likely.
     pub rain: Option<u8>,
@@ -263,11 +264,12 @@ pub struct PickForm {
     #[serde(deserialize_with = "flex_list", skip_serializing_if = "String::is_empty")]
     pub excluded: String,
     #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
-    pub used: String,
-    #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
     pub current: String,
     #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
     pub reroll: String,
+    /// Why the current slip was put back (one of `db::PUT_BACK_REASONS`), or empty.
+    #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
+    pub reason: String,
     /// "1": the asker passes on the current slip for good ("Not for me").
     #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
     pub veto: String,
@@ -371,10 +373,9 @@ impl PickForm {
         h
     }
 
-    fn hidden(&self, excluded: &[i64], used: u32, current: i64) -> Vec<(String, String)> {
+    fn hidden(&self, excluded: &[i64], current: i64) -> Vec<(String, String)> {
         let mut h = self.filter_fields();
         h.push(("excluded".into(), excluded.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(",")));
-        h.push(("used".into(), used.to_string()));
         h.push(("current".into(), current.to_string()));
         h
     }
@@ -399,10 +400,9 @@ impl PickForm {
     }
 
     /// The form to post back for the next peek: the kept filters plus where the draw has got to.
-    fn state(&self, excluded: &[i64], used: u32, current: i64) -> PickForm {
+    fn state(&self, excluded: &[i64], current: i64) -> PickForm {
         PickForm {
             excluded: excluded.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(","),
-            used: used.to_string(),
             current: current.to_string(),
             ..self.kept()
         }
@@ -516,10 +516,6 @@ pub struct PickCard {
     pub done: bool,
     /// For the stamp on an accepted pick, e.g. "14 · 10 · 2026".
     pub stamp_date: String,
-    pub rerolls_left: u32,
-    pub max_rerolls: u32,
-    /// The drawn slip was generated for us, so putting it back is free.
-    pub free_putback: bool,
     pub pairs: Vec<PairOffer>,
     /// On an accepted pair: the second slip.
     pub paired: Option<ActivityView>,
@@ -527,8 +523,6 @@ pub struct PickCard {
     pub hidden: Vec<Hidden>,
     /// The form to post to `/pick` (with `reroll`/`veto` set) to peek again; None on a done card.
     pub state: Option<PickForm>,
-    /// This draw has a bonus peek because it's this person's turn.
-    pub bonus_peek: bool,
     /// The slip can be kept as a surprise for the other.
     pub can_surprise: bool,
     /// They can pass on this slip ("Not for me").
@@ -570,15 +564,11 @@ impl PickCard {
             relax: None,
             done: false,
             stamp_date: String::new(),
-            rerolls_left: 0,
-            max_rerolls: MAX_REROLLS,
-            free_putback: false,
             middle: false,
             pairs: vec![],
             paired: None,
             hidden: vec![],
             state: None,
-            bonus_peek: false,
             can_surprise: false,
             can_veto: false,
             partner: String::new(),
@@ -597,15 +587,13 @@ impl PickCard {
     }
 }
 
-/// Who's drawing and how many peeks they get. Worked out on the server every time.
+/// Who's drawing. Worked out on the server every time.
 struct Drawer {
     me: Me,
-    max: u32,
 }
 
-async fn drawer(db: &SqlitePool, couple: &str, ctx: &Ctx, who: usize) -> Result<Drawer, AppError> {
-    let turn = turn(db, couple).await?;
-    Ok(Drawer { me: Me::new(ctx, Some(who)), max: picker::max_peeks(turn == Some(who)) })
+fn drawer(ctx: &Ctx, who: usize) -> Drawer {
+    Drawer { me: Me::new(ctx, Some(who)) }
 }
 
 /// `POST /pick`: draw a slip, peek again (`reroll`), or pass on one for good (`veto`).
@@ -617,7 +605,7 @@ pub async fn pick(
     let f = body.map(|j| j.0).unwrap_or_default();
     let j = joy(&s, &user_id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
-    let d = drawer(db, couple, ctx, j.who).await?;
+    let d = drawer(ctx, j.who);
     let middle = if f.is_middle() { middle::tonight(db, couple).await? } else { None };
     if f.is_middle() && middle.is_none() {
         return Ok(Json(PickCard {
@@ -630,9 +618,8 @@ pub async fn pick(
         None => f,
     };
     let mut excluded = f.excluded();
-    let mut used: u32 = f.used.parse().unwrap_or(0);
 
-    // "Not for me": out of the draw for both of us, and it doesn't cost a peek. A slip that
+    // "Not for me": out of the draw for both of us. A slip that
     // isn't ours does nothing (the veto is scoped to the couple).
     if f.veto == "1" {
         if let Ok(cur) = f.current.parse::<i64>() {
@@ -643,22 +630,8 @@ pub async fn pick(
     } else if f.reroll == "1"
         && let Ok(cur) = f.current.parse::<i64>() {
             super::unsealed(db, couple, j.who, cur).await?;
-            let current = db::get(db, couple, cur).await?;
-            match picker::put_back(used, current.as_ref().is_some_and(|a| a.generated), d.max) {
-                Some(next) => {
-                    db::record(db, couple, cur, false).await?;
-                    excluded.push(cur);
-                    used = next;
-                }
-                // Out of peeks: the card already hides the button, so just show it again.
-                None => {
-                    if let Some(a) = current {
-                        let learned = learned(db, couple).await?;
-                        let slot = dayplan::slot_for(db, ctx, &f.when, f.start()).await?;
-                        return Ok(Json(card(db, couple, ctx, &d, &f, Some(&a), &excluded, used, &learned, slot).await?));
-                    }
-                }
-            }
+            db::put_back(db, couple, cur, j.who, &f.reason).await?;
+            excluded.push(cur);
         }
 
     let jar = jar_data(db, couple, ctx, j.who, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
@@ -672,11 +645,11 @@ pub async fn pick(
 
     let card_out = match result {
         PickResult::Pick(id) => {
-            card(db, couple, ctx, &d, &f, jar.acts.iter().find(|a| a.id == id), &excluded, used, &jar.learned, jar.slot).await?
+            card(db, couple, ctx, &d, &f, jar.acts.iter().find(|a| a.id == id), &excluded, &jar.learned, jar.slot).await?
         }
         PickResult::NoMatch(Hint::OutsideWindow { title, why }) if middle.is_none() => {
             let label = jar.slot.map(|sl| sl.label()).unwrap_or_default();
-            let relax = PickForm { when: "any".into(), excluded: String::new(), used: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
+            let relax = PickForm { when: "any".into(), excluded: String::new(), reason: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
             PickCard {
                 message: format!("Nothing in the jar fits {label}. Closest: {title}, but it's {why}."),
                 relax_label: "Draw for any day".into(),
@@ -688,7 +661,7 @@ pub async fn pick(
         // Saying which filter to loosen would give away one of our answers.
         PickResult::NoMatch(h) if middle.is_some() => PickCard {
             message: match h {
-                Hint::Exhausted => "You've peeked at every slip that fits you both. One of you could change your check-in.".into(),
+                Hint::Exhausted => "You've been through every slip that fits you both. One of you could change your check-in.".into(),
                 _ => "Nothing in the jar fits you both tonight. One of you could change your check-in, or draw on your own.".into(),
             },
             ..PickCard::blank()
@@ -716,7 +689,6 @@ async fn card(
     f: &PickForm,
     a: Option<&db::Activity>,
     excluded: &[i64],
-    used: u32,
     learned: &Learned,
     slot: Option<Slot>,
 ) -> Result<PickCard, AppError> {
@@ -765,12 +737,8 @@ async fn card(
         route_note,
         when_label: slot.map(|sl| sl.label()).unwrap_or_default(),
         plan_line,
-        hidden: hidden_of(f.hidden(excluded, used, current)),
-        state: Some(f.state(excluded, used, current)),
-        rerolls_left: picker::rerolls_left(used, d.max),
-        max_rerolls: d.max,
-        bonus_peek: d.max > MAX_REROLLS,
-        free_putback: a.is_some_and(|a| a.generated),
+        hidden: hidden_of(f.hidden(excluded, current)),
+        state: Some(f.state(excluded, current)),
         can_surprise: d.me.who.is_some(),
         can_veto: d.me.who.is_some(),
         partner: d.me.partner.clone(),
@@ -842,7 +810,7 @@ async fn pair_offers(db: &SqlitePool, couple: &str, ctx: &Ctx, who: Option<usize
 fn hint_text(ctx: &Ctx, form: &PickForm, f: &Filters, h: Hint) -> String {
     match h {
         Hint::EmptyWishlist => "The jar is empty. Write the first slip.".into(),
-        Hint::Exhausted => "You've peeked at every slip that fits. Loosen something, or go with one you put back.".into(),
+        Hint::Exhausted => "You've been through every slip that fits. Start over, or loosen something.".into(),
         Hint::OverBudget { title, cost } if f.budget == 0 => {
             format!("Nothing in the jar is free. Closest: {title} at {}.", ctx.money(cost))
         }
@@ -881,7 +849,7 @@ fn hint_text(ctx: &Ctx, form: &PickForm, f: &Filters, h: Hint) -> String {
 
 /// The smallest change to the filters that would make the hinted slip fit.
 fn relax(ctx: &Ctx, f: &PickForm, h: &Hint) -> (String, Option<PickForm>) {
-    let mut r = PickForm { excluded: String::new(), used: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
+    let mut r = PickForm { excluded: String::new(), reason: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
     let label = match h {
         Hint::OverBudget { cost, .. } => {
             r.budget = cost.to_string();

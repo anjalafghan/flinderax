@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { applyRelax, compact, EMPTY_FILTERS, filtersToForm, putBackForm, stampDate, toggleSetting, toggleStart, vetoForm } from "./form";
+import { applyRelax, compact, EMPTY_FILTERS, filtersToForm, PUT_BACK_REASONS, putBackForm, stampDate, toggleSetting, toggleStart, vetoForm } from "./form";
 
 describe("form serialisation", () => {
   test("an empty sentence only says when", () => {
@@ -28,9 +28,14 @@ describe("form serialisation", () => {
 
 describe("put back, veto and relax", () => {
   // The server's `state` is the kept filters plus where the draw has got to, WITHOUT reroll/veto.
-  const state = { when: "2026-11-05", budget: "1500", settings: ["home"], excluded: "4,9", used: "1", current: "9" };
+  const state = { when: "2026-11-05", budget: "1500", settings: ["home"], excluded: "4,9", current: "9" };
   test("put back is the server's state plus reroll=1", () => {
     expect(putBackForm(state)).toEqual({ ...state, reroll: "1" });
+  });
+  test("put back can say why, and only with a reason the server knows", () => {
+    expect(putBackForm(state, "too_far")).toEqual({ ...state, reroll: "1", reason: "too_far" });
+    expect(putBackForm(state, "nonsense" as never).reason).toBeUndefined();
+    expect(PUT_BACK_REASONS.map((r) => r.value)).toEqual(["not_tonight", "too_far", "too_pricey", "not_my_thing"]);
   });
   test("veto is the state plus veto=1 and no reroll", () => {
     expect(vetoForm({ ...state, reroll: "1" })).toEqual({ ...state, veto: "1" });

@@ -468,6 +468,35 @@ pub async fn record(db: &SqlitePool, couple: &str, id: i64, did_it: bool) -> sql
     tx.commit().await
 }
 
+/// The one-tap reasons for putting a slip back. Anything else is stored as no reason.
+pub const PUT_BACK_REASONS: [&str; 4] = ["not_tonight", "too_far", "too_pricey", "not_my_thing"];
+
+/// Put a slip back while drawing. This is a peek, not a date: it never touches the history, and
+/// it only damps the slip for a few days (`last_skipped_at`).
+pub async fn put_back(db: &SqlitePool, couple: &str, id: i64, who: usize, reason: &str) -> sqlx::Result<()> {
+    let reason = if PUT_BACK_REASONS.contains(&reason) { reason } else { "" };
+    let mut tx = db.begin().await?;
+    let n = sqlx::query(
+        "INSERT INTO joy_peeks (couple_id, activity_id, who, reason)
+         SELECT ?1, id, ?3, ?4 FROM joy_activities WHERE id = ?2 AND couple_id = ?1",
+    )
+    .bind(couple)
+    .bind(id)
+    .bind(who as i64)
+    .bind(reason)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    if n > 0 {
+        sqlx::query("UPDATE joy_activities SET last_skipped_at = unixepoch() WHERE id = ? AND couple_id = ?")
+            .bind(id)
+            .bind(couple)
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await
+}
+
 /// Accept a pick and return its history row. A double-tap within a minute only counts once
 /// (the second tap gets the same row back).
 pub async fn accept(db: &SqlitePool, couple: &str, id: i64, drawn_by: Option<usize>, surprise: bool) -> sqlx::Result<i64> {

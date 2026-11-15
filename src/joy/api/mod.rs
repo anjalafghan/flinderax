@@ -614,7 +614,18 @@ pub async fn learned(db: &SqlitePool, couple: &str) -> Result<Learned, AppError>
     .bind(couple)
     .fetch_all(db)
     .await?;
-    let taste = crate::joy::taste::Taste::from_history(rows.iter().map(|(t, o, r)| (t.as_str(), o.as_str(), *r)));
+    // A put-back counts against a slip's tags only when it was "not my thing".
+    let passed: Vec<(String,)> = sqlx::query_as(
+        "SELECT a.tags FROM joy_peeks p JOIN joy_activities a ON a.id = p.activity_id WHERE p.couple_id = ? AND p.reason = 'not_my_thing'",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await?;
+    let taste = crate::joy::taste::Taste::from_history(
+        rows.iter()
+            .map(|(t, o, r)| (t.as_str(), o.as_str(), *r))
+            .chain(passed.iter().map(|(t,)| (t.as_str(), "skipped", None))),
+    );
     Ok(Learned { cost: usable(ratio, n), cost_ratio: ratio, cost_samples: n, cab: usable(cab_ratio, rides), rides, taste })
 }
 

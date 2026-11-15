@@ -23,18 +23,17 @@ import JarCanvas, { type JarHandle } from "./JarCanvas";
 import { buzz, finish, pose, reduced, set, springs, to } from "./motion";
 import { NoteView, SlipView, type CardActions } from "./PickCard";
 import { PlanDialog } from "../components/PlanDialog";
-import { peekView, spentDot } from "./peeks";
 import Sentence from "./Sentence";
 import { magnitude, newShake, shakeStep } from "./shake";
 import { dragPose, MOST, swipeOutcome } from "./swipe";
 
 type View =
   | { kind: "none"; key: number }
-  | { kind: "card" | "done" | "note"; key: number; card: PickCard; putBack: boolean };
+  | { kind: "card" | "done" | "note"; key: number; card: PickCard };
 
 const blankCard = (message: string): PickCard => ({
-  activity: null, message, relax_label: "", relax: null, done: false, stamp_date: "", rerolls_left: 0, max_rerolls: 0,
-  free_putback: false, pairs: [], paired: null, state: null, bonus_peek: false, can_surprise: false, can_veto: false,
+  activity: null, message, relax_label: "", relax: null, done: false, stamp_date: "",
+  pairs: [], paired: null, state: null, can_surprise: false, can_veto: false,
   partner: "", surprise: false, history_ids: "", share_text: "", wa_url: "", middle: false, when: "", start: "",
   when_label: "", plan_line: "", route: [], route_note: "", plan: null,
 });
@@ -380,13 +379,13 @@ export default function JarPage() {
   }, [view.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── requests ──────────────────────────────────────────── */
-  const show = (kind: "card" | "done" | "note", card: PickCard, putBack = false) => {
+  const show = (kind: "card" | "done" | "note", card: PickCard) => {
     setArriving(true);
-    setView({ kind, key: ++keyRef.current, card, putBack });
+    setView({ kind, key: ++keyRef.current, card });
   };
 
   /** Draw, put back, pass, or relax: all post a form to /pick and bring the answer out of the jar. */
-  const draw = async (form: PickForm, how: "draw" | "putback" | "veto" | "relax", relaxTo?: Filters) => {
+  const draw = async (form: PickForm, _how: "draw" | "putback" | "veto" | "relax", relaxTo?: Filters) => {
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
@@ -411,7 +410,7 @@ export default function JarPage() {
     try {
       const [card] = await Promise.all([jarApi.pick(form), choreo.wait(reduced() ? 0 : 340)]);
       if (!alive.current) return;
-      if (card.activity) show("card", card, how === "putback");
+      if (card.activity) show("card", card);
       else show("note", card);
     } catch {
       if (!alive.current) return;
@@ -454,9 +453,9 @@ export default function JarPage() {
 
   const actions: CardActions = {
     accept,
-    putBack: () => {
+    putBack: (reason) => {
       const v = viewRef.current;
-      if (v.kind === "card" && v.card.state) void draw(putBackForm(v.card.state), "putback");
+      if (v.kind === "card" && v.card.state) void draw(putBackForm(v.card.state, reason), "putback");
     },
     veto: () => {
       const v = viewRef.current;
@@ -491,14 +490,14 @@ export default function JarPage() {
         start: (d) => pose(d.el).stop(),
         move: (d) => {
           const v = viewRef.current;
-          const can = v.kind === "card" && (d.dx > 0 ? true : peekView(v.card).canPutBack);
+          const can = v.kind === "card" && true;
           const p = dragPose(d.dx, can);
           set(d.el, p);
         },
         end: (d, cancelled) => {
           const v = viewRef.current;
           if (v.kind !== "card") return void to(d.el, { x: 0, y: 0, r: 0, s: 1, config: springs.snap });
-          const out = swipeOutcome({ dx: d.dx, vx: d.vx, canYes: true, canBack: peekView(v.card).canPutBack, cancelled });
+          const out = swipeOutcome({ dx: d.dx, vx: d.vx, canYes: true, canBack: true, cancelled });
           if (out === "yes") {
             void to(d.el, { x: 0, y: 0, r: 0, s: 1, config: springs.snap });
             void actionsRef.current.accept({});
@@ -678,7 +677,6 @@ export default function JarPage() {
         busy={busy}
         actions={actions}
         arriving={arriving}
-        spent={arriving ? spentDot(view.card.rerolls_left, view.putBack, view.card.free_putback) : -1}
         planned={planned?.key === view.key ? planned.label : undefined}
       />
     ) : null;

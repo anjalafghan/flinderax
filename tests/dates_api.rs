@@ -160,7 +160,6 @@ async fn a_draw_returns_a_slip_and_respects_budget_and_time() {
     let slip = drawn(&card.json);
     assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE id = {slip} AND couple_id = '{couple}'")).await, 1);
     assert!(card.json["activity"]["title"].as_str().unwrap().len() > 2);
-    assert_eq!(card.json["max_rerolls"], 3);
     assert_eq!(card.json["state"]["current"], slip.to_string(), "the card carries where the draw has got to");
 
     // Free and short only. Numbers work where Joy's form had text.
@@ -197,7 +196,7 @@ async fn the_jar_page_carries_its_view_model() {
     assert_eq!(j["middle"]["both_in"], false);
     assert_eq!(j["regulars"]["show"], false);
     assert_eq!(j["my_turn"], false);
-    // Whoever didn't keep the last date draws next, with a bonus peek.
+    // Whoever didn't keep the last date draws next, and the page says so.
     let id = t.scalar("SELECT min(id) FROM joy_activities").await;
     assert_eq!(t.post(&format!("/api/dates/accept/{id}"), &rohit, json!({})).await.status, StatusCode::OK);
     assert_eq!(t.get("/api/dates/jar", &neha).await.json["my_turn"], true);
@@ -216,38 +215,47 @@ async fn nobody_gets_in_without_a_token_or_a_couple() {
 }
 
 #[tokio::test]
-async fn peeks_stop_at_three_and_the_server_keeps_count() {
+async fn putting_back_is_unlimited_and_never_touches_the_history() {
     let t = setup().await;
-    let (rohit, neha, couple) = t.couple().await;
-    // Generated slips go back for free; keep this test about the peek cap only.
-    t.exec("UPDATE joy_activities SET generated = 0").await;
-    let current = t.id_of(&couple, "Play Pokémon Emerald together").await;
+    let (rohit, _, couple) = t.couple().await;
+    let history_before = t.scalar("SELECT count(*) FROM joy_history").await;
+    let mut current = drawn(&t.post("/api/dates/pick", &rohit, json!({})).await.json);
+    let mut excluded: Vec<i64> = vec![];
+    // Far more put-backs than the old cap of three; each one draws something new.
+    for _ in 0..12 {
+        let r = t.post("/api/dates/pick", &rohit, json!({"current": current, "reroll": true, "excluded": excluded})).await;
+        assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+        excluded.push(current);
+        let next = drawn(&r.json);
+        assert!(!excluded.contains(&next), "a put-back slip does not come straight back");
+        for gone in ["rerolls_left", "max_rerolls", "bonus_peek", "free_putback"] {
+            assert!(r.json.get(gone).is_none(), "{gone} no longer exists");
+        }
+        current = next;
+    }
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_peeks").await, 12);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_history").await, history_before, "peeks are not dates");
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_peeks WHERE couple_id = '{couple}'")).await, 12);
+}
 
-    // Used 3 of 3: the card shows the same slip again and does not record another put-back.
-    let before = t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'skipped'").await;
-    let r = t.post("/api/dates/pick", &rohit, json!({"used": 3, "current": current, "reroll": true, "excluded": []})).await;
-    assert_eq!(drawn(&r.json), current, "out of peeks, so the same slip stays");
-    assert_eq!((r.json["rerolls_left"].as_u64(), r.json["max_rerolls"].as_u64()), (Some(0), Some(3)));
-    assert_eq!(t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'skipped'").await, before);
+#[tokio::test]
+async fn a_put_back_remembers_why_and_only_not_my_thing_teaches_taste() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let a = t.id_of(&couple, "Cook together").await;
+    let b = t.id_of(&couple, "Play Pokémon Emerald together").await;
+    t.post("/api/dates/pick", &rohit, json!({"current": a, "reroll": true, "reason": "too_pricey"})).await;
+    t.post("/api/dates/pick", &rohit, json!({"current": b, "reroll": true, "reason": "bogus"})).await;
+    let reasons: Vec<(i64, String)> = sqlx::query_as("SELECT activity_id, reason FROM joy_peeks ORDER BY id").fetch_all(&t.db).await.unwrap();
+    assert_eq!(reasons, vec![(a, "too_pricey".to_string()), (b, String::new())], "an unknown reason is stored as none");
+    assert!(t.scalar(&format!("SELECT last_skipped_at IS NOT NULL FROM joy_activities WHERE id = {a}")).await == 1, "still damped for a few days");
 
-    // Used 2: one more peek, and it costs the last one.
-    let r = t.post("/api/dates/pick", &rohit, json!({"used": "2", "current": current.to_string(), "reroll": "1"})).await;
-    assert_ne!(drawn(&r.json), current);
-    assert_eq!(r.json["state"]["used"], "3");
-    assert_eq!(r.json["rerolls_left"], 0);
-    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_history WHERE activity_id = {current} AND outcome = 'skipped'")).await, 1);
-
-    // Rohit kept the last date, so it's Neha's turn: she gets a fourth peek, he doesn't.
-    let cook = t.id_of(&couple, "Cook together").await;
-    t.post(&format!("/api/dates/accept/{cook}"), &rohit, json!({})).await;
-    let form = json!({"used": 3, "current": current, "reroll": 1, "excluded": [cook]});
-    let r = t.post("/api/dates/pick", &neha, form.clone()).await;
-    assert_ne!(drawn(&r.json), current, "Neha's 4th peek draws a new slip");
-    assert_eq!((r.json["bonus_peek"].as_bool(), r.json["max_rerolls"].as_u64()), (Some(true), Some(4)));
-    assert_eq!(r.json["rerolls_left"], 0, "and that was her last one");
-    let r = t.post("/api/dates/pick", &rohit, form).await;
-    assert_eq!(drawn(&r.json), current, "Rohit keeps the same slip");
-    assert_eq!((r.json["bonus_peek"].as_bool(), r.json["rerolls_left"].as_u64()), (Some(false), Some(0)));
+    // Only "not my thing" counts against the slip's tags.
+    let tags: String = sqlx::query_scalar(&format!("SELECT tags FROM joy_activities WHERE id = {a}")).fetch_one(&t.db).await.unwrap();
+    let before = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste.factor(&tags.split(',').map(str::to_string).collect::<Vec<_>>());
+    t.post("/api/dates/pick", &rohit, json!({"current": a, "reroll": true, "reason": "not_my_thing"})).await;
+    let after = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste.factor(&tags.split(',').map(str::to_string).collect::<Vec<_>>());
+    assert!(after < before, "not my thing lowers the tags' taste ({before} -> {after})");
 }
 
 #[tokio::test]
@@ -299,10 +307,9 @@ async fn not_for_me_takes_a_slip_out_of_every_draw_until_brought_back() {
     let drive = t.id_of(&couple, "Long drive to Lonavala").await;
     assert!(ids(&t.post("/api/dates/match", &neha, json!({})).await.json).contains(&drive));
 
-    let r = t.post("/api/dates/pick", &neha, json!({"veto": true, "current": drive, "used": 1})).await;
+    let r = t.post("/api/dates/pick", &neha, json!({"veto": true, "current": drive})).await;
     assert_eq!(t.scalar(&format!("SELECT person FROM joy_vetoes WHERE activity_id = {drive}")).await, 1);
     assert_ne!(r.json["activity"]["id"], drive);
-    assert_eq!(r.json["state"]["used"], "1", "a veto doesn't cost a peek");
     assert!(!ids(&t.post("/api/dates/match", &neha, json!({})).await.json).contains(&drive), "/match skips it");
     for _ in 0..40 {
         assert_ne!(t.post("/api/dates/pick", &neha, json!({})).await.json["activity"]["id"], drive, "/pick skips it");
