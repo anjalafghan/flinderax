@@ -689,6 +689,14 @@ pub async fn happened(
     Ok(go(kept_to(id)))
 }
 
+/// `POST /history/{id}/unshare`: the envelope link stops opening.
+pub async fn unshare(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    db::unshare(&s.db, &j.couple, "joy_history", id).await?;
+    Ok(go(kept_to(id)))
+}
+
 /// `POST /history/{id}/delete`
 pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
@@ -1092,6 +1100,7 @@ pub fn router() -> Router<AppState> {
         .route("/history/{id}", post(rate))
         .route("/history/{id}/reveal", post(reveal))
         .route("/history/{id}/delete", post(delete))
+        .route("/history/{id}/unshare", post(unshare))
         .route("/history/{id}/happened", post(happened))
         .route("/putbacks/clear", post(clear_putbacks))
         .route("/history/{id}/cost", post(set_cost))

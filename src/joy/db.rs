@@ -1720,7 +1720,20 @@ pub async fn next_planned(db: &SqlitePool, couple: &str) -> sqlx::Result<Option<
 async fn share_token(db: &SqlitePool, couple: &str, table: &str, id: i64) -> sqlx::Result<String> {
     use rand::{distributions::Alphanumeric, Rng};
     let fresh: String = rand::thread_rng().sample_iter(&Alphanumeric).take(24).map(char::from).collect();
-    sqlx::query(&format!("UPDATE {table} SET share_token = ? WHERE id = ? AND couple_id = ? AND share_token IS NULL"))
+    // Every share renews the link: 30 days for a slip, a week past the day for a kept date.
+    let expiry = if table == "joy_history" {
+        "MAX(COALESCE(planned_at, picked_at), unixepoch()) + 7 * 86400"
+    } else {
+        "unixepoch() + 30 * 86400"
+    };
+    sqlx::query(&format!("UPDATE {table} SET share_expires_at = {expiry} WHERE id = ? AND couple_id = ? AND share_token IS NOT NULL"))
+        .bind(id)
+        .bind(couple)
+        .execute(db)
+        .await?;
+    sqlx::query(&format!(
+        "UPDATE {table} SET share_token = ?, share_expires_at = {expiry} WHERE id = ? AND couple_id = ? AND share_token IS NULL"
+    ))
         .bind(&fresh)
         .bind(id)
         .bind(couple)
@@ -1731,6 +1744,17 @@ async fn share_token(db: &SqlitePool, couple: &str, table: &str, id: i64) -> sql
         .bind(couple)
         .fetch_one(db)
         .await
+}
+
+/// Stop sharing: the link stops opening and the next share makes a new one.
+pub async fn unshare(db: &SqlitePool, couple: &str, table: &str, id: i64) -> sqlx::Result<()> {
+    let table = if table == "joy_history" { "joy_history" } else { "joy_activities" };
+    sqlx::query(&format!("UPDATE {table} SET share_token = NULL, share_expires_at = NULL WHERE id = ? AND couple_id = ?"))
+        .bind(id)
+        .bind(couple)
+        .execute(db)
+        .await?;
+    Ok(())
 }
 
 pub async fn slip_token(db: &SqlitePool, couple: &str, activity_id: i64) -> sqlx::Result<String> {
@@ -1753,14 +1777,14 @@ pub async fn envelope(db: &SqlitePool, token: &str) -> sqlx::Result<Option<Envel
     if token.len() != 24 || !token.chars().all(|c| c.is_ascii_alphanumeric()) {
         return Ok(None);
     }
-    if let Some((couple, id)) = sqlx::query_as::<_, (String, i64)>("SELECT couple_id, id FROM joy_history WHERE share_token = ?")
+    if let Some((couple, id)) = sqlx::query_as::<_, (String, i64)>("SELECT couple_id, id FROM joy_history WHERE share_token = ? AND share_expires_at > unixepoch()")
         .bind(token)
         .fetch_optional(db)
         .await?
     {
         return Ok(history_row(db, &couple, id).await?.map(Envelope::Date));
     }
-    match sqlx::query_as::<_, (String, i64)>("SELECT couple_id, id FROM joy_activities WHERE share_token = ?")
+    match sqlx::query_as::<_, (String, i64)>("SELECT couple_id, id FROM joy_activities WHERE share_token = ? AND share_expires_at > unixepoch() AND archived = 0")
         .bind(token)
         .fetch_optional(db)
         .await?

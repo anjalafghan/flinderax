@@ -1006,3 +1006,51 @@ async fn the_pick_card_shows_the_date_budget_left() {
     let note = card.json["budget_note"].as_str().unwrap();
     assert!(note.contains("₹2,000 left") || note.contains("over this month"), "{note}");
 }
+
+// ── envelope links expire and can be stopped (S9) ─────────────────────────
+
+#[tokio::test]
+async fn envelope_links_expire_can_be_stopped_and_do_not_outlive_their_slip() {
+    async fn status(t: &T, tok: &str) -> StatusCode {
+        t.call(Method::GET, &format!("/api/public/dates/e/{tok}"), None, None).await.status
+    }
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    // A slip shared from the draw.
+    let card = t.post("/api/dates/pick", &rohit, json!({})).await;
+    let slip = drawn(&card.json);
+    let tok = t.text(&format!("SELECT share_token FROM joy_activities WHERE id = {slip}")).await;
+    let exp = t.scalar(&format!("SELECT share_expires_at FROM joy_activities WHERE id = {slip}")).await;
+    let now = t.scalar("SELECT unixepoch()").await;
+    assert!((now + 29 * 86_400..=now + 31 * 86_400).contains(&exp), "about 30 days: {}", exp - now);
+    assert_eq!(status(&t, &tok).await, StatusCode::OK);
+
+    // Past its date the link is gone; sharing it again brings the same link back to life.
+    t.exec(&format!("UPDATE joy_activities SET share_expires_at = unixepoch() - 5 WHERE id = {slip}")).await;
+    assert_eq!(status(&t, &tok).await, StatusCode::NOT_FOUND);
+    joy::joy::db::slip_token(&t.db, &couple, slip).await.unwrap();
+    assert_eq!(status(&t, &tok).await, StatusCode::OK, "sharing again renews it");
+
+    // "Stop sharing" ends it for good; a new share makes a new link.
+    let r = t.post(&format!("/api/dates/slips/{slip}/unshare"), &rohit, json!({})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(status(&t, &tok).await, StatusCode::NOT_FOUND);
+    let fresh = joy::joy::db::slip_token(&t.db, &couple, slip).await.unwrap();
+    assert_ne!(fresh, tok);
+
+    // An archived slip's envelope does not open.
+    t.post(&format!("/api/dates/slips/{slip}/archive"), &rohit, json!({})).await;
+    assert_eq!(status(&t, &fresh).await, StatusCode::NOT_FOUND);
+
+    // A kept date's link lasts until a week after the day.
+    let cook = t.id_of(&couple, "Cook together").await;
+    t.post(&format!("/api/dates/accept/{cook}"), &rohit, json!({})).await;
+    let hid = t.scalar(&format!("SELECT max(id) FROM joy_history WHERE activity_id = {cook}")).await;
+    t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch('now', '+2 days') WHERE id = {hid}")).await;
+    let dtok = joy::joy::db::date_token(&t.db, &couple, hid).await.unwrap();
+    let dexp = t.scalar(&format!("SELECT share_expires_at FROM joy_history WHERE id = {hid}")).await;
+    assert!((now + 8 * 86_400..=now + 10 * 86_400).contains(&dexp), "two days out plus a week: {}", dexp - now);
+    assert_eq!(status(&t, &dtok).await, StatusCode::OK);
+    t.post(&format!("/api/dates/history/{hid}/unshare"), &rohit, json!({})).await;
+    assert_eq!(status(&t, &dtok).await, StatusCode::NOT_FOUND);
+}

@@ -511,6 +511,15 @@ pub async fn archive(State(s): State<AppState>, Extension((user_id, _)): User, P
     Ok(go(SLIPS))
 }
 
+/// `POST /slips/{id}/unshare`: the envelope link stops opening.
+pub async fn unshare(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
+    mine(&s.db, &j.couple, id).await?;
+    db::unshare(&s.db, &j.couple, "joy_activities", id).await?;
+    Ok(go(SLIPS))
+}
+
 /// `POST /slips/{id}/restore`
 pub async fn restore(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
