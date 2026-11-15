@@ -67,10 +67,6 @@ export const INGEST_INVALIDATE: QueryKey[] = [keys.txns, keys.spendSummary, keys
 export const useJoySummary = () => useQuery({ queryKey: keys.joy, queryFn: joyApi.summary, retry: 1 });
 /** Joy writes can re-label transactions as dates, so the spending data is refreshed too. */
 export const JOY_INVALIDATE: QueryKey[] = [keys.joy, keys.txns, keys.spendSummary];
-export const useJoySetPartner = () =>
-  usePlannerMutation((partner_paise: number) => joyApi.setPartner(partner_paise), JOY_INVALIDATE, {
-    success: "Partner amount saved",
-  });
 
 // Bills and goals. Adding a suggestion also adds a fixed payment, so the commitments are refreshed.
 export const useBills = (days = 30) =>

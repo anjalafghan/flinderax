@@ -2,7 +2,6 @@
 /* joy — shared foundation: fonts, tokens, reset, nav, buttons.
    Page-specific styles live in their own files. See DESIGN.md. */
 
-@font-face { font-family: "Caveat"; src: url("../fonts/Caveat-normal.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
 @keyframes name-shine { 0% { background-position: 120% 0; } 22%, 100% { background-position: -20% 0; } }
 @keyframes nav-dot { 50% { transform: scale(1.25); } }
 @keyframes nav-drop { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
@@ -31,7 +30,8 @@
   /* Newsreader (display), Figtree (UI), Caveat (the handwritten accent) */
   --font-display: "Newsreader", Georgia, serif;
   --font-ui: "Figtree", system-ui, sans-serif;
-  --font-hand: "Caveat", "Bradley Hand", cursive;
+  /* One type system: the handwritten accent is the app's own display face, in italics. */
+  --font-hand: var(--font-display);
 
   --step--1: .875rem;
   --step-0: 1rem;

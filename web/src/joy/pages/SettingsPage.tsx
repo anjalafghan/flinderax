@@ -8,14 +8,15 @@ import { ErrorState } from "../components/ErrorState";
 import { errText, useBusy } from "../components/useBusy";
 import { rupees, standing, toPaise } from "../money";
 
-export default function SettingsPage() {
+/** Your partner, who covers what, settling up, and leaving: shown inside the app's one Settings page. */
+export function DatesSettingsCards() {
   const couple = useQuery({ queryKey: keys.couple, queryFn: getCouple });
   if (couple.isPending) return <p className="loading" role="status">Opening settings…</p>;
   if (couple.isError) return <ErrorState message={errText(couple.error)} onRetry={() => void couple.refetch()} />;
   const c = couple.data;
+  if (!c.in_couple) return null;
   return (
     <div className="set-page">
-      <h1>Settings</h1>
       <PartnerCard name={c.partner_name} waiting={c.waiting} />
       <CoversCard partner={c.partner_name} currency={c.currency} />
       <SettleCard partner={c.partner_name} currency={c.currency} />
@@ -23,6 +24,8 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+export default DatesSettingsCards;
 
 function PartnerCard({ name, waiting }: { name: string | null; waiting: boolean }) {
   const [invite, setInvite] = useState<Invite | null>(null);

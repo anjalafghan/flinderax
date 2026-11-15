@@ -3,13 +3,12 @@ import { Link } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { AccountSection } from "@/components/feature/AccountSection";
 import { IngestSetup } from "@/components/feature/IngestSetup";
-import { PartnerShare } from "@/components/feature/PartnerShare";
+import { SettingsSection } from "@/pages/PlanPage";
+import { DatesSettingsCards } from "@/joy/pages/SettingsPage";
+import "@/joy/styles/index.css";
+import "@/joy/styles/app.css";
 
-const OTHER_SETTINGS = [
-  { to: "/plan", label: "Budget settings", hint: "Spending allowance, savings floor, recovery months" },
-  { to: "/joy/settings", label: "Dates settings", hint: "Names, monthly date budget, weather, calendar" },
-  { to: "/spending", label: "Category rules", hint: "How spending is sorted (under Rules)" },
-];
+const OTHER_SETTINGS = [{ to: "/spending", label: "Category rules", hint: "How spending is sorted (under Rules)" }];
 
 /** One place for settings: the account, alert forwarding, your partner's date share, and links to the rest. */
 export default function AccountPage() {
@@ -25,8 +24,14 @@ export default function AccountPage() {
           <h2 className="font-display text-[32px] leading-none">Alert forwarding</h2>
           <IngestSetup />
         </section>
-        <section aria-label="Date budget share">
-          <PartnerShare />
+        <section aria-label="Budget settings" className="space-y-3">
+          <h2 className="font-display text-[32px] leading-none">Budget settings</h2>
+          <SettingsSection />
+        </section>
+        <section aria-label="Partner and Dates" className="space-y-3">
+          <div className="joy joy-embed">
+            <DatesSettingsCards />
+          </div>
         </section>
         <section aria-label="More settings" className="space-y-2">
           <h2 className="font-display text-[32px] leading-none">More settings</h2>
