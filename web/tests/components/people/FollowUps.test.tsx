@@ -37,7 +37,12 @@ function wrap(ui: React.ReactElement) {
   );
 }
 
-afterEach(() => cleanup());
+// Tests below replace api.post; put it back so other files see the real one.
+const realPost = api.post;
+afterEach(() => {
+  cleanup();
+  api.post = realPost;
+});
 
 describe("follow-up wording", () => {
   it("says when each one is due", () => {

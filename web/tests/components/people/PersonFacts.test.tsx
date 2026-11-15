@@ -21,7 +21,12 @@ function wrap() {
   );
 }
 
-afterEach(() => cleanup());
+// Tests below replace api.post; put it back so other files see the real one.
+const realPost = api.post;
+afterEach(() => {
+  cleanup();
+  api.post = realPost;
+});
 
 describe("things to remember", () => {
   it("shows only this person's notes", () => {
