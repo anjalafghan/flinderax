@@ -83,7 +83,7 @@ describe("one person's follow-ups", () => {
   });
 
   it("adds a trimmed follow-up with its due day", async () => {
-    const post = mock(async (_url: string, _body: unknown) => ({ data: f({ id: "n", text: "x" }) }));
+    const post = mock(async (...args: unknown[]) => ({ data: f({ id: "n", text: String(args.length) }) }));
     api.post = post as unknown as typeof api.post;
     wrap(<PersonFollowUps personId="p1" />);
     fireEvent.change(screen.getByLabelText("Add a follow-up"), { target: { value: "  Ask about the move " } });

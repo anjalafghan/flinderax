@@ -44,7 +44,7 @@ describe("things to remember", () => {
   });
 
   it("adds a trimmed note", async () => {
-    const post = mock(async (_u: string, _b: unknown) => ({ data: { id: "n", person_id: "p1", text: "x" } }));
+    const post = mock(async (...args: unknown[]) => ({ data: { id: "n", person_id: "p1", text: String(args.length) } }));
     api.post = post as unknown as typeof api.post;
     wrap();
     fireEvent.change(screen.getByLabelText("Add something to remember"), { target: { value: "  Has two kids " } });
