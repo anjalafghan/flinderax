@@ -23,7 +23,8 @@ pub const REACHES: [(&str, &str); 5] = [
     ("far", "Anywhere at all"),
 ];
 /// Spend for both of us. None = any amount.
-pub const BUDGETS: [Option<i64>; 5] = [Some(0), Some(500), Some(1500), Some(3000), None];
+/// The budgets on offer, in paise (None: any).
+pub const BUDGETS: [Option<i64>; 5] = [Some(0), Some(50_000), Some(150_000), Some(300_000), None];
 pub const ENERGY_WORDS: [(&str, &str); 4] = [("low", "Low"), ("med", "Some"), ("high", "Lots"), ("any", "Any")];
 pub const TIMES: [(&str, &str); 5] =
     [("short", "A couple of hours"), ("half_day", "Half a day"), ("full_day", "A whole day"), ("weekend", "The weekend"), ("", "Any")];
@@ -163,7 +164,7 @@ pub async fn view(db: &SqlitePool, couple: &str, ctx: &Ctx, who: Option<usize>, 
         list.iter().map(|(v, l)| Opt { value: (*v).into(), label: (*l).into(), selected: *v == current }).collect()
     };
     let m = mine.as_ref();
-    let budget = m.map(|c| c.budget.map(|b| b.to_string()).unwrap_or_default()).unwrap_or_else(|| "1500".into());
+    let budget = m.map(|c| c.budget.map(crate::validate::plain_rupees).unwrap_or_default()).unwrap_or_else(|| "1500".into());
     let msg = "I've told our jar how tonight feels. Your turn: open Dates and check in, then we'll draw from the middle.";
     let mut v = MiddleView {
         enabled: who.is_some(),
@@ -173,7 +174,7 @@ pub async fn view(db: &SqlitePool, couple: &str, ctx: &Ctx, who: Option<usize>, 
         budgets: BUDGETS
             .iter()
             .map(|b| {
-                let value = b.map(|n| n.to_string()).unwrap_or_default();
+                let value = b.map(crate::validate::plain_rupees).unwrap_or_default();
                 let label = match b {
                     Some(0) => "Free".into(),
                     Some(n) => ctx.money(*n),
@@ -234,7 +235,7 @@ pub async fn check_in(
         .await?;
     if f.clear != "1" {
         let energy = if ENERGY_WORDS.iter().any(|(k, _)| *k == f.energy) { f.energy } else { "med".into() };
-        let budget: Option<i64> = f.budget.trim().parse().ok().filter(|b: &i64| *b >= 0);
+        let budget: Option<i64> = crate::validate::paise_from_text(&f.budget).ok();
         let max_duration = Duration::parse(&f.max_duration).map(|d| d.key().to_string()).unwrap_or_default();
         let reach = REACHES.iter().find(|(k, _)| *k == f.reach).map_or("far", |(k, _)| k);
         let vibe = VIBES.iter().find(|v| **v == f.vibe).map_or("", |v| v);

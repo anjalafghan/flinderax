@@ -24,5 +24,5 @@ test("link the bank payment that paid for a kept date", async ({ page }) => {
   await page.getByText("Which payment was this?").click();
   await page.getByRole("button", { name: /link lakeside grill/i }).click();
   await expect(page.getByText(/paid with Lakeside Grill/i)).toBeVisible();
-  await expect(page.getByText(/actually/i).first()).toContainText("1,231");
+  await expect(page.getByText(/actually/i).first()).toContainText("1,230.50");
 });

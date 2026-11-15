@@ -66,7 +66,7 @@ export interface SpreadView {
   /** Weekday numbers (0 = Sunday), for the edit form. */
   day_values: number[];
   /** The usual amount as digits. */
-  usual_raw: number;
+  usual_raw: string;
   stamps: Stamp[];
 }
 
@@ -76,7 +76,7 @@ export interface OpenNight {
   title: string;
   maps_url: string;
   usual: string;
-  usual_raw: number;
+  usual_raw: string;
   day: string;
   label: string;
   today: boolean;
@@ -87,7 +87,7 @@ export interface WentTonight {
   title: string;
   place: string;
   amount: string;
-  amount_raw: number;
+  amount_raw: string;
   history_id: number | null;
   photo: string;
 }

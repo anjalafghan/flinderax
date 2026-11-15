@@ -16,7 +16,7 @@ export function EditRegular({ regular, onDone }: { regular: SpreadView; onDone: 
   const [place, setPlace] = useState(regular.place);
   const [maps, setMaps] = useState(regular.maps_url);
   const [picked, setPicked] = useState<number[]>(regular.day_values);
-  const [cost, setCost] = useState(regular.usual_raw > 0 ? String(regular.usual_raw) : "");
+  const [cost, setCost] = useState(regular.usual_raw);
   const [error, setError] = useState("");
 
   const submit = (e: React.FormEvent) => {

@@ -16,21 +16,22 @@ const TRAIN_STATION_MINS: f64 = 25.0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Estimate {
-    pub rupees: i64,
+    /// Estimated fare in paise.
+    pub paise: i64,
     pub minutes: i64,
 }
 
 pub fn cab(km: f64) -> Estimate {
     let minutes = (km / CAB_KMPH * 60.0).max(5.0);
     let fare = (CAB_BASE + km * CAB_PER_KM + minutes * CAB_PER_MIN).max(CAB_MIN_FARE);
-    Estimate { rupees: round_to(fare, 10), minutes: round_to(minutes, 5) }
+    Estimate { paise: round_to(fare, 10) * 100, minutes: round_to(minutes, 5) }
 }
 
 /// Second-class local fare bands (₹5 per ~15 km, starting at ₹5).
 pub fn train(km: f64) -> Estimate {
     let fare = 5.0 * ((km / 15.0).ceil().max(1.0));
     let minutes = km / TRAIN_KMPH * 60.0 + TRAIN_STATION_MINS;
-    Estimate { rupees: fare as i64, minutes: round_to(minutes, 5) }
+    Estimate { paise: fare as i64 * 100, minutes: round_to(minutes, 5) }
 }
 
 fn round_to(v: f64, step: i64) -> i64 {
@@ -54,17 +55,17 @@ mod tests {
     fn cab_fares_scale_with_distance() {
         let short = cab(3.0);
         let far = cab(30.0);
-        assert_eq!(short.rupees, 100, "{short:?}");
-        assert_eq!(far.rupees, 590, "{far:?}");
+        assert_eq!(short.paise, 10_000, "{short:?}");
+        assert_eq!(far.paise, 59_000, "{far:?}");
         assert_eq!(far.minutes, 80);
-        assert_eq!(cab(0.5).rupees, 100, "minimum fare");
+        assert_eq!(cab(0.5).paise, 10_000, "minimum fare");
     }
 
     #[test]
     fn train_is_cheap_but_slower_for_short_hops() {
-        assert_eq!(train(10.0).rupees, 5);
-        assert_eq!(train(30.0).rupees, 10);
-        assert_eq!(train(31.0).rupees, 15);
+        assert_eq!(train(10.0).paise, 500);
+        assert_eq!(train(30.0).paise, 1_000);
+        assert_eq!(train(31.0).paise, 1_500);
         assert!(train(3.0).minutes > cab(3.0).minutes);
     }
 

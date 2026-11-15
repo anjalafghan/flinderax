@@ -31,7 +31,7 @@ afterEach(() => {
 describe("fixing what a night cost", () => {
   it("refuses a blank or non-number, then saves a typed amount with its commas dropped", async () => {
     let saved = 0;
-    wrap(<EditAmount visitId={7} initial={300} onSaved={() => saved++} onCancel={() => {}} />);
+    wrap(<EditAmount visitId={7} initial="300" onSaved={() => saved++} onCancel={() => {}} />);
     const box = screen.getByLabelText("Spent") as HTMLInputElement;
     fireEvent.change(box, { target: { value: "" } });
     fireEvent.submit(box.closest("form")!);
@@ -45,7 +45,7 @@ describe("fixing what a night cost", () => {
 
 describe("logging a missed night", () => {
   it("needs a day, then adds the night on that day", async () => {
-    wrap(<PastNight regularId={3} usualRaw={300} />);
+    wrap(<PastNight regularId={3} usualRaw="300" />);
     fireEvent.click(screen.getByRole("button", { name: "Add to Kept" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Pick the day");
     expect(calls).toEqual([]);
@@ -55,7 +55,7 @@ describe("logging a missed night", () => {
   });
 
   it("Reset puts the form back", () => {
-    wrap(<PastNight regularId={3} usualRaw={300} />);
+    wrap(<PastNight regularId={3} usualRaw="300" />);
     const day = screen.getByLabelText("The day") as HTMLInputElement;
     fireEvent.change(day, { target: { value: "2026-07-04" } });
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
@@ -64,7 +64,7 @@ describe("logging a missed night", () => {
 });
 
 describe("undoing a night", () => {
-  const card = { show: true, open: [], ceiling: "", went: [{ visit_id: 9, title: "Blue Tokai", place: "", amount: "₹300", amount_raw: 300, history_id: 4, photo: "" }] };
+  const card = { show: true, open: [], ceiling: "", went: [{ visit_id: 9, title: "Blue Tokai", place: "", amount: "₹300", amount_raw: "300", history_id: 4, photo: "" }] };
 
   it("asks first, and only removes it when you say yes", async () => {
     const ask = mock(() => false);

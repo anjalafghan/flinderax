@@ -67,13 +67,20 @@ impl Ctx {
         }
     }
 
-    pub fn money(&self, amount: i64) -> String {
-        if amount == 0 {
+    /// An amount in paise as text: "Free", "₹1,200" or, when it is not a whole rupee, "₹1,200.50".
+    pub fn money(&self, paise: i64) -> String {
+        if paise == 0 {
             return "Free".into();
         }
-        let digits = amount.to_string();
+        let (sign, abs) = if paise < 0 { ("-", -paise) } else { ("", paise) };
+        let digits = (abs / 100).to_string();
         let grouped = if self.currency == "₹" { group_indian(&digits) } else { group_western(&digits) };
-        format!("{}{}", self.currency, grouped)
+        let cents = abs % 100;
+        if cents == 0 {
+            format!("{sign}{}{}", self.currency, grouped)
+        } else {
+            format!("{sign}{}{}.{cents:02}", self.currency, grouped)
+        }
     }
 
     /// Fills `{a}`, `{b}`, `{a_area}`, `{b_area}` in slip text from .env, so the shared
@@ -170,6 +177,17 @@ mod tests {
         assert_eq!(group_indian("1200"), "1,200");
         assert_eq!(group_indian("800"), "800");
         assert_eq!(group_western("1500000"), "1,500,000");
+    }
+
+    #[test]
+    fn money_is_paise_and_shows_paise_only_when_there_are_some() {
+        let c = Ctx::for_tests();
+        assert_eq!(c.money(0), "Free");
+        assert_eq!(c.money(120_000), "₹1,200");
+        assert_eq!(c.money(15_000_000), "₹1,50,000");
+        assert_eq!(c.money(123_050), "₹1,230.50");
+        assert_eq!(c.money(7), "₹0.07");
+        assert_eq!(c.money(-50_000), "-₹500");
     }
 
     fn cfg(areas: [Option<&str>; 2]) -> Ctx {

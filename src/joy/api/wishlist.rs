@@ -226,7 +226,7 @@ async fn form(db: &SqlitePool, j: &Joy, id: Option<i64>, i: &ActivityInput, erro
         id,
         title: i.title.clone(),
         notes: i.notes.clone(),
-        est_cost: if id.is_none() && i.est_cost == 0 && i.title.is_empty() { String::new() } else { i.est_cost.to_string() },
+        est_cost: if id.is_none() && i.est_cost == 0 && i.title.is_empty() { String::new() } else { crate::validate::plain_rupees(i.est_cost) },
         venue: i.venue.clone(),
         area: i.area.clone(),
         location: i.location.clone(),
@@ -357,9 +357,9 @@ impl SlipBody {
         let (est_cost, cost_ok) = if cost.is_empty() {
             (0, true)
         } else {
-            match cost.parse::<i64>().map(crate::validate::rupees) {
-                Ok(Ok(c)) => (c, true),
-                _ => (0, false),
+            match crate::validate::paise_from_text(cost) {
+                Ok(c) => (c, true),
+                Err(_) => (0, false),
             }
         };
         (
@@ -714,6 +714,7 @@ mod tests {
         assert!(body("1200").input().1, "a whole rupee amount is fine");
         assert!(!body("-5").input().1, "negative cost is refused");
         assert!(!body("1000000000001").input().1, "above the rupee cap is refused");
-        assert!(!body("12.5").input().1, "not a whole number is refused");
+        assert!(body("12.5").input().1, "paise are fine");
+        assert!(!body("12.345").input().1, "more than two decimals is refused");
     }
 }

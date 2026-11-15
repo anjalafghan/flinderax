@@ -156,7 +156,7 @@ async fn load_planned_dates(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<
         .into_iter()
         .filter_map(|(day, label, rupees)| {
             let date = time::Date::parse(&day, time::macros::format_description!("[year]-[month]-[day]")).ok()?;
-            Some(PlannedDateIn { date, label, amount: rupees.saturating_mul(100) })
+            Some(PlannedDateIn { date, label, amount: rupees })
         })
         .collect())
 }

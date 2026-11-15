@@ -361,7 +361,7 @@ async fn the_budget_can_be_set_and_last_months_leftover_rolled_over() {
 
     // Last month cost ₹1,000 against the ₹6,000 budget: ₹5,000 is on offer.
     t.exec(&format!(
-        "INSERT INTO joy_other_spending (couple_id, amount, note, spent_on) VALUES ('{couple}', 1000, 'old', date('now', 'localtime', 'start of month', '-1 day'))"
+        "INSERT INTO joy_other_spending (couple_id, amount, note, spent_on) VALUES ('{couple}', 100000, 'old', date('now', 'localtime', 'start of month', '-1 day'))"
     ))
     .await;
     let offer = &t.get("/api/dates/kept", &rohit).await.json["budget"]["rollover"];
@@ -374,12 +374,12 @@ async fn the_budget_can_be_set_and_last_months_leftover_rolled_over() {
     assert!(t.get("/api/dates/kept", &rohit).await.json["past"].as_array().is_some());
 
     // The other choices: put it in the jar, or start fresh.
-    for (choice, saved) in [("save", 5000), ("fresh", 0)] {
+    for (choice, saved) in [("save", 500_000), ("fresh", 0)] {
         let t2 = setup().await;
         let (a, _, c) = t2.couple().await;
         t2.post("/api/dates/budget", &a, json!({"amount": 6000})).await;
         t2.exec(&format!(
-            "INSERT INTO joy_other_spending (couple_id, amount, note, spent_on) VALUES ('{c}', 1000, 'old', date('now', 'localtime', 'start of month', '-1 day'))"
+            "INSERT INTO joy_other_spending (couple_id, amount, note, spent_on) VALUES ('{c}', 100000, 'old', date('now', 'localtime', 'start of month', '-1 day'))"
         ))
         .await;
         t2.post("/api/dates/budget/rollover", &a, json!({"choice": choice})).await;
@@ -415,7 +415,7 @@ async fn other_spending_and_savings_work() {
     let oops = jar["recent"][0]["id"].as_i64().unwrap();
     assert_eq!(jar["recent"][0]["removable"], true);
     t.post(&format!("/api/dates/savings/{oops}/delete"), &neha, json!({})).await;
-    assert_eq!(t.get("/api/dates/kept", &rohit).await.json["savings"]["saved_raw"], 2000);
+    assert_eq!(t.get("/api/dates/kept", &rohit).await.json["savings"]["saved_raw"], 200_000);
 
     let play = t.id_of(&couple, PLAY).await;
     t.post("/api/dates/savings/goal", &rohit, json!({"id": play})).await;
@@ -428,14 +428,14 @@ async fn other_spending_and_savings_work() {
     let r = t.post("/api/dates/savings/keep", &rohit, json!({})).await;
     assert_eq!(r.json["to"], "/joy/kept#k-savings");
     assert_eq!(t.scalar("SELECT count(*) FROM joy_history").await, 0);
-    t.post("/api/dates/savings/add", &rohit, json!({"amount": cost * 4 + 1000})).await;
+    t.post("/api/dates/savings/add", &rohit, json!({"amount": cost / 100 * 4 + 1000})).await;
     let r = t.post("/api/dates/savings/keep", &neha, json!({})).await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
     let hid = t.scalar("SELECT max(id) FROM joy_history").await;
     assert_eq!(r.json["to"], format!("/joy/kept#k{hid}"));
     assert_eq!(t.scalar(&format!("SELECT drawn_by FROM joy_history WHERE id = {hid}")).await, 1);
     let left = t.get("/api/dates/kept", &rohit).await.json["savings"]["saved_raw"].as_i64().unwrap();
-    assert!(left > 0 && left < cost * 4 + 1000, "the jar paid for it: {left}");
+    assert!(left > 0 && left < (cost / 100 * 4 + 1000) * 100, "the jar paid for it: {left}");
     // A double tap keeps it once, and a goal that isn't ours means nothing.
     t.post("/api/dates/savings/keep", &neha, json!({})).await;
     assert_eq!(t.scalar("SELECT count(*) FROM joy_history").await, 1);
@@ -629,7 +629,7 @@ async fn another_couple_gets_404_for_everything() {
     t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch('now', '+1 days') WHERE id = {hid}")).await;
     t.exec(&format!("INSERT INTO joy_tasks (history_id, who, task) VALUES ({hid}, 0, 'Book')")).await;
     let task = t.scalar("SELECT max(id) FROM joy_tasks").await;
-    t.exec(&format!("INSERT INTO joy_other_spending (couple_id, amount, note) VALUES ('{couple}', 77, 'mine')")).await;
+    t.exec(&format!("INSERT INTO joy_other_spending (couple_id, amount, note) VALUES ('{couple}', 7700, 'mine')")).await;
     let spend = t.scalar("SELECT max(id) FROM joy_other_spending").await;
     let carol = t.loner().await;
 
@@ -729,17 +729,17 @@ async fn a_deposit_that_has_already_been_spent_cannot_be_deleted() {
     t.post("/api/dates/savings/add", &rohit, json!({"amount": 500})).await;
     let dep = t.scalar(&format!("SELECT id FROM joy_savings WHERE couple_id = '{couple}' AND kind = 'add'")).await;
     // 300 of it has gone on a date.
-    t.exec(&format!("INSERT INTO joy_savings (couple_id, amount, kind, note) VALUES ('{couple}', -300, 'kept', 'dinner')")).await;
+    t.exec(&format!("INSERT INTO joy_savings (couple_id, amount, kind, note) VALUES ('{couple}', -30000, 'kept', 'dinner')")).await;
 
     let r = t.post(&format!("/api/dates/savings/{dep}/delete"), &rohit, json!({})).await;
     assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", r.text);
-    assert_eq!(t.scalar(&format!("SELECT sum(amount) FROM joy_savings WHERE couple_id = '{couple}'")).await, 200, "nothing changed");
+    assert_eq!(t.scalar(&format!("SELECT sum(amount) FROM joy_savings WHERE couple_id = '{couple}'")).await, 20_000, "nothing changed");
 
     // Once the jar can cover it, it can go.
     t.post("/api/dates/savings/add", &rohit, json!({"amount": 400})).await;
     let r = t.post(&format!("/api/dates/savings/{dep}/delete"), &rohit, json!({})).await;
     assert_eq!(r.status, StatusCode::OK);
-    assert_eq!(t.scalar(&format!("SELECT sum(amount) FROM joy_savings WHERE couple_id = '{couple}'")).await, 100);
+    assert_eq!(t.scalar(&format!("SELECT sum(amount) FROM joy_savings WHERE couple_id = '{couple}'")).await, 10_000);
 }
 
 #[tokio::test]
@@ -809,10 +809,10 @@ async fn a_kept_date_can_be_linked_to_the_transaction_that_paid_for_it() {
     let hers_ids: Vec<&str> = hc["candidates"].as_array().unwrap().iter().map(|x| x["txn_id"].as_str().unwrap()).collect();
     assert_eq!(hers_ids, [hers.as_str()]);
 
-    // Linking sets what the date really cost from the transaction (rounded up to a rupee) and labels it a date.
+    // Linking sets what the date really cost from the transaction (to the paise) and labels it a date.
     let r = t.post(&format!("/api/dates/history/{hid}/link"), &rohit, json!({"txn_id": dinner})).await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
-    assert_eq!(t.scalar(&format!("SELECT actual_cost FROM joy_history WHERE id = {hid}")).await, 1231);
+    assert_eq!(t.scalar(&format!("SELECT actual_cost FROM joy_history WHERE id = {hid}")).await, 123_050);
     assert_eq!(t.text(&format!("SELECT category FROM transactions WHERE txn_id = '{dinner}'")).await, "dates");
     assert_eq!(t.scalar(&format!("SELECT category_locked FROM transactions WHERE txn_id = '{dinner}'")).await, 1);
     let item = t.item(&rohit, hid).await;
@@ -851,7 +851,7 @@ async fn a_linked_payment_is_not_taken_by_a_second_date_of_a_similar_amount() {
     let two = mk(100_000).await;
     let a = t.keep(&couple, &rohit, COOK, false).await;
     let b = t.keep(&couple, &rohit, "Play Pokémon Emerald together", false).await;
-    t.exec(&format!("UPDATE joy_history SET actual_cost = 1000 WHERE id = {b}")).await;
+    t.exec(&format!("UPDATE joy_history SET actual_cost = 100000 WHERE id = {b}")).await;
     // The first date is linked to the second payment on purpose.
     assert_eq!(t.post(&format!("/api/dates/history/{a}/link"), &rohit, json!({"txn_id": two})).await.status, StatusCode::OK);
     t.get("/api/joy/summary", &rohit).await;

@@ -190,7 +190,7 @@ async fn adding_a_regular_checks_the_form() {
     let id = r.json["to"].as_str().unwrap().strip_prefix("/joy/regulars/").unwrap().to_string();
     let (maps, days, cost): (String, String, i64) =
         sqlx::query_as("SELECT maps_url, weekdays, usual_cost FROM joy_regulars").fetch_one(&t.db).await.unwrap();
-    assert_eq!((maps.as_str(), days.as_str(), cost), ("", "2,4", 250));
+    assert_eq!((maps.as_str(), days.as_str(), cost), ("", "2,4", 25_000));
     let ok = t.post("/api/dates/regulars", &rohit, json!({"title": "Maps", "maps_url": "https://maps.app.goo.gl/x", "days": "1"})).await;
     assert_eq!(ok.status, StatusCode::OK);
     assert_eq!(t.text("SELECT maps_url FROM joy_regulars WHERE title = 'Maps'").await, "https://maps.app.goo.gl/x");
@@ -241,7 +241,7 @@ async fn going_or_skipping_a_night_and_the_spread_totals() {
     assert_eq!(v["count"], 3);
     assert_eq!(v["elsewhere"], 1);
     assert_eq!(v["total"], "₹1,600");
-    assert_eq!(v["average"], "₹533");
+    assert_eq!(v["average"], "₹533.33");
     assert_eq!(v["stamps"].as_array().unwrap().len(), 3);
     assert_eq!(v["stamps"][0]["amount"], "₹300", "newest first");
     assert_eq!(v["stamps"][1]["elsewhere"], "Third Wave");
@@ -333,7 +333,7 @@ async fn keep_a_date(t: &T, couple: &str, title: &str, rating: i64) {
     t.exec(&format!("UPDATE joy_activities SET title = '{title}', venue = 'Rohit''s Kitchen' WHERE id = {activity}")).await;
     t.exec(&format!(
         "INSERT INTO joy_history (couple_id, activity_id, outcome, rating, note, est_cost, actual_cost, picked_at)
-         VALUES ('{couple}', {activity}, 'did_it', {rating}, 'Lovely evening\nsecond line', 500, 900, unixepoch() - 60)"
+         VALUES ('{couple}', {activity}, 'did_it', {rating}, 'Lovely evening\nsecond line', 50000, 90000, unixepoch() - 60)"
     ))
     .await;
 }
@@ -348,7 +348,7 @@ async fn the_month_page_lists_the_night() {
     let vid = t.scalar("SELECT id FROM joy_regular_visits").await;
     t.multipart(&format!("/api/dates/nights/{vid}/photo"), &rohit, "photo", &jpeg()).await;
     keep_a_date(&t, &couple, "Dinner at home", 5).await;
-    t.exec(&format!("INSERT INTO joy_other_spending (couple_id, amount, note, spent_on) VALUES ('{couple}', 120, 'Ice cream', '{day}')")).await;
+    t.exec(&format!("INSERT INTO joy_other_spending (couple_id, amount, note, spent_on) VALUES ('{couple}', 12000, 'Ice cream', '{day}')")).await;
 
     let (y, m) = (&day[..4], day[5..7].trim_start_matches('0'));
     let page = t.get(&format!("/api/dates/year/{y}/{m}"), &neha).await;
@@ -481,7 +481,7 @@ async fn editing_and_stopping_a_regular_stays_inside_the_couple() {
 
     // The spread carries what the edit form needs.
     let v = t.get(&format!("/api/dates/regulars/{id}"), &rohit).await.json;
-    assert_eq!((v["day_values"].clone(), v["usual_raw"].clone()), (json!([2, 4]), json!(300)));
+    assert_eq!((v["day_values"].clone(), v["usual_raw"].clone()), (json!([2, 4]), json!("300")));
 
     // Same checks as adding; a bad edit changes nothing.
     let bad = t.post(&format!("/api/dates/regulars/{id}"), &neha, json!({"title": " ", "days": [1]})).await;
@@ -561,19 +561,19 @@ async fn a_night_we_went_to_can_be_repriced_and_shows_in_the_list_and_the_year()
     // Repricing takes commas, refuses blanks, junk and huge amounts, and changes nothing then.
     let ok = t.post(&format!("/api/dates/nights/{vid}/amount"), &neha, json!({"amount": "1,250"})).await;
     assert_eq!(ok.status, StatusCode::OK, "{}", ok.text);
-    assert_eq!(t.scalar("SELECT amount FROM joy_regular_visits").await, 1250);
+    assert_eq!(t.scalar("SELECT amount FROM joy_regular_visits").await, 125_000);
     for bad in [json!(""), json!("lots"), json!("-5"), json!("9999999999999999")] {
         let r = t.post(&format!("/api/dates/nights/{vid}/amount"), &neha, json!({"amount": bad})).await;
         assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{bad}: {}", r.text);
     }
-    assert_eq!(t.scalar("SELECT amount FROM joy_regular_visits").await, 1250);
+    assert_eq!(t.scalar("SELECT amount FROM joy_regular_visits").await, 125_000);
 
     // Someone outside the couple can neither see nor change it.
     assert_eq!(t.post(&format!("/api/dates/nights/{vid}/amount"), &loner, json!({"amount": 1})).await.status, StatusCode::NOT_FOUND);
 
     // It is the same thing as a kept date: one kept date exists, at the new cost, counted once in the year.
     assert_eq!(t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'did_it'").await, 1);
-    assert_eq!(t.scalar("SELECT actual_cost FROM joy_history").await, 1250);
+    assert_eq!(t.scalar("SELECT actual_cost FROM joy_history").await, 125_000);
     let year = day[..4].to_string();
     let page = t.get(&format!("/api/dates/year/{year}"), &rohit).await;
     assert_eq!(page.json["year_total"], json!("₹1,250"), "{}", page.text);
@@ -584,7 +584,7 @@ async fn a_night_we_went_to_can_be_repriced_and_shows_in_the_list_and_the_year()
     // Changing the cost on the kept date changes the night's too; undoing the night removes the date.
     let hid = t.scalar("SELECT id FROM joy_history").await;
     t.post(&format!("/api/dates/history/{hid}/cost"), &rohit, json!({"actual": "400"})).await;
-    assert_eq!(t.scalar("SELECT amount FROM joy_regular_visits").await, 400);
+    assert_eq!(t.scalar("SELECT amount FROM joy_regular_visits").await, 40_000);
     t.post(&format!("/api/dates/nights/{vid}/delete"), &rohit, json!({})).await;
     assert_eq!(t.scalar("SELECT count(*) FROM joy_history").await, 0);
 }

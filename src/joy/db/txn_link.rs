@@ -28,7 +28,7 @@ pub async fn txn_candidates(db: &SqlitePool, user_id: &str, history_id: i64) -> 
                                              AND julianday(date(COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime')) + 3
             AND t.txn_id NOT IN (SELECT txn_id FROM joy_history WHERE txn_id IS NOT NULL)
           ORDER BY ABS(julianday(t.occurred_on) - julianday(date(COALESCE(h.planned_at, h.picked_at), 'unixepoch', 'localtime'))),
-                   ABS(t.amount_paise / 100 - COALESCE(h.est_cost, 0)), t.txn_id
+                   ABS(t.amount_paise - COALESCE(h.est_cost, 0)), t.txn_id
           LIMIT 8",
     )
     .bind(user_id)
@@ -73,10 +73,9 @@ pub async fn link_txn(db: &SqlitePool, couple: &str, user_id: &str, history_id: 
     if taken {
         return Ok(LinkOutcome::Taken);
     }
-    let rupees = (paise + 99) / 100;
     sqlx::query("UPDATE joy_history SET txn_id = ?, actual_cost = ? WHERE id = ? AND couple_id = ?")
         .bind(txn_id)
-        .bind(rupees)
+        .bind(paise)
         .bind(history_id)
         .bind(couple)
         .execute(&mut *tx)

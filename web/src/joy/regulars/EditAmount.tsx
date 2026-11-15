@@ -4,7 +4,7 @@ import { setNightAmount } from "./api";
 import { apiMessage, parseRupees } from "./days";
 
 /** Fix what a night we went to cost. `onSaved` runs after the server has it. */
-export function EditAmount({ visitId, initial, onSaved, onCancel }: { visitId: number; initial: number; onSaved: () => void; onCancel: () => void }) {
+export function EditAmount({ visitId, initial, onSaved, onCancel }: { visitId: number; initial: string; onSaved: () => void; onCancel: () => void }) {
   const { busy, run } = useBusy();
   const [value, setValue] = useState(String(initial));
   const [error, setError] = useState("");

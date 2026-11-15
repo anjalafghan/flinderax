@@ -75,7 +75,7 @@ async fn label_dates(db: &sqlx::SqlitePool, user_id: &str, payload: &JoyPayload)
         .entries
         .iter()
         .filter(|e| !linked.contains(&e.id))
-        .filter_map(|e| Some(DateSpend { day: parse_date(&e.day)?, amount: e.amount * 100 }))
+        .filter_map(|e| Some(DateSpend { day: parse_date(&e.day)?, amount: e.amount }))
         .filter(|e| e.amount > 0)
         .collect();
     let Some(from) = entries.iter().map(|e| e.day).min() else { return Ok(0) };
@@ -130,7 +130,7 @@ pub async fn set_partner(
     }
     if let Some((couple, who)) = couple_of(&state.db, &user_id).await? {
         let key = format!("COVERS_{}", 1 - who);
-        let rupees = (p.partner_paise / 100).to_string();
+        let rupees = p.partner_paise.to_string();
         sqlx::query!(
             "INSERT INTO joy_settings (couple_id, key, value) VALUES (?, ?, ?) ON CONFLICT(couple_id, key) DO UPDATE SET value = excluded.value",
             couple,
@@ -195,12 +195,12 @@ fn fill_month(out: &mut Summary, p: &JoyPayload, partner_paise: i64) {
     let today = today_local();
     let this_month = format!("{:04}-{:02}", today.year(), today.month() as u8);
     let Some(m) = p.months.iter().find(|m| m.month == this_month).or(p.months.last()) else { return };
-    let budget = m.budget.map(|b| (b + m.carry) * 100);
-    let spent = m.spent * 100;
+    let budget = m.budget.map(|b| b + m.carry);
+    let spent = m.spent;
     out.month = Some(MonthOut {
         month: m.month.clone(),
         budget_paise: budget,
-        carry_paise: m.carry * 100,
+        carry_paise: m.carry,
         spent_paise: spent,
         your_share_paise: your_share(spent, budget, partner_paise),
         your_budget_paise: budget.map(|b| (b - partner_paise).max(0)),
@@ -214,8 +214,8 @@ fn fill_month(out: &mut Summary, p: &JoyPayload, partner_paise: i64) {
             day: e.day.clone(),
             title: e.title.clone(),
             kind: e.kind.clone(),
-            amount_paise: e.amount * 100,
-            your_share_paise: your_share(e.amount * 100, budget, partner_paise),
+            amount_paise: e.amount,
+            your_share_paise: your_share(e.amount, budget, partner_paise),
         })
         .collect();
 }
@@ -286,7 +286,7 @@ pub async fn local_payload(db: &sqlx::SqlitePool, couple: &str, who: Option<usiz
 pub async fn partner_covers(db: &sqlx::SqlitePool, couple: &str, who: usize, p: &JoyPayload) -> Result<i64, AppError> {
     let key = format!("COVERS_{}", 1 - who);
     if let Some(v) = crate::joy::db::setting(db, couple, &key).await?.and_then(|v| v.trim().parse::<i64>().ok()) {
-        return Ok(v.max(0) * 100);
+        return Ok(v.max(0));
     }
     let two = sqlx::query_scalar!(
         r#"SELECT (user_0 IS NOT NULL AND user_1 IS NOT NULL) AS "two!: bool" FROM couples WHERE couple_id = ?"#,
@@ -294,7 +294,7 @@ pub async fn partner_covers(db: &sqlx::SqlitePool, couple: &str, who: usize, p: 
     )
     .fetch_one(db)
     .await?;
-    Ok(if two { p.monthly_budget.unwrap_or(0) * 100 / 2 } else { 0 })
+    Ok(if two { p.monthly_budget.unwrap_or(0) / 2 } else { 0 })
 }
 
 // ---------- settling up ----------
@@ -328,7 +328,7 @@ pub async fn settle(State(state): State<AppState>, Extension((user_id, _)): User
     let (couple, who) = crate::handlers::couple::require_couple(db, &user_id).await?;
     let p = local_payload(db, &couple, Some(who)).await?;
     let partner = partner_covers(db, &couple, who, &p).await?;
-    let budget = p.monthly_budget.unwrap_or(0) * 100;
+    let budget = p.monthly_budget.unwrap_or(0);
     let your_share_bps = if budget > 0 { ((budget - partner).clamp(0, budget) * 10_000) / budget } else { 5_000 };
     let since = format!("{}-01", p.months.first().map(|m| m.month.as_str()).unwrap_or("1970-01"));
     let users = sqlx::query!(r#"SELECT user_0, user_1 FROM couples WHERE couple_id = ?"#, couple).fetch_one(db).await?;
