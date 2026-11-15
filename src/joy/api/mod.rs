@@ -576,6 +576,8 @@ pub struct Learned {
     /// Multiply cab estimates by this (None until there are enough real rides).
     pub cab: Option<f64>,
     pub rides: i64,
+    /// How much this couple tends to enjoy each kind of date (nudges the draw).
+    pub taste: crate::joy::taste::Taste,
 }
 
 /// Learned factors are clamped so one odd night can't wreck every estimate.
@@ -586,7 +588,14 @@ pub async fn learned(db: &SqlitePool, couple: &str) -> Result<Learned, AppError>
     let (ratio, n) = db::cost_ratio(db, couple).await?;
     let (cab_ratio, rides) = db::cab_ratio(db, couple).await?;
     let usable = |r: f64, n: i64| (n >= db::MIN_SAMPLES).then(|| r.clamp(FACTOR_RANGE.0, FACTOR_RANGE.1));
-    Ok(Learned { cost: usable(ratio, n), cost_ratio: ratio, cost_samples: n, cab: usable(cab_ratio, rides), rides })
+    let rows: Vec<(String, String, Option<i64>)> = sqlx::query_as(
+        "SELECT a.tags, h.outcome, h.rating FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id WHERE h.couple_id = ?",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await?;
+    let taste = crate::joy::taste::Taste::from_history(rows.iter().map(|(t, o, r)| (t.as_str(), o.as_str(), *r)));
+    Ok(Learned { cost: usable(ratio, n), cost_ratio: ratio, cost_samples: n, cab: usable(cab_ratio, rides), rides, taste })
 }
 
 /// "Closed Mondays & Wednesdays · Nov–May only".

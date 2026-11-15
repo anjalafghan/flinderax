@@ -1,5 +1,5 @@
 // Regulars: weekday labels, form payloads and error text. Pure.
-import { ApiError, type Go } from "../api";
+import { ApiError } from "../api";
 
 export const WEEKDAY_PLURALS = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"] as const;
 
@@ -99,10 +99,6 @@ export function apiMessage(e: unknown, fallback = "That didn’t work. Try again
   return fallback;
 }
 
-export const isGo = (g: unknown): g is Go => !!g && typeof (g as Go).to === "string";
-
-/** A path under /joy for `back` (the server only accepts paths that start with "/"). */
-export const regularPath = (id: number | string) => `/joy/regulars/${id}`;
 
 /** "1 night" / "3 nights" */
 export const nightsWord = (n: number) => (n === 1 ? "night" : "nights");

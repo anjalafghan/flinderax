@@ -429,6 +429,7 @@ impl JarData {
                     _ => distance_from(ctx, a, f.from()),
                 };
                 let mut c = a.candidate(km, self.learned.cost);
+                c.taste = self.learned.taste.factor(&c.tags);
                 // "The time we have" is door to door: two hours in Andheri is most of a day from
                 // home. An evening from the office has its own clock (the fit above).
                 let from_office = self.slot.is_some_and(|sl| sl.kind == schedule::Kind::Weeknight);

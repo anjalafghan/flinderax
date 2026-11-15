@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import { TabBar } from './components/layout/Header'
 import { useAuth } from './context/AuthContext'
@@ -52,168 +52,37 @@ function App() {
             path="/auth"
             element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />}
           />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/account"
-            element={
-              <ProtectedRoute>
-                <AccountPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/cards/new"
-            element={
-              <ProtectedRoute>
-                <CreateCardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/cards/:id"
-            element={
-              <ProtectedRoute>
-                <CardDetailsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/accounts"
-            element={
-              <ProtectedRoute>
-                <AccountsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/plan"
-            element={
-              <ProtectedRoute>
-                <PlanPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/working"
-            element={
-              <ProtectedRoute>
-                <WorkingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/what-if"
-            element={
-              <ProtectedRoute>
-                <WhatIfPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/spending"
-            element={
-              <ProtectedRoute>
-                <SpendingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/money"
-            element={
-              <ProtectedRoute>
-                <MoneyPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/spending/sort"
-            element={
-              <ProtectedRoute>
-                <SortPayeesPage />
-              </ProtectedRoute>
-            }
-          />
           {/* Public: the envelope a date arrives in. No login, no app chrome. */}
           <Route path="/joy/e/:token" element={<EnvelopePage />} />
+          {/* Everything below needs a login. */}
           <Route
-            path="/joy/*"
             element={
               <ProtectedRoute>
-                <DatesApp />
+                <Outlet />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="/health"
-            element={
-              <ProtectedRoute>
-                <HealthPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/people"
-            element={
-              <ProtectedRoute>
-                <PeoplePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/people/:id"
-            element={
-              <ProtectedRoute>
-                <PersonPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/work"
-            element={
-              <ProtectedRoute>
-                <WorkPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/week"
-            element={
-              <ProtectedRoute>
-                <WeekPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/review"
-            element={
-              <ProtectedRoute>
-                <ReviewPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/life"
-            element={
-              <ProtectedRoute>
-                <LifePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/checkin"
-            element={
-              <ProtectedRoute>
-                <CheckInPage />
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/cards/new" element={<CreateCardPage />} />
+            <Route path="/cards/:id" element={<CardDetailsPage />} />
+            <Route path="/accounts" element={<AccountsPage />} />
+            <Route path="/plan" element={<PlanPage />} />
+            <Route path="/working" element={<WorkingPage />} />
+            <Route path="/what-if" element={<WhatIfPage />} />
+            <Route path="/spending" element={<SpendingPage />} />
+            <Route path="/money" element={<MoneyPage />} />
+            <Route path="/spending/sort" element={<SortPayeesPage />} />
+            <Route path="/joy/*" element={<DatesApp />} />
+            <Route path="/health" element={<HealthPage />} />
+            <Route path="/people" element={<PeoplePage />} />
+            <Route path="/people/:id" element={<PersonPage />} />
+            <Route path="/work" element={<WorkPage />} />
+            <Route path="/week" element={<WeekPage />} />
+            <Route path="/review" element={<ReviewPage />} />
+            <Route path="/life" element={<LifePage />} />
+            <Route path="/checkin" element={<CheckInPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

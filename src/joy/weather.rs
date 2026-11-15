@@ -1,23 +1,41 @@
 //! Tonight's rain chance from Open-Meteo (free, no key). Cached for an hour and
 //! fails open: any error just means "no forecast", never a broken jar.
+//!
+//! Three things keep it cheap and honest: the cache is per calendar day (an answer from last night
+//! is never "tonight"); one fetch at a time, so a burst of requests after the cache expires makes
+//! one call, not many; and when the API is down we keep showing the last good answer from today
+//! instead of dropping the hint.
 
-use std::{
-    sync::Mutex,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
+use time::Date;
+use tokio::sync::Mutex;
 
 /// Rain counts as "likely" at or above this chance.
 pub const LIKELY_PERCENT: u8 = 60;
 const FRESH: Duration = Duration::from_secs(60 * 60);
 const RETRY_AFTER_ERROR: Duration = Duration::from_secs(10 * 60);
 
+/// What the last lookup learned: the local day it is for, when, and the answer (None = unknown).
+#[derive(Clone, Copy)]
+struct Entry {
+    day: Date,
+    at: Instant,
+    value: Option<u8>,
+}
+
+/// The cached value to serve now, if the entry is still good for `today`.
+fn fresh(e: &Entry, today: Date, now: Instant) -> Option<Option<u8>> {
+    let ttl = if e.value.is_some() { FRESH } else { RETRY_AFTER_ERROR };
+    (e.day == today && now.duration_since(e.at) < ttl).then_some(e.value)
+}
+
 pub struct Weather {
     /// Where to look: between our two homes. None turns the feature off.
     at: Option<(f64, f64)>,
     client: reqwest::Client,
-    cache: Mutex<Option<(Instant, Option<u8>)>>,
+    cache: Mutex<Option<Entry>>,
     /// WEATHER_FAKE_PERCENT, for design work: pretend tonight's rain chance is this.
     fake: Option<u8>,
 }
@@ -48,17 +66,22 @@ impl Weather {
             return self.fake;
         }
         let (lat, lng) = self.at?;
-        if let Some((at, value)) = *self.cache.lock().unwrap() {
-            let ttl = if value.is_some() { FRESH } else { RETRY_AFTER_ERROR };
-            if at.elapsed() < ttl {
-                return value;
+        let today = crate::handlers::common::today_local();
+        // Held across the fetch on purpose: concurrent callers wait for the one in flight.
+        let mut cache = self.cache.lock().await;
+        if let Some(hit) = cache.as_ref().and_then(|e| fresh(e, today, Instant::now())) {
+            return hit;
+        }
+        let fetched = self.fetch(lat, lng).await;
+        let value = match fetched {
+            Some(v) => Some(v),
+            None => {
+                tracing::warn!("weather: no forecast, carrying on without it");
+                // Keep today's last good answer rather than losing the hint to a blip.
+                cache.as_ref().filter(|e| e.day == today).and_then(|e| e.value)
             }
-        }
-        let value = self.fetch(lat, lng).await;
-        if value.is_none() {
-            tracing::warn!("weather: no forecast, carrying on without it");
-        }
-        *self.cache.lock().unwrap() = Some((Instant::now(), value));
+        };
+        *cache = Some(Entry { day: today, at: Instant::now(), value });
         value
     }
 
@@ -102,6 +125,28 @@ mod tests {
             precipitation_probability: (0..24).map(|i| Some(if i == 9 { 95 } else if i == 20 { 70 } else { 10 })).collect(),
         };
         assert_eq!(evening_max(&h), Some(70));
+    }
+
+    fn entry(day: Date, age: u64, value: Option<u8>) -> (Entry, Instant) {
+        let now = Instant::now();
+        (Entry { day, at: now, value }, now + Duration::from_secs(age))
+    }
+
+    #[test]
+    fn cache_is_per_day_and_expires() {
+        let d1 = time::macros::date!(2026 - 11 - 15);
+        let d2 = time::macros::date!(2026 - 11 - 16);
+        let (e, soon) = entry(d1, 60, Some(80));
+        assert_eq!(fresh(&e, d1, soon), Some(Some(80)));
+        // Yesterday's answer is never tonight's.
+        assert_eq!(fresh(&e, d2, soon), None);
+        let (e, later) = entry(d1, 61 * 60, Some(80));
+        assert_eq!(fresh(&e, d1, later), None);
+        // A failed lookup is retried sooner than a good one expires.
+        let (e, t) = entry(d1, 11 * 60, None);
+        assert_eq!(fresh(&e, d1, t), None);
+        let (e, t) = entry(d1, 5 * 60, None);
+        assert_eq!(fresh(&e, d1, t), Some(None));
     }
 
     #[test]

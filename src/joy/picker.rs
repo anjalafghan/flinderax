@@ -88,6 +88,8 @@ pub struct Candidate {
     /// Why it doesn't fit the date we're drawing for ("closes at 9"), or None when it does
     /// (or we're not drawing for a particular date).
     pub window_miss: Option<String>,
+    /// Learned liking for this kind of date (see `taste`): about 0.7 to 1.3, 1.0 = no opinion.
+    pub taste: f64,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -192,7 +194,7 @@ fn checks(c: &Candidate, f: &Filters) -> Checks {
 /// Higher weight = more likely. Never-done ideas get a boost, older ones
 /// climb back up over ~2 months, recently skipped ones are damped.
 pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
-    let mut w = match c.last_done_at {
+    let mut w = c.taste * match c.last_done_at {
         None => 3.0,
         Some(t) => 1.0 + ((now - t).max(0) as f64 / (30 * DAY) as f64).min(2.0),
     };
@@ -340,6 +342,7 @@ mod tests {
             closed_days: vec![],
             season: None,
             window_miss: None,
+            taste: 1.0,
         }
     }
 
@@ -501,6 +504,14 @@ mod tests {
         let fresh_wins = results.iter().filter(|p| **p == PickResult::Pick(1)).count();
         // weights 3.0 vs ~1.03 -> ~74%
         assert!((2700..3200).contains(&fresh_wins), "fresh won {fresh_wins}/4000");
+    }
+
+    #[test]
+    fn taste_scales_the_weight() {
+        let mut c = cand(1, 0, "home", Duration::Short);
+        let base = weight(&c, NOW, false);
+        c.taste = 1.3;
+        assert!((weight(&c, NOW, false) - base * 1.3).abs() < 1e-9);
     }
 
     #[test]

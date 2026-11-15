@@ -1,9 +1,18 @@
 // Regulars, nights and photos. Photo links in these views are signed public URLs: use them in <img src> as-is.
 import type { Go } from "../api";
-import { get, post, upload } from "./http";
+import { get, post, upload as uploadWithProgress } from "../api";
 import type { NewRegularBody, WentBody } from "./days";
 
 const BASE = "/api/dates";
+
+/** multipart POST with upload progress (fetch can't report it). `onProgress` gets 0..1. */
+function upload<T>(url: string, form: FormData, onProgress?: (fraction: number) => void): Promise<T> {
+  return uploadWithProgress<T>(url, form, {
+    onProgress: (loaded, total) => {
+      if (total > 0) onProgress?.(loaded / total);
+    },
+  });
+}
 
 export interface ListItem {
   id: number;

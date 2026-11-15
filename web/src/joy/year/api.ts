@@ -1,6 +1,6 @@
 // The year and month pages' calls. Photo links are signed public URLs: use them in <img src> as-is.
 import type { Go } from "../api";
-import { get } from "../regulars/http";
+import { get } from "../api";
 import type { ShareData } from "./layout";
 
 const BASE = "/api/dates";

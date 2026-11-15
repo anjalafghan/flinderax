@@ -9,4 +9,6 @@ pub mod photos;
 pub mod picker;
 pub mod schedule;
 pub mod travel;
+pub mod enrich;
+pub mod taste;
 pub mod weather;

@@ -108,6 +108,7 @@ impl Activity {
             closed_days: crate::joy::picker::parse_closed(&self.closed_days),
             season: self.season(),
             window_miss: None,
+            taste: 1.0,
         }
     }
 }
