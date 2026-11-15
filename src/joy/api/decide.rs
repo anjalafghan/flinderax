@@ -443,6 +443,8 @@ pub struct JarData {
     pub today: Today,
     /// The date we're drawing for, when we have a schedule and didn't say "any time".
     pub slot: Option<Slot>,
+    /// (setting, main tag) of the last two dates that happened.
+    pub recent: Vec<(String, String)>,
 }
 
 pub async fn jar_data(db: &SqlitePool, couple: &str, _ctx: &Ctx, who: usize, slot: Option<Slot>) -> Result<JarData, AppError> {
@@ -456,7 +458,7 @@ pub async fn jar_data(db: &SqlitePool, couple: &str, _ctx: &Ctx, who: usize, slo
             Today { weekday, month }
         }
     };
-    Ok(JarData { acts, learned: learned(db, couple).await?, today, slot })
+    Ok(JarData { acts, learned: learned(db, couple).await?, today, slot, recent: db::recent_kinds(db, couple).await? })
 }
 
 impl JarData {
@@ -470,6 +472,7 @@ impl JarData {
                 };
                 let mut c = a.candidate(km, self.learned.cost);
                 c.taste = self.learned.taste.factor(&c.tags);
+                c.like_recent = self.recent.iter().any(|(setting, tag)| *setting == c.setting && !tag.is_empty() && c.tags.first() == Some(tag));
                 // "The time we have" is door to door: two hours in Andheri is most of a day from
                 // home. An evening from the office has its own clock (the fit above).
                 let from_office = self.slot.is_some_and(|sl| sl.kind == schedule::Kind::Weeknight);

@@ -91,7 +91,12 @@ pub struct Candidate {
     pub taste: f64,
     /// Would rain spoil it? From the slip's cover, falling back to the "outdoors" tag.
     pub outdoor: bool,
+    /// Same setting and main tag as one of the last two dates we had.
+    pub like_recent: bool,
 }
+
+/// How much a kind of date we just had is damped, so the jar does not hand out the same evening twice.
+pub const VARIETY_DAMP: f64 = 0.6;
 
 #[derive(Debug, Clone, Default)]
 pub struct Filters {
@@ -201,6 +206,9 @@ pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
     };
     if c.last_skipped_at.is_some_and(|t| now - t < 3 * DAY) {
         w *= 0.5;
+    }
+    if c.like_recent {
+        w *= VARIETY_DAMP;
     }
     // Rain doesn't rule outdoor plans out, it just lets the cozy ones float up.
     if rain_likely && c.outdoor {
@@ -327,6 +335,7 @@ mod tests {
             window_miss: None,
             taste: 1.0,
             outdoor: false,
+            like_recent: false,
         }
     }
 
@@ -509,6 +518,15 @@ mod tests {
         assert_eq!(old, 3.0, "capped");
         c.last_skipped_at = Some(NOW - DAY);
         assert_eq!(weight(&c, NOW, false), 1.5);
+    }
+
+    #[test]
+    fn a_kind_of_date_we_just_had_is_damped_so_the_jar_does_not_repeat_itself() {
+        let mut c = cand(1, 0, "local", Duration::Short);
+        let plain = weight(&c, NOW, false);
+        c.like_recent = true;
+        assert!(weight(&c, NOW, false) < plain);
+        assert_eq!(weight(&c, NOW, false), plain * VARIETY_DAMP);
     }
 
     #[test]

@@ -110,6 +110,7 @@ impl Activity {
             window_miss: None,
             taste: 1.0,
             outdoor: self.outdoor(),
+            like_recent: false,
         }
     }
 }
@@ -595,6 +596,19 @@ pub async fn accept(db: &SqlitePool, couple: &str, id: i64, drawn_by: Option<usi
     .await?;
     tx.commit().await?;
     Ok(row)
+}
+
+/// The (setting, main tag) of the last two dates that happened, newest first: what we just did.
+pub async fn recent_kinds(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(String, String)>> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT a.setting, a.tags FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id
+         WHERE h.couple_id = ? AND h.outcome = 'did_it' AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()
+         ORDER BY COALESCE(h.planned_at, h.picked_at) DESC, h.id DESC LIMIT 2",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await?;
+    Ok(rows.into_iter().map(|(s, t)| (s, t.split(',').next().unwrap_or("").trim().to_lowercase())).collect())
 }
 
 /// The most recent kept date whose day has passed and that nobody has confirmed, rated or priced:
