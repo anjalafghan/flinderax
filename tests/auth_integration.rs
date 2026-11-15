@@ -1130,3 +1130,20 @@ async fn coming_up_puts_bills_birthdays_and_follow_ups_in_one_list() {
     let other = new_user(&app, "10.0.1.3", "nosy").await;
     assert_eq!(authed_get(&app, &other, "/api/coming-up").await["items"], json!([]));
 }
+
+#[tokio::test]
+async fn a_refund_is_not_counted_as_income() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.1.4", "refunded").await;
+    authed_post(&app, &t, "/api/account/create", json!({"name": "HDFC", "kind": "bank", "balance_paise": 100, "last_4_digits": "1234"})).await;
+    let (_, b) = authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
+    let key = serde_json::from_str::<Value>(&b).unwrap()["key"].as_str().unwrap().to_string();
+
+    let (_, v) = hook_post(&app, &key, "Refund of INR 1,299.00 credited to HDFC Bank A/c XX1234 from AMAZON PAY on 12-11-26. Ref 55501.").await;
+    assert_eq!(v["status"], "created", "{v}");
+    assert_eq!(v["transaction"]["category"], "refund", "{v}");
+
+    // Salary still reads as income.
+    let (_, v) = hook_post(&app, &key, "Update! INR 90,000.00 deposited in HDFC Bank A/c XX1234 for NEFT Cr-ACME CORP. Ref 77712.").await;
+    assert_eq!(v["transaction"]["category"], "income", "{v}");
+}

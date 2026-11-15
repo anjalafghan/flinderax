@@ -247,7 +247,11 @@ pub async fn ingest_text(
         .date
         .filter(|d| *d <= today && *d >= today - Duration::days(MAX_ALERT_AGE_DAYS))
         .unwrap_or(today);
-    let category = categorize(alert.merchant.as_deref(), alert.direction, alert.card_payment, &load_rules(db, user_id).await?);
+    let mut category = categorize(alert.merchant.as_deref(), alert.direction, alert.card_payment, &load_rules(db, user_id).await?);
+    // Money coming back for something you bought is not income.
+    if category == "income" && alert.direction == alerts::Direction::Credit && alerts::is_refund_text(text) {
+        category = "refund".into();
+    }
     let direction = alert.direction.as_str();
     let dedupe_key = match &alert.reference {
         Some(r) => format!("ref:{r}:{direction}"),

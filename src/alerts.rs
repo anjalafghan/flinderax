@@ -159,6 +159,11 @@ fn find_merchant(text: &str, direction: Direction) -> Option<String> {
     None
 }
 
+/// Does the text say this credit is money coming back (a refund, reversal or cashback)?
+pub fn is_refund_text(text: &str) -> bool {
+    regex!(r"(?i)\b(refund(ed)?|reversed|reversal|cashback)\b").is_match(text)
+}
+
 /// Reads one alert. `None` when the text is not a completed transaction.
 pub fn parse(raw: &str) -> Option<Alert> {
     let text = regex!(r"\s+").replace_all(raw, " ").trim().to_string();
