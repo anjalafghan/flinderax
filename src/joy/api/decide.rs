@@ -542,6 +542,8 @@ pub struct PickCard {
     /// For the stamp on an accepted pick, e.g. "14 · 10 · 2026".
     pub stamp_date: String,
     pub pairs: Vec<PairOffer>,
+    /// Why this slip came up: "Never done", "Fits ₹1,500", "About 12 km away".
+    pub why: Vec<String>,
     /// On an accepted pair: the second slip.
     pub paired: Option<ActivityView>,
     /// Joy's hidden fields for a reroll.
@@ -591,6 +593,7 @@ impl PickCard {
             stamp_date: String::new(),
             middle: false,
             pairs: vec![],
+            why: vec![],
             paired: None,
             hidden: vec![],
             state: None,
@@ -755,7 +758,23 @@ async fn card(
         _ => (vec![], String::new()),
     };
     let current = a.map_or(0, |a| a.id);
+    let why = match a {
+        Some(a) => {
+            let money = |n: i64| ctx.money(n);
+            why(&WhyInput {
+                times_done: a.times_done,
+                cost: a.effective_cost(learned.cost),
+                budget: f.filters().budget,
+                km: distance_from(ctx, a, f.from()),
+                max_km: f.filters().max_km,
+                taste: learned.taste.factor(&a.tag_list()),
+                money: &money,
+            })
+        }
+        None => vec![],
+    };
     Ok(PickCard {
+        why,
         when: slot.map(|sl| sl.key()).unwrap_or_else(|| "any".into()),
         start: f.start().into(),
         route,
@@ -994,6 +1013,66 @@ pub async fn accept(
         activity: view,
         ..PickCard::blank()
     }))
+}
+
+/// Why this slip came up, in a few plain words (the inputs the picker already weighs).
+pub(crate) struct WhyInput<'a> {
+    pub times_done: i64,
+    pub cost: i64,
+    pub budget: i64,
+    pub km: Option<f64>,
+    pub max_km: Option<f64>,
+    pub taste: f64,
+    pub money: &'a dyn Fn(i64) -> String,
+}
+
+pub(crate) fn why(i: &WhyInput) -> Vec<String> {
+    let mut out = vec![];
+    if i.times_done == 0 {
+        out.push("Never done".to_string());
+    }
+    if i.budget != i64::MAX {
+        out.push(if i.cost == 0 { "Free".to_string() } else { format!("Fits {}", (i.money)(i.budget)) });
+    }
+    if let (Some(km), Some(max)) = (i.km, i.max_km)
+        && km <= max {
+            out.push(format!("About {} km away", km.round() as i64));
+        }
+    if i.taste >= 1.1 {
+        out.push("Like dates you've enjoyed".to_string());
+    }
+    out
+}
+
+#[cfg(test)]
+mod why_tests {
+    use super::*;
+
+    fn money(n: i64) -> String {
+        format!("₹{n}")
+    }
+
+    fn input(f: impl FnOnce(&mut WhyInput)) -> Vec<String> {
+        let mut i = WhyInput { times_done: 3, cost: 500, budget: i64::MAX, km: None, max_km: None, taste: 1.0, money: &money };
+        f(&mut i);
+        why(&i)
+    }
+
+    #[test]
+    fn says_nothing_when_there_is_nothing_to_say() {
+        assert!(input(|_| {}).is_empty());
+    }
+
+    #[test]
+    fn names_what_the_draw_used() {
+        assert_eq!(input(|i| i.times_done = 0), ["Never done"]);
+        assert_eq!(input(|i| i.budget = 1500), ["Fits ₹1500"]);
+        assert_eq!(input(|i| { i.budget = 1500; i.cost = 0 }), ["Free"]);
+        assert_eq!(input(|i| { i.km = Some(12.4); i.max_km = Some(20.0) }), ["About 12 km away"]);
+        assert!(input(|i| { i.km = Some(30.0); i.max_km = Some(20.0) }).is_empty(), "too far is not a reason");
+        assert_eq!(input(|i| i.taste = 1.2), ["Like dates you've enjoyed"]);
+        assert_eq!(input(|i| { i.times_done = 0; i.taste = 1.3 }), ["Never done", "Like dates you've enjoyed"]);
+    }
 }
 
 #[cfg(test)]

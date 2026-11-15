@@ -984,3 +984,13 @@ async fn saving_a_slip_fills_what_it_can_and_says_so() {
     assert!(r.json.get("filled").is_none_or(|f| f.as_array().unwrap().is_empty()), "{}", r.text);
     assert_eq!(t.text(&format!("SELECT closed_days FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Quiet museum'")).await, "fri");
 }
+
+#[tokio::test]
+async fn the_pick_card_says_why_this_slip() {
+    let t = setup().await;
+    let (rohit, _, _) = t.couple().await;
+    let card = t.post("/api/dates/pick", &rohit, json!({"budget": 100000})).await;
+    let why: Vec<&str> = card.json["why"].as_array().unwrap().iter().map(|v| v.as_str().unwrap()).collect();
+    assert!(why.iter().any(|w| w.starts_with("Fits ") || *w == "Free"), "{why:?}");
+    assert!(why.contains(&"Never done"), "a fresh jar has never done anything: {why:?}");
+}

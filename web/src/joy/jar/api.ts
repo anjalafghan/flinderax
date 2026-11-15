@@ -146,6 +146,8 @@ export interface PickCard {
   done: boolean;
   stamp_date: string;
   pairs: PairOffer[];
+  /** Why this slip came up: "Never done", "Fits ₹1,500", "About 12 km away". */
+  why: string[];
   paired: ActivityView | null;
   state: PickForm | null;
   can_surprise: boolean;

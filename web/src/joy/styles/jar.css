@@ -481,6 +481,7 @@
 .closeout-d { font-weight: 400; color: var(--ink-soft); }
 .closeout-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
 .closeout-err { color: var(--stamp); font-size: var(--step--1); }
+.slip-why { margin: 10px 0 0; font: 600 1.3rem/1.1 var(--font-hand); color: var(--ink-soft); }
 .putback-why { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 12px; }
 .putback-why-label { font: 600 1.3rem/1.1 var(--font-hand); color: var(--ink-soft); margin-right: 2px; }
 .btn-why {

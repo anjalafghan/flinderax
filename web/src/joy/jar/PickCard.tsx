@@ -333,6 +333,11 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
             </>
           )}
           {card.plan && <DayPlanView plan={card.plan} onSwapped={actions.planSwapped} />}
+          {card.why.length > 0 && (
+            <p className="slip-why" aria-label="Why this one">
+              {card.why.join(" · ")}
+            </p>
+          )}
           <div className="slip-actions">
             <Link className="btn btn-quiet" to="/joy/kept">
               See it in Kept
