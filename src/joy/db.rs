@@ -2168,6 +2168,12 @@ pub async fn archive_regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Re
 /// Fill a new couple's jar: copies every starter slip in `joy_seed_activities` into their
 /// `joy_activities`. Returns how many slips were added.
 pub async fn seed_new_couple(db: &SqlitePool, couple: &str) -> sqlx::Result<u64> {
+    let mut conn = db.acquire().await?;
+    seed_new_couple_in(&mut conn, couple).await
+}
+
+/// The one copy of the starter-slip SQL, usable inside a larger transaction (creating a couple).
+pub async fn seed_new_couple_in(conn: &mut sqlx::SqliteConnection, couple: &str) -> sqlx::Result<u64> {
     let done = sqlx::query(
         "INSERT INTO joy_activities (couple_id, title, notes, est_cost, setting, area, venue, lat, lng, duration, tags, energy,
                 added_by, generated, closed_days, season_from, season_to, hours, best_time, minutes, booking,
@@ -2178,7 +2184,7 @@ pub async fn seed_new_couple(db: &SqlitePool, couple: &str) -> sqlx::Result<u64>
            FROM joy_seed_activities ORDER BY id",
     )
     .bind(couple)
-    .execute(db)
+    .execute(&mut *conn)
     .await?;
     Ok(done.rows_affected())
 }
