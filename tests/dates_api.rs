@@ -1135,3 +1135,14 @@ async fn a_quiet_mark_is_only_ever_shown_to_whoever_made_it_until_you_both_want_
     let (loner, _) = t.loner().await;
     assert_eq!(t.post(&url, &loner, json!({"level": "want"})).await.status, StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn tags_are_saved_in_the_jars_own_words() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let r = t
+        .post("/api/dates/slips", &rohit, json!({"title": "Pottery night", "est_cost": 800, "setting": "local", "duration": "short", "energy": "low", "tags": "Cosy, Food, pottery, cozy"}))
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(t.text(&format!("SELECT tags FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Pottery night'")).await, "cozy,foodie,pottery");
+}

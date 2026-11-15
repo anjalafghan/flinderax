@@ -287,13 +287,7 @@ pub async fn duplicate_of(db: &SqlitePool, couple: &str, title: &str, except: Op
 
 /// Insert or update a slip and its pairs; returns its id.
 pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityInput, latlng: Option<(f64, f64)>) -> sqlx::Result<i64> {
-    let tags = a
-        .tags
-        .split(',')
-        .map(|t| t.trim().to_lowercase())
-        .filter(|t| !t.is_empty())
-        .collect::<Vec<_>>()
-        .join(",");
+    let tags = crate::joy::tags::normalise(&a.tags);
     let sql = match id {
         None => "INSERT INTO joy_activities (title, notes, est_cost, setting, duration, venue, area, lat, lng, tags, energy, added_by,
                  closed_days, season_from, season_to, hours, best_time, minutes, booking, book_ahead_days, cover, bring,
@@ -582,7 +576,8 @@ const MAX_TAG_LEN: usize = 24;
 
 /// At most 12 tags of at most 24 characters each.
 pub fn tags_fit(tags: &str) -> bool {
-    let list: Vec<&str> = tags.split(',').map(str::trim).filter(|t| !t.is_empty()).collect();
+    let normalised = crate::joy::tags::normalise(tags);
+    let list: Vec<&str> = normalised.split(',').filter(|t| !t.is_empty()).collect();
     list.len() <= MAX_TAGS && list.iter().all(|t| t.chars().count() <= MAX_TAG_LEN)
 }
 
