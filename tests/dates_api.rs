@@ -836,3 +836,89 @@ async fn confirming_a_date_clears_the_question_and_a_future_one_cannot_be_closed
     assert!(t.get("/api/dates/jar", &rohit).await.json["to_close"].is_null());
     assert_eq!(done_count(&t, &couple, id).await.0, 1);
 }
+
+// ── a slip must be drawable to be kept (S4) ───────────────────────────────
+
+#[tokio::test]
+async fn an_archived_or_passed_on_slip_cannot_be_kept_or_planned() {
+    let t = setup().await;
+    let (rohit, neha, couple) = t.couple().await;
+    let cook = t.id_of(&couple, "Cook together").await;
+    let drive = t.id_of(&couple, "Long drive to Lonavala").await;
+    t.post(&format!("/api/dates/slips/{cook}/archive"), &rohit, json!({})).await;
+    t.post("/api/dates/pick", &neha, json!({"veto": true, "current": drive})).await;
+
+    for id in [cook, drive] {
+        let before = t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'did_it'").await;
+        assert_eq!(t.post(&format!("/api/dates/accept/{id}"), &rohit, json!({})).await.status, StatusCode::NOT_FOUND, "accept {id}");
+        let plan = t.post(&format!("/api/dates/slips/{id}/plan"), &rohit, json!({"at": "2030-01-01T19:00"})).await;
+        assert_eq!(plan.status, StatusCode::NOT_FOUND, "plan {id}: {}", plan.text);
+        assert_eq!(t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'did_it'").await, before);
+    }
+}
+
+// ── one-off slips stay out of the drawer (S7) ─────────────────────────────
+
+#[tokio::test]
+async fn a_hand_added_dates_one_off_slip_is_not_in_the_drawer_and_cannot_be_restored() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let r = t.post("/api/dates/history/custom", &rohit, json!({"title": "Sunset walk", "on": "2026-03-14"})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    let slip = t.id_of(&couple, "Sunset walk").await;
+    let page = t.get("/api/dates/slips", &rohit).await.json;
+    assert!(page["archived"].as_array().unwrap().iter().all(|a| a["id"] != slip), "not in the drawer");
+    let r = t.post(&format!("/api/dates/slips/{slip}/restore"), &rohit, json!({})).await;
+    assert_eq!(r.status, StatusCode::NOT_FOUND);
+    assert_eq!(t.scalar(&format!("SELECT archived FROM joy_activities WHERE id = {slip}")).await, 1);
+}
+
+// ── server-side limits (S8) ───────────────────────────────────────────────
+
+#[tokio::test]
+async fn slip_text_has_limits_and_energy_is_checked() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let ok = json!({"title": "Sunset", "est_cost": 0, "setting": "local", "duration": "short", "energy": "low"});
+    let long = |n: usize| "x".repeat(n);
+    let tags = (0..13).map(|i| format!("t{i}")).collect::<Vec<_>>().join(",");
+    for (field, value, msg) in [
+        ("title", json!(long(121)), "name"),
+        ("venue", json!(long(121)), "place"),
+        ("area", json!(long(121)), "area"),
+        ("notes", json!(long(2001)), "notes"),
+        ("tags", json!(tags), "tags"),
+        ("tags", json!(long(25)), "tags"),
+        ("energy", json!("hyper"), "energy"),
+    ] {
+        let mut b = ok.clone();
+        b[field] = value;
+        let r = t.post("/api/dates/slips", &rohit, b).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{field}: {}", r.text);
+        assert!(r.json["error"].as_str().unwrap().to_lowercase().contains(msg), "{field}: {}", r.text);
+    }
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Sunset'")).await, 0);
+    let mut b = ok.clone();
+    b["title"] = json!(long(120));
+    b["tags"] = json!((0..12).map(|i| format!("tag{i}")).collect::<Vec<_>>().join(","));
+    assert_eq!(t.post("/api/dates/slips", &rohit, b).await.status, StatusCode::OK, "right at the limits is fine");
+}
+
+// ── bringing a slip back only takes back your own pass (S10) ──────────────
+
+#[tokio::test]
+async fn bringing_a_slip_back_clears_only_your_own_pass() {
+    let t = setup().await;
+    let (rohit, neha, couple) = t.couple().await;
+    let drive = t.id_of(&couple, "Long drive to Lonavala").await;
+    t.post("/api/dates/pick", &rohit, json!({"veto": true, "current": drive})).await;
+    t.post("/api/dates/pick", &neha, json!({"veto": true, "current": drive})).await;
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_vetoes WHERE activity_id = {drive}")).await, 2);
+
+    t.post(&format!("/api/dates/slips/{drive}/unveto"), &rohit, json!({})).await;
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_vetoes WHERE activity_id = {drive}")).await, 1, "Neha's pass stays");
+    assert!(!ids(&t.post("/api/dates/match", &neha, json!({})).await.json).contains(&drive), "still out of the draw");
+
+    t.post(&format!("/api/dates/slips/{drive}/unveto"), &neha, json!({})).await;
+    assert!(ids(&t.post("/api/dates/match", &neha, json!({})).await.json).contains(&drive), "back once nobody has passed");
+}

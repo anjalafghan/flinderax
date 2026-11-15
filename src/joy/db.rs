@@ -211,7 +211,7 @@ const COLS: &str = "id, title, notes, est_cost, setting, area, venue, lat, lng, 
 
 pub async fn list(db: &SqlitePool, couple: &str, archived: bool) -> sqlx::Result<Vec<Activity>> {
     sqlx::query_as(&format!(
-        "SELECT {COLS} FROM joy_activities WHERE couple_id = ? AND archived = ? ORDER BY est_cost, title"
+        "SELECT {COLS} FROM joy_activities WHERE couple_id = ? AND archived = ? AND (archived = 0 OR custom = 0) ORDER BY est_cost, title"
     ))
     .bind(couple)
     .bind(archived)
@@ -258,6 +258,8 @@ pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityIn
         .join(",");
     let month = |s: &str| s.trim().parse::<i64>().ok().filter(|m| (1..=12).contains(m));
     let season = month(&a.season_from).zip(month(&a.season_to));
+    // The slip and its pairs are saved together or not at all.
+    let mut tx = db.begin().await?;
     let done = sqlx::query(sql)
         .bind(a.title.split_whitespace().collect::<Vec<_>>().join(" "))
         .bind(a.notes.trim())
@@ -285,7 +287,7 @@ pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityIn
         .bind(capped(&a.station.split_whitespace().collect::<Vec<_>>().join(" "), 60))
         .bind(small_number(&a.station_walk_min, 120))
         .bind(couple)
-        .execute(db)
+        .execute(&mut *tx)
         .await?;
     // Editing a slip that isn't this couple's matches nothing.
     if id.is_some() && done.rows_affected() == 0 {
@@ -293,7 +295,8 @@ pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityIn
     }
     // From this statement's own result: a separate query could run on another pool connection.
     let id = id.unwrap_or(done.last_insert_rowid());
-    set_pairs(db, couple, id, &a.pairs).await?;
+    set_pairs_in(&mut tx, couple, id, &a.pairs).await?;
+    tx.commit().await?;
     Ok(id)
 }
 
@@ -334,13 +337,18 @@ pub async fn visible_partners(db: &SqlitePool, couple: &str, who: usize, id: i64
 /// Both ends must be this couple's slips; anything else is skipped.
 pub async fn set_pairs(db: &SqlitePool, couple: &str, id: i64, with: &[i64]) -> sqlx::Result<()> {
     let mut tx = db.begin().await?;
+    set_pairs_in(&mut tx, couple, id, with).await?;
+    tx.commit().await
+}
+
+async fn set_pairs_in(tx: &mut sqlx::SqliteConnection, couple: &str, id: i64, with: &[i64]) -> sqlx::Result<()> {
     let mine: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM joy_activities WHERE id = ? AND couple_id = ?)")
         .bind(id)
         .bind(couple)
         .fetch_one(&mut *tx)
         .await?;
     if !mine {
-        return tx.rollback().await;
+        return Ok(());
     }
     sqlx::query("DELETE FROM joy_pairs WHERE a_id = ?1 OR b_id = ?1").bind(id).execute(&mut *tx).await?;
     for &other in with.iter().filter(|&&o| o != id) {
@@ -355,7 +363,16 @@ pub async fn set_pairs(db: &SqlitePool, couple: &str, id: i64, with: &[i64]) -> 
         .execute(&mut *tx)
         .await?;
     }
-    tx.commit().await
+    Ok(())
+}
+
+pub async fn restore_one(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
+    let done = sqlx::query("UPDATE joy_activities SET archived = 0 WHERE id = ? AND couple_id = ? AND custom = 0")
+        .bind(id)
+        .bind(couple)
+        .execute(db)
+        .await?;
+    Ok(done.rows_affected() > 0)
 }
 
 pub async fn set_archived(db: &SqlitePool, couple: &str, id: i64, archived: bool) -> sqlx::Result<()> {
@@ -432,6 +449,20 @@ pub async fn visible_list(db: &SqlitePool, couple: &str, who: Option<usize>) -> 
     Ok(acts)
 }
 
+/// A slip that can be drawn, kept or planned right now: in the jar (not archived), not passed on
+/// by either of us, and not sealed from `who`. Anything else is not found, the same as one that
+/// doesn't exist.
+pub async fn drawable_get(db: &SqlitePool, couple: &str, who: usize, id: i64) -> sqlx::Result<Option<Activity>> {
+    let Some(a) = visible_get(db, couple, who, id).await? else { return Ok(None) };
+    let archived: bool = sqlx::query_scalar("SELECT archived FROM joy_activities WHERE id = ? AND couple_id = ?")
+        .bind(id)
+        .bind(couple)
+        .fetch_one(db)
+        .await?;
+    let vetoed: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM joy_vetoes WHERE activity_id = ?)").bind(id).fetch_one(db).await?;
+    Ok((!archived && !vetoed).then_some(a))
+}
+
 /// `get`, but a slip sealed from `who` is not found, the same as one that doesn't exist.
 pub async fn visible_get(db: &SqlitePool, couple: &str, who: usize, id: i64) -> sqlx::Result<Option<Activity>> {
     if sealed_from(db, couple, who).await?.contains(&id) {
@@ -474,6 +505,19 @@ pub async fn record(db: &SqlitePool, couple: &str, id: i64, did_it: bool) -> sql
     };
     sqlx::query(sql).bind(id).bind(couple).execute(&mut *tx).await?;
     tx.commit().await
+}
+
+/// Server-side limits on what a slip may hold (the form's `maxLength` is only a courtesy).
+pub const MAX_TITLE: usize = 120;
+pub const MAX_PLACE: usize = 120;
+pub const MAX_NOTES: usize = 2000;
+const MAX_TAGS: usize = 12;
+const MAX_TAG_LEN: usize = 24;
+
+/// At most 12 tags of at most 24 characters each.
+pub fn tags_fit(tags: &str) -> bool {
+    let list: Vec<&str> = tags.split(',').map(str::trim).filter(|t| !t.is_empty()).collect();
+    list.len() <= MAX_TAGS && list.iter().all(|t| t.chars().count() <= MAX_TAG_LEN)
 }
 
 /// The one-tap reasons for putting a slip back. Anything else is stored as no reason.
@@ -1249,9 +1293,13 @@ pub async fn clear_putbacks(db: &SqlitePool, couple: &str) -> sqlx::Result<u64> 
     Ok(done.rows_affected())
 }
 
-pub async fn unveto(db: &SqlitePool, couple: &str, activity: i64) -> sqlx::Result<()> {
-    sqlx::query("DELETE FROM joy_vetoes WHERE activity_id = ? AND activity_id IN (SELECT id FROM joy_activities WHERE couple_id = ?)")
+/// Take back `person`'s own pass on a slip. The other one's pass, if there is one, stays.
+pub async fn unveto(db: &SqlitePool, couple: &str, activity: i64, person: usize) -> sqlx::Result<()> {
+    sqlx::query(
+        "DELETE FROM joy_vetoes WHERE activity_id = ? AND person = ? AND activity_id IN (SELECT id FROM joy_activities WHERE couple_id = ?)",
+    )
         .bind(activity)
+        .bind(person as i64)
         .bind(couple)
         .execute(db)
         .await?;

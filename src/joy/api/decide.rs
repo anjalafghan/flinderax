@@ -945,14 +945,15 @@ pub async fn accept(
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
     let who = Some(j.who);
     // A slip that isn't ours isn't here.
-    let Some(a) = db::visible_get(db, couple, j.who, id).await? else { return Err(not_found("No such slip")) };
+    let Some(a) = db::drawable_get(db, couple, j.who, id).await? else { return Err(not_found("No such slip")) };
     let surprise = q.surprise == "1";
     let learned = learned(db, couple).await?;
     let mut ids = vec![db::accept(db, couple, id, who, surprise).await?];
     let mut paired = None;
+    let db_partner_ids: Vec<i64> = db::visible_partners(db, couple, j.who, id).await?.into_iter().map(|p| p.id).collect();
     if let Ok(with) = q.with.trim().parse::<i64>() {
         // Only a real partner of this slip can ride along.
-        if let Some(p) = db::visible_partners(db, couple, j.who, id).await?.into_iter().find(|p| p.id == with) {
+        if let Some(p) = db::drawable_get(db, couple, j.who, with).await?.filter(|p| db_partner_ids.contains(&p.id)) {
             ids.push(db::accept(db, couple, p.id, who, surprise).await?);
             paired = Some(ActivityView::new(ctx, &p, &learned));
         }

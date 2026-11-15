@@ -136,9 +136,9 @@ pub async fn plan(
 ) -> Result<Json<SlipPlanned>, AppError> {
     let f = body.map(|j| j.0).unwrap_or(PlanForm { at: String::new() });
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
-    let a = mine(db, couple, id).await?;
+    // Only a slip that could be drawn can be planned: not archived, passed on or sealed.
+    let Some(a) = db::drawable_get(db, couple, j.who, id).await? else { return Err(not_found("No such slip")) };
     let Some(local) = parse_local(&f.at) else {
         return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, "Pick a day and a time.".into()));
     };
@@ -437,6 +437,18 @@ async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> 
     let latlng = parse_latlng(&i.location);
     let error = if i.title.trim().is_empty() {
         "Give it a name."
+    } else if i.title.trim().chars().count() > db::MAX_TITLE {
+        "That name is too long: keep it under 120 characters."
+    } else if i.venue.trim().chars().count() > db::MAX_PLACE {
+        "That place is too long: keep it under 120 characters."
+    } else if i.area.trim().chars().count() > db::MAX_PLACE {
+        "That area is too long: keep it under 120 characters."
+    } else if i.notes.trim().chars().count() > db::MAX_NOTES {
+        "Those notes are too long: keep them under 2,000 characters."
+    } else if !db::tags_fit(&i.tags) {
+        "Use at most 12 tags of up to 24 characters each."
+    } else if !ENERGIES.iter().any(|(k, _)| *k == i.energy) {
+        "Pick an energy: low, medium or high."
     } else if !cost_ok {
         "The cost should be a whole number."
     } else if !i.location.trim().is_empty() && latlng.is_none() {
@@ -487,7 +499,10 @@ pub async fn restore(State(s): State<AppState>, Extension((user_id, _)): User, P
     let j = joy(&s, &user_id).await?;
     unsealed(&s.db, &j, id).await?;
     mine(&s.db, &j.couple, id).await?;
-    db::set_archived(&s.db, &j.couple, id, false).await?;
+    // A hand-added date's one-off slip has no place in the jar.
+    if !db::restore_one(&s.db, &j.couple, id).await? {
+        return Err(not_found("No such slip"));
+    }
     Ok(go(SLIPS))
 }
 
@@ -496,7 +511,7 @@ pub async fn unveto(State(s): State<AppState>, Extension((user_id, _)): User, Pa
     let j = joy(&s, &user_id).await?;
     unsealed(&s.db, &j, id).await?;
     mine(&s.db, &j.couple, id).await?;
-    db::unveto(&s.db, &j.couple, id).await?;
+    db::unveto(&s.db, &j.couple, id, j.who).await?;
     Ok(go(SLIPS))
 }
 
