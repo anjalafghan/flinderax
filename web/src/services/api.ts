@@ -135,6 +135,8 @@ export const accountApi = {
 };
 
 export const planApi = {
+  scenarios: () => data(api.get<{ drafts: unknown[] }>("/api/plan/scenarios")),
+  saveScenarios: (drafts: unknown[]) => data(api.post<Ok>("/api/plan/scenarios", { drafts })),
   commitments: () => data(api.get<Commitment[]>("/api/plan/commitment/list")),
   createCommitment: (c: NewCommitment) => data(api.post<Id>("/api/plan/commitment/create", c)),
   updateCommitment: (c: Commitment) => data(api.post<Ok>("/api/plan/commitment/update", c)),

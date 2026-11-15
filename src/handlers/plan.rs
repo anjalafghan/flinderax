@@ -461,3 +461,51 @@ pub async fn settings_reset(State(state): State<AppState>, Extension((user_id, _
     .await?;
     Ok(Json(StatusResponse { status: true }))
 }
+
+// ---------- what-if scenarios ----------
+
+const MAX_SCENARIOS: usize = 50;
+const MAX_SCENARIO_BYTES: usize = 64 * 1024;
+
+#[derive(Serialize, Deserialize)]
+pub struct Scenarios {
+    pub drafts: serde_json::Value,
+}
+
+/// `GET /api/plan/scenarios`: the what-if drafts this person has saved.
+pub async fn scenarios_get(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Scenarios>, AppError> {
+    let raw: Option<String> = sqlx::query_scalar("SELECT drafts_json FROM whatif_scenarios WHERE user_id = ?")
+        .bind(&user_id)
+        .fetch_optional(&state.db)
+        .await?;
+    let drafts = raw.and_then(|r| serde_json::from_str(&r).ok()).unwrap_or_else(|| serde_json::json!([]));
+    Ok(Json(Scenarios { drafts }))
+}
+
+/// `POST /api/plan/scenarios`: replaces the saved drafts. The page owns their shape; the server only
+/// keeps a list, within limits, for this person.
+pub async fn scenarios_put(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<Scenarios>,
+) -> Result<Json<StatusResponse>, AppError> {
+    let Some(list) = p.drafts.as_array() else {
+        return Err(AppError(axum::http::StatusCode::UNPROCESSABLE_ENTITY, "drafts must be a list".into()));
+    };
+    if list.len() > MAX_SCENARIOS {
+        return Err(bad_request(format!("at most {MAX_SCENARIOS} scenarios")));
+    }
+    let json = p.drafts.to_string();
+    if json.len() > MAX_SCENARIO_BYTES {
+        return Err(bad_request("those scenarios are too large to save"));
+    }
+    sqlx::query(
+        "INSERT INTO whatif_scenarios (user_id, drafts_json) VALUES (?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET drafts_json = excluded.drafts_json, updated_at = CURRENT_TIMESTAMP",
+    )
+    .bind(&user_id)
+    .bind(json)
+    .execute(&state.db)
+    .await?;
+    Ok(Json(StatusResponse { status: true }))
+}

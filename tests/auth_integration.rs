@@ -1028,3 +1028,35 @@ async fn a_session_in_use_renews_itself_before_it_runs_out() {
     assert_eq!(s, StatusCode::UNAUTHORIZED);
     assert!(h.get("x-refreshed-token").is_none());
 }
+
+#[tokio::test]
+async fn what_if_scenarios_follow_the_person_and_stay_private() {
+    let (app, db) = test_app_with_db().await;
+    let a = new_user(&app, "10.0.0.97", "scenarioa").await;
+    let b = new_user(&app, "10.0.0.98", "scenariob").await;
+    assert_eq!(authed_get(&app, &a, "/api/plan/scenarios").await["drafts"], json!([]), "none yet");
+
+    let drafts = json!([{"id": "d1", "kind": "sip", "amount": "5000"}, {"id": "d2", "kind": "emi", "amount": "12000"}]);
+    let (s, body) = authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": drafts})).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    assert_eq!(authed_get(&app, &a, "/api/plan/scenarios").await["drafts"], drafts);
+    assert_eq!(authed_get(&app, &b, "/api/plan/scenarios").await["drafts"], json!([]), "someone else's are theirs");
+
+    // Saving again replaces, and an empty list clears.
+    authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": [{"id": "d3"}]})).await;
+    assert_eq!(authed_get(&app, &a, "/api/plan/scenarios").await["drafts"], json!([{"id": "d3"}]));
+    authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": []})).await;
+    assert_eq!(authed_get(&app, &a, "/api/plan/scenarios").await["drafts"], json!([]));
+
+    // Not a list, or far too much, is refused.
+    let (s, _) = authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": {"nope": 1}})).await;
+    assert_eq!(s, StatusCode::UNPROCESSABLE_ENTITY);
+    let many: Vec<Value> = (0..60).map(|i| json!({"id": i})).collect();
+    let (s, _) = authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": many})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let big = json!([{"note": "x".repeat(70_000)}]);
+    let (s, _) = authed_post(&app, &a, "/api/plan/scenarios", json!({"drafts": big})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM whatif_scenarios").fetch_one(&db).await.unwrap();
+    assert_eq!(n, 1, "one row per person");
+}
