@@ -146,7 +146,31 @@ async fn cors_is_not_open_by_default() {
 async fn internal_errors_do_not_leak_details() {
     let res = AppError(StatusCode::INTERNAL_SERVER_ERROR, "no such table: secrets".into()).into_response();
     let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
-    assert_eq!(&body[..], b"Internal server error");
+    let v: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(v, json!({"code": "internal", "message": "Internal server error", "field": null}));
+    assert!(!String::from_utf8_lossy(&body).contains("secrets"));
+}
+
+#[tokio::test]
+async fn errors_answer_with_a_code_a_message_and_the_field_when_there_is_one() {
+    let app = test_app().await;
+    let call = |method: &'static str, path: &'static str, body: Option<Value>| {
+        let app = app.clone();
+        async move {
+            let (s, h, text) = raw(&app, method, path, &[], body).await;
+            (s, h.get("content-type").map(|v| v.to_str().unwrap().to_string()), serde_json::from_str::<Value>(&text).unwrap_or(Value::Null))
+        }
+    };
+    let (s, ct, v) = call("GET", "/api/account/list", None).await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+    assert_eq!(ct.as_deref(), Some("application/json"));
+    assert_eq!(v["code"], "unauthorized");
+    assert!(v["message"].is_string() && v["field"].is_null());
+    let (_, _, v) = call("GET", "/api/nothing-here", None).await;
+    assert_eq!(v["code"], "not_found");
+    let (_, _, v) = call("POST", "/api/common/login", Some(json!({"user_name": "nobody", "user_password": "wrong"}))).await;
+    assert_eq!(v["code"], "unauthorized");
+    assert_eq!(v["message"], "Invalid username or password");
 }
 
 async fn authed_post(app: &Router, token: &str, path: &str, body: Value) -> (StatusCode, String) {

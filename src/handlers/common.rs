@@ -19,14 +19,34 @@ use tracing::error;
 
 pub struct AppError(pub StatusCode, pub String);
 
+/// A short, stable word for an error's status, so clients can decide what to do without reading prose.
+pub fn error_code(status: StatusCode) -> &'static str {
+    match status.as_u16() {
+        400 => "bad_request",
+        401 => "unauthorized",
+        403 => "forbidden",
+        404 => "not_found",
+        409 => "conflict",
+        413 => "too_large",
+        422 => "invalid",
+        429 => "too_many_requests",
+        s if s >= 500 => "internal",
+        _ => "error",
+    }
+}
+
 impl IntoResponse for AppError {
+    /// `{"code": "not_found", "message": "No such slip", "field": null}`. `field` is for a message
+    /// that is about one input of a form (none of the generic ones are yet).
     fn into_response(self) -> Response {
         // Internal details (SQL errors etc.) stay in the logs, never in the response body.
-        if self.0.is_server_error() {
+        let message = if self.0.is_server_error() {
             error!("{}: {}", self.0, self.1);
-            return (self.0, "Internal server error".to_string()).into_response();
-        }
-        (self.0, self.1).into_response()
+            "Internal server error".to_string()
+        } else {
+            self.1
+        };
+        (self.0, Json(serde_json::json!({ "code": error_code(self.0), "message": message, "field": null }))).into_response()
     }
 }
 

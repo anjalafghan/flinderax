@@ -3,6 +3,7 @@
 import { adoptRenewedToken } from "@/services/renew";
 import type { JoySummary } from "@/services/types";
 import { authHeadersFor, clearSession } from "@/session";
+import { errorMessageOf } from "@/services/errors";
 
 export interface Opt {
   value: string;
@@ -271,7 +272,7 @@ export async function request<T>(method: "GET" | "POST", url: string, body?: unk
   if (res.status === 401 && auth) return toLogin<T>();
   const text = await res.text().catch(() => "");
   const data = parse(text);
-  if (!res.ok) throw new ApiError(res.status, text.trim() || `Request failed with status ${res.status}`, data);
+  if (!res.ok) throw new ApiError(res.status, errorMessageOf(text, res.status), data);
   return data as T;
 }
 
@@ -303,7 +304,7 @@ export function upload<T>(url: string, form: FormData, { onProgress, failMessage
       const text = xhr.responseText.trim();
       const data = parse(text);
       if (xhr.status >= 200 && xhr.status < 300) resolve(data as T);
-      else reject(new ApiError(xhr.status, failMessage ? failMessage(xhr.status, text) : text || `Request failed with status ${xhr.status}`, data));
+      else reject(new ApiError(xhr.status, failMessage ? failMessage(xhr.status, text) : errorMessageOf(text, xhr.status), data));
     };
     xhr.send(form);
   });

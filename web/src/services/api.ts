@@ -43,6 +43,7 @@ import type {
 } from "./types";
 
 import { authHeadersFor, clearSession } from "../session";
+import { errorMessageOf } from "./errors";
 
 // The Rust server serves both the API and this app, so every request is same-origin.
 
@@ -84,7 +85,7 @@ async function send(method: Method, url: string, body?: unknown): Promise<Respon
     if (response.status === 401 && token && !isAuthEndpoint(url)) {
       handleUnauthorized();
     }
-    throw new Error(errorBody || `Request failed with status ${response.status}`);
+    throw new Error(errorMessageOf(errorBody, response.status));
   }
   return response;
 }
@@ -185,7 +186,7 @@ async function postStatement<T>(url: string, form: FormData): Promise<T> {
   });
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(text || `Upload failed (${response.status})`);
+    throw new Error(text ? errorMessageOf(text, response.status) : `Upload failed (${response.status})`);
   }
   return (await response.json()) as T;
 }

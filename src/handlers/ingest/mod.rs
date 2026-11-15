@@ -1308,7 +1308,8 @@ mod statement_tests {
         let state = test_state().await;
         let (status, body) = upload(&state, multipart_body(None, &[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1])).await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert_eq!(body, "This is the Excel export. Download the Delimited (.txt) format instead.");
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(v["message"], "This is the Excel export. Download the Delimited (.txt) format instead.");
     }
 
     #[tokio::test]
