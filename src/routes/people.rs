@@ -3,6 +3,7 @@ use axum::{
     Router,
 };
 
+use crate::handlers::facts as fx;
 use crate::handlers::followups as f;
 use crate::handlers::people as h;
 use crate::models::AppState;
@@ -13,6 +14,8 @@ pub fn routes(state: AppState) -> Router {
         .route("/", get(h::list).post(h::create))
         .route("/seasons", get(h::list_seasons).post(h::add_season))
         .route("/seasons/{id}", patch(h::patch_season).delete(h::delete_season))
+        .route("/facts", get(fx::list))
+        .route("/facts/{id}", delete(fx::delete))
         .route("/followups", get(f::list))
         .route("/followups/{id}", patch(f::patch).delete(f::delete))
         .route("/gift-plan", get(h::gift_plan))
@@ -25,5 +28,6 @@ pub fn routes(state: AppState) -> Router {
         .route("/{id}/touches", post(h::add_touch).delete(h::clear_touches))
         .route("/{id}/dates", post(h::add_date))
         .route("/{id}/followups", post(f::add))
+        .route("/{id}/facts", post(fx::add))
         .with_state(state)
 }

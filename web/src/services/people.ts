@@ -393,3 +393,20 @@ export function followUpWhen(f: Pick<FollowUp, "state" | "days_away">): string {
       return "No date";
   }
 }
+
+// ---------- things to remember ----------
+
+export interface Fact {
+  id: string;
+  person_id: string;
+  text: string;
+}
+
+/** Under ["people"], so any people write refreshes these too. */
+export const factsKey = ["people", "facts"] as const;
+
+export const getFacts = () => api.get<{ facts: Fact[] }>("/api/people/facts").then((r) => r.data.facts);
+export const addFact = (a: { personId: string; text: string }) =>
+  api.post<Fact>(`/api/people/${a.personId}/facts`, { text: a.text }).then((r) => r.data);
+export const deleteFact = (id: string) => request<void>("DELETE", `/api/people/facts/${id}`);
+export const useFacts = () => useQuery({ queryKey: factsKey, queryFn: getFacts, retry: 1 });
