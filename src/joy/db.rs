@@ -228,6 +228,17 @@ pub async fn get(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Option<
         .await
 }
 
+/// Another slip in the jar with the same title (ignoring case and spacing), if any.
+pub async fn duplicate_of(db: &SqlitePool, couple: &str, title: &str, except: Option<i64>) -> sqlx::Result<Option<i64>> {
+    let norm = |t: &str| t.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+    let want = norm(title);
+    let rows: Vec<(i64, String)> = sqlx::query_as("SELECT id, title FROM joy_activities WHERE couple_id = ? AND archived = 0")
+        .bind(couple)
+        .fetch_all(db)
+        .await?;
+    Ok(rows.into_iter().find(|(id, t)| Some(*id) != except && norm(t) == want).map(|(id, _)| id))
+}
+
 /// Insert or update a slip and its pairs; returns its id.
 pub async fn save(db: &SqlitePool, couple: &str, id: Option<i64>, a: &ActivityInput, latlng: Option<(f64, f64)>) -> sqlx::Result<i64> {
     let tags = a

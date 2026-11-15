@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { archiveSlip, getSlipForm, keys, saveSlip, type FormView } from "../api";
-import { errorField, formToState, tidyTitle, toPayload, type FormState } from "../form";
+import { errorField, formToState, isDuplicateWarning, tidyTitle, toPayload, type FormState } from "../form";
 import { mapGoTo } from "../paths";
 import { parseMapLink } from "../maplink";
 import { ErrorState } from "../components/ErrorState";
@@ -73,6 +73,10 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    send(false);
+  };
+
+  const send = (allowDuplicate: boolean) => {
     void run(async () => {
       setError("");
       setFieldErr(null);
@@ -81,7 +85,7 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
       setFolding(true);
       try {
         await wait(reduced() ? 0 : 360);
-        const res = await saveSlip(id, toPayload({ ...s, title: clean }));
+        const res = await saveSlip(id, { ...toPayload({ ...s, title: clean }), ...(allowDuplicate ? { allow_duplicate: true } : {}) });
         if (res.ok) {
           void qc.invalidateQueries({ queryKey: keys.slips });
           navigate(mapGoTo(res.go.to));
@@ -124,6 +128,11 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
             <path d="M12 16.3v.3" />
           </svg>
           <p><strong>Almost.</strong> {error}</p>
+          {isDuplicateWarning(error) && (
+            <button type="button" className="btn btn-ink" disabled={busy} onClick={() => send(true)}>
+              Save it anyway
+            </button>
+          )}
         </div>
       )}
 

@@ -283,6 +283,9 @@ fn month_opts(selected: &str) -> Vec<Opt> {
 #[derive(Debug, Default, Deserialize)]
 pub struct SlipBody {
     pub title: String,
+    /// "Save anyway": the title is the same as another slip's and that is fine.
+    #[serde(default)]
+    pub allow_duplicate: bool,
     #[serde(default)]
     pub notes: String,
     #[serde(default, deserialize_with = "flex")]
@@ -433,6 +436,7 @@ async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> 
     if let Some(id) = id {
         mine(&s.db, &j.couple, id).await?;
     }
+    let allow_duplicate = body.allow_duplicate;
     let (i, cost_ok) = body.input();
     let latlng = parse_latlng(&i.location);
     let error = if i.title.trim().is_empty() {
@@ -460,6 +464,8 @@ async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> 
     } else {
         ""
     };
+    let dup = if error.is_empty() && !allow_duplicate { db::duplicate_of(&s.db, &j.couple, &i.title, id).await? } else { None };
+    let error = if dup.is_some() { "A slip like this is already in the jar. Save it anyway?" } else { error };
     if !error.is_empty() {
         let view = form(&s.db, &j, id, &i, error).await?;
         return Ok((StatusCode::UNPROCESSABLE_ENTITY, Json(view)).into_response());

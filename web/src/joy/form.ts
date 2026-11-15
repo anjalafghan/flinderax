@@ -94,6 +94,9 @@ export function toPayload(s: FormState): SlipBody {
 }
 
 /** Which field an error message is about, so it can be marked invalid and focused. */
+/** The server asks before saving a second slip with the same title. */
+export const isDuplicateWarning = (error: string): boolean => error.includes("already in the jar");
+
 export function errorField(error: string): "title" | "est_cost" | "location" | "hours" | null {
   if (!error) return null;
   if (error.includes("name")) return "title";

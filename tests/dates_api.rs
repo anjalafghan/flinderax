@@ -922,3 +922,31 @@ async fn bringing_a_slip_back_clears_only_your_own_pass() {
     t.post(&format!("/api/dates/slips/{drive}/unveto"), &neha, json!({})).await;
     assert!(ids(&t.post("/api/dates/match", &neha, json!({})).await.json).contains(&drive), "back once nobody has passed");
 }
+
+// ── the same idea twice (S17) ─────────────────────────────────────────────
+
+#[tokio::test]
+async fn writing_the_same_idea_twice_asks_first() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let body = |title: &str| json!({"title": title, "est_cost": 100, "setting": "local", "duration": "short", "energy": "low"});
+    assert_eq!(t.post("/api/dates/slips", &rohit, body("Sunset at Carter Road")).await.status, StatusCode::OK);
+    // Same words, different case and spacing.
+    let r = t.post("/api/dates/slips", &rohit, body("  sunset  at CARTER road ")).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", r.text);
+    assert!(r.json["error"].as_str().unwrap().contains("already in the jar"), "{}", r.text);
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE couple_id = '{couple}' AND lower(title) = 'sunset at carter road'")).await, 1);
+
+    // Saying "save anyway" saves it.
+    let mut again = body("Sunset at Carter Road");
+    again["allow_duplicate"] = json!(true);
+    assert_eq!(t.post("/api/dates/slips", &rohit, again).await.status, StatusCode::OK);
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE couple_id = '{couple}' AND lower(title) = 'sunset at carter road'")).await, 2);
+
+    // Editing a slip does not collide with itself, and an archived one does not count.
+    let first = t.scalar(&format!("SELECT min(id) FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Sunset at Carter Road'")).await;
+    assert_eq!(t.post(&format!("/api/dates/slips/{first}"), &rohit, body("Sunset at Carter Road")).await.status, StatusCode::UNPROCESSABLE_ENTITY, "the other copy is still there");
+    t.post(&format!("/api/dates/slips/{first}/archive"), &rohit, json!({})).await;
+    let second = t.scalar(&format!("SELECT max(id) FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Sunset at Carter Road'")).await;
+    assert_eq!(t.post(&format!("/api/dates/slips/{second}"), &rohit, body("Sunset at Carter Road")).await.status, StatusCode::OK, "no other active copy");
+}

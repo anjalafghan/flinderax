@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { FormView, Opt } from "./api";
-import { errorField, formToState, tidyTitle, toPayload } from "./form";
+import { errorField, formToState, isDuplicateWarning, tidyTitle, toPayload } from "./form";
 import { rupees, standing, toPaise } from "./money";
 import { daysLeftInMonth, nudgeFor } from "./nudge";
 import { mapGoTo, navFor, pageKey } from "./paths";
@@ -206,5 +206,12 @@ describe("slip search", () => {
     expect(filterGroups(groups, "").shown.length).toBe(2);
     expect(filterGroups(groups, "zzz").shown.length).toBe(0);
     expect(filterGroups(groups, "cafe").total).toBe(1);
+  });
+});
+
+describe("duplicate warning", () => {
+  test("recognises the server's question", () => {
+    expect(isDuplicateWarning("A slip like this is already in the jar. Save it anyway?")).toBe(true);
+    expect(isDuplicateWarning("Give it a name.")).toBe(false);
   });
 });

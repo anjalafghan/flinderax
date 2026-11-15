@@ -80,6 +80,8 @@ export interface FormView {
 /** The JSON body of POST /slips and POST /slips/{id}. */
 export interface SlipBody {
   title: string;
+  /** "Save anyway": another slip has the same title and that is fine. */
+  allow_duplicate?: boolean;
   notes: string;
   est_cost: string;
   setting: string;
