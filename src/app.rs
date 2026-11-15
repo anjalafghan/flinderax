@@ -172,17 +172,28 @@ pub async fn token_validator_middleware(
     next: Next,
 ) -> Result<Response, AppError> {
     match get_token(&headers) {
-        Some(token) => {
+        Some((token, from_cookie)) => {
+            // A cookie goes along with any request a page on another site makes to ours, so for
+            // anything that changes data it is only trusted when the request also carries a header
+            // that only our own page can add (a cross-site request cannot, without our consent).
+            if from_cookie && !matches!(*request.method(), axum::http::Method::GET | axum::http::Method::HEAD | axum::http::Method::OPTIONS) && !headers.contains_key("x-joy") {
+                return Err(AppError(StatusCode::FORBIDDEN, "Missing request header.".to_string()));
+            }
             let (user_id, role, version) = authenticate(token, &state).await?;
             // Renew a session that is past its halfway point; the client swaps the token in.
             let renewal = renewal(token, &user_id, &role, version, &state);
             request.extensions_mut().insert((user_id, role));
             let mut response = next.run(request).await;
-            if let Some((new_token, expires_at)) = renewal
-                && let (Ok(t), Ok(e)) = (new_token.parse(), expires_at.to_string().parse())
-            {
-                response.headers_mut().insert("x-refreshed-token", t);
-                response.headers_mut().insert("x-token-expires-at", e);
+            if let Some((new_token, expires_at)) = renewal {
+                if from_cookie {
+                    // The web app lives on the cookie: renew that, and keep the token out of reach of scripts.
+                    if let Ok(c) = crate::handlers::common::session_cookie(&new_token, crate::handlers::common::is_https(&headers)).parse() {
+                        response.headers_mut().append(axum::http::header::SET_COOKIE, c);
+                    }
+                } else if let (Ok(t), Ok(e)) = (new_token.parse(), expires_at.to_string().parse()) {
+                    response.headers_mut().insert("x-refreshed-token", t);
+                    response.headers_mut().insert("x-token-expires-at", e);
+                }
             }
             Ok(response)
         }
@@ -225,12 +236,18 @@ fn token_expiry(token: &str, key: &Arc<PasetoSymmetricKey<V4, Local>>) -> Option
     OffsetDateTime::parse(claims["exp"].as_str()?, &time::format_description::well_known::Rfc3339).ok()
 }
 
-fn get_token(headers: &HeaderMap) -> Option<&str> {
-    let header_value = headers.get("Authorization")?.to_str().ok()?;
-    header_value
-        .strip_prefix("Bearer ")
-        .map(|t| t.trim())
-        .or(Some(header_value))
+/// The session token and whether it came from the cookie (as opposed to an Authorization header).
+fn get_token(headers: &HeaderMap) -> Option<(&str, bool)> {
+    if let Some(v) = headers.get("Authorization") {
+        let header_value = v.to_str().ok()?;
+        return Some((header_value.strip_prefix("Bearer ").map(|t| t.trim()).unwrap_or(header_value), false));
+    }
+    let cookies = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
+    cookies
+        .split(';')
+        .filter_map(|c| c.trim().split_once('='))
+        .find(|(name, _)| *name == crate::handlers::common::SESSION_COOKIE)
+        .map(|(_, v)| (v, true))
 }
 
 fn parse_token(

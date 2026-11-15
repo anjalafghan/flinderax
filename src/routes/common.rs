@@ -13,6 +13,7 @@ pub fn routes(state: AppState) -> Router {
         .layer(middleware::from_fn_with_state(state.clone(), token_validator_middleware));
     Router::new()
         .route("/login", post(common::login))
+        .route("/logout", post(common::logout))
         .route("/register", post(common::register))
         .merge(signed_in)
         .with_state(state)

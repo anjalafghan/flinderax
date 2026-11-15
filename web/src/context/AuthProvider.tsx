@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearSession } from '../session';
+import { clearSession, isCookieSession } from '../session';
 import { AuthContext } from './AuthContext';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -8,7 +8,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [token, setToken] = useState<string | null>(() => {
         const storedToken = localStorage.getItem('token');
         const expiresAt = localStorage.getItem('expires_at');
-        if (storedToken && expiresAt && Date.now() > parseInt(expiresAt) * 1000) {
+        // A cookie login is renewed in its cookie, so only the server knows when it really ends (a 401).
+        if (storedToken && !isCookieSession(storedToken) && expiresAt && Date.now() > parseInt(expiresAt) * 1000) {
             clearSession();
             return null;
         }
@@ -19,6 +20,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const queryClient = useQueryClient();
 
     const logout = useCallback(() => {
+        // Ends the cookie on the server (best effort: a stale cookie is harmless and expires on its own).
+        if (isCookieSession(localStorage.getItem('token'))) {
+            try {
+                void fetch('/api/common/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Joy': '1' }, body: '{}' }).catch(() => {});
+            } catch {
+                /* ignore */
+            }
+        }
         // The token, drafts and saved offline copies all belong to this login: drop them with it.
         clearSession();
         // Cached responses belong to this login too; the next user must not see them.
@@ -28,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         const expiresAt = localStorage.getItem('expires_at');
-        if (expiresAt && Date.now() > parseInt(expiresAt) * 1000) {
+        if (token && !isCookieSession(token) && expiresAt && Date.now() > parseInt(expiresAt) * 1000) {
             // The page is leaving, so clear storage directly: the reload resets the state.
             clearSession();
             window.location.href = '/auth';

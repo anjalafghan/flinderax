@@ -574,6 +574,7 @@ mod tests {
             station_walk_min: None,
             url: String::new(),
             verified_at: None,
+            starter: false,
         }
     }
 

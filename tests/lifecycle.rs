@@ -184,7 +184,8 @@ async fn old_token_is_rejected_after_a_password_change() {
 
     let gone = t.get("/api/account/list", &old).await;
     assert_eq!(gone.status, StatusCode::UNAUTHORIZED);
-    assert_eq!(gone.text, "Please sign in again.");
+    assert_eq!(gone.json["message"], "Please sign in again.");
+    assert_eq!(gone.json["code"], "unauthorized");
     assert_eq!(t.get("/api/account/list", &fresh).await.status, StatusCode::OK);
     assert_eq!(t.login_raw(&name, PW).await.status, StatusCode::UNAUTHORIZED);
     let again = t.login(&name, "a brand new one").await;

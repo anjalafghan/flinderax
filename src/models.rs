@@ -35,6 +35,8 @@ pub struct LoginPayload {
 pub struct LoginResponse {
     pub access_token: String,
     pub expires_at: i64,
+    /// The same token is also in an HttpOnly cookie; the web app should rely on that and not keep this.
+    pub cookie: bool,
 }
 
 #[derive(Deserialize)]

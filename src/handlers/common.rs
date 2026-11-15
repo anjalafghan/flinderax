@@ -19,14 +19,34 @@ use tracing::error;
 
 pub struct AppError(pub StatusCode, pub String);
 
+/// A short, stable word for an error's status, so clients can decide what to do without reading prose.
+pub fn error_code(status: StatusCode) -> &'static str {
+    match status.as_u16() {
+        400 => "bad_request",
+        401 => "unauthorized",
+        403 => "forbidden",
+        404 => "not_found",
+        409 => "conflict",
+        413 => "too_large",
+        422 => "invalid",
+        429 => "too_many_requests",
+        s if s >= 500 => "internal",
+        _ => "error",
+    }
+}
+
 impl IntoResponse for AppError {
+    /// `{"code": "not_found", "message": "No such slip", "field": null}`. `field` is for a message
+    /// that is about one input of a form (none of the generic ones are yet).
     fn into_response(self) -> Response {
         // Internal details (SQL errors etc.) stay in the logs, never in the response body.
-        if self.0.is_server_error() {
+        let message = if self.0.is_server_error() {
             error!("{}: {}", self.0, self.1);
-            return (self.0, "Internal server error".to_string()).into_response();
-        }
-        (self.0, self.1).into_response()
+            "Internal server error".to_string()
+        } else {
+            self.1
+        };
+        (self.0, Json(serde_json::json!({ "code": error_code(self.0), "message": message, "field": null }))).into_response()
     }
 }
 
@@ -105,7 +125,7 @@ pub async fn login(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(login_payload): Json<LoginPayload>,
-) -> Result<Json<LoginResponse>, AppError> {
+) -> Result<Response, AppError> {
     let ip_key = format!("login-ip:{}", ratelimit::client_key(&headers));
     if !ratelimit::allow(&ip_key, LOGIN_ATTEMPTS_PER_MINUTE * 3) {
         return Err(too_many());
@@ -154,14 +174,45 @@ pub async fn login(
         .await?;
     let token = get_paseto_token(&user_id, user.user_role, version, &state.paseto_key, expiration)?;
 
-    Ok(Json(LoginResponse {
-        access_token: token,
-        expires_at: expiration.unix_timestamp(),
-    }))
+    Ok(login_response(&headers, token, expiration))
 }
 /// How long a sign-in lasts. A session that is being used renews itself (see the token middleware),
 /// so someone who opens the app every few weeks never signs in again.
 pub const SESSION_LIFETIME: Duration = Duration::days(30);
+
+/// The cookie that carries a web session. HttpOnly, so scripts on the page cannot read it, and
+/// SameSite=Strict, so other sites cannot send it. `Secure` is added when the request came in over
+/// https (Fly terminates TLS and says so); plain http is only local development.
+pub const SESSION_COOKIE: &str = "joy_session";
+
+pub fn is_https(headers: &HeaderMap) -> bool {
+    headers.get("x-forwarded-proto").and_then(|v| v.to_str().ok()) == Some("https")
+}
+
+pub fn session_cookie(token: &str, secure: bool) -> String {
+    format!(
+        "{SESSION_COOKIE}={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={}{}",
+        SESSION_LIFETIME.whole_seconds(),
+        if secure { "; Secure" } else { "" }
+    )
+}
+
+pub fn cleared_cookie(secure: bool) -> String {
+    format!("{SESSION_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0{}", if secure { "; Secure" } else { "" })
+}
+
+/// A sign-in answer: the token in the body (for scripts) and in the session cookie (for the web app).
+pub fn login_response(headers: &HeaderMap, token: String, expiration: OffsetDateTime) -> Response {
+    let cookie = session_cookie(&token, is_https(headers));
+    let body = LoginResponse { access_token: token, expires_at: expiration.unix_timestamp(), cookie: true };
+    ([(axum::http::header::SET_COOKIE, cookie)], Json(body)).into_response()
+}
+
+/// `POST /api/common/logout`: ends the session on this device. Needs no valid session, so it works
+/// when the cookie is already stale. (Other devices stay signed in; see logout-everywhere.)
+pub async fn logout(headers: HeaderMap) -> Response {
+    ([(axum::http::header::SET_COOKIE, cleared_cookie(is_https(&headers)))], Json(serde_json::json!({ "status": true }))).into_response()
+}
 
 pub fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
     let parsed_hash = PasswordHash::new(&database_password)

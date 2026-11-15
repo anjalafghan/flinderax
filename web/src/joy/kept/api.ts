@@ -1,4 +1,5 @@
 // Kept's API calls. They use the shared request helpers in ../api.ts (bearer token, 401 -> /auth).
+import { errorMessageOf } from "@/services/errors";
 import { post as postTo, request, upload, type Go } from "../api";
 import { budgetBody, costBody, goalBody, lineBody, moneyBody, rateBody, rolloverBody, whenBody, type RolloverChoice } from "./helpers";
 import type { HistoryView, PlannedView } from "./types";
@@ -30,7 +31,7 @@ export function uploadPhoto(id: number, file: Blob, onProgress: (loaded: number,
   fd.append("photo", file, "photo.jpg");
   return upload<Go | null>(`${BASE}/history/${id}/photo`, fd, {
     onProgress,
-    failMessage: (status, text) => (status === 422 ? text || "That photo couldn’t be used. Try another one." : "That didn’t work. Try again?"),
+    failMessage: (status, text) => (status === 422 ? (text && errorMessageOf(text, status)) || "That photo couldn’t be used. Try another one." : "That didn’t work. Try again?"),
   }).then((go) => go ?? { ok: true, to: "/joy/kept" });
 }
 

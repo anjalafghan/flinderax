@@ -42,7 +42,8 @@ import type {
   NewTaxEntry,
 } from "./types";
 
-import { clearSession } from "../session";
+import { authHeadersFor, clearSession } from "../session";
+import { errorMessageOf } from "./errors";
 
 // The Rust server serves both the API and this app, so every request is same-origin.
 
@@ -70,7 +71,7 @@ type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 async function send(method: Method, url: string, body?: unknown): Promise<Response> {
   const headers: HeadersInit = { "Content-Type": "application/json" };
   const token = localStorage.getItem("token");
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  Object.assign(headers, authHeadersFor(token));
 
   const response = await fetch(url, {
     method,
@@ -84,7 +85,7 @@ async function send(method: Method, url: string, body?: unknown): Promise<Respon
     if (response.status === 401 && token && !isAuthEndpoint(url)) {
       handleUnauthorized();
     }
-    throw new Error(errorBody || `Request failed with status ${response.status}`);
+    throw new Error(errorMessageOf(errorBody, response.status));
   }
   return response;
 }
@@ -180,12 +181,12 @@ async function postStatement<T>(url: string, form: FormData): Promise<T> {
   const token = localStorage.getItem("token");
   const response = await fetch(url, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: authHeadersFor(token),
     body: form,
   });
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(text || `Upload failed (${response.status})`);
+    throw new Error(text ? errorMessageOf(text, response.status) : `Upload failed (${response.status})`);
   }
   return (await response.json()) as T;
 }

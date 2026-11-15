@@ -2,7 +2,8 @@
 // the HTTP status and parsed body, because a refused slip save is a 422 that carries a FormView.
 import { adoptRenewedToken } from "@/services/renew";
 import type { JoySummary } from "@/services/types";
-import { clearSession } from "@/session";
+import { authHeadersFor, clearSession } from "@/session";
+import { errorMessageOf } from "@/services/errors";
 
 export interface Opt {
   value: string;
@@ -240,8 +241,7 @@ interface Options {
 /** The bearer header from localStorage. Empty when storage is blocked: the server then answers 401. */
 export function authHeaders(): Record<string, string> {
   try {
-    const token = localStorage.getItem("token");
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return authHeadersFor(localStorage.getItem("token"));
   } catch {
     return {};
   }
@@ -272,7 +272,7 @@ export async function request<T>(method: "GET" | "POST", url: string, body?: unk
   if (res.status === 401 && auth) return toLogin<T>();
   const text = await res.text().catch(() => "");
   const data = parse(text);
-  if (!res.ok) throw new ApiError(res.status, text.trim() || `Request failed with status ${res.status}`, data);
+  if (!res.ok) throw new ApiError(res.status, errorMessageOf(text, res.status), data);
   return data as T;
 }
 
@@ -304,7 +304,7 @@ export function upload<T>(url: string, form: FormData, { onProgress, failMessage
       const text = xhr.responseText.trim();
       const data = parse(text);
       if (xhr.status >= 200 && xhr.status < 300) resolve(data as T);
-      else reject(new ApiError(xhr.status, failMessage ? failMessage(xhr.status, text) : text || `Request failed with status ${xhr.status}`, data));
+      else reject(new ApiError(xhr.status, failMessage ? failMessage(xhr.status, text) : errorMessageOf(text, xhr.status), data));
     };
     xhr.send(form);
   });
@@ -323,7 +323,8 @@ export const keys = {
 
 // ---- couple ----
 export const getCouple = () => get<CoupleStatus>("/api/couple");
-export const createCouple = () => post<{ status: boolean }>("/api/couple/create");
+/** Starts Dates with no slips in the jar; the couple adds starter packs (or writes their own). */
+export const createCouple = () => post<{ status: boolean }>("/api/couple/create", { packs: [] });
 export const inviteCode = () => post<Invite>("/api/couple/invite");
 export const joinCouple = (code: string) => post<{ status: boolean }>("/api/couple/join", { code });
 export const leaveCouple = () => post<{ status: boolean }>("/api/couple/leave");

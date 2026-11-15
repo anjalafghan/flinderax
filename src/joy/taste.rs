@@ -8,6 +8,43 @@
 
 use std::collections::HashMap;
 
+/// What we felt about things, and what has happened to them, fades with a half-life of about six months.
+const HALF_LIFE_DAYS: f64 = 180.0;
+
+/// One past outing, as the model reads it.
+#[derive(Debug, Clone, Copy)]
+pub struct Event<'a> {
+    /// Tags as stored ("romantic,foodie").
+    pub tags: &'a str,
+    pub setting: &'a str,
+    pub energy: &'a str,
+    /// What the slip was estimated to cost, whole rupees.
+    pub cost: i64,
+    /// "did_it" | "skipped"
+    pub outcome: &'a str,
+    pub rating: Option<i64>,
+    /// How long ago it happened, in days.
+    pub age_days: i64,
+}
+
+pub fn cost_band(cost: i64) -> &'static str {
+    match cost {
+        i64::MIN..=0 => "free",
+        1..=499 => "cheap",
+        500..=1999 => "middling",
+        _ => "dear",
+    }
+}
+
+/// The things about a slip the model learns on: each tag, its setting, energy and cost band.
+pub fn features(tags: &[String], setting: &str, energy: &str, cost: i64) -> Vec<String> {
+    let mut f: Vec<String> = tags.iter().map(|t| format!("tag:{t}")).collect();
+    f.push(format!("setting:{setting}"));
+    f.push(format!("energy:{energy}"));
+    f.push(format!("cost:{}", cost_band(cost)));
+    f
+}
+
 /// Pseudo-observations on each side: with little data every tag scores near 0.5 (neutral).
 const PRIOR: f64 = 3.0;
 const SKIP_WEIGHT: f64 = 0.5;
@@ -19,6 +56,38 @@ pub struct Taste {
 }
 
 impl Taste {
+    /// Learn from outings with their age: each counts for half as much every six months. A tag, a
+    /// setting, an energy level and a cost band each keep their own score.
+    pub fn from_events<'a>(events: impl IntoIterator<Item = Event<'a>>) -> Self {
+        let mut tags: HashMap<String, (f64, f64)> = HashMap::new();
+        for e in events {
+            let (good, bad) = match (e.outcome, e.rating) {
+                ("did_it", Some(r)) if r <= 2 => (0.0, 1.0),
+                ("did_it", Some(r)) if r >= 4 => (1.5, 0.0),
+                ("did_it", _) => (1.0, 0.0),
+                ("skipped", _) => (0.0, SKIP_WEIGHT),
+                _ => continue,
+            };
+            let fade = 0.5f64.powf(e.age_days.max(0) as f64 / HALF_LIFE_DAYS);
+            let list: Vec<String> = e.tags.split(',').map(str::trim).filter(|t| !t.is_empty()).map(String::from).collect();
+            for f in features(&list, e.setting, e.energy, e.cost) {
+                let slot = tags.entry(f).or_default();
+                slot.0 += good * fade;
+                slot.1 += bad * fade;
+            }
+        }
+        Self { tags }
+    }
+
+    /// Multiplier for the draw weight from a slip's [`features`]: 1.0 with no history, else 0.7 to 1.3.
+    pub fn factor_for(&self, features: &[String]) -> f64 {
+        if features.is_empty() || self.tags.is_empty() {
+            return 1.0;
+        }
+        let avg = features.iter().map(|f| self.score(f)).sum::<f64>() / features.len() as f64;
+        0.7 + 0.6 * avg
+    }
+
     /// `rows` are (tags as stored, "did_it" | "skipped", rating).
     pub fn from_history<'a>(rows: impl IntoIterator<Item = (&'a str, &'a str, Option<i64>)>) -> Self {
         let mut tags: HashMap<String, (f64, f64)> = HashMap::new();
@@ -81,6 +150,59 @@ mod tests {
         assert!((0.7..0.95).contains(&down), "{down}");
         // A tag it has never seen stays neutral.
         assert!((taste.factor(&t("cozy")) - 1.0).abs() < 1e-9);
+    }
+
+    fn ev<'a>(tags: &'a str, setting: &'a str, energy: &'a str, cost: i64, outcome: &'a str, rating: Option<i64>, age_days: i64) -> Event<'a> {
+        Event { tags, setting, energy, cost, outcome, rating, age_days }
+    }
+
+    fn feats(tags: &str, setting: &str, energy: &str, cost: i64) -> Vec<String> {
+        features(&t(tags), setting, energy, cost)
+    }
+
+    #[test]
+    fn it_learns_more_than_tags() {
+        // Five great evenings at home, each with a different tag: no tag repeats, but "home" does.
+        let events: Vec<Event> = (["a", "b", "c", "d", "e"]).iter().map(|tag| ev(tag, "home", "low", 300, "did_it", Some(5), 5)).collect();
+        let taste = Taste::from_events(events);
+        let home = taste.factor_for(&feats("new-tag", "home", "high", 5000));
+        let away = taste.factor_for(&feats("new-tag", "day_trip", "high", 5000));
+        assert!(home > away, "home {home} vs away {away}");
+        assert!(home > 1.0 && away - 1.0 <= 0.05, "an unseen kind stays near neutral: {away}");
+        // And it still reads tags and the cost band.
+        assert!(taste.factor_for(&feats("a", "day_trip", "high", 5000)) > away);
+        assert!(taste.factor_for(&feats("new-tag", "day_trip", "high", 300)) > away, "cheap is liked too");
+    }
+
+    #[test]
+    fn what_we_felt_long_ago_counts_for_less() {
+        let loved = |age| Taste::from_events((0..6).map(|_| ev("foodie", "local", "med", 1000, "did_it", Some(5), age)).collect::<Vec<_>>());
+        let recent = loved(10).factor_for(&feats("foodie", "local", "med", 1000));
+        let old = loved(720).factor_for(&feats("foodie", "local", "med", 1000));
+        assert!(recent > old && old > 1.0, "{recent} {old}");
+        // A hundred-year-old like is almost forgotten.
+        let ancient = loved(36_500).factor_for(&feats("foodie", "local", "med", 1000));
+        assert!((ancient - 1.0).abs() < 0.01, "{ancient}");
+    }
+
+    #[test]
+    fn it_stays_bounded_whatever_the_history() {
+        let loved: Vec<Event> = (0..500).map(|_| ev("foodie", "local", "med", 1000, "did_it", Some(5), 1)).collect();
+        let hated: Vec<Event> = (0..500).map(|_| ev("games", "home", "low", 100, "did_it", Some(1), 1)).collect();
+        let taste = Taste::from_events(loved.into_iter().chain(hated));
+        for (tags, setting, energy, cost) in [("foodie", "local", "med", 1000), ("games", "home", "low", 100), ("x", "y", "z", 0)] {
+            let f = taste.factor_for(&feats(tags, setting, energy, cost));
+            assert!((0.7..=1.3).contains(&f), "{f}");
+        }
+    }
+
+    #[test]
+    fn cost_bands_are_free_cheap_middling_and_dear() {
+        assert_eq!(cost_band(0), "free");
+        assert_eq!(cost_band(499), "cheap");
+        assert_eq!(cost_band(500), "middling");
+        assert_eq!(cost_band(1999), "middling");
+        assert_eq!(cost_band(2000), "dear");
     }
 
     #[test]

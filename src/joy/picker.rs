@@ -97,7 +97,12 @@ pub struct Candidate {
     pub both_want: bool,
     /// At least one of us marked it "no" (privately). Nobody is told which.
     pub any_no: bool,
+    /// Came from a starter pack, not the couple's own pen.
+    pub starter: bool,
 }
+
+/// Starter slips are drawn a little less than ones the couple wrote.
+pub const STARTER_DAMP: f64 = 0.8;
 
 /// A slip we both want comes up this much more often; one either of us ruled out, much less.
 pub const BOTH_WANT_BOOST: f64 = 2.0;
@@ -217,6 +222,9 @@ pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
     }
     if c.like_recent {
         w *= VARIETY_DAMP;
+    }
+    if c.starter {
+        w *= STARTER_DAMP;
     }
     if c.any_no {
         w *= ANY_NO_DAMP;
@@ -351,6 +359,7 @@ mod tests {
             like_recent: false,
             both_want: false,
             any_no: false,
+            starter: false,
         }
     }
 
@@ -536,6 +545,15 @@ mod tests {
     }
 
     #[test]
+    fn slips_the_couple_wrote_come_up_a_little_more_often_than_starter_ones() {
+        let mut c = cand(1, 0, "local", Duration::Short);
+        let own = weight(&c, NOW, false);
+        c.starter = true;
+        assert_eq!(weight(&c, NOW, false), own * STARTER_DAMP);
+        const { assert!(STARTER_DAMP < 1.0 && STARTER_DAMP > 0.5) } // a nudge, not a ban
+    }
+
+    #[test]
     fn what_we_both_want_rises_and_what_either_ruled_out_sinks() {
         let mut c = cand(1, 0, "local", Duration::Short);
         let plain = weight(&c, NOW, false);
@@ -580,5 +598,77 @@ mod tests {
         let r = picks(&[out, cozy], &f, &[], 2000);
         let outdoor = r.iter().filter(|p| **p == PickResult::Pick(1)).count();
         assert!((300..700).contains(&outdoor), "outdoor won {outdoor}/2000, expected ~23%");
+    }
+
+    mod properties {
+        use super::*;
+        use proptest::prelude::*;
+
+        const SETTINGS_POOL: [&str; 4] = ["home", "local", "day_trip", "apart"];
+        const TAGS_POOL: [&str; 5] = ["chill", "foodie", "games", "outdoors", "cozy"];
+
+        fn candidate() -> impl Strategy<Value = Candidate> {
+            (0i64..40, 0i64..5000, 0usize..4, 0usize..3, proptest::collection::vec(0usize..5, 0..3), proptest::option::of(0.0f64..120.0), any::<bool>(), any::<bool>())
+                .prop_map(|(id, cost, setting, duration, tags, km, outdoor, closed)| {
+                    let mut c = cand(id, cost, SETTINGS_POOL[setting], [Duration::Short, Duration::HalfDay, Duration::FullDay][duration]);
+                    c.tags = tags.into_iter().map(|t| TAGS_POOL[t].to_string()).collect();
+                    c.distance_km = km;
+                    c.outdoor = outdoor;
+                    if closed {
+                        c.closed_days = vec![2];
+                    }
+                    c
+                })
+        }
+
+        fn filters_strategy() -> impl Strategy<Value = Filters> {
+            (proptest::option::of(0i64..6000), proptest::collection::vec(0usize..4, 0..3), proptest::option::of(0usize..5), proptest::option::of(5.0f64..100.0), any::<bool>()).prop_map(
+                |(budget, settings, tag, km, rain)| Filters {
+                    budget: budget.unwrap_or(i64::MAX),
+                    settings: settings.into_iter().map(|i| SETTINGS_POOL[i].to_string()).collect(),
+                    tag: tag.map(|t| TAGS_POOL[t].to_string()),
+                    max_km: km,
+                    rain_likely: rain,
+                    today: Some(Today { weekday: 2, month: 6 }),
+                    ..Default::default()
+                },
+            )
+        }
+
+        proptest! {
+            /// Whatever the jar holds and whatever is asked, a pick fits every filter and was not set aside;
+            /// and when nothing is picked, nothing eligible was left.
+            #[test]
+            fn a_pick_always_satisfies_every_filter_and_never_returns_an_excluded_slip(
+                all in proptest::collection::vec(candidate(), 0..25),
+                f in filters_strategy(),
+                excluded in proptest::collection::vec(0i64..40, 0..10),
+                seed in any::<u64>(),
+            ) {
+                let mut rng = StdRng::seed_from_u64(seed);
+                // Ids are unique in a real jar.
+                let mut seen = std::collections::HashSet::new();
+                let all: Vec<Candidate> = all.into_iter().filter(|c| seen.insert(c.id)).collect();
+                match pick(&all, &f, &excluded, NOW, &mut rng) {
+                    PickResult::Pick(id) => {
+                        let c = all.iter().find(|c| c.id == id).expect("the pick is in the jar");
+                        prop_assert!(matches(c, &f), "{c:?} does not fit {f:?}");
+                        prop_assert!(!excluded.contains(&id));
+                    }
+                    PickResult::NoMatch(_) => {
+                        prop_assert!(!all.iter().any(|c| matches(c, &f) && !excluded.contains(&c.id)), "something eligible was left");
+                    }
+                }
+            }
+
+            /// The weight of any slip is positive and finite, so the draw can never divide by zero or favour NaN.
+            #[test]
+            fn weights_are_always_positive_and_finite(c in candidate(), rain in any::<bool>(), done_days in proptest::option::of(0i64..2000)) {
+                let mut c = c;
+                c.last_done_at = done_days.map(|d| NOW - d * DAY);
+                let w = weight(&c, NOW, rain);
+                prop_assert!(w.is_finite() && w > 0.0, "{w}");
+            }
+        }
     }
 }

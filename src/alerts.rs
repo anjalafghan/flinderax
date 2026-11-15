@@ -577,4 +577,28 @@ mod tests {
         assert_eq!(categorize(Some("HPCL PETROL PUMP"), Direction::Debit, false, &[]), "fuel");
         assert_eq!(categorize(Some("IOCL FUEL STATION"), Direction::Debit, false, &[]), "fuel");
     }
+
+    mod properties {
+        use super::*;
+        use proptest::prelude::*;
+
+        proptest! {
+            /// Any text at all, however odd, is either read as a transaction with a positive amount or left alone.
+            #[test]
+            fn parsing_never_panics_and_never_invents_an_empty_amount(text in ".{0,400}") {
+                if let Some(a) = parse(&text) {
+                    prop_assert!(a.amount_paise > 0);
+                }
+            }
+
+            /// Real-looking alerts with random amounts come back with exactly that amount.
+            #[test]
+            fn a_debit_alert_returns_the_amount_it_names(rupees in 1i64..10_000_000, paise in 0i64..100) {
+                let text = format!("Rs {rupees}.{paise:02} debited from A/c XX1234 on 12-11-26 to SOME SHOP. Ref 123456.");
+                let a = parse(&text).expect("a plain debit parses");
+                prop_assert_eq!(a.amount_paise, rupees * 100 + paise);
+                prop_assert_eq!(a.direction, Direction::Debit);
+            }
+        }
+    }
 }

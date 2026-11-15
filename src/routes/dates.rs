@@ -27,6 +27,8 @@ pub fn routes(state: AppState) -> Router {
         .route("/slips/{id}/restore", post(wishlist::restore))
         .route("/slips/{id}/unshare", post(wishlist::unshare))
         .route("/slips/{id}/want", post(wishlist::want))
+        .route("/packs", get(wishlist::packs))
+        .route("/packs/add", post(wishlist::add_pack))
         .route("/slips/{id}/delete", post(wishlist::delete))
         .route("/slips/{id}/unveto", post(wishlist::unveto))
         .route("/slips/{id}/plan", post(wishlist::plan))

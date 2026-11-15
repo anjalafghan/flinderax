@@ -40,7 +40,10 @@ self.addEventListener("message", (e) => {
 });
 
 async function cacheName(req) {
-  const auth = req.headers.get("authorization");
+  // An older login sends a bearer token; a cookie login sends only a harmless session id (the cookie
+  // itself is HttpOnly). Either one names this login's saved copies.
+  const sid = req.headers.get("x-session-id");
+  const auth = req.headers.get("authorization") || (sid ? "sid:" + sid : null);
   if (!auth) return null;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(auth));
   const hex = [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
