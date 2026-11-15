@@ -491,6 +491,9 @@
 .pack { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border: 1.5px dashed var(--rule); border-radius: 10px; }
 .pack p { margin: 2px 0 0; }
 .pack-done { color: var(--ink-soft); font: 600 1.3rem/1 var(--font-hand); }
+.k-link { margin: 8px 0; font-size: var(--step--1); color: var(--ink-soft); }
+.k-link-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.k-link-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .putback-why { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 12px; }
 .putback-why-label { font: 600 1.3rem/1.1 var(--font-hand); color: var(--ink-soft); margin-right: 2px; }
 .btn-why {

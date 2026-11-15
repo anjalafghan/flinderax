@@ -4,6 +4,8 @@ use sqlx::{FromRow, SqlitePool};
 use crate::joy::picker::{Candidate, Duration};
 
 mod learned;
+mod txn_link;
+pub use txn_link::*;
 pub use learned::*;
 mod vetoes;
 pub use vetoes::*;

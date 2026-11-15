@@ -14,6 +14,7 @@ import { shrinkImage } from "./photo";
 import { PhotoViewer } from "../components/PhotoViewer";
 import type { KeptView, PlannedView } from "./types";
 import { useAction } from "./useAction";
+import { LinkPayment } from "./LinkPayment";
 import { useFold } from "./useFold";
 
 const slipVars = (h: KeptView, i: number) => ({ "--r": rotOf(h.id), "--i": i }) as CSSProperties;
@@ -627,6 +628,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
               <Err text={whenAct.err} />
             </form>
           </details>
+          <LinkPayment historyId={h.id} linked={h.linked_txn} onDone={() => void finish({ ok: true, to: "/joy/kept" }, { focus: `#k${h.id}` })} />
           <details className="k-when-edit k-cost-edit" {...costFold.props}>
             <summary className="k-tool">
               <span className="k-cost-ico" aria-hidden="true">

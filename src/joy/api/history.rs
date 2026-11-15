@@ -120,6 +120,8 @@ pub struct KeptView {
     pub photos: Vec<KeptPhoto>,
     /// More photos fit on this date.
     pub can_add_photo: bool,
+    /// The bank transaction that paid for this date, when you linked one (only ever your own).
+    pub linked_txn: Option<db::TxnCandidate>,
     /// "₹1,000": the slip's estimate.
     pub cost_est: String,
     /// "₹5,000", or empty when the real cost isn't filled in.
@@ -322,6 +324,7 @@ fn view(ctx: &Ctx, r: &HistoryRow, who: Option<usize>, rain: bool, pair_ids: Str
         photo_url: pics.first().filter(|_| !sealed).map(|p| photo_url(r, p.id, who)),
         photos: if sealed { vec![] } else { pics.iter().map(|p| KeptPhoto { id: p.id, url: photo_url(r, p.id, who) }).collect() },
         can_add_photo: !sealed && r.outcome == "did_it" && (pics.len() as i64) < db::MAX_PHOTOS_PER_DATE,
+        linked_txn: None,
         pair_ids,
         cost_est: if sealed { String::new() } else { ctx.money(r.est_cost) },
         cost_actual: r.actual_cost.filter(|_| !sealed).map(|c| ctx.money(c)).unwrap_or_default(),
@@ -466,10 +469,12 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
     for p in db::all_photos(db, couple).await? {
         pics.entry(p.history_id).or_default().push(p);
     }
+    let links = db::linked_txns(db, couple, &user_id).await?;
     let mut months: Vec<Month> = vec![];
     for row in &done {
         let label = row.month_label();
-        let v = view(ctx, row, who, rain, pair_ids(row, &done, &pairs), &memories, pics.get(&row.id).map_or(&[], Vec::as_slice));
+        let mut v = view(ctx, row, who, rain, pair_ids(row, &done, &pairs), &memories, pics.get(&row.id).map_or(&[], Vec::as_slice));
+        v.linked_txn = links.iter().find(|(id, _)| *id == row.id).map(|(_, t)| t.clone());
         match months.last_mut() {
             Some(m) if m.label == label => m.items.push(v),
             _ => {
@@ -696,6 +701,38 @@ pub async fn unshare(State(s): State<AppState>, Extension((user_id, _)): User, P
     let j = joy(&s, &user_id).await?;
     open_row(&s.db, &j.couple, id, Some(j.who)).await?;
     db::unshare(&s.db, &j.couple, "joy_history", id).await?;
+    Ok(go(kept_to(id)))
+}
+
+/// `GET /history/{id}/candidates`: your own debits around the day of the date, to link one as what it cost.
+pub async fn candidates(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<serde_json::Value>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    Ok(Json(serde_json::json!({ "candidates": db::txn_candidates(&s.db, &user_id, id).await? })))
+}
+
+#[derive(Deserialize)]
+pub struct LinkBody {
+    txn_id: String,
+}
+
+/// `POST /history/{id}/link`: this transaction is what the date cost.
+pub async fn link(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>, Json(b): Json<LinkBody>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    match db::link_txn(&s.db, &j.couple, &user_id, id, &b.txn_id).await? {
+        db::LinkOutcome::Linked => Ok(go(kept_to(id))),
+        db::LinkOutcome::NoSuchTransaction => Err(crate::handlers::common::not_found("No such transaction")),
+        db::LinkOutcome::NoSuchDate => Err(missing()),
+        db::LinkOutcome::Taken => Err(AppError(StatusCode::CONFLICT, "That payment is already linked to another date.".into())),
+    }
+}
+
+/// `POST /history/{id}/unlink`: take the link off (the cost stays).
+pub async fn unlink(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    db::unlink_txn(&s.db, &j.couple, id).await?;
     Ok(go(kept_to(id)))
 }
 
@@ -1120,6 +1157,9 @@ pub fn router() -> Router<AppState> {
         .route("/history/{id}", post(rate))
         .route("/history/{id}/reveal", post(reveal))
         .route("/history/{id}/delete", post(delete))
+        .route("/history/{id}/candidates", get(candidates))
+        .route("/history/{id}/link", post(link))
+        .route("/history/{id}/unlink", post(unlink))
         .route("/history/{id}/unshare", post(unshare))
         .route("/history/{id}/happened", post(happened))
         .route("/putbacks/clear", post(clear_putbacks))

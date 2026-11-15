@@ -56,9 +56,25 @@ fn parse_date(s: &str) -> Option<Date> {
 
 /// Labels the debits that match Joy's dates; returns how many changed.
 async fn label_dates(db: &sqlx::SqlitePool, user_id: &str, payload: &JoyPayload) -> Result<u64, AppError> {
+    // A date linked to the transaction that paid for it is settled: neither is guessed at again.
+    let linked: Vec<String> = sqlx::query_scalar(
+        "SELECT 'date:' || h.id FROM joy_history h JOIN couples c ON c.couple_id = h.couple_id
+          WHERE (c.user_0 = ?1 OR c.user_1 = ?1) AND h.txn_id IS NOT NULL",
+    )
+    .bind(user_id)
+    .fetch_all(db)
+    .await?;
+    let linked_txns: Vec<String> = sqlx::query_scalar(
+        "SELECT h.txn_id FROM joy_history h JOIN couples c ON c.couple_id = h.couple_id
+          WHERE (c.user_0 = ?1 OR c.user_1 = ?1) AND h.txn_id IS NOT NULL",
+    )
+    .bind(user_id)
+    .fetch_all(db)
+    .await?;
     let entries: Vec<DateSpend> = payload
         .entries
         .iter()
+        .filter(|e| !linked.contains(&e.id))
         .filter_map(|e| Some(DateSpend { day: parse_date(&e.day)?, amount: e.amount * 100 }))
         .filter(|e| e.amount > 0)
         .collect();
@@ -75,6 +91,7 @@ async fn label_dates(db: &sqlx::SqlitePool, user_id: &str, payload: &JoyPayload)
     .await?
     .into_iter()
     .filter_map(|t| Some(Debit { on: parse_date(&t.occurred_on)?, amount: t.amount_paise, is_date: t.category == "dates", txn_id: t.txn_id }))
+    .filter(|d| !linked_txns.contains(&d.txn_id))
     .collect();
 
     let mut changed = 0;
