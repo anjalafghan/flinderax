@@ -61,8 +61,6 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         ("moves", "SELECT * FROM moves WHERE user_id = ?"),
         ("card_events", "SELECT e.* FROM card_events e JOIN cards c ON c.card_id = e.card_id WHERE c.user_id = ?"),
         ("card_running_state", "SELECT s.* FROM card_running_state s JOIN cards c ON c.card_id = s.card_id WHERE c.user_id = ?"),
-        ("deferred_payment_batches", "SELECT * FROM deferred_payment_batches WHERE user_id = ?"),
-        ("deferred_payment_items", "SELECT i.* FROM deferred_payment_items i JOIN deferred_payment_batches b ON b.batch_id = i.batch_id WHERE b.user_id = ?"),
         ("pending_charges", "SELECT p.* FROM pending_charges p JOIN cards c ON c.card_id = p.card_id WHERE c.user_id = ?"),
         ("auto_postings", "SELECT * FROM auto_postings WHERE user_id = ?"),
         ("dismissed_recurring", "SELECT * FROM dismissed_recurring WHERE user_id = ?"),

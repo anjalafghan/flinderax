@@ -124,30 +124,3 @@ pub struct DeleteTransactionPayload {
     pub transaction_id: String,
 }
 
-#[derive(Serialize)]
-pub struct DeferredBatchStatus {
-    pub batch_id: String,
-    pub total_amount: f32,
-    pub status: String,
-    pub items: Vec<DeferredItemStatus>,
-}
-
-#[derive(Serialize)]
-pub struct DeferredItemStatus {
-    pub item_id: String,
-    pub card_id: String,
-    pub card_name: Option<String>,
-    pub amount: f32,
-}
-
-#[derive(Deserialize)]
-pub struct SettleDeferredPayload {
-    pub batch_id: String,
-}
-
-#[derive(Serialize)]
-pub struct SettleDeferredResponse {
-    pub batch_id: String,
-    pub total_settled: f32,
-    pub status: bool,
-}

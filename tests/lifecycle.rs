@@ -292,7 +292,7 @@ async fn export_has_the_new_tables_and_no_secrets() {
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
     let data = &r.json["data"];
     for k in [
-        "card_events", "card_running_state", "deferred_payment_batches", "deferred_payment_items", "pending_charges", "auto_postings",
+        "card_events", "card_running_state", "pending_charges", "auto_postings",
         "dismissed_recurring", "statement_imports", "statement_profiles", "tax_entries", "life_profiles", "transactions",
         "followups", "person_facts", "rewards", "reward_claims", "reward_settings",
     ] {

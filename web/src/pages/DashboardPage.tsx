@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, ChevronDown, CircleHelp, Clock, Heart, ListFilter, Plus, X, type LucideIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, CircleHelp, Heart, ListFilter, Plus, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 
 import api from "@/services/api";
 import { Header } from "@/components/layout/Header";
 import { CardCarousel } from "@/components/feature/CardCarousel";
-import { Button } from "@/components/ui/button";
 import { PlannerSummary } from "@/components/feature/PlannerSummary";
 import { NetWorthPanel } from "@/components/feature/NetWorthPanel";
 import { CardUtilization } from "@/components/feature/CardUtilization";
@@ -22,7 +20,6 @@ import { CheckInCard } from "@/components/feature/CheckInCard";
 import { LifeLineCard } from "@/components/feature/life/LifeLineCard";
 import { UpcomingDatesCard } from "@/components/feature/people/UpcomingDatesCard";
 import { EmptyScene } from "@/components/ui/EmptyScene";
-import { celebrate } from "@/utils/motion";
 import { useDashboardHistory } from "@/hooks/usePlanner";
 import { StreaksCard } from "@/components/feature/StreaksCard";
 import { DatesHome } from "@/components/feature/DatesHome";
@@ -63,33 +60,12 @@ export interface CardData {
   pay_from_account_id?: string | null;
 }
 
-interface DeferredItem {
-  item_id: string;
-  card_id: string;
-  card_name: string | null;
-  amount: number;
-}
-
-interface DeferredBatchStatus {
-  batch_id: string;
-  total_amount: number;
-  status: string;
-  items: DeferredItem[];
-}
-
 function MoneyDashboard() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1200,
   );
-  const [showSettleConfirm, setShowSettleConfirm] = useState(false);
-  const [pendingToSettle, setPendingToSettle] = useState<{
-    batchId: string;
-    total: number;
-  } | null>(null);
-
   const [showCarousel, setShowCarousel] = useState(false);
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -128,75 +104,7 @@ function MoneyDashboard() {
   // Tracker data is optional: if this fails, the section is simply hidden.
   const { data: history } = useDashboardHistory(12);
 
-  const { data: deferredStatus } = useQuery({
-    queryKey: ["deferred-status"],
-    queryFn: async () => {
-      const res = await api.get<DeferredBatchStatus>("/api/card/defer_status");
-      return res.data;
-    },
-  });
 
-   const settleMutation = useMutation({
-     mutationFn: async (batchId: string) => {
-       const res = await api.post<{
-         batch_id: string;
-         total_settled: number;
-         status: boolean;
-       }>("/api/card/defer_settle", { batch_id: batchId });
-       return res.data;
-     },
-     onSuccess: (data) => {
-       if (data.status) {
-         void celebrate();
-         toast.success(
-           `Settled ${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(data.total_settled)} successfully!`,
-         );
-         setShowSettleConfirm(false);
-         setPendingToSettle(null);
-         queryClient.invalidateQueries({ queryKey: ["deferred-status"] });
-         queryClient.invalidateQueries({ queryKey: ["cards"] });
-       }
-     },
-     onError: (error: unknown) => {
-       toast.error("Failed to settle payments");
-       console.error(error);
-     },
-   });
-
-   const cancelDeferredMutation = useMutation({
-     mutationFn: async (batchId: string) => {
-       const res = await api.post<{ status: boolean }>("/api/card/defer_cancel", {
-         batch_id: batchId,
-       });
-       return res.data;
-     },
-     onSuccess: (data) => {
-       if (data.status) {
-         toast.success("Pending payments cancelled");
-         queryClient.invalidateQueries({ queryKey: ["deferred-status"] });
-       }
-     },
-     onError: (error: unknown) => {
-       toast.error("Failed to cancel payments");
-       console.error(error);
-     },
-    });
-
-   const handleSettle = () => {
-    if (deferredStatus) {
-      setPendingToSettle({
-        batchId: deferredStatus.batch_id,
-        total: deferredStatus.total_amount,
-      });
-      setShowSettleConfirm(true);
-    }
-  };
-
-  const confirmSettle = () => {
-    if (pendingToSettle) {
-      settleMutation.mutate(pendingToSettle.batchId);
-    }
-  };
 
   const unpackColor = (packed: number): [number, number, number] => {
     const r = (packed >> 16) & 0xff;
@@ -226,13 +134,11 @@ function MoneyDashboard() {
     }
   }
 
-   const hasPendingDeferred = deferredStatus && deferredStatus.total_amount !== 0;
-
   return (
     <div className="min-h-[100dvh] w-full text-foreground transition-colors duration-300 flex flex-col overflow-x-clip">
       <Header />
 
-      <main className={`page flex-1 ${hasPendingDeferred ? "pb-32" : ""}`}>
+      <main className="page flex-1">
         <div className="mb-6 w-full">
           <PlannerSummary />
           <StreaksCard />
@@ -320,90 +226,6 @@ function MoneyDashboard() {
         )}
       </main>
 
-       {hasPendingDeferred && (
-         <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 bg-gradient-to-t md:bottom-0 from-background via-background/95 to-transparent pt-8 pb-4 px-4 border-t border-border/50">
-           <div className="container mx-auto max-w-md relative">
-             <div className="rounded-xl border border-warn/40 bg-warn-tint p-4">
-               <button
-                 onClick={() => {
-                   if (deferredStatus) {
-                     cancelDeferredMutation.mutate(deferredStatus.batch_id);
-                   }
-                 }}
-                 className="absolute -top-2 -right-2 rounded-full p-1.5 bg-background border border-border hover:bg-accent hover:text-destructive transition-colors z-10"
-                 aria-label="Dismiss pending payments"
-                 disabled={cancelDeferredMutation.isPending}
-               >
-                 <X className="h-4 w-4" />
-               </button>
-               <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-warn-tint">
-                    <Clock className="h-5 w-5 text-warn" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-warn">
-                      Pending Payments
-                    </p>
-                    <p className="text-xl font-bold text-warn">
-                      {new Intl.NumberFormat("en-IN", {
-                        style: "currency",
-                        currency: "INR",
-                      }).format(deferredStatus?.total_amount || 0)}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={handleSettle}
-                  disabled={settleMutation.isPending}
-                >
-                  {settleMutation.isPending ? "Settling..." : "Settle All"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showSettleConfirm && pendingToSettle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 p-4">
-          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in fade-in zoom-in duration-200">
-            <h2 className="font-display text-[32px] leading-none mb-2">Settle All Payments</h2>
-            <p className="text-muted-foreground mb-4">
-              You are about to settle{" "}
-              <span className="font-bold text-foreground">
-                {deferredStatus?.items?.length || 0}
-              </span>{" "}
-              pending payments totaling{" "}
-              <span className="font-bold text-good">
-                {new Intl.NumberFormat("en-IN", {
-                  style: "currency",
-                  currency: "INR",
-                }).format(pendingToSettle.total)}
-              </span>
-            </p>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setShowSettleConfirm(false);
-                  setPendingToSettle(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={confirmSettle}
-              >
-                Confirm Settlement
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
