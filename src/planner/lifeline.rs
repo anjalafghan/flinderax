@@ -82,6 +82,15 @@ pub enum Choice {
         start: String,
         months: i64,
     },
+    /// A hospital stay in `year`: the bill (in today's money) less what health cover pays.
+    Hospital {
+        year: i64,
+        bill_paise: i64,
+    },
+    /// The user's pay stops for good from `year` (illness or death). Term cover, if any, pays out.
+    LoseEarner {
+        year: i64,
+    },
     /// Spend this much less each month while working; it is invested instead.
     SaveMore {
         monthly_paise: i64,
@@ -237,6 +246,17 @@ pub fn validate(choice: &Choice, today: Date) -> Result<(), String> {
         Choice::SaveMore { monthly_paise } => {
             positive_amount(*monthly_paise)?;
         }
+        Choice::Hospital { year, bill_paise } => {
+            if !year_ok(*year) {
+                return Err("The year must be this year or later.".into());
+            }
+            positive_amount(*bill_paise)?;
+        }
+        Choice::LoseEarner { year } => {
+            if !year_ok(*year) {
+                return Err("The year must be this year or later.".into());
+            }
+        }
         Choice::StayActive { medical_cut_bps } => {
             if medical_cut_bps.is_some_and(|b| !bps_ok(b, 9_000)) {
                 return Err("The saving on medical costs must be between 0% and 90%.".into());
@@ -358,6 +378,7 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
     let mut homes: Vec<Home> = Vec::new();
     let mut lumps: Vec<Lump> = Vec::new();
     let mut save_more = 0.0;
+    let mut earner_lost: Option<i64> = None;
     let mut medical_keep = 1.0;
     let my_raise = rate(p.raise_bps.clamp(0, 3_000));
     let partner_raise = rate(p.partner_raise_bps.clamp(0, 3_000));
@@ -416,6 +437,25 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
             Choice::Break { start, months } => {
                 let Some(from) = month_index(start, today) else { continue };
                 breaks.push((from, from + (*months).clamp(1, 60)));
+            }
+            Choice::Hospital { year, bill_paise } => {
+                let from = months_from(today, (*year).clamp(ty, ty + 80), 6);
+                let net = ((*bill_paise).clamp(0, MAX_AMOUNT_PAISE) - p.health_cover_paise.clamp(0, MAX_AMOUNT_PAISE)).max(0) as f64;
+                if net > 0.0 {
+                    lumps.push(Lump { month: from, amount: grow(net, MEDICAL_INFLATION_BPS, from), label: "Hospital bill".into() });
+                } else {
+                    // Covered in full: nothing to pay, but the year still notes it.
+                    lumps.push(Lump { month: from, amount: 0.0, label: "Hospital bill".into() });
+                }
+            }
+            Choice::LoseEarner { year } => {
+                let from = months_from(today, (*year).clamp(ty, ty + 80), 6);
+                earner_lost = Some(earner_lost.map_or(from, |e: i64| e.min(from)));
+                let cover = p.term_cover_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
+                if cover > 0.0 {
+                    // A payout is money coming in, which is a negative cost in that month.
+                    lumps.push(Lump { month: from, amount: -cover, label: "Term cover pays out".into() });
+                }
             }
             Choice::SaveMore { monthly_paise } => save_more += (*monthly_paise).clamp(0, MAX_AMOUNT_PAISE) as f64,
             Choice::StayActive { medical_cut_bps } => {
@@ -480,6 +520,9 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
             mine = if since < 0 { 0.0 } else { job.pay * (1.0 + job.raise).powi((since / MONTHS_PER_YEAR) as i32) };
         }
         if breaks.iter().any(|(from, to)| (*from..*to).contains(&m)) {
+            mine = 0.0;
+        }
+        if earner_lost.is_some_and(|from| m >= from) {
             mine = 0.0;
         }
         let income = if working { mine + partner_base * (1.0 + partner_raise).powi(years_in) } else { 0.0 };
@@ -774,6 +817,51 @@ mod tests {
 
     fn end_today(l: &Line) -> i64 {
         l.marks.at_end_today_paise
+    }
+
+    fn covered(health: i64, term: i64, choices: Vec<Choice>) -> Line {
+        let mut i = input(choices);
+        i.profile.health_cover_paise = health;
+        i.profile.term_cover_paise = term;
+        i.profile.partner_take_home_paise = 12_000_000; // someone is still earning when the other is lost
+        simulate(&i, today())
+    }
+
+    #[test]
+    fn a_hospital_bill_costs_what_health_cover_does_not() {
+        let bill = Choice::Hospital { year: 2030, bill_paise: 50_000_000 };
+        let none = end_today(&covered(0, 0, vec![]));
+        let uncovered = end_today(&covered(0, 0, vec![bill.clone()]));
+        let part = end_today(&covered(20_000_000, 0, vec![bill.clone()]));
+        let all = end_today(&covered(60_000_000, 0, vec![bill]));
+        assert!(uncovered < part && part < all, "{uncovered} {part} {all}");
+        assert_eq!(all, none, "fully covered, it costs nothing");
+        let l = covered(0, 0, vec![Choice::Hospital { year: 2030, bill_paise: 50_000_000 }]);
+        assert!(l.rows.iter().any(|r| r.year == 2030 && r.events.iter().any(|e| e == "Hospital bill")));
+    }
+
+    #[test]
+    fn losing_an_earner_stops_their_pay_and_term_cover_softens_it() {
+        let lose = || Choice::LoseEarner { year: 2030 };
+        let base = end_today(&covered(0, 0, vec![]));
+        let bare = end_today(&covered(0, 0, vec![lose()]));
+        let insured = end_today(&covered(0, 500_000_000, vec![lose()]));
+        assert!(bare < base, "less income");
+        assert!(insured > bare, "term cover pays out");
+        let l = covered(0, 500_000_000, vec![lose()]);
+        assert!(l.rows.iter().any(|r| r.year == 2030 && r.events.iter().any(|e| e.contains("Term cover"))));
+        assert!(l.rows.last().unwrap().income_paise > 0 || l.marks.retire_age > 0);
+    }
+
+    #[test]
+    fn shocks_are_checked() {
+        assert!(validate(&Choice::Hospital { year: 2030, bill_paise: 1_000_000 }, today()).is_ok());
+        assert!(validate(&Choice::Hospital { year: 2001, bill_paise: 1_000_000 }, today()).is_err());
+        assert!(validate(&Choice::Hospital { year: 2030, bill_paise: 0 }, today()).is_err());
+        assert!(validate(&Choice::LoseEarner { year: 2030 }, today()).is_ok());
+        assert!(validate(&Choice::LoseEarner { year: 1999 }, today()).is_err());
+        let json = serde_json::to_string(&Choice::LoseEarner { year: 2031 }).unwrap();
+        assert_eq!(json, r#"{"kind":"lose_earner","year":2031}"#);
     }
 
     #[test]

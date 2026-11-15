@@ -11,6 +11,8 @@ export type Choice =
   | { kind: "retire_at"; age: number }
   | { kind: "big_spend"; name: string; year: number; amount_paise: number; every_years: number | null }
   | { kind: "break"; start: string; months: number }
+  | { kind: "hospital"; year: number; bill_paise: number }
+  | { kind: "lose_earner"; year: number }
   | { kind: "save_more"; monthly_paise: number }
   | { kind: "stay_active"; medical_cut_bps: number | null };
 
@@ -146,6 +148,10 @@ export function describeChoice(c: Choice): string {
     }
     case "break":
       return `${c.months} months off work from ${monthLabel(c.start)}`;
+    case "hospital":
+      return `A ${formatINR(c.bill_paise)} hospital bill in ${c.year}`;
+    case "lose_earner":
+      return `My income stops in ${c.year}`;
     case "save_more":
       return `Spend ${formatINR(c.monthly_paise)} less a month`;
     case "stay_active":
