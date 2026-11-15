@@ -5,6 +5,7 @@ import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
+import { NotificationsSection } from "@/components/feature/NotificationsSection";
 import { BackupSection } from "@/components/feature/BackupSection";
 import { sessionApi } from "@/services/session";
 import { loginToKeep } from "@/session";
@@ -16,6 +17,7 @@ export function AccountSection() {
   return (
     <div className="stack">
       <ChangePassword />
+      <NotificationsSection />
       <BackupSection />
       <SignOutEverywhere />
       <DeleteAccount />

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AuthContext } from "@/context/AuthContext";
 import { AccountSection } from "./AccountSection";
@@ -15,6 +16,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 function view() {
   return render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <AuthContext.Provider value={{ isAuthenticated: true, token: "old", login, logout, isLoading: false }}>
       <MemoryRouter initialEntries={["/account"]}>
         <Routes>
@@ -22,7 +24,8 @@ function view() {
           <Route path="/auth" element={<p>sign in page</p>} />
         </Routes>
       </MemoryRouter>
-    </AuthContext.Provider>,
+    </AuthContext.Provider>
+    </QueryClientProvider>,
   );
 }
 
@@ -32,6 +35,8 @@ beforeEach(() => {
   logout.mockClear();
   reply = () => json({ status: true });
   globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    // The notifications card asks the server its status on its own; these tests are about the account calls.
+    if (url === "/api/push") return json({ public_key: null, subscribed: false });
     calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
     return reply(url);
   }) as unknown as typeof fetch;

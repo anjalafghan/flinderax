@@ -36,6 +36,8 @@ A private life-planning app for one household: money (Flinderax) plus the date j
 - Quiet marks (`joy_wants`): a person only ever sees their own, plus `both_want`. Never return or export the partner's level; the draw only turns them into weights.
 - `POST /api/import` loads an export back (money and people; Dates is left alone). New user tables join `export::USER_TABLES` in parent-before-child order, and the round-trip test in `tests/auth_integration.rs` should cover them.
 - Web sign-in is an HttpOnly `joy_session` cookie (SameSite=Strict). Unsafe requests authenticated by the cookie must carry `X-Joy: 1`. The page keeps only a harmless `s_…` id under `localStorage.token` (it names the offline cache; never the token). Bearer tokens still work for scripts and older logins.
+- Notifications (`src/push.rs`, `docs/notifications.md`): a morning and an evening digest of counts only (never names or amounts), sent by a scheduled call to `/api/internal/push/run`. New nudge kinds must keep that rule.
+- Every authenticated POST accepts an `Idempotency-Key` and is then done once; the web outbox (`web/src/offline.ts`) relies on it.
 - Bank texts the parser can't read are kept 30 days in `unrecognized_alerts`.
 
 ## SQL, offline data and local databases
