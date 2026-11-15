@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { QUEUED_NOTE } from "@/offline";
 import { checkIn, getJarMiddle, keys, type MiddleBody, type MiddleView } from "../api";
 import { errText, useBusy } from "../components/useBusy";
 
@@ -36,9 +37,9 @@ function Middle({ m }: { m: MiddleView }) {
     run(async () => {
       setErr("");
       try {
-        await checkIn(body);
+        const res = await checkIn(body);
         await qc.invalidateQueries({ queryKey: keys.jar });
-        setSaid(saidText);
+        setSaid(res.queued ? QUEUED_NOTE : saidText);
       } catch (e) {
         setErr(errText(e));
       }

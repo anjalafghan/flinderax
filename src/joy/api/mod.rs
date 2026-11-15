@@ -312,14 +312,14 @@ impl ActivityView {
                     let km = (*d)?;
                     let mut cab = crate::joy::travel::cab(km);
                     if let Some(f) = learned.cab {
-                        cab.rupees = ((cab.rupees as f64 * f) / 10.0).round() as i64 * 10;
+                        cab.paise = ((cab.paise as f64 * f) / 1_000.0).round() as i64 * 1_000;
                     }
                     let train = crate::joy::travel::train(km);
                     Some(TravelLine {
                         name: name.clone(),
-                        cab: format!("~{}", ctx.money(cab.rupees)),
+                        cab: format!("~{}", ctx.money(cab.paise)),
                         cab_time: crate::joy::travel::duration_label(cab.minutes),
-                        train: format!("~{}", ctx.money(train.rupees)),
+                        train: format!("~{}", ctx.money(train.paise)),
                         train_time: crate::joy::travel::duration_label(train.minutes),
                     })
                 })
@@ -493,7 +493,7 @@ pub async fn budget_view(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Bud
     Ok(BudgetView {
         spent: if spent == 0 { format!("{}0", ctx.currency) } else { ctx.money(spent) },
         budget: budget.map(|b| ctx.money(b)).unwrap_or_default(),
-        budget_raw: standing.map(|b| b.to_string()).unwrap_or_default(),
+        budget_raw: standing.map(crate::validate::plain_rupees).unwrap_or_default(),
         pct: budget.map(|b| ((spent * 100) / b).clamp(0, 100) as u8).unwrap_or(0),
         over: budget.is_some_and(|b| spent > b),
         carry_note: if carry > 0 && standing.is_some() { format!("includes {} rolled over", ctx.money(carry)) } else { String::new() },

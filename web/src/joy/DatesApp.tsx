@@ -10,7 +10,6 @@ const JarPage = lazy(() => import("./jar/JarPage"));
 const SlipsPage = lazy(() => import("./pages/SlipsPage"));
 const SlipFormPage = lazy(() => import("./pages/SlipFormPage"));
 const MiddlePage = lazy(() => import("./pages/MiddlePage"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const KeptPage = lazy(() => import("./pages/KeptPage"));
 const RegularsPage = lazy(() => import("./pages/RegularsPage"));
 const RegularPage = lazy(() => import("./pages/RegularPage"));
@@ -30,9 +29,6 @@ function Nav({ page }: { page: ReturnType<typeof pageKey> }) {
   return (
     <>
       <header className="top">
-        <Link className="wordmark" to="/joy" aria-label="Dates, home">
-          joy
-        </Link>
         <nav aria-label="Dates">
           <Link to="/joy" data-nav="jar" {...cur("jar")}>
             Jar
@@ -64,9 +60,6 @@ function Nav({ page }: { page: ReturnType<typeof pageKey> }) {
           </Link>
           <Link to="/people" data-nav="circle">
             Circle
-          </Link>
-          <Link to="/joy/settings" data-nav="settings" {...(page === "settings" ? ({ "aria-current": "page" } as const) : {})}>
-            Settings
           </Link>
         </nav>
       </header>
@@ -106,7 +99,7 @@ export default function DatesApp() {
                 <Route path="slips/new" element={<div className="p-slips"><SlipFormPage /></div>} />
                 <Route path="slips/:id" element={<div className="p-slips"><SlipFormPage /></div>} />
                 <Route path="middle" element={<MiddlePage />} />
-                <Route path="settings" element={<SettingsPage />} />
+                <Route path="settings" element={<Navigate to="/account" replace />} />
                 <Route path="kept" element={<KeptPage />} />
                 <Route path="regulars" element={<RegularsPage />} />
                 <Route path="regulars/:id" element={<RegularPage />} />

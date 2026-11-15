@@ -5,14 +5,14 @@ import { regKeys, wentTo } from "./api";
 import { apiMessage, parseRupees } from "./days";
 
 /** Log a night we went to on any day that has passed: it becomes a kept date on that day. */
-export function PastNight({ regularId, usualRaw }: { regularId: number; usualRaw: number }) {
+export function PastNight({ regularId, usualRaw }: { regularId: number; usualRaw: string }) {
   const qc = useQueryClient();
   const { busy, run } = useBusy();
   const [day, setDay] = useState("");
-  const [amount, setAmount] = useState(usualRaw > 0 ? String(usualRaw) : "");
+  const [amount, setAmount] = useState(usualRaw);
   const [error, setError] = useState("");
   const today = new Date().toLocaleDateString("en-CA");
-  const reset = () => { setDay(""); setAmount(usualRaw > 0 ? String(usualRaw) : ""); setError(""); };
+  const reset = () => { setDay(""); setAmount(usualRaw); setError(""); };
   return (
     <form
       className="rl-form"

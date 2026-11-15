@@ -6,18 +6,40 @@
 /// Far above any real balance, far below where `i64` sums can overflow.
 pub const MAX_AMOUNT_PAISE: i64 = 100_000_000_000_000;
 
-/// The same cap for the Dates side, which stores whole rupees: ₹10^12.
-pub const MAX_AMOUNT_RUPEES: i64 = 1_000_000_000_000;
-
-/// Dates side (whole rupees): `Ok(v)` when `0 <= v <= MAX_AMOUNT_RUPEES`.
-pub fn rupees(v: i64) -> Result<i64, String> {
-    if v < 0 {
-        Err("Amount can't be negative.".into())
-    } else if v > MAX_AMOUNT_RUPEES {
-        Err("That amount is too large.".into())
-    } else {
-        Ok(v)
+/// An amount as a person types it ("1200", "₹1,200", "1 200.50") in integer paise: no more than two
+/// decimals, not negative, within the cap. Money is paise everywhere in the software; this is the
+/// one place rupees typed into a form become paise.
+pub fn paise_from_text(text: &str) -> Result<i64, String> {
+    let wrong = || "That amount didn't look right.".to_string();
+    let t: String = text.trim().trim_start_matches('₹').chars().filter(|c| !matches!(c, ',' | ' ')).collect();
+    if t.is_empty() || t.starts_with('-') {
+        return Err(if t.starts_with('-') { "Amount can't be negative.".into() } else { wrong() });
     }
+    let (whole, frac) = match t.split_once('.') {
+        Some((w, f)) => (w, f),
+        None => (t.as_str(), ""),
+    };
+    let digits = |s: &str| s.chars().all(|c| c.is_ascii_digit());
+    if (whole.is_empty() && frac.is_empty()) || !digits(whole) || !digits(frac) || frac.len() > 2 {
+        return Err(wrong());
+    }
+    let rupees: i64 = if whole.is_empty() { 0 } else { whole.parse().map_err(|_| "That amount is too large.".to_string())? };
+    let paise: i64 = match frac.len() {
+        0 => 0,
+        1 => frac.parse::<i64>().map_err(|_| wrong())? * 10,
+        _ => frac.parse::<i64>().map_err(|_| wrong())?,
+    };
+    let total = rupees.checked_mul(100).and_then(|r| r.checked_add(paise)).ok_or_else(|| "That amount is too large.".to_string())?;
+    if total > MAX_AMOUNT_PAISE {
+        return Err("That amount is too large.".into());
+    }
+    Ok(total)
+}
+
+/// Paise as the plain text an input field holds: "1200" or "1200.50" (no symbol, no commas).
+pub fn plain_rupees(paise: i64) -> String {
+    let (r, p) = (paise / 100, (paise % 100).abs());
+    if p == 0 { r.to_string() } else { format!("{r}.{p:02}") }
 }
 
 /// Longest tenure / horizon in months that any planner input may span (100 years).
@@ -80,7 +102,32 @@ mod tests {
         assert!(months(1201).is_err());
         assert!(months(-1).is_err());
         assert!(months(360).is_ok());
-        assert!(rupees(MAX_AMOUNT_RUPEES + 1).is_err());
-        assert!(rupees(0).is_ok());
+    }
+
+    #[test]
+    fn typed_amounts_become_paise() {
+        for (typed, paise) in [("1200", 120_000), ("₹1,200", 120_000), ("1 200.5", 120_050), ("1200.50", 120_050), ("0.07", 7), (".5", 50), ("0", 0), ("  42  ", 4_200)] {
+            assert_eq!(paise_from_text(typed), Ok(paise), "{typed}");
+        }
+    }
+
+    #[test]
+    fn odd_amounts_are_refused_with_a_reason() {
+        for bad in ["", "abc", "12.345", "1.2.3", "1e5", "₹", "."] {
+            assert_eq!(paise_from_text(bad).unwrap_err(), "That amount didn't look right.", "{bad:?}");
+        }
+        assert_eq!(paise_from_text("-5").unwrap_err(), "Amount can't be negative.");
+        assert_eq!(paise_from_text("99999999999999999999").unwrap_err(), "That amount is too large.");
+        assert_eq!(paise_from_text("1000000000001").unwrap_err(), "That amount is too large.");
+        assert!(paise_from_text("1000000000000").is_ok(), "the cap itself is fine");
+    }
+
+    #[test]
+    fn plain_text_for_a_field_round_trips() {
+        for paise in [0, 7, 50, 100, 120_050, 99_999_999] {
+            assert_eq!(paise_from_text(&plain_rupees(paise)), Ok(paise));
+        }
+        assert_eq!(plain_rupees(120_000), "1200");
+        assert_eq!(plain_rupees(120_050), "1200.50");
     }
 }

@@ -36,9 +36,13 @@ pub struct ComingUp {
 }
 
 pub async fn get(State(state): State<AppState>, Extension((user_id, _)): User, Query(q): Query<Q>) -> Result<Json<ComingUp>, AppError> {
-    let today = today_local();
     let days = q.days.unwrap_or(14).clamp(1, 60);
-    let db = &state.db;
+    Ok(Json(ComingUp { items: gather(&state.db, &user_id, today_local(), days).await? }))
+}
+
+/// Everything coming up for one person in the next `days` days, soonest first.
+pub async fn gather(db: &sqlx::SqlitePool, user_id: &str, today: Date, days: i64) -> Result<Vec<Entry>, AppError> {
+    let user_id = user_id.to_string();
     let mut items: Vec<Item> = Vec::new();
 
     autopost::apply(db, &user_id, today).await?;
@@ -64,5 +68,5 @@ pub async fn get(State(state): State<AppState>, Extension((user_id, _)): User, Q
         }
     }
 
-    Ok(Json(ComingUp { items: merge(items, today, days) }))
+    Ok(merge(items, today, days))
 }

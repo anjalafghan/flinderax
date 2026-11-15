@@ -1289,3 +1289,175 @@ async fn a_cookie_session_is_renewed_in_the_cookie() {
     let set = cookie_of(&h);
     assert!(set.starts_with("joy_session=") && !set.starts_with(&format!("joy_session={old}")) && set.contains("Max-Age=2592000"), "{set}");
 }
+
+async fn make_couple(app: &Router, a: &str, b: &str) {
+    authed_post(app, a, "/api/couple/create", json!({})).await;
+    let (_, inv) = authed_post(app, a, "/api/couple/invite", json!({})).await;
+    let code = serde_json::from_str::<Value>(&inv).unwrap()["code"].as_str().unwrap().to_string();
+    let (s, body) = authed_post(app, b, "/api/couple/join", json!({"code": code})).await;
+    assert!(s.is_success(), "{body}");
+}
+
+#[tokio::test]
+async fn a_couple_agrees_on_a_goal_and_both_pay_into_it() {
+    let app = test_app().await;
+    let (a, b) = (new_user(&app, "10.0.3.1", "goaleda").await, new_user(&app, "10.0.3.2", "goaledb").await);
+    make_couple(&app, &a, &b).await;
+    let today = joy::handlers::common::today_local();
+    let by = (today + time::Duration::days(200)).to_string();
+
+    let (s, body) = authed_post(&app, &a, "/api/couple-goals", json!({"name": "Wedding", "target_paise": 5_000_000, "target_date": by})).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    let id = serde_json::from_str::<Value>(&body).unwrap()["goal_id"].as_str().unwrap().to_string();
+
+    // Both see the same goal.
+    for t in [&a, &b] {
+        let v = authed_get(&app, t, "/api/couple-goals").await;
+        assert_eq!(v["goals"][0]["name"], "Wedding", "{v}");
+        assert_eq!(v["goals"][0]["target_paise"], 5_000_000);
+    }
+
+    // Each pays in their own; the total is shared and each share is named.
+    let (s, _) = authed_post(&app, &a, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": 1_000_000})).await;
+    assert_eq!(s, StatusCode::OK);
+    let (s, _) = authed_post(&app, &b, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": 500_000, "note": "from my bonus"})).await;
+    assert_eq!(s, StatusCode::OK);
+    let v = authed_get(&app, &b, "/api/couple-goals").await;
+    let g = &v["goals"][0];
+    assert_eq!(g["saved_paise"], 1_500_000);
+    assert_eq!(g["percent"], 30);
+    assert!(g["monthly_needed_paise"].as_i64().unwrap() > 0);
+    let shares: Vec<(&str, i64)> = g["shares"].as_array().unwrap().iter().map(|s| (s["name"].as_str().unwrap(), s["paise"].as_i64().unwrap())).collect();
+    assert_eq!(shares.len(), 2, "{shares:?}");
+    assert!(shares.iter().any(|(n, p)| n.starts_with("goaleda") && *p == 1_000_000));
+    assert!(shares.iter().any(|(n, p)| n.starts_with("goaledb") && *p == 500_000));
+
+    // You can take back your own payment, not your partner's.
+    let first = g["contributions"][0]["id"].as_i64().unwrap();
+    let mine = g["contributions"].as_array().unwrap().iter().find(|c| c["mine"] == true).unwrap()["id"].as_i64().unwrap();
+    let theirs = g["contributions"].as_array().unwrap().iter().find(|c| c["mine"] == false).unwrap()["id"].as_i64().unwrap();
+    let _ = first;
+    let (s, _) = authed_post(&app, &b, &format!("/api/couple-goals/{id}/contributions/{theirs}/delete"), json!({})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+    let (s, _) = authed_post(&app, &b, &format!("/api/couple-goals/{id}/contributions/{mine}/delete"), json!({})).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(authed_get(&app, &a, "/api/couple-goals").await["goals"][0]["saved_paise"], 1_000_000);
+
+    // Bad amounts, and people outside the couple.
+    for amount in [0, -5] {
+        let (s, _) = authed_post(&app, &a, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": amount})).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST, "{amount}");
+    }
+    let stranger = new_user(&app, "10.0.3.3", "goalnosy").await;
+    assert_eq!(authed_get(&app, &stranger, "/api/couple-goals").await["in_couple"], false);
+    let (s, _) = authed_post(&app, &stranger, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": 100})).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    let (c, d) = (new_user(&app, "10.0.3.4", "goalc").await, new_user(&app, "10.0.3.5", "goald").await);
+    make_couple(&app, &c, &d).await;
+    let (s, _) = authed_post(&app, &c, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": 100})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND, "another couple's goal is not found");
+    assert_eq!(authed_get(&app, &c, "/api/couple-goals").await["goals"], json!([]));
+
+    // Archiving hides it from both.
+    let (s, _) = authed_post(&app, &b, &format!("/api/couple-goals/{id}/archive"), json!({})).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(authed_get(&app, &a, "/api/couple-goals").await["goals"], json!([]));
+}
+
+#[tokio::test]
+async fn a_post_sent_twice_with_the_same_idempotency_key_happens_once() {
+    let (app, db) = test_app_with_db().await;
+    let a = new_user(&app, "10.0.4.1", "idema").await;
+    let b = new_user(&app, "10.0.4.2", "idemb").await;
+    let today = joy::handlers::common::today_local().to_string();
+    let body = json!({"occurred_on": today, "direction": "debit", "amount_paise": 4_200, "merchant": "Chai", "category": "food"});
+    let send = |token: &str, key: &str, b: Value| {
+        let token = token.to_string();
+        let key = key.to_string();
+        let app = app.clone();
+        async move { raw(&app, "POST", "/api/ingest/transactions/create", &[("authorization", &format!("Bearer {token}")), ("idempotency-key", &key)], Some(b)).await }
+    };
+    let count = || async { sqlx::query_scalar::<_, i64>("SELECT count(*) FROM transactions").fetch_one(&db).await.unwrap() };
+
+    let (s1, _, first) = send(&a, "key-1", body.clone()).await;
+    assert_eq!(s1, StatusCode::OK, "{first}");
+    assert_eq!(count().await, 1);
+    // The phone never heard back and sends it again: same answer, nothing new.
+    let (s2, h2, again) = send(&a, "key-1", body.clone()).await;
+    assert_eq!(s2, StatusCode::OK);
+    assert_eq!(again, first, "the first answer is replayed");
+    assert_eq!(h2.get("idempotent-replay").map(|v| v.to_str().unwrap()), Some("true"));
+    assert_eq!(count().await, 1);
+
+    // A different key is a different action; the same key from someone else is theirs alone.
+    send(&a, "key-2", body.clone()).await;
+    assert_eq!(count().await, 2);
+    let (s, _, _) = send(&b, "key-1", body.clone()).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(count().await, 3);
+
+    // A refused request is not remembered: fix it and send again with the same key.
+    let (s, _, _) = send(&a, "key-3", json!({"occurred_on": today, "direction": "debit", "amount_paise": -1, "category": "food"})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let (s, _, _) = send(&a, "key-3", body.clone()).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(count().await, 4);
+
+    // Without a key nothing is remembered, as before; absurd keys are refused.
+    raw(&app, "POST", "/api/ingest/transactions/create", &[("authorization", &format!("Bearer {a}"))], Some(body.clone())).await;
+    raw(&app, "POST", "/api/ingest/transactions/create", &[("authorization", &format!("Bearer {a}"))], Some(body.clone())).await;
+    assert_eq!(count().await, 6);
+    let (s, _, _) = send(&a, &"k".repeat(200), body).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn people_can_turn_notifications_on_and_off_and_a_scheduled_job_can_trigger_a_round() {
+    let (app, db) = test_app_with_db().await;
+    let (private, public) = joy::push::WebPushSender::generate();
+    // Safety: only this test reads these.
+    unsafe {
+        std::env::set_var("VAPID_PRIVATE_KEY", &private);
+        std::env::set_var("PUSH_RUN_TOKEN", "round-token");
+    }
+    let a = new_user(&app, "10.0.5.1", "pusha").await;
+    let b = new_user(&app, "10.0.5.2", "pushb").await;
+
+    assert_eq!(authed_get(&app, &a, "/api/push").await, json!({"public_key": public, "subscribed": false}));
+    let sub = json!({"endpoint": "https://push.example/abc", "p256dh": "BLn9b-VR0ca83knDNZ32dCHGyjJp-1riX9ZTN40MqV8K_LpQmLqxC_DoHvqvFXO_nGdAB4W9dogZb_sM-uV4JbY", "auth": "_ordMnz7uTCmrpBTeUV4Bw"});
+    let (s, body) = authed_post(&app, &a, "/api/push/subscribe", sub.clone()).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    authed_post(&app, &a, "/api/push/subscribe", sub.clone()).await;
+    assert_eq!(authed_get(&app, &a, "/api/push").await["subscribed"], true);
+    assert_eq!(authed_get(&app, &b, "/api/push").await["subscribed"], false, "someone else's is theirs");
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM push_subscriptions").fetch_one(&db).await.unwrap();
+    assert_eq!(n, 1, "subscribing twice is one subscription");
+
+    // Plain http and junk are refused.
+    for bad in [json!({"endpoint": "http://push.example/x", "p256dh": "k", "auth": "a"}), json!({"endpoint": "https://x", "p256dh": "", "auth": "a"}), json!({"endpoint": "not a url", "p256dh": "k", "auth": "a"})] {
+        let (s, _) = authed_post(&app, &a, "/api/push/subscribe", bad).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST);
+    }
+    // Only you can switch yours off.
+    authed_post(&app, &b, "/api/push/unsubscribe", json!({"endpoint": "https://push.example/abc"})).await;
+    assert_eq!(authed_get(&app, &a, "/api/push").await["subscribed"], true);
+    authed_post(&app, &a, "/api/push/unsubscribe", json!({"endpoint": "https://push.example/abc"})).await;
+    assert_eq!(authed_get(&app, &a, "/api/push").await["subscribed"], false);
+
+    // The scheduled round: needs the secret, and a real slot.
+    let round = |token: Option<&str>, slot: &str| {
+        let app = app.clone();
+        let hdr: Vec<(String, String)> = token.map(|t| vec![("authorization".to_string(), format!("Bearer {t}"))]).unwrap_or_default();
+        let path = format!("/api/internal/push/run?slot={slot}");
+        async move {
+            let h: Vec<(&str, &str)> = hdr.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+            raw(&app, "POST", &path, &h, Some(json!({}))).await
+        }
+    };
+    assert_eq!(round(None, "morning").await.0, StatusCode::UNAUTHORIZED);
+    assert_eq!(round(Some("wrong"), "morning").await.0, StatusCode::UNAUTHORIZED);
+    assert_eq!(round(Some("round-token"), "noon").await.0, StatusCode::BAD_REQUEST);
+    let (s, _, body) = round(Some("round-token"), "morning").await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    assert_eq!(serde_json::from_str::<Value>(&body).unwrap()["sent"], 0);
+}

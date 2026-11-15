@@ -17,9 +17,9 @@ const STAR =
 const MONTHS = "JFMAMJJASOND";
 const HEART =
   "M16.2 27.4C11.6 24.1 3.4 18.3 3.1 10.9 2.9 6.6 6 3.3 9.8 3.4c2.9.1 5 2.2 6.2 4.6 1.3-2.6 3.5-4.8 6.6-4.7 3.9.2 6.5 3.6 6.2 7.7-.5 7.2-8.4 12.6-12.6 16.4z";
-export const FD = '"Fraunces", Georgia, serif';
-export const FU = '"Instrument Sans", system-ui, sans-serif';
-export const FH = '"Caveat", cursive';
+export const FD = '"Newsreader", Georgia, serif';
+export const FU = '"Figtree", system-ui, sans-serif';
+export const FH = '"Newsreader", Georgia, serif';
 
 type Ctx = CanvasRenderingContext2D;
 const newCanvas = (w: number, h: number) => {
@@ -424,7 +424,7 @@ function draw(ctx: Ctx, d: ShareData, photos: Photo[], dense: boolean, extra: nu
 }
 
 // document.fonts.ready only waits for faces the page already asked for; ask for each one, then check they are in.
-const FACES = ['640 96px "Fraunces"', 'italic 400 48px "Fraunces"', '600 32px "Instrument Sans"', '400 32px "Instrument Sans"', '600 40px "Caveat"'];
+const FACES = ['640 96px "Newsreader"', 'italic 400 48px "Newsreader"', '600 32px "Figtree"', '400 32px "Figtree"', 'italic 600 40px "Newsreader"'];
 export async function loadFonts(): Promise<void> {
   if (!document.fonts || !document.fonts.load) return;
   await Promise.all(FACES.map((f) => document.fonts.load(f))).catch(() => {});

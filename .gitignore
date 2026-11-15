@@ -37,3 +37,6 @@ flinderax.db-shm
 flinderax.db-wal
 *.db
 
+e2e/.tmp/
+test-results/
+playwright-report/

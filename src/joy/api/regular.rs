@@ -40,7 +40,7 @@ pub struct OpenNight {
     /// "₹300"
     pub usual: String,
     /// The usual amount as digits, for the form field.
-    pub usual_raw: i64,
+    pub usual_raw: String,
     /// "2026-11-05"
     pub day: String,
     /// "Thu 5 Nov"
@@ -56,7 +56,7 @@ pub struct WentTonight {
     pub place: String,
     pub amount: String,
     /// What it cost, in whole rupees (for the edit box).
-    pub amount_raw: i64,
+    pub amount_raw: String,
     /// The kept date this night is: photos, rating and lines are added there.
     pub history_id: Option<i64>,
     /// Signed photo link, or empty.
@@ -89,7 +89,7 @@ pub async fn card(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Card, AppE
             title: r.title,
             maps_url: r.maps_url,
             usual: ctx.money(r.usual_cost),
-            usual_raw: r.usual_cost,
+            usual_raw: crate::validate::plain_rupees(r.usual_cost),
             today: day == today,
             day,
             label,
@@ -103,7 +103,7 @@ pub async fn card(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Card, AppE
             title: r.title.clone(),
             place: if v.place.is_empty() { String::new() } else { v.place.clone() },
             amount: ctx.money(v.amount),
-            amount_raw: v.amount,
+            amount_raw: crate::validate::plain_rupees(v.amount),
             history_id: v.history_id,
             photo: if v.has_photo { visit_photo_url(ctx, v.id) } else { String::new() },
         })
@@ -169,12 +169,10 @@ fn refuse(msg: impl Into<String>) -> Response {
     (StatusCode::UNPROCESSABLE_ENTITY, Json(serde_json::json!({ "error": msg.into() }))).into_response()
 }
 
-/// A rupee amount as typed: "₹1,200", "1 200" or "1200" become whole rupees within the shared cap.
-/// The currency symbol is stripped the same way `history.rs` does it. Blank is the caller's call.
+/// A rupee amount as typed: "₹1,200", "1 200.50" or "1200" become paise within the shared cap.
+/// Blank is the caller's call.
 fn typed_rupees(v: &str, currency: &str) -> Result<i64, String> {
-    let raw: String = v.trim().trim_start_matches(currency).chars().filter(|c| !matches!(c, ',' | ' ')).collect();
-    let n = raw.parse::<i64>().map_err(|_| "That amount didn't look right.".to_string())?;
-    crate::validate::rupees(n)
+    crate::validate::paise_from_text(v.trim().trim_start_matches(currency))
 }
 
 /// Where to go after answering: the caller's own `back` if it is a path on this site.
@@ -445,7 +443,7 @@ pub struct SpreadView {
     /// Weekday numbers (0 = Sunday), for the edit form.
     pub day_values: Vec<u8>,
     /// The usual amount as digits, for the edit form.
-    pub usual_raw: i64,
+    pub usual_raw: String,
     pub stamps: Vec<Stamp>,
 }
 
@@ -492,7 +490,7 @@ pub async fn spread(State(s): State<AppState>, Extension((user_id, _)): User, Pa
         total: ctx.money(total),
         average: if count > 0 { ctx.money(total / count as i64) } else { String::new() },
         day_values: r.weekdays.split(',').filter_map(|d| d.trim().parse().ok()).collect(),
-        usual_raw: r.usual_cost,
+        usual_raw: crate::validate::plain_rupees(r.usual_cost),
         stamps,
     }))
 }

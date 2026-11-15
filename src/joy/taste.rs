@@ -18,7 +18,7 @@ pub struct Event<'a> {
     pub tags: &'a str,
     pub setting: &'a str,
     pub energy: &'a str,
-    /// What the slip was estimated to cost, whole rupees.
+    /// What the slip was estimated to cost, in paise.
     pub cost: i64,
     /// "did_it" | "skipped"
     pub outcome: &'a str,
@@ -27,11 +27,12 @@ pub struct Event<'a> {
     pub age_days: i64,
 }
 
+/// Free, under ₹500, under ₹2,000, or dearer. `cost` is in paise.
 pub fn cost_band(cost: i64) -> &'static str {
     match cost {
         i64::MIN..=0 => "free",
-        1..=499 => "cheap",
-        500..=1999 => "middling",
+        1..=49_999 => "cheap",
+        50_000..=199_999 => "middling",
         _ => "dear",
     }
 }
@@ -163,34 +164,34 @@ mod tests {
     #[test]
     fn it_learns_more_than_tags() {
         // Five great evenings at home, each with a different tag: no tag repeats, but "home" does.
-        let events: Vec<Event> = (["a", "b", "c", "d", "e"]).iter().map(|tag| ev(tag, "home", "low", 300, "did_it", Some(5), 5)).collect();
+        let events: Vec<Event> = (["a", "b", "c", "d", "e"]).iter().map(|tag| ev(tag, "home", "low", 30_000, "did_it", Some(5), 5)).collect();
         let taste = Taste::from_events(events);
-        let home = taste.factor_for(&feats("new-tag", "home", "high", 5000));
-        let away = taste.factor_for(&feats("new-tag", "day_trip", "high", 5000));
+        let home = taste.factor_for(&feats("new-tag", "home", "high", 500_000));
+        let away = taste.factor_for(&feats("new-tag", "day_trip", "high", 500_000));
         assert!(home > away, "home {home} vs away {away}");
         assert!(home > 1.0 && away - 1.0 <= 0.05, "an unseen kind stays near neutral: {away}");
         // And it still reads tags and the cost band.
-        assert!(taste.factor_for(&feats("a", "day_trip", "high", 5000)) > away);
-        assert!(taste.factor_for(&feats("new-tag", "day_trip", "high", 300)) > away, "cheap is liked too");
+        assert!(taste.factor_for(&feats("a", "day_trip", "high", 500_000)) > away);
+        assert!(taste.factor_for(&feats("new-tag", "day_trip", "high", 30_000)) > away, "cheap is liked too");
     }
 
     #[test]
     fn what_we_felt_long_ago_counts_for_less() {
-        let loved = |age| Taste::from_events((0..6).map(|_| ev("foodie", "local", "med", 1000, "did_it", Some(5), age)).collect::<Vec<_>>());
-        let recent = loved(10).factor_for(&feats("foodie", "local", "med", 1000));
-        let old = loved(720).factor_for(&feats("foodie", "local", "med", 1000));
+        let loved = |age| Taste::from_events((0..6).map(|_| ev("foodie", "local", "med", 100_000, "did_it", Some(5), age)).collect::<Vec<_>>());
+        let recent = loved(10).factor_for(&feats("foodie", "local", "med", 100_000));
+        let old = loved(720).factor_for(&feats("foodie", "local", "med", 100_000));
         assert!(recent > old && old > 1.0, "{recent} {old}");
         // A hundred-year-old like is almost forgotten.
-        let ancient = loved(36_500).factor_for(&feats("foodie", "local", "med", 1000));
+        let ancient = loved(36_500).factor_for(&feats("foodie", "local", "med", 100_000));
         assert!((ancient - 1.0).abs() < 0.01, "{ancient}");
     }
 
     #[test]
     fn it_stays_bounded_whatever_the_history() {
-        let loved: Vec<Event> = (0..500).map(|_| ev("foodie", "local", "med", 1000, "did_it", Some(5), 1)).collect();
-        let hated: Vec<Event> = (0..500).map(|_| ev("games", "home", "low", 100, "did_it", Some(1), 1)).collect();
+        let loved: Vec<Event> = (0..500).map(|_| ev("foodie", "local", "med", 100_000, "did_it", Some(5), 1)).collect();
+        let hated: Vec<Event> = (0..500).map(|_| ev("games", "home", "low", 10_000, "did_it", Some(1), 1)).collect();
         let taste = Taste::from_events(loved.into_iter().chain(hated));
-        for (tags, setting, energy, cost) in [("foodie", "local", "med", 1000), ("games", "home", "low", 100), ("x", "y", "z", 0)] {
+        for (tags, setting, energy, cost) in [("foodie", "local", "med", 100_000), ("games", "home", "low", 10_000), ("x", "y", "z", 0)] {
             let f = taste.factor_for(&feats(tags, setting, energy, cost));
             assert!((0.7..=1.3).contains(&f), "{f}");
         }
@@ -199,10 +200,10 @@ mod tests {
     #[test]
     fn cost_bands_are_free_cheap_middling_and_dear() {
         assert_eq!(cost_band(0), "free");
-        assert_eq!(cost_band(499), "cheap");
-        assert_eq!(cost_band(500), "middling");
-        assert_eq!(cost_band(1999), "middling");
-        assert_eq!(cost_band(2000), "dear");
+        assert_eq!(cost_band(49_999), "cheap");
+        assert_eq!(cost_band(50_000), "middling");
+        assert_eq!(cost_band(199_999), "middling");
+        assert_eq!(cost_band(200_000), "dear");
     }
 
     #[test]

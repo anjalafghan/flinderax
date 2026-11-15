@@ -53,6 +53,8 @@ fn trace_layer() -> Trace {
 fn protected(state: &AppState, router: Router) -> Router {
     router
         .layer(trace_layer())
+        // Inside the auth layer, so it knows whose key it is.
+        .layer(middleware::from_fn_with_state(state.clone(), crate::idempotency::layer))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             token_validator_middleware,
@@ -116,6 +118,31 @@ pub fn build_router(state: AppState) -> Router {
                     .with_state(state.clone()),
             ),
         )
+        .nest(
+            "/api/couple-goals",
+            protected(
+                &state,
+                Router::new()
+                    .route("/", axum::routing::get(crate::handlers::couple_goals::list).post(crate::handlers::couple_goals::create))
+                    .route("/{id}/contribute", axum::routing::post(crate::handlers::couple_goals::contribute))
+                    .route("/{id}/contributions/{cid}/delete", axum::routing::post(crate::handlers::couple_goals::delete_contribution))
+                    .route("/{id}/archive", axum::routing::post(crate::handlers::couple_goals::archive))
+                    .with_state(state.clone()),
+            ),
+        )
+        .nest(
+            "/api/push",
+            protected(
+                &state,
+                Router::new()
+                    .route("/", axum::routing::get(crate::handlers::push::status))
+                    .route("/subscribe", axum::routing::post(crate::handlers::push::subscribe))
+                    .route("/unsubscribe", axum::routing::post(crate::handlers::push::unsubscribe))
+                    .with_state(state.clone()),
+            ),
+        )
+        // Not a session route: a scheduled job proves itself with a secret instead.
+        .route("/api/internal/push/run", axum::routing::post(crate::handlers::push::run_round).with_state(state.clone()))
         .nest("/api/coming-up", protected(&state, Router::new().route("/", axum::routing::get(crate::handlers::coming::get)).with_state(state.clone())))
         .nest("/api/review", protected(&state, routes::review::routes(state.clone())))
         .nest("/api/hook", routes::ingest::hook_routes(state.clone()).layer(trace_layer()))

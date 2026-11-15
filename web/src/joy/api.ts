@@ -3,6 +3,7 @@
 import { adoptRenewedToken } from "@/services/renew";
 import type { JoySummary } from "@/services/types";
 import { authHeadersFor, clearSession } from "@/session";
+import { sendOrQueue } from "@/offline";
 import { errorMessageOf } from "@/services/errors";
 
 export interface Opt {
@@ -276,6 +277,26 @@ export async function request<T>(method: "GET" | "POST", url: string, body?: unk
   return data as T;
 }
 
+/** Reads an answer the way `request` does (renewal, sign-in redirect, refusals as ApiError). */
+async function readAnswer<T>(res: Response): Promise<T> {
+  adoptRenewedToken(res);
+  if (res.status === 401) return toLogin<T>();
+  const text = await res.text().catch(() => "");
+  const data = parse(text);
+  if (!res.ok) throw new ApiError(res.status, errorMessageOf(text, res.status), data);
+  return data as T;
+}
+
+/**
+ * A POST that survives having no signal: sent with an Idempotency-Key, and kept on the phone to be
+ * sent later if the network is down. `queued` tells the page it has not happened yet.
+ */
+export async function postKeyed<T>(url: string, body: unknown, label: string): Promise<T | { queued: true }> {
+  const r = await sendOrQueue(url, body, label);
+  if (r.queued || !r.response) return { queued: true };
+  return readAnswer<T>(r.response);
+}
+
 export const get = <T>(url: string, o?: Options) => request<T>("GET", url, undefined, o);
 export const post = <T>(url: string, body: unknown = {}) => request<T>("POST", url, body);
 
@@ -334,11 +355,16 @@ export const getSlips = () => get<WishlistView>("/api/dates/slips");
 export const getSlipForm = (id: string | null) => get<FormView>(id ? `/api/dates/slips/${id}` : "/api/dates/slips/new");
 
 /** A save is either accepted (Go) or refused with the form echoed back and `error` set. */
-export type SaveResult = { ok: true; go: Go & { filled?: string[] } } | { ok: false; form: FormView };
+export type SaveResult = { ok: true; go: Go & { filled?: string[]; queued?: boolean } } | { ok: false; form: FormView };
 
 export async function saveSlip(id: string | null, body: SlipBody): Promise<SaveResult> {
   try {
-    return { ok: true, go: await post<Go & { filled?: string[] }>(id ? `/api/dates/slips/${id}` : "/api/dates/slips", body) };
+    // A new slip can be written with no signal; editing one needs it (the form has to be loaded anyway).
+    if (!id) {
+      const r = await postKeyed<Go & { filled?: string[] }>("/api/dates/slips", body, `Slip: ${body.title}`);
+      return { ok: true, go: "queued" in r ? { ok: true, to: "/joy/slips", queued: true } : r };
+    }
+    return { ok: true, go: await post<Go & { filled?: string[] }>(`/api/dates/slips/${id}`, body) };
   } catch (e) {
     if (e instanceof ApiError && e.status === 422 && e.data && typeof (e.data as FormView).error === "string") {
       return { ok: false, form: e.data as FormView };
@@ -359,7 +385,10 @@ export const planSlip = (id: number, at: string) => post<SlipPlanned>(`/api/date
 
 // ---- jar (the page here only needs tonight's "meet in the middle" part) ----
 export const getJarMiddle = () => get<{ middle: MiddleView }>("/api/dates/jar");
-export const checkIn = (body: MiddleBody) => post<Go>("/api/dates/middle", body);
+export const checkIn = async (body: MiddleBody): Promise<Go & { queued?: boolean }> => {
+  const r = await postKeyed<Go>("/api/dates/middle", body, "Check-in");
+  return "queued" in r ? { ok: true, to: "/joy/middle", queued: true } : r;
+};
 
 // ---- envelope (public) ----
 export const getEnvelope = (token: string) =>

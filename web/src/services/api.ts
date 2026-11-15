@@ -44,6 +44,7 @@ import type {
 
 import { authHeadersFor, clearSession } from "../session";
 import { errorMessageOf } from "./errors";
+import { sendOrQueue } from "@/offline";
 
 // The Rust server serves both the API and this app, so every request is same-origin.
 
@@ -199,7 +200,18 @@ export const ingestApi = {
   updateCategory: (u: UpdateTxnCategory) =>
     data(api.post<{ status: boolean; recategorized: number }>("/api/ingest/transactions/update", u)),
   removeTxn: (txn_id: string) => data(api.post<Ok>("/api/ingest/transactions/delete", { txn_id })),
-  createTxn: (t: NewTxn) => data(api.post<{ txn_id: string; status: boolean }>("/api/ingest/transactions/create", t)),
+  /** Works with no signal: if the phone is offline it is kept and sent later (`queued`). */
+  createTxn: async (t: NewTxn): Promise<{ txn_id: string; status: boolean; queued?: boolean }> => {
+    const r = await sendOrQueue("/api/ingest/transactions/create", t, `Transaction: ${t.merchant ?? "payment"}`);
+    if (r.queued || !r.response) return { txn_id: "", status: true, queued: true };
+    if (r.response.status === 401) {
+      handleUnauthorized();
+      throw new Error("Please sign in again.");
+    }
+    const text = await r.response.text().catch(() => "");
+    if (!r.response.ok) throw new Error(errorMessageOf(text, r.response.status));
+    return JSON.parse(text) as { txn_id: string; status: boolean };
+  },
   parse: (text: string) => data(api.post<ParseResult>("/api/ingest/parse", { text })),
   importStatement: (b: { csv: string; account_id?: string }) =>
     data(api.post<StatementResult>("/api/ingest/statement", b)),

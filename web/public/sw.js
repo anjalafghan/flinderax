@@ -109,3 +109,38 @@ self.addEventListener("fetch", (e) => {
   }
   e.respondWith(shell(req));
 });
+
+// Notifications: the server sends a count by kind ("Today: 2 bills."), never names or amounts, so a
+// lock screen shows nothing private. Tapping one opens the app on the page it names.
+self.addEventListener("push", (e) => {
+  let m = {};
+  try {
+    m = e.data ? e.data.json() : {};
+  } catch {
+    m = {};
+  }
+  e.waitUntil(
+    self.registration.showNotification(m.title || "joy", {
+      body: m.body || "",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url: m.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "/";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((open) => {
+      for (const c of open) {
+        if ("focus" in c) {
+          if ("navigate" in c) c.navigate(url);
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
+});

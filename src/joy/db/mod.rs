@@ -4,6 +4,8 @@ use sqlx::{FromRow, SqlitePool};
 use crate::joy::picker::{Candidate, Duration};
 
 mod learned;
+mod txn_link;
+pub use txn_link::*;
 pub use learned::*;
 mod vetoes;
 pub use vetoes::*;
@@ -93,7 +95,7 @@ impl Activity {
     /// unless it was already set from a real cost.
     pub fn effective_cost(&self, factor: Option<f64>) -> i64 {
         match factor {
-            Some(f) if !self.est_from_actual && self.est_cost > 0 => ((self.est_cost as f64 * f) / 50.0).round() as i64 * 50,
+            Some(f) if !self.est_from_actual && self.est_cost > 0 => ((self.est_cost as f64 * f) / 5_000.0).round() as i64 * 5_000,
             _ => self.est_cost,
         }
     }

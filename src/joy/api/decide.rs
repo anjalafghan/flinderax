@@ -324,7 +324,8 @@ impl PickForm {
     pub fn filters(&self) -> Filters {
         let opt = |s: &str| Some(s.trim().to_string()).filter(|s| !s.is_empty());
         Filters {
-            budget: self.budget.trim().parse().unwrap_or(i64::MAX),
+            // Typed in rupees on the page; paise from here on.
+            budget: crate::validate::paise_from_text(&self.budget).unwrap_or(i64::MAX),
             max_duration: Duration::parse(&self.max_duration),
             settings: self.settings.iter().filter(|s| !s.is_empty()).cloned().collect(),
             tag: opt(&self.tag),
@@ -342,7 +343,7 @@ impl PickForm {
     /// These filters replaced by where tonight's two check-ins meet.
     fn met(&self, m: &Middle) -> PickForm {
         PickForm {
-            budget: m.budget.map(|b| b.to_string()).unwrap_or_default(),
+            budget: m.budget.map(crate::validate::plain_rupees).unwrap_or_default(),
             max_duration: m.max_duration.map(|d| d.key().to_string()).unwrap_or_default(),
             settings: if m.apart {
                 vec!["apart".into()]
@@ -917,7 +918,7 @@ fn relax(ctx: &Ctx, f: &PickForm, h: &Hint) -> (String, Option<PickForm>) {
     let mut r = PickForm { excluded: String::new(), reason: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
     let label = match h {
         Hint::OverBudget { cost, .. } => {
-            r.budget = cost.to_string();
+            r.budget = crate::validate::plain_rupees(*cost);
             format!("Stretch to {}", ctx.money(*cost))
         }
         Hint::NeedsMoreTime { duration, .. } => {

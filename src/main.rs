@@ -84,6 +84,13 @@ async fn main() -> Result<(), sqlx::Error> {
     }
     info!("Database connected successfully");
 
+    // `joy vapid-keys`: make the key pair for notifications (set VAPID_PRIVATE_KEY on Fly; the page learns the public half itself).
+    if env::args().nth(1).as_deref() == Some("vapid-keys") {
+        let (private, public) = joy::push::WebPushSender::generate();
+        println!("VAPID_PRIVATE_KEY={private}\nVAPID_PUBLIC_KEY={public} (not a secret; the app serves it)");
+        return Ok(());
+    }
+
     // `joy enrich-slips [--dry-run]`: fill blank slip fields from data already in the database.
     let args: Vec<String> = env::args().collect();
     if args.get(1).map(String::as_str) == Some("enrich-slips") {

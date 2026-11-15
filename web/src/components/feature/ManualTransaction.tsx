@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { QUEUED_NOTE } from "@/offline";
 import { ingestApi } from "@/services/api";
 import type { TxnDirection } from "@/services/types";
 import { INGEST_INVALIDATE, usePlannerMutation } from "@/hooks/usePlanner";
@@ -18,7 +19,7 @@ const blank = () => ({ date: dateKey(new Date()), direction: "debit" as TxnDirec
 export function ManualTransaction() {
   const [f, setF] = useState(blank);
   const [error, setError] = useState<string | null>(null);
-  const create = usePlannerMutation(ingestApi.createTxn, INGEST_INVALIDATE, { success: "Logged. Nice and tidy!" });
+  const create = usePlannerMutation(ingestApi.createTxn, INGEST_INVALIDATE, { success: (r) => ((r as { queued?: boolean }).queued ? QUEUED_NOTE : "Logged. Nice and tidy!") });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();

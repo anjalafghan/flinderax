@@ -196,7 +196,7 @@ impl T {
     async fn sealed_setup(&self) -> (String, String, String, i64, i64) {
         let (rohit, neha, couple) = self.couple().await;
         let id = self.id_of(&couple, PLAY).await;
-        self.exec(&format!("UPDATE joy_activities SET est_cost = 800, title = '{SECRET}', notes = 'quiet rooftop' WHERE id = {id}")).await;
+        self.exec(&format!("UPDATE joy_activities SET est_cost = 80000, title = '{SECRET}', notes = 'quiet rooftop' WHERE id = {id}")).await;
         let hid = self.keep(&couple, &rohit, SECRET, true).await;
         (rohit, neha, couple, id, hid)
     }
@@ -300,7 +300,7 @@ async fn the_slip_form_hides_a_sealed_slip_from_pair_options_and_by_id() {
 async fn the_money_summary_hides_the_title_and_day_of_a_sealed_surprise() {
     let t = setup().await;
     let (rohit, neha, _c, _id, hid) = t.sealed_setup().await;
-    t.exec(&format!("UPDATE joy_history SET actual_cost = 500 WHERE id = {hid}")).await;
+    t.exec(&format!("UPDATE joy_history SET actual_cost = 50000 WHERE id = {hid}")).await;
     let find = |r: &Res| r.json["recent"].as_array().unwrap().iter().find(|e| e["kind"] == "date").cloned().unwrap_or_else(|| panic!("{}", r.text));
     let theirs = t.get("/api/joy/summary", &neha).await;
     let e = find(&theirs);

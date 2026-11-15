@@ -120,6 +120,8 @@ pub struct KeptView {
     pub photos: Vec<KeptPhoto>,
     /// More photos fit on this date.
     pub can_add_photo: bool,
+    /// The bank transaction that paid for this date, when you linked one (only ever your own).
+    pub linked_txn: Option<db::TxnCandidate>,
     /// "₹1,000": the slip's estimate.
     pub cost_est: String,
     /// "₹5,000", or empty when the real cost isn't filled in.
@@ -322,10 +324,11 @@ fn view(ctx: &Ctx, r: &HistoryRow, who: Option<usize>, rain: bool, pair_ids: Str
         photo_url: pics.first().filter(|_| !sealed).map(|p| photo_url(r, p.id, who)),
         photos: if sealed { vec![] } else { pics.iter().map(|p| KeptPhoto { id: p.id, url: photo_url(r, p.id, who) }).collect() },
         can_add_photo: !sealed && r.outcome == "did_it" && (pics.len() as i64) < db::MAX_PHOTOS_PER_DATE,
+        linked_txn: None,
         pair_ids,
         cost_est: if sealed { String::new() } else { ctx.money(r.est_cost) },
         cost_actual: r.actual_cost.filter(|_| !sealed).map(|c| ctx.money(c)).unwrap_or_default(),
-        cost_actual_raw: r.actual_cost.filter(|_| !sealed).map(|c| c.to_string()).unwrap_or_default(),
+        cost_actual_raw: r.actual_cost.filter(|_| !sealed).map(crate::validate::plain_rupees).unwrap_or_default(),
         cost_diff: match r.actual_cost.filter(|_| !sealed).map(|c| c - r.est_cost) {
             None => String::new(),
             Some(0) => "spot on".into(),
@@ -337,7 +340,7 @@ fn view(ctx: &Ctx, r: &HistoryRow, who: Option<usize>, rain: bool, pair_ids: Str
             .people
             .iter()
             .zip([r.cab_fare_0, r.cab_fare_1])
-            .map(|((name, _), fare)| Cab { name: name.clone(), fare: fare.filter(|_| !sealed).map(|f| f.to_string()).unwrap_or_default() })
+            .map(|((name, _), fare)| Cab { name: name.clone(), fare: fare.filter(|_| !sealed).map(crate::validate::plain_rupees).unwrap_or_default() })
             .collect(),
         planned_label: planned,
         from_name,
@@ -466,10 +469,12 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
     for p in db::all_photos(db, couple).await? {
         pics.entry(p.history_id).or_default().push(p);
     }
+    let links = db::linked_txns(db, couple, &user_id).await?;
     let mut months: Vec<Month> = vec![];
     for row in &done {
         let label = row.month_label();
-        let v = view(ctx, row, who, rain, pair_ids(row, &done, &pairs), &memories, pics.get(&row.id).map_or(&[], Vec::as_slice));
+        let mut v = view(ctx, row, who, rain, pair_ids(row, &done, &pairs), &memories, pics.get(&row.id).map_or(&[], Vec::as_slice));
+        v.linked_txn = links.iter().find(|(id, _)| *id == row.id).map(|(_, t)| t.clone());
         match months.last_mut() {
             Some(m) if m.label == label => m.items.push(v),
             _ => {
@@ -699,6 +704,38 @@ pub async fn unshare(State(s): State<AppState>, Extension((user_id, _)): User, P
     Ok(go(kept_to(id)))
 }
 
+/// `GET /history/{id}/candidates`: your own debits around the day of the date, to link one as what it cost.
+pub async fn candidates(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<serde_json::Value>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    Ok(Json(serde_json::json!({ "candidates": db::txn_candidates(&s.db, &user_id, id).await? })))
+}
+
+#[derive(Deserialize)]
+pub struct LinkBody {
+    txn_id: String,
+}
+
+/// `POST /history/{id}/link`: this transaction is what the date cost.
+pub async fn link(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>, Json(b): Json<LinkBody>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    match db::link_txn(&s.db, &j.couple, &user_id, id, &b.txn_id).await? {
+        db::LinkOutcome::Linked => Ok(go(kept_to(id))),
+        db::LinkOutcome::NoSuchTransaction => Err(crate::handlers::common::not_found("No such transaction")),
+        db::LinkOutcome::NoSuchDate => Err(missing()),
+        db::LinkOutcome::Taken => Err(AppError(StatusCode::CONFLICT, "That payment is already linked to another date.".into())),
+    }
+}
+
+/// `POST /history/{id}/unlink`: take the link off (the cost stays).
+pub async fn unlink(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    db::unlink_txn(&s.db, &j.couple, id).await?;
+    Ok(go(kept_to(id)))
+}
+
 /// `POST /history/{id}/delete`
 pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
@@ -738,12 +775,11 @@ pub async fn set_cost(State(s): State<AppState>, Extension((user_id, _)): User, 
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
     let row = open_row(db, couple, id, Some(j.who)).await?;
     let amount = |v: &str| -> Result<Option<i64>, String> {
-        let raw: String = v.trim().trim_start_matches(ctx.currency.as_str()).chars().filter(|c| !matches!(c, ',' | ' ')).collect();
-        if raw.is_empty() {
+        let raw = v.trim().trim_start_matches(ctx.currency.as_str());
+        if raw.trim().is_empty() {
             return Ok(None);
         }
-        let n = raw.parse::<i64>().map_err(|_| "That amount didn't look right.".to_string())?;
-        crate::validate::rupees(n).map(Some)
+        crate::validate::paise_from_text(raw).map(Some)
     };
     let (actual, cab_0, cab_1) = match (amount(&f.actual), amount(&f.cab_0), amount(&f.cab_1)) {
         (Ok(a), Ok(b), Ok(c)) => (a, b, c),
@@ -758,7 +794,7 @@ pub async fn set_cost(State(s): State<AppState>, Extension((user_id, _)): User, 
     // so later changes to rates or home locations can't skew what we learn.
     let km = ctx.distances(row.lat.zip(row.lng));
     for (person, fare) in [(0, cab_0), (1, cab_1)] {
-        let model = km[person].map(|k| crate::joy::travel::cab(k).rupees);
+        let model = km[person].map(|k| crate::joy::travel::cab(k).paise);
         db::set_cab_fare(db, couple, id, person, fare.filter(|f| *f > 0), model).await?;
     }
     Ok(go(kept_to(id)))
@@ -911,18 +947,14 @@ pub async fn photo(State(s): State<AppState>, Path((id, photo_id)): Path<(i64, i
 
 // ── monthly budget ────────────────────────────────────────────────────────
 
-/// A typed whole-rupee amount: blank or zero is "none"; anything else must be a number within the
-/// shared Dates cap (`rupees`), so a huge or negative value is a 422 instead of a silent no-op.
+/// A typed rupee amount in paise: blank or zero is "none"; anything else must be a number within the
+/// shared cap, so a huge or negative value is a 422 instead of a silent no-op.
 fn money_in(v: &str) -> Result<Option<i64>, String> {
-    let t = v.trim().replace(',', "");
-    if t.is_empty() {
+    if v.trim().is_empty() {
         return Ok(None);
     }
-    let n = t.parse::<i64>().map_err(|_| "That amount didn't look right.".to_string())?;
-    if n == 0 {
-        return Ok(None);
-    }
-    crate::validate::rupees(n).map(Some)
+    let paise = crate::validate::paise_from_text(v)?;
+    Ok((paise != 0).then_some(paise))
 }
 
 #[derive(Deserialize)]
@@ -1120,6 +1152,9 @@ pub fn router() -> Router<AppState> {
         .route("/history/{id}", post(rate))
         .route("/history/{id}/reveal", post(reveal))
         .route("/history/{id}/delete", post(delete))
+        .route("/history/{id}/candidates", get(candidates))
+        .route("/history/{id}/link", post(link))
+        .route("/history/{id}/unlink", post(unlink))
         .route("/history/{id}/unshare", post(unshare))
         .route("/history/{id}/happened", post(happened))
         .route("/putbacks/clear", post(clear_putbacks))
@@ -1254,7 +1289,7 @@ mod tests {
 
     #[test]
     fn amounts_accept_commas_and_refuse_zero() {
-        assert_eq!(money_in(" 6,000 "), Ok(Some(6000)));
+        assert_eq!(money_in(" 6,000 "), Ok(Some(600_000)));
         assert_eq!(money_in("0"), Ok(None));
         assert_eq!(money_in(""), Ok(None));
         assert!(money_in("-5").is_err());

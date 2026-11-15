@@ -69,3 +69,8 @@
 .joy .empty-jar-art .shine { stroke: var(--rule); stroke-width: 3; }
 .joy .empty-jar-art .floor { stroke: var(--rule); }
 .joy .empty-jar-art .lone-slip { fill: var(--tint-local); stroke-width: 1.6; opacity: 0; }
+
+/* Dates' own settings cards shown inside the app's single Settings page: no page chrome of their own. */
+.joy.joy-embed { min-height: 0; background: transparent; overflow: visible; }
+.joy .top { justify-content: flex-start; }
+.joy .top nav { padding-left: 0; }

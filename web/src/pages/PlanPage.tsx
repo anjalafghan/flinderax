@@ -314,7 +314,7 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
 
 // ---------- settings ----------
 
-function SettingsSection() {
+export function SettingsSection() {
   const { data } = useSettings();
   const { data: summary } = useSummary();
   const [spending, setSpending] = useState("");

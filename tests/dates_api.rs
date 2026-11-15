@@ -265,7 +265,7 @@ async fn nothing_fits_says_why_and_offers_the_smallest_loosening() {
     t.exec("UPDATE joy_activities SET archived = 1").await;
     let id = t.id_of(&couple, "Cook together").await;
     t.exec(&format!(
-        "UPDATE joy_activities SET archived = 0, est_cost = 1500, closed_days = '', season_from = NULL, season_to = NULL WHERE id = {id}"
+        "UPDATE joy_activities SET archived = 0, est_cost = 150000, closed_days = '', season_from = NULL, season_to = NULL WHERE id = {id}"
     ))
     .await;
 
@@ -495,7 +495,7 @@ async fn meet_in_the_middle_draws_from_the_overlap_and_never_shows_the_others_an
             sqlx::query_as(&format!("SELECT setting, energy, est_cost FROM joy_activities WHERE id = {id}")).fetch_one(&t.db).await.unwrap();
         assert_eq!(setting, "home", "Neha wants to stay in");
         assert_eq!(energy, "low", "Neha is tired");
-        assert!(cost <= 500, "Neha's budget");
+        assert!(cost <= 50_000, "Neha's budget");
     }
     assert!(seen > 0, "the middle draw found something cozy at home");
 
