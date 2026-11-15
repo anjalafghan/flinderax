@@ -12,7 +12,7 @@ A private life-planning app for one household: money (Flinderax) plus the date j
 
 ## Rules that must keep holding
 
-- Money on the finance side is integer paise (`*_paise`). Dates still stores whole rupees; `src/planner/joy.rs` converts. Never add float money.
+- Money is integer paise everywhere, Dates included. Rupees typed into a form become paise only through `validate::paise_from_text`; form fields are filled with `validate::plain_rupees`; `Ctx::money` formats for display. Never add float money.
 - A slip sealed as a surprise answers **404, never 403**, to the partner it is for. `visible_list`, `visible_get` and `unsealed` are the only doors to a slip by id.
 - "Meet in the middle" never reveals one partner's answers.
 - Logs record route templates, never real paths (tokens live in paths).
