@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type AnimationEvent, type ChangeEvent, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
+import { thumbOf } from "../photo";
 import { Link } from "react-router-dom";
 import { ApiError } from "../api";
 import { DayEditor } from "./DayEditor";
@@ -437,7 +438,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
                 {pics.slice(1).map((p, i) => (
                   <li key={p.id}>
                     <a href={p.url} onClick={view(i + 1)} aria-label={`Open photo ${i + 2} of ${pics.length} from ${h.title}`}>
-                      <img src={p.url} alt="" width={160} height={120} loading="lazy" decoding="async" />
+                      <img src={thumbOf(p.url)} alt="" width={160} height={120} loading="lazy" decoding="async" />
                     </a>
                   </li>
                 ))}
@@ -689,7 +690,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
                   <ul className="k-photo-pick">
                     {pics.map((p, i) => (
                       <li key={p.id}>
-                        <img src={p.url} alt="" width={96} height={72} loading="lazy" decoding="async" />
+                        <img src={thumbOf(p.url)} alt="" width={96} height={72} loading="lazy" decoding="async" />
                         <button
                           className="k-btn k-btn-stamp"
                           type="button"

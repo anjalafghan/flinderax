@@ -589,6 +589,8 @@ pub struct SignedQuery {
     who: Option<usize>,
     exp: Option<i64>,
     sig: Option<String>,
+    /// "1": a 400px copy for lists. The signature covers the photo, not its size.
+    thumb: Option<String>,
 }
 
 /// The couple a history row belongs to (the signed public endpoints have no login to ask).
@@ -706,6 +708,9 @@ pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Pa
     db::delete_history(&s.db, &j.couple, id).await?;
     for p in pics {
         if let Some(path) = photos::date_path(&j.ctx.photos_dir, &p.file) {
+            let _ = tokio::fs::remove_file(path).await;
+        }
+        if let Some(path) = photos::thumb_path(&j.ctx.photos_dir, &p.file) {
             let _ = tokio::fs::remove_file(path).await;
         }
     }
@@ -860,10 +865,10 @@ pub async fn delete_photo(
 ) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     open_row(&s.db, &j.couple, id, Some(j.who)).await?;
-    if let Some(file) = db::remove_photo(&s.db, &j.couple, id, photo_id).await?
-        && let Some(path) = photos::date_path(&j.ctx.photos_dir, &file)
-    {
-        let _ = tokio::fs::remove_file(path).await;
+    if let Some(file) = db::remove_photo(&s.db, &j.couple, id, photo_id).await? {
+        for path in [photos::date_path(&j.ctx.photos_dir, &file), photos::thumb_path(&j.ctx.photos_dir, &file)].into_iter().flatten() {
+            let _ = tokio::fs::remove_file(path).await;
+        }
     }
     Ok(go(kept_to(id)))
 }
@@ -884,7 +889,22 @@ pub async fn photo(State(s): State<AppState>, Path((id, photo_id)): Path<(i64, i
     }
     let ctx = load_ctx(&s.db, &couple).await?;
     let Some(path) = photos::date_path(&ctx.photos_dir, &pic.file) else { return Err(missing()) };
-    let Ok(bytes) = tokio::fs::read(path).await else { return Err(missing()) };
+    let bytes = if q.thumb.as_deref() == Some("1") {
+        let tp = photos::thumb_path(&ctx.photos_dir, &pic.file).ok_or_else(missing)?;
+        match tokio::fs::read(&tp).await {
+            Ok(b) => b,
+            Err(_) => {
+                // First look: make it once, keep it next to the photo.
+                let Ok(full) = tokio::fs::read(&path).await else { return Err(missing()) };
+                let Ok(Ok(small)) = tokio::task::spawn_blocking(move || photos::thumb(&full)).await else { return Err(missing()) };
+                let _ = tokio::fs::write(&tp, &small).await;
+                small
+            }
+        }
+    } else {
+        let Ok(bytes) = tokio::fs::read(path).await else { return Err(missing()) };
+        bytes
+    };
     // A photo id always means the same picture, so it may be cached for as long as the link lives.
     Ok(([(header::CONTENT_TYPE, "image/jpeg"), (header::CACHE_CONTROL, "private, max-age=3000")], bytes).into_response())
 }

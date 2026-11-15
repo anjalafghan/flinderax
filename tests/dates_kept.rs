@@ -741,3 +741,34 @@ async fn a_deposit_that_has_already_been_spent_cannot_be_deleted() {
     assert_eq!(r.status, StatusCode::OK);
     assert_eq!(t.scalar(&format!("SELECT sum(amount) FROM joy_savings WHERE couple_id = '{couple}'")).await, 100);
 }
+
+#[tokio::test]
+async fn a_photo_has_a_small_copy_for_lists_that_goes_with_it() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let hid = t.keep(&couple, &rohit, COOK, false).await;
+    let mut big = Vec::new();
+    image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(1600, 1000, image::Rgb([10, 120, 200])))
+        .write_to(&mut Cursor::new(&mut big), image::ImageFormat::Jpeg)
+        .unwrap();
+    assert_eq!(t.upload(&format!("/api/dates/history/{hid}/photo"), &rohit, &big).await.status, StatusCode::OK);
+    let pic = &t.item(&rohit, hid).await["photos"][0];
+    let (pid, url) = (pic["id"].as_i64().unwrap(), public_url(pic["url"].as_str().unwrap()));
+
+    let full = t.public(&url).await;
+    assert_eq!(image::load_from_memory(&full.bytes).unwrap().width(), 1600);
+    let small = t.public(&format!("{url}&thumb=1")).await;
+    assert_eq!(small.status, StatusCode::OK, "{}", small.text);
+    let d = image::load_from_memory(&small.bytes).unwrap();
+    assert_eq!((d.width(), d.height()), (400, 250));
+    assert!(small.bytes.len() < full.bytes.len());
+    // Still needs a valid signature: asking for the small one is not a way around it.
+    assert_eq!(t.public(&format!("{}&thumb=1", url.replace("sig=", "sig=0"))).await.status, StatusCode::FORBIDDEN);
+
+    // Taking the photo away takes its small copy too.
+    let file: String = sqlx::query_scalar("SELECT file FROM joy_history_photos WHERE id = ?").bind(pid).fetch_one(&t.db).await.unwrap();
+    let dir = std::path::PathBuf::from(std::env::var("JOY_PHOTOS_DIR").unwrap()).join(&couple);
+    assert!(dir.join(format!("{file}.t.jpg")).exists());
+    t.post(&format!("/api/dates/history/{hid}/photos/{pid}/delete"), &rohit, json!({})).await;
+    assert!(!dir.join(format!("{file}.t.jpg")).exists() && !dir.join(&file).exists());
+}
