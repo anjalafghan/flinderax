@@ -3,6 +3,7 @@
 //
 //   bun build.ts           one-off production build (minified, console dropped, .br/.gz copies)
 //   bun build.ts --watch   rebuild on change (dev); refresh the Rust server's page to see it
+import { HEAD_EXTRAS } from "./head-extras";
 import { copyFile, cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync, watch } from "node:fs";
 import { brotliCompressSync, constants as zlib } from "node:zlib";
@@ -172,7 +173,10 @@ async function build(): Promise<boolean> {
   await cp(path.join(root, "public"), outdir, { recursive: true });
   await copyReferencedFonts(outdir);
   const indexPath = path.join(outdir, "index.html");
-  await writeFile(indexPath, (await readFile(indexPath, "utf8")).replaceAll("__SITE_URL__", siteUrl));
+  // The install tags are added here, not written in index.html: the bundler would try to resolve
+  // their absolute paths as source files and fail the build.
+  const html = (await readFile(indexPath, "utf8")).replace("</head>", `${HEAD_EXTRAS}</head>`);
+  await writeFile(indexPath, html.replaceAll("__SITE_URL__", siteUrl));
   if (!isWatch) await precompress(outdir);
   console.log(`built web/dist in ${(performance.now() - started).toFixed(0)}ms`);
   return true;

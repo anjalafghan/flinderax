@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { HEAD_EXTRAS } from "../head-extras";
 
 const root = path.join(import.meta.dir, "..");
 const manifest = () => JSON.parse(readFileSync(path.join(root, "public/manifest.webmanifest"), "utf8"));
@@ -23,10 +24,14 @@ describe("web app manifest (installable on a phone's home screen)", () => {
     }
   });
 
-  test("the page links it and an iOS home-screen icon", () => {
-    const html = readFileSync(path.join(root, "index.html"), "utf8");
-    expect(html).toContain('rel="manifest" href="/manifest.webmanifest"');
-    expect(html).toContain('rel="apple-touch-icon"');
+  test("the built page links it and an iOS home-screen icon", () => {
+    expect(HEAD_EXTRAS).toContain('rel="manifest" href="/manifest.webmanifest"');
+    expect(HEAD_EXTRAS).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png"');
+    expect(readFileSync(path.join(root, "build.ts"), "utf8")).toContain("HEAD_EXTRAS");
+  });
+
+  test("index.html itself does not name them (the bundler would try to resolve the paths)", () => {
+    expect(readFileSync(path.join(root, "index.html"), "utf8")).not.toContain("manifest.webmanifest");
   });
 
   test("the service worker does not cache the manifest as an app file", () => {
