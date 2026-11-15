@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { useOutbox } from '@/hooks/useOutbox'
 import { RouteBoundary } from '@/components/ui/route-boundary'
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -40,6 +41,7 @@ const PageLoader = () => (
 
 function App() {
   const { isAuthenticated } = useAuth()
+  useOutbox(isAuthenticated)
   const { pathname } = useLocation()
   // The phone tab bar is fixed to the bottom, so pages leave room for it (md+ uses the top nav).
   const showTabs = isAuthenticated && pathname !== '/auth'

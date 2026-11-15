@@ -1363,3 +1363,50 @@ async fn a_couple_agrees_on_a_goal_and_both_pay_into_it() {
     assert_eq!(s, StatusCode::OK);
     assert_eq!(authed_get(&app, &a, "/api/couple-goals").await["goals"], json!([]));
 }
+
+#[tokio::test]
+async fn a_post_sent_twice_with_the_same_idempotency_key_happens_once() {
+    let (app, db) = test_app_with_db().await;
+    let a = new_user(&app, "10.0.4.1", "idema").await;
+    let b = new_user(&app, "10.0.4.2", "idemb").await;
+    let today = joy::handlers::common::today_local().to_string();
+    let body = json!({"occurred_on": today, "direction": "debit", "amount_paise": 4_200, "merchant": "Chai", "category": "food"});
+    let send = |token: &str, key: &str, b: Value| {
+        let token = token.to_string();
+        let key = key.to_string();
+        let app = app.clone();
+        async move { raw(&app, "POST", "/api/ingest/transactions/create", &[("authorization", &format!("Bearer {token}")), ("idempotency-key", &key)], Some(b)).await }
+    };
+    let count = || async { sqlx::query_scalar::<_, i64>("SELECT count(*) FROM transactions").fetch_one(&db).await.unwrap() };
+
+    let (s1, _, first) = send(&a, "key-1", body.clone()).await;
+    assert_eq!(s1, StatusCode::OK, "{first}");
+    assert_eq!(count().await, 1);
+    // The phone never heard back and sends it again: same answer, nothing new.
+    let (s2, h2, again) = send(&a, "key-1", body.clone()).await;
+    assert_eq!(s2, StatusCode::OK);
+    assert_eq!(again, first, "the first answer is replayed");
+    assert_eq!(h2.get("idempotent-replay").map(|v| v.to_str().unwrap()), Some("true"));
+    assert_eq!(count().await, 1);
+
+    // A different key is a different action; the same key from someone else is theirs alone.
+    send(&a, "key-2", body.clone()).await;
+    assert_eq!(count().await, 2);
+    let (s, _, _) = send(&b, "key-1", body.clone()).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(count().await, 3);
+
+    // A refused request is not remembered: fix it and send again with the same key.
+    let (s, _, _) = send(&a, "key-3", json!({"occurred_on": today, "direction": "debit", "amount_paise": -1, "category": "food"})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let (s, _, _) = send(&a, "key-3", body.clone()).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(count().await, 4);
+
+    // Without a key nothing is remembered, as before; absurd keys are refused.
+    raw(&app, "POST", "/api/ingest/transactions/create", &[("authorization", &format!("Bearer {a}"))], Some(body.clone())).await;
+    raw(&app, "POST", "/api/ingest/transactions/create", &[("authorization", &format!("Bearer {a}"))], Some(body.clone())).await;
+    assert_eq!(count().await, 6);
+    let (s, _, _) = send(&a, &"k".repeat(200), body).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+}

@@ -134,14 +134,15 @@ export const useBreakdown = (cardId: string | undefined) =>
 export function usePlannerMutation<TVars, TResult>(
   fn: (vars: TVars) => Promise<TResult>,
   invalidate: QueryKey[],
-  messages: { success?: string; error?: string } = {},
+  messages: { success?: string | ((result: TResult) => string | undefined); error?: string } = {},
 ) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => {
+    onSuccess: (result: TResult) => {
       for (const key of [...invalidate, keys.summary, keys.history]) qc.invalidateQueries({ queryKey: key });
-      if (messages.success) toast.success(messages.success);
+      const text = typeof messages.success === "function" ? messages.success(result) : messages.success;
+      if (text) toast.success(text);
     },
     onError: (e: unknown) => {
       toast.error(messages.error ?? (e instanceof Error ? e.message : "Something went wrong"));

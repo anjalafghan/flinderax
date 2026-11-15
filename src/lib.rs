@@ -8,6 +8,7 @@ pub mod backup;
 pub mod handlers;
 pub mod housekeeping;
 pub mod headers;
+pub mod idempotency;
 pub mod joy;
 pub mod models;
 pub mod narration;

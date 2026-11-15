@@ -53,6 +53,8 @@ fn trace_layer() -> Trace {
 fn protected(state: &AppState, router: Router) -> Router {
     router
         .layer(trace_layer())
+        // Inside the auth layer, so it knows whose key it is.
+        .layer(middleware::from_fn_with_state(state.clone(), crate::idempotency::layer))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             token_validator_middleware,

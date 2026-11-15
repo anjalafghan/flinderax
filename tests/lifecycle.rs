@@ -371,7 +371,7 @@ async fn every_user_table_is_exported_or_deliberately_left_out() {
     // Secrets, sessions and bookkeeping that must never leave in a download.
     const DENIED: &[&str] = &[
         "users", "ingest_keys", "reminder_feeds", "signup_codes", "_sqlx_migrations",
-        "joy_seed_activities", "couples", "couple_invites",
+        "joy_seed_activities", "couples", "couple_invites", "idempotency_keys",
     ];
     let t = setup().await;
     let source = include_str!("../src/handlers/export.rs");
