@@ -25,6 +25,9 @@ export interface LifeProfile {
   raise_bps?: number;
   partner_raise_bps?: number;
   live_to_age?: number;
+  /** Your own guesses (bps) for the life line; null or missing uses the default. */
+  equity_return_bps?: number | null;
+  inflation_bps?: number | null;
 }
 
 export interface LifeOut {

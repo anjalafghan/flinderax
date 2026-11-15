@@ -346,7 +346,10 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
     // Rows are calendar years, so the first one is what is left of this year.
     let offset = today.month() as i64 - 1;
     let total_months = (end_age - age0 + 1) * MONTHS_PER_YEAR - offset;
-    let inflation = rate(GENERAL_INFLATION_BPS);
+    // Your own guesses, held to a sane range.
+    let infl_bps = p.inflation_bps.map_or(GENERAL_INFLATION_BPS, |b| b.clamp(0, 2_000));
+    let equity_bps = p.equity_return_bps.map_or(EQUITY_RETURN_BPS, |b| b.clamp(0, 2_500));
+    let inflation = rate(infl_bps);
     let grow = |today_cost: f64, bps: i64, month: i64| today_cost * (1.0 + rate(bps)).powf(month as f64 / 12.0);
 
     let mut children: Vec<i64> = p.child_birth_year.into_iter().collect();
@@ -372,7 +375,7 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
             }
             Choice::House { year, price_paise, down_bps, loan_bps, tenure_years, rent_saved_paise } => {
                 let from = months_from(today, (*year).clamp(ty, ty + 80), 1);
-                let price = grow((*price_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, GENERAL_INFLATION_BPS, from);
+                let price = grow((*price_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, infl_bps, from);
                 let down = price * rate((*down_bps).clamp(0, 10_000));
                 let months = (*tenure_years).clamp(1, 40) * MONTHS_PER_YEAR;
                 let monthly_rate = rate((*loan_bps).clamp(0, 3_000)) / 12.0;
@@ -402,7 +405,7 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
                 let step = every_years.map(|n| n.clamp(1, 50) * MONTHS_PER_YEAR);
                 let mut month = months_from(today, (*year).clamp(ty, ty + 80), 1);
                 while month < total_months {
-                    let amount = grow((*amount_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, GENERAL_INFLATION_BPS, month);
+                    let amount = grow((*amount_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, infl_bps, month);
                     lumps.push(Lump { month, amount, label: label.clone() });
                     match step {
                         Some(s) => month += s,
@@ -481,23 +484,23 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
         }
         let income = if working { mine + partner_base * (1.0 + partner_raise).powi(years_in) } else { 0.0 };
 
-        let mut spend = grow(expenses, GENERAL_INFLATION_BPS, m);
+        let mut spend = grow(expenses, infl_bps, m);
         if working {
-            spend = (spend - grow(save_more, GENERAL_INFLATION_BPS, m)).max(0.0);
+            spend = (spend - grow(save_more, infl_bps, m)).max(0.0);
         }
         if age >= MEDICAL_FROM_AGE {
             spend += grow(LATER_MEDICAL_TODAY as f64 / 12.0, MEDICAL_INFLATION_BPS, m) * medical_keep;
         }
         for (from, to) in &child_spans {
             if (*from..*to).contains(&m) {
-                spend += grow(CHILD_MONTHLY_TODAY as f64, GENERAL_INFLATION_BPS, m);
+                spend += grow(CHILD_MONTHLY_TODAY as f64, infl_bps, m);
             }
         }
         for (home, loan) in homes.iter().zip(loans.iter_mut()) {
             if m < home.from {
                 continue;
             }
-            spend = (spend - grow(home.rent_saved, GENERAL_INFLATION_BPS, m)).max(0.0);
+            spend = (spend - grow(home.rent_saved, infl_bps, m)).max(0.0);
             if m < home.from + home.months && *loan > 0.0 {
                 let interest = *loan * home.monthly_rate;
                 *loan = (*loan + interest - home.emi).max(0.0);
@@ -528,7 +531,7 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
         // Grow what is there, then add the month's pay and take its costs.
         let months_to_retire = retire_month - m;
         let return_bps = if months_to_retire > EQUITY_MIN_MONTHS {
-            EQUITY_RETURN_BPS
+            equity_bps
         } else if months_to_retire > 0 {
             HYBRID_RETURN_BPS
         } else {
@@ -559,13 +562,13 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
 
         if (offset + m) % MONTHS_PER_YEAR == MONTHS_PER_YEAR - 1 {
             let i = year_index;
-            let home_value: f64 = homes.iter().filter(|h| h.from <= m).map(|h| grow(h.price, GENERAL_INFLATION_BPS, m - h.from)).sum();
+            let home_value: f64 = homes.iter().filter(|h| h.from <= m).map(|h| grow(h.price, infl_bps, m - h.from)).sum();
             let owed: f64 = homes.iter().zip(&loans).filter(|(h, _)| h.from <= m).map(|(_, l)| *l).sum();
             let net = wealth + home_value - owed;
             let deflate = (1.0 + inflation).powf((m + 1) as f64 / 12.0);
             let net_today = to_paise(net / deflate);
             // Free: savings alone would pay a year of today's costs for good, and nothing is short.
-            let yearly_need = spend_regular(expenses, m, age, medical_keep, &grow) * 12.0;
+            let yearly_need = spend_regular(expenses, m, age, medical_keep, infl_bps, &grow) * 12.0;
             if marks.free_at_age.is_none() && short_year == 0.0 && yearly_need > 0.0 && wealth * swr >= yearly_need {
                 marks.free_at_age = Some(age);
             }
@@ -617,8 +620,8 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
 }
 
 /// The monthly living cost at month `m`, without one-offs, loans or children: what retirement must pay.
-fn spend_regular(expenses: f64, m: i64, age: i64, medical_keep: f64, grow: &impl Fn(f64, i64, i64) -> f64) -> f64 {
-    let mut spend = grow(expenses, GENERAL_INFLATION_BPS, m);
+fn spend_regular(expenses: f64, m: i64, age: i64, medical_keep: f64, infl_bps: i64, grow: &impl Fn(f64, i64, i64) -> f64) -> f64 {
+    let mut spend = grow(expenses, infl_bps, m);
     if age >= MEDICAL_FROM_AGE {
         spend += grow(LATER_MEDICAL_TODAY as f64 / 12.0, MEDICAL_INFLATION_BPS, m) * medical_keep;
     }
@@ -771,6 +774,23 @@ mod tests {
 
     fn end_today(l: &Line) -> i64 {
         l.marks.at_end_today_paise
+    }
+
+    #[test]
+    fn your_own_return_and_inflation_move_the_line() {
+        let base = input(vec![]);
+        let with = |f: &dyn Fn(&mut LifeProfile)| {
+            let mut i = input(vec![]);
+            f(&mut i.profile);
+            end_today(&simulate(&i, today()))
+        };
+        let plain = end_today(&simulate(&base, today()));
+        assert_eq!(with(&|p| { p.equity_return_bps = Some(EQUITY_RETURN_BPS); p.inflation_bps = Some(GENERAL_INFLATION_BPS); }), plain, "the defaults, spelled out");
+        assert!(with(&|p| p.equity_return_bps = Some(900)) < plain, "lower returns, less money");
+        assert!(with(&|p| p.equity_return_bps = Some(1400)) > plain);
+        assert!(with(&|p| p.inflation_bps = Some(900)) < plain, "higher inflation, less in today's money");
+        // Wild values are held to a sane range rather than breaking the line.
+        let _ = with(&|p| { p.equity_return_bps = Some(i64::MAX); p.inflation_bps = Some(-5); });
     }
 
     #[test]
