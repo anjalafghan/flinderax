@@ -143,6 +143,8 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
             ("regulars", "SELECT * FROM joy_regulars WHERE couple_id = ?"),
             ("nights", "SELECT v.* FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id WHERE r.couple_id = ?"),
             ("wants", &my_wants),
+            ("goals", "SELECT * FROM couple_goals WHERE couple_id = ?"),
+            ("goal_contributions", "SELECT c.* FROM couple_goal_contributions c JOIN couple_goals g ON g.goal_id = c.goal_id WHERE g.couple_id = ?"),
             ("peeks", "SELECT * FROM joy_peeks WHERE couple_id = ?"),
             ("settlements", "SELECT * FROM joy_settlements WHERE couple_id = ?"),
         ];

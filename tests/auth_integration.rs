@@ -1289,3 +1289,77 @@ async fn a_cookie_session_is_renewed_in_the_cookie() {
     let set = cookie_of(&h);
     assert!(set.starts_with("joy_session=") && !set.starts_with(&format!("joy_session={old}")) && set.contains("Max-Age=2592000"), "{set}");
 }
+
+async fn make_couple(app: &Router, a: &str, b: &str) {
+    authed_post(app, a, "/api/couple/create", json!({})).await;
+    let (_, inv) = authed_post(app, a, "/api/couple/invite", json!({})).await;
+    let code = serde_json::from_str::<Value>(&inv).unwrap()["code"].as_str().unwrap().to_string();
+    let (s, body) = authed_post(app, b, "/api/couple/join", json!({"code": code})).await;
+    assert!(s.is_success(), "{body}");
+}
+
+#[tokio::test]
+async fn a_couple_agrees_on_a_goal_and_both_pay_into_it() {
+    let app = test_app().await;
+    let (a, b) = (new_user(&app, "10.0.3.1", "goaleda").await, new_user(&app, "10.0.3.2", "goaledb").await);
+    make_couple(&app, &a, &b).await;
+    let today = joy::handlers::common::today_local();
+    let by = (today + time::Duration::days(200)).to_string();
+
+    let (s, body) = authed_post(&app, &a, "/api/couple-goals", json!({"name": "Wedding", "target_paise": 5_000_000, "target_date": by})).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    let id = serde_json::from_str::<Value>(&body).unwrap()["goal_id"].as_str().unwrap().to_string();
+
+    // Both see the same goal.
+    for t in [&a, &b] {
+        let v = authed_get(&app, t, "/api/couple-goals").await;
+        assert_eq!(v["goals"][0]["name"], "Wedding", "{v}");
+        assert_eq!(v["goals"][0]["target_paise"], 5_000_000);
+    }
+
+    // Each pays in their own; the total is shared and each share is named.
+    let (s, _) = authed_post(&app, &a, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": 1_000_000})).await;
+    assert_eq!(s, StatusCode::OK);
+    let (s, _) = authed_post(&app, &b, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": 500_000, "note": "from my bonus"})).await;
+    assert_eq!(s, StatusCode::OK);
+    let v = authed_get(&app, &b, "/api/couple-goals").await;
+    let g = &v["goals"][0];
+    assert_eq!(g["saved_paise"], 1_500_000);
+    assert_eq!(g["percent"], 30);
+    assert!(g["monthly_needed_paise"].as_i64().unwrap() > 0);
+    let shares: Vec<(&str, i64)> = g["shares"].as_array().unwrap().iter().map(|s| (s["name"].as_str().unwrap(), s["paise"].as_i64().unwrap())).collect();
+    assert_eq!(shares.len(), 2, "{shares:?}");
+    assert!(shares.iter().any(|(n, p)| n.starts_with("goaleda") && *p == 1_000_000));
+    assert!(shares.iter().any(|(n, p)| n.starts_with("goaledb") && *p == 500_000));
+
+    // You can take back your own payment, not your partner's.
+    let first = g["contributions"][0]["id"].as_i64().unwrap();
+    let mine = g["contributions"].as_array().unwrap().iter().find(|c| c["mine"] == true).unwrap()["id"].as_i64().unwrap();
+    let theirs = g["contributions"].as_array().unwrap().iter().find(|c| c["mine"] == false).unwrap()["id"].as_i64().unwrap();
+    let _ = first;
+    let (s, _) = authed_post(&app, &b, &format!("/api/couple-goals/{id}/contributions/{theirs}/delete"), json!({})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+    let (s, _) = authed_post(&app, &b, &format!("/api/couple-goals/{id}/contributions/{mine}/delete"), json!({})).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(authed_get(&app, &a, "/api/couple-goals").await["goals"][0]["saved_paise"], 1_000_000);
+
+    // Bad amounts, and people outside the couple.
+    for amount in [0, -5] {
+        let (s, _) = authed_post(&app, &a, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": amount})).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST, "{amount}");
+    }
+    let stranger = new_user(&app, "10.0.3.3", "goalnosy").await;
+    assert_eq!(authed_get(&app, &stranger, "/api/couple-goals").await["in_couple"], false);
+    let (s, _) = authed_post(&app, &stranger, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": 100})).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    let (c, d) = (new_user(&app, "10.0.3.4", "goalc").await, new_user(&app, "10.0.3.5", "goald").await);
+    make_couple(&app, &c, &d).await;
+    let (s, _) = authed_post(&app, &c, &format!("/api/couple-goals/{id}/contribute"), json!({"amount_paise": 100})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND, "another couple's goal is not found");
+    assert_eq!(authed_get(&app, &c, "/api/couple-goals").await["goals"], json!([]));
+
+    // Archiving hides it from both.
+    let (s, _) = authed_post(&app, &b, &format!("/api/couple-goals/{id}/archive"), json!({})).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(authed_get(&app, &a, "/api/couple-goals").await["goals"], json!([]));
+}

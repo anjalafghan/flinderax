@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import api from "@/services/api";
 import { Header } from "@/components/layout/Header";
 import { CardCarousel } from "@/components/feature/CardCarousel";
+import { CoupleGoalsCard } from "@/components/feature/CoupleGoalsCard";
 import { ComingUpCard } from "@/components/feature/ComingUpCard";
 import { PlannerSummary } from "@/components/feature/PlannerSummary";
 import { NetWorthPanel } from "@/components/feature/NetWorthPanel";
@@ -143,6 +144,7 @@ function MoneyDashboard() {
         <div className="mb-6 w-full">
           <PlannerSummary />
           <ComingUpCard />
+          <CoupleGoalsCard />
           <StreaksCard />
           <LifeLineCard />
           <InsightsNudge />

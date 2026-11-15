@@ -9,6 +9,7 @@ pub mod checkin;
 pub mod coming;
 pub mod common;
 pub mod couple;
+pub mod couple_goals;
 pub mod dashboard;
 pub mod diet;
 pub mod export;
