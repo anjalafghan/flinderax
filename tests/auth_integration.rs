@@ -1410,3 +1410,54 @@ async fn a_post_sent_twice_with_the_same_idempotency_key_happens_once() {
     let (s, _, _) = send(&a, &"k".repeat(200), body).await;
     assert_eq!(s, StatusCode::BAD_REQUEST);
 }
+
+#[tokio::test]
+async fn people_can_turn_notifications_on_and_off_and_a_scheduled_job_can_trigger_a_round() {
+    let (app, db) = test_app_with_db().await;
+    let (private, public) = joy::push::WebPushSender::generate();
+    // Safety: only this test reads these.
+    unsafe {
+        std::env::set_var("VAPID_PRIVATE_KEY", &private);
+        std::env::set_var("PUSH_RUN_TOKEN", "round-token");
+    }
+    let a = new_user(&app, "10.0.5.1", "pusha").await;
+    let b = new_user(&app, "10.0.5.2", "pushb").await;
+
+    assert_eq!(authed_get(&app, &a, "/api/push").await, json!({"public_key": public, "subscribed": false}));
+    let sub = json!({"endpoint": "https://push.example/abc", "p256dh": "BLn9b-VR0ca83knDNZ32dCHGyjJp-1riX9ZTN40MqV8K_LpQmLqxC_DoHvqvFXO_nGdAB4W9dogZb_sM-uV4JbY", "auth": "_ordMnz7uTCmrpBTeUV4Bw"});
+    let (s, body) = authed_post(&app, &a, "/api/push/subscribe", sub.clone()).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    authed_post(&app, &a, "/api/push/subscribe", sub.clone()).await;
+    assert_eq!(authed_get(&app, &a, "/api/push").await["subscribed"], true);
+    assert_eq!(authed_get(&app, &b, "/api/push").await["subscribed"], false, "someone else's is theirs");
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM push_subscriptions").fetch_one(&db).await.unwrap();
+    assert_eq!(n, 1, "subscribing twice is one subscription");
+
+    // Plain http and junk are refused.
+    for bad in [json!({"endpoint": "http://push.example/x", "p256dh": "k", "auth": "a"}), json!({"endpoint": "https://x", "p256dh": "", "auth": "a"}), json!({"endpoint": "not a url", "p256dh": "k", "auth": "a"})] {
+        let (s, _) = authed_post(&app, &a, "/api/push/subscribe", bad).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST);
+    }
+    // Only you can switch yours off.
+    authed_post(&app, &b, "/api/push/unsubscribe", json!({"endpoint": "https://push.example/abc"})).await;
+    assert_eq!(authed_get(&app, &a, "/api/push").await["subscribed"], true);
+    authed_post(&app, &a, "/api/push/unsubscribe", json!({"endpoint": "https://push.example/abc"})).await;
+    assert_eq!(authed_get(&app, &a, "/api/push").await["subscribed"], false);
+
+    // The scheduled round: needs the secret, and a real slot.
+    let round = |token: Option<&str>, slot: &str| {
+        let app = app.clone();
+        let hdr: Vec<(String, String)> = token.map(|t| vec![("authorization".to_string(), format!("Bearer {t}"))]).unwrap_or_default();
+        let path = format!("/api/internal/push/run?slot={slot}");
+        async move {
+            let h: Vec<(&str, &str)> = hdr.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+            raw(&app, "POST", &path, &h, Some(json!({}))).await
+        }
+    };
+    assert_eq!(round(None, "morning").await.0, StatusCode::UNAUTHORIZED);
+    assert_eq!(round(Some("wrong"), "morning").await.0, StatusCode::UNAUTHORIZED);
+    assert_eq!(round(Some("round-token"), "noon").await.0, StatusCode::BAD_REQUEST);
+    let (s, _, body) = round(Some("round-token"), "morning").await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    assert_eq!(serde_json::from_str::<Value>(&body).unwrap()["sent"], 0);
+}

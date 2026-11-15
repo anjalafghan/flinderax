@@ -29,6 +29,7 @@ pub mod moves;
 pub mod payees;
 pub mod people;
 pub mod plan;
+pub mod push;
 pub mod projection;
 pub mod reminders;
 pub mod review;
