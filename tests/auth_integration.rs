@@ -993,3 +993,38 @@ async fn card_totals_are_exact_to_the_paisa() {
     let h: Value = serde_json::from_str(&h).unwrap();
     assert_eq!(h["histories"][1]["total_due_input"], 12_345_678.91);
 }
+
+/// What a protected GET answers with, headers included.
+async fn get_with_headers(app: &Router, path: &str, token: &str) -> (StatusCode, axum::http::HeaderMap) {
+    let req = Request::get(path).header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap();
+    let res = app.clone().oneshot(req).await.unwrap();
+    (res.status(), res.headers().clone())
+}
+
+#[tokio::test]
+async fn a_session_in_use_renews_itself_before_it_runs_out() {
+    let (app, db) = test_app_with_db().await;
+    let fresh = new_user(&app, "10.0.0.96", "renewer").await;
+    // A just-issued token has plenty of life left: nothing to renew.
+    let (s, h) = get_with_headers(&app, "/api/account/list", &fresh).await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(h.get("x-refreshed-token").is_none(), "no renewal needed yet");
+
+    // The same person, with a token that has two days left, is handed a new long one.
+    let (id, role, version): (String, String, i64) =
+        sqlx::query_as("SELECT user_id, user_role, token_version FROM users WHERE user_name = 'renewer'").fetch_one(&db).await.unwrap();
+    let key = Arc::new(PasetoSymmetricKey::from(Key::from(&[7u8; 32])));
+    let old = joy::handlers::common::get_paseto_token(&id, role, version, &key, time::OffsetDateTime::now_utc() + time::Duration::days(2)).ok().unwrap();
+    let (s, h) = get_with_headers(&app, "/api/account/list", &old).await;
+    assert_eq!(s, StatusCode::OK);
+    let renewed = h.get("x-refreshed-token").expect("renewed").to_str().unwrap().to_string();
+    let exp: i64 = h.get("x-token-expires-at").expect("expiry").to_str().unwrap().parse().unwrap();
+    assert!(exp > time::OffsetDateTime::now_utc().unix_timestamp() + 20 * 86_400, "a month, not two days");
+    assert_eq!(get(&app, "/api/account/list", Some(&renewed)).await, StatusCode::OK, "the new token works");
+
+    // A revoked session is not renewed: signing out everywhere still ends old tokens.
+    authed_post(&app, &renewed, "/api/common/logout-everywhere", json!({})).await;
+    let (s, h) = get_with_headers(&app, "/api/account/list", &old).await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+    assert!(h.get("x-refreshed-token").is_none());
+}

@@ -1,3 +1,4 @@
+import { adoptRenewedToken } from "@/services/renew";
 import type {
   Account,
   AccountUpdate,
@@ -77,6 +78,7 @@ async function send(method: Method, url: string, body?: unknown): Promise<Respon
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
+  adoptRenewedToken(response);
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
     if (response.status === 401 && token && !isAuthEndpoint(url)) {

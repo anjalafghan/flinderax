@@ -147,7 +147,7 @@ pub async fn login(
         ))?
         .to_string();
 
-    let expiration = OffsetDateTime::now_utc() + Duration::hours(24);
+    let expiration = OffsetDateTime::now_utc() + SESSION_LIFETIME;
     let version: i64 = sqlx::query_scalar("SELECT token_version FROM users WHERE user_id = ?")
         .bind(&user_id)
         .fetch_one(&state.db)
@@ -159,6 +159,10 @@ pub async fn login(
         expires_at: expiration.unix_timestamp(),
     }))
 }
+/// How long a sign-in lasts. A session that is being used renews itself (see the token middleware),
+/// so someone who opens the app every few weeks never signs in again.
+pub const SESSION_LIFETIME: Duration = Duration::days(30);
+
 pub fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
     let parsed_hash = PasswordHash::new(&database_password)
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

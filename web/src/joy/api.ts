@@ -1,5 +1,6 @@
 // Every request the Dates section makes. Same bearer-token pattern as services/api.ts, but it keeps
 // the HTTP status and parsed body, because a refused slip save is a 422 that carries a FormView.
+import { adoptRenewedToken } from "@/services/renew";
 import type { JoySummary } from "@/services/types";
 import { clearSession } from "@/session";
 
@@ -256,6 +257,7 @@ export async function request<T>(method: "GET" | "POST", url: string, body?: unk
     headers: { "Content-Type": "application/json", ...(auth ? authHeaders() : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  adoptRenewedToken(res);
   if (res.status === 401 && auth) return toLogin<T>();
   const text = await res.text().catch(() => "");
   const data = parse(text);
