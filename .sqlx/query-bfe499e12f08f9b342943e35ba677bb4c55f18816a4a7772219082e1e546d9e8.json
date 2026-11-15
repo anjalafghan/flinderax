@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT charge_id AS \"charge_id!\", label, amount_paise,\n                  created_at < datetime('now', '-30 days') AS \"stale!: bool\"\n           FROM pending_charges\n           WHERE card_id = ? AND cleared_at IS NULL\n           ORDER BY created_at",
+  "describe": {
+    "columns": [
+      {
+        "name": "charge_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "label",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount_paise",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "stale!: bool",
+        "ordinal": 3,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "bfe499e12f08f9b342943e35ba677bb4c55f18816a4a7772219082e1e546d9e8"
+}

@@ -112,6 +112,8 @@ export interface PendingCharge {
   charge_id: string;
   label: string;
   amount_paise: number;
+  /** Older than 30 days: left out of the next-bill estimate. */
+  stale: boolean;
 }
 
 export interface CardBreakdown {
@@ -128,6 +130,8 @@ export interface CardBreakdown {
   last_updated: string | null;
   emis: Emi[];
   pending_charges: PendingCharge[];
+  /** Total of the stale pending charges the estimate leaves out. */
+  stale_pending_paise: number;
 }
 
 export type Status = "green" | "yellow" | "red";

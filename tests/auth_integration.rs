@@ -945,3 +945,28 @@ async fn an_alert_the_parser_cannot_read_is_kept_in_an_inbox() {
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM unrecognized_alerts").fetch_one(&db).await.unwrap();
     assert_eq!(n, 1, "the old one was cleaned up");
 }
+
+#[tokio::test]
+async fn an_old_pending_charge_is_flagged_not_silently_dropped() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.94", "pender").await;
+    let (s, b) = authed_post(&app, &t, "/api/card/create", json!({
+        "card_name": "Visa", "card_bank": "HDFC", "card_primary_color": [0, 0, 0], "card_secondary_color": [9, 9, 9],
+        "last_4_digits": "4321", "statement_day": 5, "due_day": 25})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let card = serde_json::from_str::<Value>(&b).unwrap()["card_id"].as_str().unwrap().to_string();
+    authed_post(&app, &t, "/api/card/pending/create", json!({"card_id": card, "label": "Fresh", "amount_paise": 10_000})).await;
+    authed_post(&app, &t, "/api/card/pending/create", json!({"card_id": card, "label": "Old", "amount_paise": 25_000})).await;
+    sqlx::query("UPDATE pending_charges SET created_at = datetime('now', '-45 days') WHERE label = 'Old'").execute(&db).await.unwrap();
+
+    let (s, b) = authed_post(&app, &t, "/api/card/breakdown", json!({"card_id": card})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let v: Value = serde_json::from_str(&b).unwrap();
+    let rows = v["pending_charges"].as_array().unwrap();
+    assert_eq!(rows.len(), 2, "the old one is still listed: {v}");
+    let old = rows.iter().find(|r| r["label"] == "Old").unwrap();
+    let fresh = rows.iter().find(|r| r["label"] == "Fresh").unwrap();
+    assert_eq!((old["stale"].as_bool(), fresh["stale"].as_bool()), (Some(true), Some(false)));
+    assert_eq!(v["stale_pending_paise"], 25_000, "and the card says how much is being left out");
+    assert_eq!(v["next_bill_est_paise"], 10_000, "the estimate still counts only the recent one");
+}
