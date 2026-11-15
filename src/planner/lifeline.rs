@@ -283,7 +283,61 @@ fn emi(loan: f64, monthly_rate: f64, months: i64) -> f64 {
 }
 
 /// Runs the line for one input.
+/// A rough effective tax on investment gains, as a share of each month's growth. An estimate.
+pub const GAINS_TAX_BPS: i64 = 1_000;
+/// The cautious and hopeful lines shift every return by this much either way.
+pub const BAND_SHIFT_BPS: i64 = 200;
+
+/// Ways to bend the line without changing the household's facts.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Tweaks {
+    /// Added to every investment return (negative: cautious, positive: hopeful).
+    pub return_shift_bps: i64,
+    /// Share of each month's gain that is lost to tax. Losses are not taxed back.
+    pub gains_tax_bps: i64,
+}
+
+/// One year of the band: net worth in today's money on three assumptions about returns.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub struct BandRow {
+    pub year: i64,
+    pub age: i64,
+    pub cautious_today_paise: i64,
+    pub expected_today_paise: i64,
+    pub hopeful_today_paise: i64,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub struct Band {
+    pub shift_bps: i64,
+    pub gains_tax_bps: i64,
+    pub rows: Vec<BandRow>,
+}
+
+/// The same household on cautious, expected and hopeful returns, all after estimated tax on gains.
+pub fn band(input: &LineInput, today: Date) -> Band {
+    let run = |shift: i64| simulate_with(input, today, &Tweaks { return_shift_bps: shift, gains_tax_bps: GAINS_TAX_BPS });
+    let (low, mid, high) = (run(-BAND_SHIFT_BPS), run(0), run(BAND_SHIFT_BPS));
+    let rows = mid
+        .rows
+        .iter()
+        .zip(low.rows.iter().zip(high.rows.iter()))
+        .map(|(m, (l, h))| BandRow {
+            year: m.year,
+            age: m.age,
+            cautious_today_paise: l.net_worth_today_paise,
+            expected_today_paise: m.net_worth_today_paise,
+            hopeful_today_paise: h.net_worth_today_paise,
+        })
+        .collect();
+    Band { shift_bps: BAND_SHIFT_BPS, gains_tax_bps: GAINS_TAX_BPS, rows }
+}
+
 pub fn simulate(input: &LineInput, today: Date) -> Line {
+    simulate_with(input, today, &Tweaks::default())
+}
+
+pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
     let p = &input.profile;
     let ty = today.year() as i64;
     let age0 = p.my_age.clamp(MIN_AGE, 100);
@@ -481,7 +535,8 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
             RETIRED_RETURN_BPS
         };
         if wealth > 0.0 {
-            wealth *= 1.0 + rate(return_bps) / 12.0;
+            let gain = wealth * rate(return_bps + tweaks.return_shift_bps) / 12.0;
+            wealth += if gain > 0.0 { gain * (1.0 - rate(tweaks.gains_tax_bps.clamp(0, 9_000))) } else { gain };
         }
         wealth += income - spend;
         let mut short = 0.0;
@@ -540,6 +595,12 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
             inr(LATER_MEDICAL_TODAY)
         ),
     ];
+    if tweaks.gains_tax_bps > 0 {
+        notes.push(format!(
+            "Estimate: about {}% of each year's investment gains goes to tax. Your real rate depends on what you hold.",
+            tweaks.gains_tax_bps / 100
+        ));
+    }
     if !children.is_empty() {
         notes.push(format!(
             "Estimate: raising a child costs {} a month in today's money until 18, plus education.",
@@ -706,6 +767,47 @@ mod tests {
 
     fn line(choices: Vec<Choice>) -> Line {
         simulate(&input(choices), today())
+    }
+
+    fn end_today(l: &Line) -> i64 {
+        l.marks.at_end_today_paise
+    }
+
+    #[test]
+    fn no_tweaks_is_the_plain_line() {
+        let i = input(vec![]);
+        assert_eq!(simulate_with(&i, today(), &Tweaks::default()), simulate(&i, today()));
+    }
+
+    #[test]
+    fn tax_on_gains_lowers_the_line_and_says_so() {
+        let i = input(vec![]);
+        let free = simulate(&i, today());
+        let taxed = simulate_with(&i, today(), &Tweaks { gains_tax_bps: GAINS_TAX_BPS, ..Default::default() });
+        assert!(end_today(&taxed) < end_today(&free), "{} vs {}", end_today(&taxed), end_today(&free));
+        assert!(taxed.notes.iter().any(|n| n.contains("tax") && n.starts_with("Estimate")), "{:?}", taxed.notes);
+        assert!(!free.notes.iter().any(|n| n.to_lowercase().contains("gains")), "an untaxed line does not claim to be taxed");
+    }
+
+    #[test]
+    fn a_loss_is_not_taxed_back() {
+        let i = input(vec![]);
+        let cautious = Tweaks { return_shift_bps: -2_000, ..Default::default() };
+        let with_tax = Tweaks { return_shift_bps: -2_000, gains_tax_bps: 5_000 };
+        // Returns this low are negative in the retired years: tax must not make a loss smaller.
+        assert!(end_today(&simulate_with(&i, today(), &with_tax)) <= end_today(&simulate_with(&i, today(), &cautious)));
+    }
+
+    #[test]
+    fn the_band_runs_cautious_to_hopeful_around_the_expected_line() {
+        let b = band(&input(vec![]), today());
+        assert_eq!((b.shift_bps, b.rows.len()), (BAND_SHIFT_BPS, 62));
+        for r in &b.rows {
+            assert!(r.cautious_today_paise <= r.expected_today_paise && r.expected_today_paise <= r.hopeful_today_paise, "{r:?}");
+        }
+        let last = b.rows.last().unwrap();
+        assert!(last.hopeful_today_paise > last.cautious_today_paise);
+        assert_eq!(last.expected_today_paise, end_today(&simulate_with(&input(vec![]), today(), &Tweaks { gains_tax_bps: GAINS_TAX_BPS, ..Default::default() })));
     }
 
     #[test]
