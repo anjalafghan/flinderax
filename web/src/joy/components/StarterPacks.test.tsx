@@ -34,7 +34,7 @@ afterEach(() => {
 describe("StarterPacks", () => {
   test("offers each pack with what it holds; one already added says so", async () => {
     view();
-    expect(await screen.findByText("At home")).toBeTruthy();
+    expect(await screen.findByText("At home", { selector: "strong" })).toBeTruthy();
     expect(screen.getByText(/40 slips/)).toBeTruthy();
     expect(screen.getByRole("button", { name: /add at home/i })).toBeTruthy();
     expect(screen.getByText(/added/i, { selector: ".pack-done" })).toBeTruthy();
