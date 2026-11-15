@@ -26,6 +26,21 @@ A private life-planning app for one household: money (Flinderax) plus the date j
 - **Numbering:** the newest migration is dated ahead of the calendar (`20261119…`). Name new ones after the newest existing file, not today's date, or they sort before ones already applied.
 - After changing any SQL: `cargo sqlx prepare -- --bin joy` and commit `.sqlx/`.
 
+## How the draw and the history work (read before touching slips)
+
+- Putting a slip back is unlimited. Each one is a row in `joy_peeks` (optional reason; only `not_my_thing` teaches taste), never in `joy_history`.
+- A kept date is `joy_history.outcome = 'did_it'` from the moment it is kept, but it only *counts* once its day has passed (`times_done` is derived in `db::COLS`). `last_done_at` includes planned dates so a booked slip is not drawn again. "Did it happen?" (`POST /history/{id}/happened`) confirms or cancels (`outcome = 'cancelled'`).
+- A slip can be kept or planned only through `db::drawable_get` (not archived, not passed on, not sealed).
+- Envelope links expire (`share_expires_at`); `unshare` clears them.
+- Money-changing POSTs accept an `idempotency_key` (moves do now); add it to new ones.
+- Bank texts the parser can't read are kept 30 days in `unrecognized_alerts`.
+
+## SQL, offline data and local databases
+
+`cargo sqlx prepare` needs a migrated database. Use a scratch one, not your dev database:
+`DATABASE_URL=sqlite:///tmp/prep.db?mode=rwc cargo sqlx database setup && DATABASE_URL=... cargo sqlx prepare -- --bin joy`.
+After new migrations, run tests with `SQLX_OFFLINE=true` until your `.env` database is migrated too.
+
 ## Checks (all must be clean before merging)
 
 ```
