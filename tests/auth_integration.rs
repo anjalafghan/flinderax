@@ -1147,3 +1147,32 @@ async fn a_refund_is_not_counted_as_income() {
     let (_, v) = hook_post(&app, &key, "Update! INR 90,000.00 deposited in HDFC Bank A/c XX1234 for NEFT Cr-ACME CORP. Ref 77712.").await;
     assert_eq!(v["transaction"]["category"], "income", "{v}");
 }
+
+#[tokio::test]
+async fn moving_a_payments_day_does_not_post_that_month_twice() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.1.5", "mover2").await;
+    let (_, b) = authed_post(&app, &t, "/api/account/create", json!({"name": "HDFC", "kind": "bank", "balance_paise": 10_000_000, "role": "spending"})).await;
+    let acct = serde_json::from_str::<Value>(&b).unwrap()["account_id"].as_str().unwrap().to_string();
+    let uid: String = sqlx::query_scalar("SELECT user_id FROM users WHERE user_name = 'mover2'").fetch_one(&db).await.unwrap();
+    sqlx::query("UPDATE accounts SET balance_set_on = '2026-11-01'").execute(&db).await.unwrap();
+    let (s, b) = authed_post(&app, &t, "/api/plan/commitment/create",
+        json!({"label": "Rent", "amount_paise": 2_000_000, "day_of_month": 5, "account_id": acct})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let cid = serde_json::from_str::<Value>(&b).unwrap()["id"].as_str().unwrap().to_string();
+    let balance = || async { sqlx::query_scalar::<_, i64>("SELECT balance_paise FROM accounts").fetch_one(&db).await.unwrap() };
+
+    joy::handlers::autopost::apply(&db, &uid, time::macros::date!(2026 - 11 - 06)).await.ok().unwrap();
+    assert_eq!(balance().await, 8_000_000, "rent posted on the 5th");
+
+    // The day is moved to the 20th; when the 20th comes, November's rent is not taken again.
+    let (s, b) = authed_post(&app, &t, "/api/plan/commitment/update",
+        json!({"commitment_id": cid, "label": "Rent", "amount_paise": 2_000_000, "day_of_month": 20, "account_id": acct})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    joy::handlers::autopost::apply(&db, &uid, time::macros::date!(2026 - 11 - 21)).await.ok().unwrap();
+    assert_eq!(balance().await, 8_000_000, "still taken once for November");
+
+    // December's rent is a new month and does post, on the new day.
+    joy::handlers::autopost::apply(&db, &uid, time::macros::date!(2026 - 12 - 21)).await.ok().unwrap();
+    assert_eq!(balance().await, 6_000_000);
+}
