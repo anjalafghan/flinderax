@@ -19,6 +19,7 @@ const line = (free: number | null, end: number): Line => ({
 const overview: LifelineOut = {
   saved_profile: true,
   line: line(58, 2_000_000_00),
+  band: { shift_bps: 200, gains_tax_bps: 1000, rows: line(58, 2_000_000_00).rows.map((r) => ({ year: r.year, age: r.age, cautious_today_paise: r.net_worth_today_paise / 2, expected_today_paise: r.net_worth_today_paise, hopeful_today_paise: r.net_worth_today_paise * 2 })) },
   choices: [],
   working: { accounts_paise: 100_000_000, plan_saved_paise: 0, loans_paise: 0, wealth_paise: 100_000_000, expenses_paise: 7_000_000, income_paise: 15_000_000, note: "Starts from your account balances, less loans." },
 };

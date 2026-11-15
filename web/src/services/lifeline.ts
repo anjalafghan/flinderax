@@ -60,9 +60,25 @@ export interface Working {
   note: string;
 }
 
+export interface BandRow {
+  year: number;
+  age: number;
+  cautious_today_paise: number;
+  expected_today_paise: number;
+  hopeful_today_paise: number;
+}
+
+/** The same line on cautious and hopeful returns, after estimated tax on gains. */
+export interface Band {
+  shift_bps: number;
+  gains_tax_bps: number;
+  rows: BandRow[];
+}
+
 export interface LifelineOut {
   saved_profile: boolean;
   line: Line;
+  band: Band;
   choices: SavedChoice[];
   working: Working;
 }

@@ -18,6 +18,7 @@ import {
   lifelineKey,
   tryChoices,
   updateChoice,
+  type Band,
   type Choice,
   type Line,
   type LifelineOut,
@@ -65,7 +66,7 @@ function Stats({ line, plan }: { line: Line; plan?: Line }) {
   );
 }
 
-function Chart({ plan, preview }: { plan: Line; preview: Preview | null }) {
+function Chart({ plan, band, preview }: { plan: Line; band: Band; preview: Preview | null }) {
   const shown = preview ? preview.out.with : plan;
   const labels = shown.rows.map((r) => String(r.age));
   const values = (l: Line) => l.rows.map((r) => r.net_worth_today_paise);
@@ -74,7 +75,11 @@ function Chart({ plan, preview }: { plan: Line; preview: Preview | null }) {
         { label: "Without it", values: values(preview.out.base), stroke: "stroke-muted-foreground", dashed: true },
         { label: "With it", values: values(preview.out.with), stroke: "stroke-emerald-500" },
       ]
-    : [{ label: "Your plan", values: values(plan), stroke: "stroke-sky-500" }];
+    : [
+        { label: `If returns are ${band.shift_bps / 100} points lower`, values: band.rows.map((r) => r.cautious_today_paise), stroke: "stroke-muted-foreground", dashed: true },
+        { label: "Your plan", values: values(plan), stroke: "stroke-sky-500" },
+        { label: `If returns are ${band.shift_bps / 100} points higher`, values: band.rows.map((r) => r.hopeful_today_paise), stroke: "stroke-muted-foreground", dashed: true },
+      ];
   const markers: ChartMarker[] = shown.rows.flatMap((r, index) =>
     r.short_paise > 0 ? [{ index, label: `Age ${r.age}: short by ${rupees(r.short_paise)}` }] : [],
   );
@@ -257,7 +262,12 @@ export function LifeLine() {
       </div>
 
       <Stats line={shown} plan={preview ? data.line : undefined} />
-      <Chart plan={data.line} preview={preview} />
+      <Chart plan={data.line} band={data.band} preview={preview} />
+      {!preview && (
+        <p className="m-0 text-sm text-muted-foreground">
+          The dashed lines show what happens if investments earn {data.band.shift_bps / 100} points less or more every year. Nobody knows which it will be, so read the plan as a range.
+        </p>
+      )}
       {shown.marks.unfunded.length > 0 && (
         <p className="tone-over m-0 rounded-[14px] px-4 py-3 text-sm">Savings can't fully pay for: {shown.marks.unfunded.join(", ")}.</p>
       )}
