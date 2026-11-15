@@ -1082,15 +1082,29 @@ pub async fn month_budget(db: &SqlitePool, couple: &str, month: &str) -> sqlx::R
 
 /// Settle a month's start: rolling over `carry` (0 = start fresh). Pressing twice changes nothing.
 /// True when this call was the one that settled it.
-pub async fn decide_month(db: &SqlitePool, couple: &str, month: &str, base: i64, carry: i64) -> sqlx::Result<bool> {
+/// `leftover` ((amount, note) for the savings jar) goes in with it in one transaction, so a failure
+/// in between can't lose the month's leftover.
+pub async fn decide_month(db: &SqlitePool, couple: &str, month: &str, base: i64, carry: i64, leftover: Option<(i64, &str)>) -> sqlx::Result<bool> {
+    let mut tx = db.begin().await?;
     let done = sqlx::query("INSERT OR IGNORE INTO joy_month_budget (couple_id, month, base, carry) VALUES (?, ?, ?, ?)")
         .bind(couple)
         .bind(month)
         .bind(base)
         .bind(carry)
-        .execute(db)
+        .execute(&mut *tx)
         .await?;
-    Ok(done.rows_affected() == 1)
+    let settled = done.rows_affected() == 1;
+    if let (true, Some((amount, note))) = (settled, leftover)
+        && amount != 0 {
+            sqlx::query("INSERT INTO joy_savings (couple_id, amount, kind, note) VALUES (?, ?, 'leftover', ?)")
+                .bind(couple)
+                .bind(amount)
+                .bind(note.trim())
+                .execute(&mut *tx)
+                .await?;
+        }
+    tx.commit().await?;
+    Ok(settled)
 }
 
 /// Finished months with anything spent, newest first: (month "YYYY-MM", spent).
@@ -1424,9 +1438,27 @@ pub async fn savings_recent(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(
 }
 
 /// Undo money put in by hand. Leftovers and paid dates stay, so the jar's sums stay true.
-pub async fn delete_saving(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<()> {
-    sqlx::query("DELETE FROM joy_savings WHERE id = ? AND couple_id = ? AND kind = 'add'").bind(id).bind(couple).execute(db).await?;
-    Ok(())
+/// False (and nothing deleted) when the jar no longer holds that money: removing the deposit would
+/// leave it below zero because part of it has already paid for a date.
+pub async fn delete_saving(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
+    let done = sqlx::query(
+        "DELETE FROM joy_savings WHERE id = ?1 AND couple_id = ?2 AND kind = 'add'
+           AND (SELECT COALESCE(SUM(amount), 0) FROM joy_savings WHERE couple_id = ?2) - amount >= 0",
+    )
+    .bind(id)
+    .bind(couple)
+    .execute(db)
+    .await?;
+    if done.rows_affected() == 1 {
+        return Ok(true);
+    }
+    // Nothing deleted: either it isn't a deposit of ours (fine, nothing to do) or the jar can't spare it.
+    let is_deposit: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM joy_savings WHERE id = ? AND couple_id = ? AND kind = 'add')")
+        .bind(id)
+        .bind(couple)
+        .fetch_one(db)
+        .await?;
+    Ok(!is_deposit)
 }
 
 /// Keep the slip we were saving for, paid from the jar: stamps it as a date, takes `cost`

@@ -1061,7 +1061,9 @@ pub async fn add_saving(State(s): State<AppState>, Extension((user_id, _)): User
 /// `POST /savings/{id}/delete`
 pub async fn delete_saving(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    db::delete_saving(&s.db, &j.couple, id).await?;
+    if !db::delete_saving(&s.db, &j.couple, id).await? {
+        return Err(unprocessable("Part of that money has already paid for a date, so it can't be taken back out."));
+    }
     Ok(go(SAVINGS_TO))
 }
 

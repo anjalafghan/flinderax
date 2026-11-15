@@ -721,3 +721,23 @@ async fn deleting_a_hand_added_date_takes_its_one_off_slip_with_it() {
     assert_eq!(t.post(&format!("/api/dates/history/{hid}/delete"), &rohit, json!({})).await.status, StatusCode::OK);
     assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_activities WHERE id = {slip}")).await, 1);
 }
+
+#[tokio::test]
+async fn a_deposit_that_has_already_been_spent_cannot_be_deleted() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    t.post("/api/dates/savings/add", &rohit, json!({"amount": 500})).await;
+    let dep = t.scalar(&format!("SELECT id FROM joy_savings WHERE couple_id = '{couple}' AND kind = 'add'")).await;
+    // 300 of it has gone on a date.
+    t.exec(&format!("INSERT INTO joy_savings (couple_id, amount, kind, note) VALUES ('{couple}', -300, 'kept', 'dinner')")).await;
+
+    let r = t.post(&format!("/api/dates/savings/{dep}/delete"), &rohit, json!({})).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", r.text);
+    assert_eq!(t.scalar(&format!("SELECT sum(amount) FROM joy_savings WHERE couple_id = '{couple}'")).await, 200, "nothing changed");
+
+    // Once the jar can cover it, it can go.
+    t.post("/api/dates/savings/add", &rohit, json!({"amount": 400})).await;
+    let r = t.post(&format!("/api/dates/savings/{dep}/delete"), &rohit, json!({})).await;
+    assert_eq!(r.status, StatusCode::OK);
+    assert_eq!(t.scalar(&format!("SELECT sum(amount) FROM joy_savings WHERE couple_id = '{couple}'")).await, 100);
+}

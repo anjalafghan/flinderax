@@ -503,11 +503,16 @@ pub async fn settle_month(db: &SqlitePool, couple: &str, choice: Leftover) -> Re
         Some((_, _, _, left)) if choice == Leftover::Roll => left,
         _ => 0,
     };
-    let settled = jdb::decide_month(db, couple, &this, base, carry).await?;
-    if let (true, Leftover::Save, Some((prev, _, _, left))) = (settled, choice, pending) {
-        let year = this.get(..4).unwrap_or_default();
-        jdb::add_saving(db, couple, left, "leftover", &format!("{}'s leftover", month_name(&prev, year))).await?;
-    }
+    let note;
+    let leftover = match (choice, pending) {
+        (Leftover::Save, Some((prev, _, _, left))) => {
+            let year = this.get(..4).unwrap_or_default();
+            note = format!("{}'s leftover", month_name(&prev, year));
+            Some((left, note.as_str()))
+        }
+        _ => None,
+    };
+    jdb::decide_month(db, couple, &this, base, carry, leftover).await?;
     Ok(())
 }
 
