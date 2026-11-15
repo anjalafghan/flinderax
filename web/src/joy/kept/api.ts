@@ -21,6 +21,8 @@ export const reveal = (id: number) => post(`/history/${id}/reveal`);
 /** Backdate (or re-date) a kept date: the day it really happened, "YYYY-MM-DD". */
 export const setDay = (id: number, on: string) => post(`/history/${id}/day`, { on });
 export const deleteDate = (id: number) => post(`/history/${id}/delete`);
+/** Choose the photo that stands for this date (Month, Year and the cover here); null goes back to the oldest. */
+export const setHeroPhoto = (id: number, photoId: number | null) => post(`/history/${id}/hero`, { photo_id: photoId === null ? "" : String(photoId) });
 export const deletePhoto = (id: number, photoId: number) => post(`/history/${id}/photos/${photoId}/delete`);
 /** Signed `ics_url` / `send_url` in the answer are public links: use them as an href as they are. */
 export const setWhen = (ids: string, at: string) => post<PlannedView>("/history/when", whenBody(ids, at));

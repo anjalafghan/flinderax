@@ -11,6 +11,7 @@ import { dealIn, dropSlips } from "../year/motion";
 import { ApiError } from "../api";
 import { mapGoTo } from "../paths";
 import { errText } from "../components/useBusy";
+import { Keepsake, KeepsakeDefs } from "../keepsakes/Keepsake";
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
@@ -366,6 +367,25 @@ function Year({ v }: { v: YearView }) {
               <div className="y-rings" aria-hidden="true">{Array.from({ length: 24 }, (_, i) => <span key={i}></span>)}</div>
             </div>
           </div>
+
+          {v.keepsakes.length > 0 && (
+            <section className="y-shelf y-page y-page-wall" id="kept" aria-labelledby="y-shelf-h">
+              <KeepsakeDefs />
+              <div className="y-sec-head">
+                <h2 id="y-shelf-h" className="y-hand-h">Everything we kept</h2>
+                <p className="y-hand-label">a keepsake for every date ♡</p>
+              </div>
+              <ol className="y-keepsakes">
+                {v.keepsakes.map((d, i) => (
+                  <li key={i} style={{ "--r": i % 5 } as React.CSSProperties}>
+                    <Link to={d.href} aria-label={`${d.title}, ${d.day}: open that month`}>
+                      <Keepsake d={d} no={i + 1} />
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
 
           {v.photos.length > 0 && (
             <section className="y-wall y-page y-page-wall" id="wall" aria-labelledby="y-wall-h">

@@ -58,6 +58,19 @@ export interface YearPhoto {
   when: string;
 }
 
+/** One kept date on the Year page's keepsake shelf. */
+export interface YearDate {
+  title: string;
+  place: string;
+  kind: string;
+  kind_label: string;
+  tags: string[];
+  day: string;
+  rating: number;
+  /** Its month page. */
+  href: string;
+}
+
 export interface YearView {
   me_name: string;
   year: number;
@@ -76,6 +89,8 @@ export interface YearView {
   money: Money | null;
   cabs: string;
   photos: YearPhoto[];
+  /** Every date of the year, oldest first. */
+  keepsakes: YearDate[];
   busiest_n: number;
   tally: number[];
   tally_more: number;
@@ -95,6 +110,8 @@ export interface Entry {
   place: string;
   kind: string;
   kind_label: string;
+  /** The slip's tags; with `kind` they pick the keepsake it is drawn as. */
+  tags: string[];
   day: string;
   stamp: string;
   photo: string;

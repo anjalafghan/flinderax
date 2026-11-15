@@ -909,6 +909,33 @@ pub async fn delete_photo(
     Ok(go(kept_to(id)))
 }
 
+#[derive(Deserialize)]
+pub struct HeroBody {
+    /// The photo to show for this date; blank goes back to the oldest one.
+    #[serde(default, deserialize_with = "flex")]
+    photo_id: String,
+}
+
+/// `POST /history/{id}/hero`: choose which of a date's photos is its main one (the Month and Year
+/// pages show it, and it leads in Kept). A photo of another date is a 404, like a date that isn't ours.
+pub async fn set_hero(
+    State(s): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(id): Path<i64>,
+    Json(f): Json<HeroBody>,
+) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    let photo_id = match f.photo_id.trim() {
+        "" => None,
+        p => Some(p.parse::<i64>().map_err(|_| missing())?),
+    };
+    if !db::set_hero_photo(&s.db, &j.couple, id, photo_id).await? {
+        return Err(missing());
+    }
+    Ok(go(kept_to(id)))
+}
+
 /// `GET /history/{id}/photos/{photo_id}?exp=..&sig=..` (public): the signed link [`photo_url`]
 /// made. A sealed surprise (for the viewer the link names, else for anyone) is a 404.
 pub async fn photo(State(s): State<AppState>, Path((id, photo_id)): Path<(i64, i64)>, Query(q): Query<SignedQuery>) -> Result<Response, AppError> {
@@ -1163,6 +1190,7 @@ pub fn router() -> Router<AppState> {
         .route("/history/{id}/line", post(set_line))
         .route("/history/{id}/photo", post(upload_photo).layer(DefaultBodyLimit::max(photos::MAX_UPLOAD_BYTES + UPLOAD_SLACK)))
         .route("/history/{id}/photos/{photo_id}/delete", post(delete_photo))
+        .route("/history/{id}/hero", post(set_hero))
         .route("/history/{id}/plan-b", post(dayplan::swap_plan_b))
         .route("/tasks/{id}/done", post(dayplan::task_done))
         .route("/budget", post(set_budget))

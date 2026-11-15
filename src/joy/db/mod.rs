@@ -1004,22 +1004,22 @@ pub struct DatePhoto {
     pub file: String,
 }
 
-/// Every photo of this couple's kept dates, oldest first within each date.
+/// Every photo of this couple's kept dates: within each date the hero first, then oldest first.
 pub async fn all_photos(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<DatePhoto>> {
     sqlx::query_as(
         "SELECT p.id, p.history_id, p.file FROM joy_history_photos p JOIN joy_history h ON h.id = p.history_id
-         WHERE h.couple_id = ? ORDER BY p.history_id, p.id",
+         WHERE h.couple_id = ? ORDER BY p.history_id, COALESCE(p.id = h.hero_photo_id, 0) DESC, p.id",
     )
     .bind(couple)
     .fetch_all(db)
     .await
 }
 
-/// The photos of one kept date, oldest first (the first is its cover).
+/// The photos of one kept date: the hero we chose first (it is the cover), then oldest first.
 pub async fn photos_of(db: &SqlitePool, couple: &str, history_id: i64) -> sqlx::Result<Vec<DatePhoto>> {
     sqlx::query_as(
         "SELECT p.id, p.history_id, p.file FROM joy_history_photos p JOIN joy_history h ON h.id = p.history_id
-         WHERE h.couple_id = ? AND p.history_id = ? ORDER BY p.id",
+         WHERE h.couple_id = ? AND p.history_id = ? ORDER BY COALESCE(p.id = h.hero_photo_id, 0) DESC, p.id",
     )
     .bind(couple)
     .bind(history_id)
@@ -1081,13 +1081,34 @@ pub async fn remove_photo(db: &SqlitePool, couple: &str, history_id: i64, photo_
     .await?;
     if file.is_some() {
         sqlx::query("DELETE FROM joy_history_photos WHERE id = ?").bind(photo_id).execute(&mut *tx).await?;
-        sqlx::query("UPDATE joy_history SET has_photo = EXISTS (SELECT 1 FROM joy_history_photos WHERE history_id = ?1) WHERE id = ?1")
-            .bind(history_id)
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "UPDATE joy_history SET has_photo = EXISTS (SELECT 1 FROM joy_history_photos WHERE history_id = ?1),
+                    hero_photo_id = CASE WHEN hero_photo_id = ?2 THEN NULL ELSE hero_photo_id END
+             WHERE id = ?1",
+        )
+        .bind(history_id)
+        .bind(photo_id)
+        .execute(&mut *tx)
+        .await?;
     }
     tx.commit().await?;
     Ok(file)
+}
+
+/// Makes one of a date's photos its hero (the one the Month and Year pages show), or with `None`
+/// goes back to the oldest. False when the date isn't this couple's or the photo isn't the date's.
+pub async fn set_hero_photo(db: &SqlitePool, couple: &str, history_id: i64, photo_id: Option<i64>) -> sqlx::Result<bool> {
+    let done = sqlx::query(
+        "UPDATE joy_history SET hero_photo_id = ?3
+         WHERE id = ?1 AND couple_id = ?2
+           AND (?3 IS NULL OR EXISTS (SELECT 1 FROM joy_history_photos WHERE id = ?3 AND history_id = ?1))",
+    )
+    .bind(history_id)
+    .bind(couple)
+    .bind(photo_id)
+    .execute(db)
+    .await?;
+    Ok(done.rows_affected() > 0)
 }
 
 /// Who kept the most recent date (0 or 1), if we know.

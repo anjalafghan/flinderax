@@ -299,6 +299,17 @@
 .y-gave-row { display: flex; align-items: center; gap: 10px; margin: 0; font: 600 1.5rem/1 var(--font-hand); }
 .y-stars-small { display: inline-flex; gap: 1px; }
 .y-stars-small svg { width: 16px; height: 16px; fill: var(--ink-pen); }
+/* ── everything we kept: a shelf of small keepsakes, one per date, each opening its month ── */
+.y-keepsakes {
+  --ks-size: min(11px, 2.9vw);
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 22px 18px;
+}
+.y-keepsakes li { max-width: 100%; rotate: calc((var(--r, 0) - 2) * 1.4deg); }
+.y-keepsakes a { display: block; max-width: 100%; color: inherit; text-decoration: none; border-radius: 6px; transition: translate var(--t-small) var(--ease-out); }
+.y-keepsakes a:hover { translate: 0 -3px; }
+.y-keepsakes a:focus-visible { outline: 2px solid var(--stamp); outline-offset: 4px; }
+@media (min-width: 700px) { .y-keepsakes { --ks-size: 12px; gap: 28px 24px; } }
 /* ── the photo wall ──────────────────────────────────────── */
 .y-page-wall { margin: 48px 0 0; gap: 28px; animation: none; }
 .y-photos {
