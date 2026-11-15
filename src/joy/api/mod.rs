@@ -261,7 +261,7 @@ impl ActivityView {
             setting_key: a.setting.clone(),
             tags: a.tag_list(),
             distances,
-            maps_url: a.latlng().map(|(lat, lng)| format!("https://www.google.com/maps/search/?api=1&query={lat},{lng}")),
+            maps_url: maps_link(&slip_place(&a.venue, &a.area), a.latlng()),
             times_done: a.times_done,
             generated: a.generated,
             pairs: vec![],
@@ -555,6 +555,26 @@ pub fn parse_local(at: &str) -> Option<String> {
     ok.then(|| format!("{} {}", &at[..10], &at[11..16]))
 }
 
+/// "Seasonal Tastes, The Westin, Goregaon East": the venue with its area, so a search finds the place itself.
+fn slip_place(venue: &str, area: &str) -> String {
+    let (venue, area) = (venue.trim(), area.trim());
+    match (venue.is_empty(), area.is_empty() || venue.contains(area)) {
+        (true, _) => area.to_string(),
+        (false, true) => venue.to_string(),
+        (false, false) => format!("{venue}, {area}"),
+    }
+}
+
+/// A Google Maps link. A name search opens the place's own page (reviews, hours, photos); bare
+/// coordinates only drop a pin, so they are the fallback for slips without a venue name.
+pub fn maps_link(place: &str, latlng: Option<(f64, f64)>) -> Option<String> {
+    let place = place.trim();
+    if !place.is_empty() {
+        return Some(format!("https://www.google.com/maps/search/?api=1&query={}", url_encode(place)));
+    }
+    latlng.map(|(lat, lng)| format!("https://www.google.com/maps/search/?api=1&query={lat},{lng}"))
+}
+
 /// Minimal percent-encoding for a URL query value.
 pub fn url_encode(s: &str) -> String {
     s.bytes()
@@ -703,6 +723,21 @@ pub fn verify(path: &str, exp: i64, sig: &str) -> bool {
 mod tests {
     use super::*;
     use crate::joy::picker::Duration;
+
+    #[test]
+    fn maps_links_search_by_name_and_fall_back_to_coordinates() {
+        let place = slip_place("Seasonal Tastes, The Westin Mumbai Garden City", "Goregaon East");
+        assert_eq!(
+            maps_link(&place, Some((19.1706, 72.8598))).unwrap(),
+            "https://www.google.com/maps/search/?api=1&query=Seasonal%20Tastes%2C%20The%20Westin%20Mumbai%20Garden%20City%2C%20Goregaon%20East"
+        );
+        // An area already in the venue text isn't repeated; an area alone still works.
+        assert_eq!(slip_place("Blue Tokai, Goregaon East", "Goregaon East"), "Blue Tokai, Goregaon East");
+        assert_eq!(slip_place("", "Fort"), "Fort");
+        // No name at all: the pin is all there is. Nothing at all: no link.
+        assert_eq!(maps_link("", Some((19.1, 72.8))).unwrap(), "https://www.google.com/maps/search/?api=1&query=19.1,72.8");
+        assert_eq!(maps_link("", None), None);
+    }
 
     #[test]
     fn a_date_far_from_both_of_us_takes_most_of_the_day() {

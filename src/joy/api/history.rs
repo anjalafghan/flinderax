@@ -616,7 +616,7 @@ pub async fn invite(State(s): State<AppState>, Path(id): Path<i64>, Query(q): Qu
     let (summary, location, description) = if sealed {
         (format!("A surprise from {from}"), String::new(), hints(&r, "", false).join("\n"))
     } else {
-        let maps = r.lat.zip(r.lng).map(|(a, b)| format!("\nhttps://www.google.com/maps/search/?api=1&query={a},{b}"));
+        let maps = super::maps_link(&r.place, r.lat.zip(r.lng)).map(|u| format!("\n{u}"));
         (ctx.personalize(&r.title), r.place.clone(), format!("{}{}", ctx.personalize(&r.notes), maps.unwrap_or_default()))
     };
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map_err(internal)?.as_secs() as i64;
