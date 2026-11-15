@@ -5,6 +5,7 @@ import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
+import { BackupSection } from "@/components/feature/BackupSection";
 import { sessionApi } from "@/services/session";
 
 const msg = (e: unknown) => (e instanceof Error && e.message ? e.message : "Something went wrong. Please try again.");
@@ -14,6 +15,7 @@ export function AccountSection() {
   return (
     <div className="stack">
       <ChangePassword />
+      <BackupSection />
       <SignOutEverywhere />
       <DeleteAccount />
     </div>

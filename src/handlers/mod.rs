@@ -11,6 +11,7 @@ pub mod couple;
 pub mod dashboard;
 pub mod diet;
 pub mod export;
+pub mod import;
 pub mod facts;
 pub mod followups;
 pub mod forecast;

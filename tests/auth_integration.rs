@@ -1060,3 +1060,44 @@ async fn what_if_scenarios_follow_the_person_and_stay_private() {
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM whatif_scenarios").fetch_one(&db).await.unwrap();
     assert_eq!(n, 1, "one row per person");
 }
+
+#[tokio::test]
+async fn an_export_can_be_loaded_back_and_exports_the_same_again() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.99", "restorer").await;
+    let (s, b) = authed_post(&app, &t, "/api/account/create", json!({"name": "HDFC", "kind": "bank", "balance_paise": 5_000_000, "role": "spending", "last_4_digits": "1234"})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    authed_post(&app, &t, "/api/card/create", json!({"card_name": "Visa", "card_bank": "HDFC", "card_primary_color": [1, 2, 3], "card_secondary_color": [4, 5, 6]})).await;
+    let today = joy::handlers::common::today_local().to_string();
+    authed_post(&app, &t, "/api/ingest/transactions/create",
+        json!({"occurred_on": today, "direction": "debit", "amount_paise": 25_000, "merchant": "Chai", "category": "food"})).await;
+    authed_post(&app, &t, "/api/plan/scenarios", json!({"drafts": [{"id": "d1"}]})).await;
+
+    let before = authed_get(&app, &t, "/api/export").await;
+    assert!(!before["data"]["accounts"].as_array().unwrap().is_empty());
+
+    // Lose it all (and add something that was never in the backup).
+    sqlx::query("DELETE FROM transactions").execute(&db).await.unwrap();
+    sqlx::query("DELETE FROM cards").execute(&db).await.unwrap();
+    sqlx::query("DELETE FROM accounts").execute(&db).await.unwrap();
+    sqlx::query("DELETE FROM whatif_scenarios").execute(&db).await.unwrap();
+    authed_post(&app, &t, "/api/account/create", json!({"name": "Junk", "kind": "cash", "balance_paise": 1})).await;
+
+    let (s, b) = authed_post(&app, &t, "/api/import", before.clone()).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let after = authed_get(&app, &t, "/api/export").await;
+    assert_eq!(after["data"], before["data"], "export -> wipe -> import -> export is the same file");
+
+    // Someone else's backup is not loadable into your account: ids are theirs.
+    let other = new_user(&app, "10.0.1.1", "intruder").await;
+    let (s, _) = authed_post(&app, &other, "/api/import", before.clone()).await;
+    assert_eq!(s, StatusCode::CONFLICT, "those rows already belong to another account");
+    assert_eq!(authed_get(&app, &other, "/api/export").await["data"]["accounts"], json!([]));
+
+    // Not an export at all, or a table we don't know: refused, and nothing changes.
+    for bad in [json!({"nope": 1}), json!({"data": {"users": [{"user_id": "x"}]}}), json!({"data": {"accounts": "no"}})] {
+        let (s, _) = authed_post(&app, &t, "/api/import", bad).await;
+        assert_eq!(s, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+    assert_eq!(authed_get(&app, &t, "/api/export").await["data"], before["data"]);
+}

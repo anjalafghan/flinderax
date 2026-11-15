@@ -47,10 +47,9 @@ async fn rows(db: &sqlx::SqlitePool, sql: &str, id: &str) -> Result<Vec<Value>, 
         .collect())
 }
 
-pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Extension<(String, String)>) -> Result<Response, AppError> {
-    let db = &state.db;
-    let mut out = Map::new();
-    let mine: &[(&str, &str)] = &[
+/// Every table of one person's money and people data, parents before children: the export key
+/// and the query that reads it. `import` loads them back in this order.
+pub(crate) const USER_TABLES: &[(&str, &str)] = &[
         ("accounts", "SELECT * FROM accounts WHERE user_id = ?"),
         ("balance_history", "SELECT h.* FROM balance_history h JOIN accounts a ON a.account_id = h.account_id WHERE a.user_id = ?"),
         ("cards", "SELECT * FROM cards WHERE user_id = ?"),
@@ -94,6 +93,11 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         ("reward_claims", "SELECT * FROM reward_claims WHERE user_id = ?"),
         ("reward_settings", "SELECT * FROM reward_settings WHERE user_id = ?"),
     ];
+
+pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Extension<(String, String)>) -> Result<Response, AppError> {
+    let db = &state.db;
+    let mut out = Map::new();
+    let mine = USER_TABLES;
     for (name, sql) in mine {
         out.insert((*name).into(), Value::Array(rows(db, sql, &user_id).await?));
     }

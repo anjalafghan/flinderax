@@ -107,6 +107,15 @@ pub fn build_router(state: AppState) -> Router {
             "/api/export",
             protected(&state, Router::new().route("/", axum::routing::get(crate::handlers::export::export)).with_state(state.clone())),
         )
+        .nest(
+            "/api/import",
+            protected(
+                &state,
+                Router::new()
+                    .route("/", axum::routing::post(crate::handlers::import::import).layer(axum::extract::DefaultBodyLimit::max(20 * 1024 * 1024)))
+                    .with_state(state.clone()),
+            ),
+        )
         .nest("/api/review", protected(&state, routes::review::routes(state.clone())))
         .nest("/api/hook", routes::ingest::hook_routes(state.clone()).layer(trace_layer()))
         // Unknown API paths must 404 instead of falling through to the SPA's index.html.
