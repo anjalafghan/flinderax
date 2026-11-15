@@ -688,26 +688,28 @@ pub async fn learned(db: &SqlitePool, couple: &str) -> Result<Learned, AppError>
     let (ratio, n) = db::cost_ratio(db, couple).await?;
     let (cab_ratio, rides) = db::cab_ratio(db, couple).await?;
     let usable = |r: f64, n: i64| (n >= db::MIN_SAMPLES).then(|| r.clamp(FACTOR_RANGE.0, FACTOR_RANGE.1));
-    let rows: Vec<(String, String, Option<i64>)> = sqlx::query_as(
-        // A date still to come has not been liked or disliked yet.
-        "SELECT a.tags, h.outcome, h.rating FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id
+    // Every outing that has happened, with what kind it was and how long ago.
+    type Row = (String, String, String, i64, String, Option<i64>, i64);
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT a.tags, a.setting, a.energy, a.est_cost, h.outcome, h.rating,
+                (unixepoch() - COALESCE(h.planned_at, h.picked_at)) / 86400
+         FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id
          WHERE h.couple_id = ? AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()",
     )
     .bind(couple)
     .fetch_all(db)
     .await?;
-    // A put-back counts against a slip's tags only when it was "not my thing".
-    let passed: Vec<(String,)> = sqlx::query_as(
-        "SELECT a.tags FROM joy_peeks p JOIN joy_activities a ON a.id = p.activity_id WHERE p.couple_id = ? AND p.reason = 'not_my_thing'",
+    // A put-back counts against a slip only when it was "not my thing".
+    let passed: Vec<Row> = sqlx::query_as(
+        "SELECT a.tags, a.setting, a.energy, a.est_cost, 'skipped', NULL, (unixepoch() - p.at) / 86400
+         FROM joy_peeks p JOIN joy_activities a ON a.id = p.activity_id WHERE p.couple_id = ? AND p.reason = 'not_my_thing'",
     )
     .bind(couple)
     .fetch_all(db)
     .await?;
-    let taste = crate::joy::taste::Taste::from_history(
-        rows.iter()
-            .map(|(t, o, r)| (t.as_str(), o.as_str(), *r))
-            .chain(passed.iter().map(|(t,)| (t.as_str(), "skipped", None))),
-    );
+    let taste = crate::joy::taste::Taste::from_events(rows.iter().chain(passed.iter()).map(|(tags, setting, energy, cost, outcome, rating, age)| {
+        crate::joy::taste::Event { tags, setting, energy, cost: *cost, outcome, rating: *rating, age_days: *age }
+    }));
     Ok(Learned { cost: usable(ratio, n), cost_ratio: ratio, cost_samples: n, cab: usable(cab_ratio, rides), rides, taste })
 }
 

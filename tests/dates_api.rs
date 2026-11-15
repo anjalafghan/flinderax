@@ -252,9 +252,9 @@ async fn a_put_back_remembers_why_and_only_not_my_thing_teaches_taste() {
 
     // Only "not my thing" counts against the slip's tags.
     let tags: String = sqlx::query_scalar(&format!("SELECT tags FROM joy_activities WHERE id = {a}")).fetch_one(&t.db).await.unwrap();
-    let before = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste.factor(&tags.split(',').map(str::to_string).collect::<Vec<_>>());
+    let before = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste.factor_for(&joy::joy::taste::features(&tags.split(',').map(str::to_string).collect::<Vec<_>>(), "local", "low", 0));
     t.post("/api/dates/pick", &rohit, json!({"current": a, "reroll": true, "reason": "not_my_thing"})).await;
-    let after = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste.factor(&tags.split(',').map(str::to_string).collect::<Vec<_>>());
+    let after = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste.factor_for(&joy::joy::taste::features(&tags.split(',').map(str::to_string).collect::<Vec<_>>(), "local", "low", 0));
     assert!(after < before, "not my thing lowers the tags' taste ({before} -> {after})");
 }
 
@@ -789,7 +789,7 @@ async fn a_date_planned_for_later_is_not_done_until_its_day_has_passed() {
     // It doesn't teach taste either.
     let tags: Vec<String> = joy::joy::db::get(&t.db, &couple, id).await.unwrap().unwrap().tag_list();
     let taste = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste;
-    assert!((taste.factor(&tags) - 1.0).abs() < 1e-9, "a planned date is not a liked one");
+    assert!((taste.factor_for(&joy::joy::taste::features(&tags, "local", "low", 0)) - 1.0).abs() < 1e-9, "a planned date is not a liked one");
 
     // Once the day has passed it is done.
     t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch('now', '-1 days') WHERE id = {hid}")).await;

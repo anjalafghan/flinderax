@@ -478,7 +478,7 @@ impl JarData {
                     _ => distance_from(ctx, a, f.from()),
                 };
                 let mut c = a.candidate(km, self.learned.cost);
-                c.taste = self.learned.taste.factor(&c.tags);
+                c.taste = self.learned.taste.factor_for(&crate::joy::taste::features(&c.tags, &c.setting, &c.energy, c.est_cost));
                 c.both_want = self.both_want(a.id);
                 c.any_no = self.wants.iter().any(|(id, _, l)| *id == a.id && l == "no");
                 c.like_recent = self.recent.iter().any(|(setting, tag)| *setting == c.setting && !tag.is_empty() && c.tags.first() == Some(tag));
@@ -782,7 +782,7 @@ async fn card(
                 budget: f.filters().budget,
                 km: distance_from(ctx, a, f.from()),
                 max_km: f.filters().max_km,
-                taste: learned.taste.factor(&a.tag_list()),
+                taste: learned.taste.factor_for(&crate::joy::taste::features(&a.tag_list(), &a.setting, &a.energy, a.effective_cost(learned.cost))),
                 both_want: db::wants(db, couple).await?.iter().filter(|(id, _, l)| *id == a.id && l == "want").count() == 2,
                 money: &money,
             })
