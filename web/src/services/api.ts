@@ -187,6 +187,8 @@ async function postStatement<T>(url: string, form: FormData): Promise<T> {
 }
 
 export const ingestApi = {
+  unrecognized: () => data(api.get<{ count: number; items: { alert_id: string; text: string; source: string; received_at: string }[] }>("/api/ingest/unrecognized")),
+  dismissUnrecognized: (alert_id: string) => data(api.post<Ok>("/api/ingest/unrecognized/dismiss", { alert_id })),
   transactions: (month?: string) =>
     data(api.get<Txn[]>(`/api/ingest/transactions${month ? `?month=${encodeURIComponent(month)}` : ""}`)),
   updateCategory: (u: UpdateTxnCategory) =>
