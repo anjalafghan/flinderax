@@ -126,7 +126,7 @@ impl T {
         let sql = [
             format!("INSERT INTO accounts (account_id, user_id, name, kind) VALUES ('acc-{id}', '{id}', 'Salary', 'bank')"),
             format!("INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color) VALUES ('card-{id}', '{id}', 'Everyday', 'ACME', 1, 2)"),
-            format!("INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES ('ev-{id}', 'card-{id}', 1200.0)"),
+            format!("INSERT INTO card_events (transaction_id, card_id, total_due_input_paise) VALUES ('ev-{id}', 'card-{id}', 120000)"),
             format!("INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, merchant, source, raw_text, dedupe_key) VALUES ('t-{id}', '{id}', '2026-11-01', 'debit', 25000, 'ASHA STORES', 'sms', 'Rs 250 spent at ASHA STORES', 'k-{id}')"),
             format!("INSERT INTO merchant_rules (user_id, pattern, category) VALUES ('{id}', 'asha', 'groceries')"),
             format!("INSERT INTO ingest_keys (user_id, key_hash) VALUES ('{id}', 'hash-secret-{id}')"),

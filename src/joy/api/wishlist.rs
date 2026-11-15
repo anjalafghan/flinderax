@@ -279,6 +279,15 @@ fn month_opts(selected: &str) -> Vec<Opt> {
         .collect()
 }
 
+/// What a saved slip answers with: where to go, and what was filled in on the way.
+#[derive(Debug, Serialize)]
+pub struct SlipSaved {
+    pub ok: bool,
+    pub to: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub filled: Vec<String>,
+}
+
 /// The JSON body of `POST /slips` and `POST /slips/{id}`. Converted to Joy's [`ActivityInput`].
 #[derive(Debug, Default, Deserialize)]
 pub struct SlipBody {
@@ -470,8 +479,10 @@ async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> 
         let view = form(&s.db, &j, id, &i, error).await?;
         return Ok((StatusCode::UNPROCESSABLE_ENTITY, Json(view)).into_response());
     }
-    db::save(&s.db, &j.couple, id, &i, latlng).await?;
-    Ok(go(SLIPS).into_response())
+    let saved = db::save(&s.db, &j.couple, id, &i, latlng).await?;
+    // Blanks the rest of the jar can answer are filled, and the note says what, so it can be undone by editing.
+    let filled: Vec<String> = crate::joy::enrich::run_one(&s.db, &j.couple, saved).await?.iter().map(|f| f.describe()).collect();
+    Ok(Json(SlipSaved { ok: true, to: SLIPS.into(), filled }).into_response())
 }
 
 /// `POST /slips`

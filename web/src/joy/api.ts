@@ -320,11 +320,11 @@ export const getSlips = () => get<WishlistView>("/api/dates/slips");
 export const getSlipForm = (id: string | null) => get<FormView>(id ? `/api/dates/slips/${id}` : "/api/dates/slips/new");
 
 /** A save is either accepted (Go) or refused with the form echoed back and `error` set. */
-export type SaveResult = { ok: true; go: Go } | { ok: false; form: FormView };
+export type SaveResult = { ok: true; go: Go & { filled?: string[] } } | { ok: false; form: FormView };
 
 export async function saveSlip(id: string | null, body: SlipBody): Promise<SaveResult> {
   try {
-    return { ok: true, go: await post<Go>(id ? `/api/dates/slips/${id}` : "/api/dates/slips", body) };
+    return { ok: true, go: await post<Go & { filled?: string[] }>(id ? `/api/dates/slips/${id}` : "/api/dates/slips", body) };
   } catch (e) {
     if (e instanceof ApiError && e.status === 422 && e.data && typeof (e.data as FormView).error === "string") {
       return { ok: false, form: e.data as FormView };

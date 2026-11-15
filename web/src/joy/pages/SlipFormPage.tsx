@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { archiveSlip, getSlipForm, keys, saveSlip, type FormView } from "../api";
+import { toast } from "sonner";
 import { errorField, formToState, isDuplicateWarning, tidyTitle, toPayload, type FormState } from "../form";
 import { mapGoTo } from "../paths";
 import { parseMapLink } from "../maplink";
@@ -88,6 +89,8 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
         const res = await saveSlip(id, { ...toPayload({ ...s, title: clean }), ...(allowDuplicate ? { allow_duplicate: true } : {}) });
         if (res.ok) {
           void qc.invalidateQueries({ queryKey: keys.slips });
+          // "Closed Mon, Tue (worked out from the hours)": say what was filled in. Edit the slip to change it.
+          if (res.go.filled?.length) toast.info("Filled in for you", { description: res.go.filled.join(". ") });
           navigate(mapGoTo(res.go.to));
           return;
         }

@@ -550,7 +550,8 @@ async fn slips_are_listed_edited_archived_and_deleted() {
     body["closed"] = json!(["mon"]);
     body["tags"] = json!("romantic, outdoors");
     let ok = t.post("/api/dates/slips", &rohit, body.clone()).await;
-    assert_eq!(ok.json, json!({"ok": true, "to": "/joy/slips"}), "{}", ok.text);
+    assert_eq!((&ok.json["ok"], &ok.json["to"]), (&json!(true), &json!("/joy/slips")), "{}", ok.text);
+    assert!(!ok.json["filled"].as_array().unwrap().is_empty(), "a sunset slip near another gets its blanks filled");
     let id = t.id_of(&couple, "Sunset at Carter Road").await;
     assert_eq!(t.text(&format!("SELECT hours FROM joy_activities WHERE id = {id}")).await, "mon-sun 17:00-23:00");
 
@@ -949,4 +950,37 @@ async fn writing_the_same_idea_twice_asks_first() {
     t.post(&format!("/api/dates/slips/{first}/archive"), &rohit, json!({})).await;
     let second = t.scalar(&format!("SELECT max(id) FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Sunset at Carter Road'")).await;
     assert_eq!(t.post(&format!("/api/dates/slips/{second}"), &rohit, body("Sunset at Carter Road")).await.status, StatusCode::OK, "no other active copy");
+}
+
+// ── a saved slip fills its own blanks (S16) ───────────────────────────────
+
+#[tokio::test]
+async fn saving_a_slip_fills_what_it_can_and_says_so() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let r = t
+        .post(
+            "/api/dates/slips",
+            &rohit,
+            json!({"title": "Museum morning", "est_cost": 200, "setting": "local", "duration": "short", "energy": "low",
+                   "hours": "wed-sun 09:00-17:30"}),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    let filled = r.json["filled"].as_array().unwrap();
+    assert_eq!(filled.len(), 1, "{}", r.text);
+    assert_eq!(filled[0], "Closed Mon, Tue (worked out from the hours)");
+    assert_eq!(t.text(&format!("SELECT closed_days FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Museum morning'")).await, "mon,tue");
+
+    // What a person typed is never overwritten, and nothing filled means no note.
+    let r = t
+        .post(
+            "/api/dates/slips",
+            &rohit,
+            json!({"title": "Quiet museum", "est_cost": 200, "setting": "local", "duration": "short", "energy": "low",
+                   "hours": "wed-sun 09:00-17:30", "closed": ["fri"]}),
+        )
+        .await;
+    assert!(r.json.get("filled").is_none_or(|f| f.as_array().unwrap().is_empty()), "{}", r.text);
+    assert_eq!(t.text(&format!("SELECT closed_days FROM joy_activities WHERE couple_id = '{couple}' AND title = 'Quiet museum'")).await, "fri");
 }
