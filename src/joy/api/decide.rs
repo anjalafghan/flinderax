@@ -146,6 +146,20 @@ async fn rain(ctx: &Ctx) -> Option<u8> {
 }
 
 /// `GET /jar`
+/// "foodie" is how we eat out, so it reads as "Restaurant" and leads the mood list. It is still the
+/// `foodie` tag underneath: every foodie slip counts, nothing needs re-tagging.
+fn mood_label(tag: &str) -> String {
+    if tag == "foodie" { "Restaurant".into() } else { tag.into() }
+}
+
+fn mood_order(mut tags: Vec<String>) -> Vec<String> {
+    if let Some(i) = tags.iter().position(|t| t == "foodie") {
+        let t = tags.remove(i);
+        tags.insert(0, t);
+    }
+    tags
+}
+
 pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<(String, String)>) -> Result<Json<DecideView>, AppError> {
     let j = joy(&s, &user_id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
@@ -176,6 +190,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
     let mut tags: Vec<String> = acts.iter().flat_map(|a| a.tag_list()).collect();
     tags.sort();
     tags.dedup();
+    let tags = mood_order(tags);
     let slips: Vec<Slip> = acts
         .iter()
         .map(|a| Slip {
@@ -193,7 +208,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
         slips,
         durations: duration_opts(""),
         settings: Opt::list(SETTINGS, &[]),
-        tags: tags.iter().map(|t| Opt { value: t.clone(), label: t.clone(), selected: false }).collect(),
+        tags: tags.iter().map(|t| Opt { value: t.clone(), label: mood_label(t), selected: false }).collect(),
         energies: Opt::list(ENERGIES, &[]),
         kms: Opt::list(KM_CHOICES, &[]),
         froms: ctx
@@ -985,4 +1000,19 @@ pub async fn accept(
         activity: view,
         ..PickCard::blank()
     }))
+}
+
+#[cfg(test)]
+mod mood_tests {
+    use super::*;
+
+    #[test]
+    fn foodie_reads_as_restaurant_and_comes_first() {
+        let tags = mood_order(vec!["chill".into(), "foodie".into(), "games".into()]);
+        assert_eq!(tags, vec!["foodie", "chill", "games"]);
+        assert_eq!(mood_label("foodie"), "Restaurant");
+        assert_eq!(mood_label("chill"), "chill");
+        // No foodie slips: nothing to move.
+        assert_eq!(mood_order(vec!["chill".into()]), vec!["chill"]);
+    }
 }

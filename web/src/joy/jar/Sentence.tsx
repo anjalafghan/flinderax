@@ -159,7 +159,7 @@ export default function Sentence({ view: v, filters: f, onChange, busy, onDraw, 
           {" "}
           {sel("from", "Measured from", "from either of our homes", v.froms, (o) => `from ${o.label}`)}
         </span>
-        , {sel("tag", "Mood", "any mood", v.tags, (o) => `feeling ${o.label}`)},{" "}
+        , {sel("tag", "Mood", "any mood", v.tags, (o) => (o.value === "foodie" ? "like a restaurant" : `feeling ${o.label}`))},{" "}
         {sel("energy", "Energy", "any energy", v.energies, (o) => `${o.label.toLowerCase()} energy`)}.
       </p>
 
