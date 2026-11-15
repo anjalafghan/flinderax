@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
 use super::{
-    budget_view, dayplan, distance_from, door_minutes, duration_opts, envelope, flex, flex_list, internal, joy,
+    budget_left, budget_note, budget_view, dayplan, distance_from, door_minutes, duration_opts, envelope, flex, flex_list, internal, joy,
     learned, middle::{self, Middle}, regular, weather_for, ActivityView, AppError, BudgetView, Learned, Me, Opt,
 };
 use crate::{
@@ -545,6 +545,8 @@ pub struct PickCard {
     /// For the stamp on an accepted pick, e.g. "14 · 10 · 2026".
     pub stamp_date: String,
     pub pairs: Vec<PairOffer>,
+    /// "₹2,300 left for dates this month", or how far over this one would go. Empty without a budget.
+    pub budget_note: String,
     /// Why this slip came up: "Never done", "Fits ₹1,500", "About 12 km away".
     pub why: Vec<String>,
     /// On an accepted pair: the second slip.
@@ -597,6 +599,7 @@ impl PickCard {
             middle: false,
             pairs: vec![],
             why: vec![],
+            budget_note: String::new(),
             paired: None,
             hidden: vec![],
             state: None,
@@ -776,8 +779,13 @@ async fn card(
         }
         None => vec![],
     };
+    let budget_note = match a {
+        Some(a) => budget_note(budget_left(db, couple).await?, a.effective_cost(learned.cost), |n| ctx.money(n)),
+        None => String::new(),
+    };
     Ok(PickCard {
         why,
+        budget_note,
         when: slot.map(|sl| sl.key()).unwrap_or_else(|| "any".into()),
         start: f.start().into(),
         route,

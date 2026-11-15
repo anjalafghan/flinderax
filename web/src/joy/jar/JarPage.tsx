@@ -34,7 +34,7 @@ type View =
 
 const blankCard = (message: string): PickCard => ({
   activity: null, message, relax_label: "", relax: null, done: false, stamp_date: "",
-  pairs: [], why: [], paired: null, state: null, can_surprise: false, can_veto: false,
+  pairs: [], why: [], budget_note: "", paired: null, state: null, can_surprise: false, can_veto: false,
   partner: "", surprise: false, history_ids: "", share_text: "", wa_url: "", middle: false, when: "", start: "",
   when_label: "", plan_line: "", route: [], route_note: "", plan: null,
 });

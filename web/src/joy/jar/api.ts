@@ -148,6 +148,8 @@ export interface PickCard {
   pairs: PairOffer[];
   /** Why this slip came up: "Never done", "Fits ₹1,500", "About 12 km away". */
   why: string[];
+  /** "₹2,300 left for dates this month", or how far over this one would go. Empty without a budget. */
+  budget_note: string;
   paired: ActivityView | null;
   state: PickForm | null;
   can_surprise: boolean;

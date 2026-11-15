@@ -463,6 +463,43 @@ pub async fn budget_view(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Bud
     })
 }
 
+/// What is left of this month's date budget (can be negative), or None when no budget is set.
+pub async fn budget_left(db: &SqlitePool, couple: &str) -> Result<Option<i64>, AppError> {
+    use crate::joy::db;
+    let spent = db::spent_this_month(db, couple).await?;
+    let standing = standing_budget(db::setting(db, couple, "monthly_budget").await?);
+    let this = db::month_offset(db, 0).await?;
+    let carry = db::month_budget(db, couple, &this).await?.map(|(_, c)| c).unwrap_or(0);
+    Ok(standing.map(|b| b + carry - spent))
+}
+
+/// The line on a pick card about the date budget: what is left, or by how much this one would go over.
+pub fn budget_note(left: Option<i64>, cost: i64, money: impl Fn(i64) -> String) -> String {
+    match left {
+        None => String::new(),
+        Some(left) if cost > left => format!("This one would take you {} over this month's date budget", money(cost - left.max(0))),
+        Some(left) => format!("{} left for dates this month", money(left)),
+    }
+}
+
+#[cfg(test)]
+mod budget_note_tests {
+    use super::budget_note;
+
+    fn m(n: i64) -> String {
+        format!("₹{n}")
+    }
+
+    #[test]
+    fn says_what_is_left_or_how_far_over() {
+        assert_eq!(budget_note(None, 500, m), "", "no budget, no note");
+        assert_eq!(budget_note(Some(2300), 500, m), "₹2300 left for dates this month");
+        assert_eq!(budget_note(Some(500), 500, m), "₹500 left for dates this month", "exactly fits");
+        assert_eq!(budget_note(Some(300), 500, m), "This one would take you ₹200 over this month's date budget");
+        assert_eq!(budget_note(Some(-100), 500, m), "This one would take you ₹500 over this month's date budget", "already over: all of it");
+    }
+}
+
 /// Finished months, newest first, each against the budget it had (or today's, if we never decided).
 pub async fn past_months(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Vec<PastMonth>, AppError> {
     use crate::joy::db as jdb;

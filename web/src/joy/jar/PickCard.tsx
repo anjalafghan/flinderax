@@ -333,6 +333,7 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
             </>
           )}
           {card.plan && <DayPlanView plan={card.plan} onSwapped={actions.planSwapped} />}
+          {card.budget_note && <p className="slip-budget">{card.budget_note}</p>}
           {card.why.length > 0 && (
             <p className="slip-why" aria-label="Why this one">
               {card.why.join(" · ")}
