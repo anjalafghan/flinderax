@@ -970,3 +970,26 @@ async fn an_old_pending_charge_is_flagged_not_silently_dropped() {
     assert_eq!(v["stale_pending_paise"], 25_000, "and the card says how much is being left out");
     assert_eq!(v["next_bill_est_paise"], 10_000, "the estimate still counts only the recent one");
 }
+
+#[tokio::test]
+async fn card_totals_are_exact_to_the_paisa() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.0.95", "exact").await;
+    let (_, b) = authed_post(&app, &t, "/api/card/create", json!({
+        "card_name": "Big", "card_bank": "HDFC", "card_primary_color": [0, 0, 0], "card_secondary_color": [9, 9, 9]})).await;
+    let card = serde_json::from_str::<Value>(&b).unwrap()["card_id"].as_str().unwrap().to_string();
+    // ₹1,23,45,678.91 is more than an f32 can hold to the paisa.
+    let (s, b) = authed_post(&app, &t, "/api/card/snapshot", json!({"card_id": card, "total_due_paise": 0,
+        "outstanding_paise": 1_234_567_891_i64, "unbilled_spent_paise": 0, "unbilled_credit_paise": 0})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let (_, b) = authed_post(&app, &t, "/api/card/snapshot", json!({"card_id": card, "total_due_paise": 0,
+        "outstanding_paise": 1_234_567_890_i64, "unbilled_spent_paise": 0, "unbilled_credit_paise": 0})).await;
+    assert!(b.contains("transaction_id"), "{b}");
+
+    let cards = authed_get(&app, &t, "/api/card/get_all_cards").await;
+    assert_eq!(cards["cards"][0]["last_total_due"], 12_345_678.90);
+    assert_eq!(cards["cards"][0]["last_delta"], -0.01);
+    let (_, h) = authed_post(&app, &t, "/api/card/history", json!({"card_id": card})).await;
+    let h: Value = serde_json::from_str(&h).unwrap();
+    assert_eq!(h["histories"][1]["total_due_input"], 12_345_678.91);
+}

@@ -86,7 +86,7 @@ pub async fn snapshot(
     .execute(&mut *tx)
     .await?;
     let (transaction_id, _) =
-        record_total(&mut tx, &p.card_id, (p.outstanding_paise as f64 / 100.0) as f32).await?;
+        record_total(&mut tx, &p.card_id, p.outstanding_paise).await?;
     tx.commit().await?;
 
     Ok(Json(SnapshotResponse { snapshot_id, transaction_id, status: true }))

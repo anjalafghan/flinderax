@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO card_running_state (card_id, last_total_due_paise, last_delta_paise) VALUES (?, 0, 0)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "1c83a7b2e5e3b892e03af0ac43ecffe7aba2819c23994dd9a835510f847ea16b"
+}

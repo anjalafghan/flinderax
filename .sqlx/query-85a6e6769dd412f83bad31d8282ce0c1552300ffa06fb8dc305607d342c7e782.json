@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT \n            transaction_id as \"transaction_id!\",\n            total_due_input_paise as \"total_due_input_paise!: i64\",\n            timestamp as \"timestamp!: String\"\n        FROM card_events\n        WHERE card_id = ?\n        ORDER BY timestamp DESC, rowid DESC\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "transaction_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_due_input_paise!: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "timestamp!: String",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "85a6e6769dd412f83bad31d8282ce0c1552300ffa06fb8dc305607d342c7e782"
+}

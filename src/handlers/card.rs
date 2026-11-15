@@ -40,8 +40,8 @@ pub struct CardListItem {
     /// Colours are packed 0xRRGGBB integers (see `pack`).
     card_primary_color: i64,
     card_secondary_color: i64,
-    last_total_due: Option<f32>,
-    last_delta: Option<f32>,
+    last_total_due: Option<f64>,
+    last_delta: Option<f64>,
     last_4_digits: Option<String>,
 }
 
@@ -53,7 +53,7 @@ pub struct CardListResponse {
 #[derive(serde::Serialize)]
 pub struct HistoryItem {
     transaction_id: String,
-    total_due_input: f32,
+    total_due_input: f64,
     timestamp: String,
 }
 
@@ -106,10 +106,8 @@ pub async fn create_card(
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     sqlx::query!(
-        "INSERT INTO card_running_state (card_id, last_total_due, last_delta) VALUES (?, ?, ?)",
-        card_id,
-        0.0,
-        0.0
+        "INSERT INTO card_running_state (card_id, last_total_due_paise, last_delta_paise) VALUES (?, 0, 0)",
+        card_id
     )
     .execute(&mut *tx)
     .await
@@ -177,7 +175,7 @@ pub async fn get_card(
     let card = sqlx::query!(
         "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color, c.last_4_digits,
                 c.statement_day, c.due_day, c.credit_limit_paise, c.pay_from_account_id,
-                crs.last_total_due, crs.last_delta
+                crs.last_total_due_paise, crs.last_delta_paise
          FROM cards c
          LEFT JOIN card_running_state crs ON c.card_id = crs.card_id
          WHERE c.card_id = ? AND c.user_id = ?",
@@ -201,8 +199,8 @@ pub async fn get_card(
         card_primary_color: unpack(card.card_primary_color),
         card_secondary_color: unpack(card.card_secondary_color),
         last_4_digits: card.last_4_digits,
-        last_total_due: Some(card.last_total_due as f32),
-        last_delta: Some(card.last_delta as f32),
+        last_total_due: Some(rupees(card.last_total_due_paise)),
+        last_delta: Some(rupees(card.last_delta_paise)),
         statement_day: card.statement_day,
         due_day: card.due_day,
         credit_limit_paise: card.credit_limit_paise,
@@ -216,7 +214,7 @@ pub async fn get_all_cards(
 ) -> Result<Json<CardListResponse>, AppError> {
     let cards = sqlx::query!(
         "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color, c.last_4_digits,
-                crs.last_total_due, crs.last_delta
+                crs.last_total_due_paise, crs.last_delta_paise
          FROM cards c
          LEFT JOIN card_running_state crs ON c.card_id = crs.card_id
          WHERE c.user_id = ?",
@@ -234,8 +232,8 @@ pub async fn get_all_cards(
             card_bank: card.card_bank,
             card_primary_color: card.card_primary_color,
             card_secondary_color: card.card_secondary_color,
-            last_total_due: Some(card.last_total_due as f32),
-            last_delta: Some(card.last_delta as f32),
+            last_total_due: Some(rupees(card.last_total_due_paise)),
+            last_delta: Some(rupees(card.last_delta_paise)),
             last_4_digits: card.last_4_digits,
         })
         .collect();
@@ -273,19 +271,24 @@ pub async fn delete_card(
     }))
 }
 
-/// Appends a `card_events` row and moves `card_running_state` to `amount`, returning
-/// `(transaction_id, delta)`. Shared by the plain "insert transaction" flow and bank snapshots.
+/// Paise as rupees for the card API, which still speaks rupees (exact: a paisa count under 2^53).
+fn rupees(paise: i64) -> f64 {
+    paise as f64 / 100.0
+}
+
+/// Appends a `card_events` row and moves `card_running_state` to `amount_paise`, returning
+/// `(transaction_id, delta_paise)`. Shared by the plain "insert transaction" flow and bank snapshots.
 pub(crate) async fn record_total(
     tx: &mut sqlx::SqliteConnection,
     card_id: &str,
-    amount: f32,
-) -> Result<(String, f64), AppError> {
+    amount_paise: i64,
+) -> Result<(String, i64), AppError> {
     let transaction_id = nanoid!();
     sqlx::query!(
-        "INSERT INTO card_events (transaction_id, card_id, total_due_input) VALUES (?, ?, ?)",
+        "INSERT INTO card_events (transaction_id, card_id, total_due_input_paise) VALUES (?, ?, ?)",
         transaction_id,
         card_id,
-        amount,
+        amount_paise,
     )
     .execute(&mut *tx)
     .await
@@ -296,12 +299,12 @@ pub(crate) async fn record_total(
 
     let result = sqlx::query!(
         "UPDATE card_running_state
-         SET last_delta = ? - last_total_due,
-             last_total_due = ?
+         SET last_delta_paise = ? - last_total_due_paise,
+             last_total_due_paise = ?
          WHERE card_id = ?
-         RETURNING last_delta",
-        amount,
-        amount,
+         RETURNING last_delta_paise",
+        amount_paise,
+        amount_paise,
         card_id
     )
     .fetch_one(&mut *tx)
@@ -311,7 +314,7 @@ pub(crate) async fn record_total(
         AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
 
-    Ok((transaction_id, result.last_delta))
+    Ok((transaction_id, result.last_delta_paise))
 }
 
 pub(crate) fn validate_cycle(statement_day: &Option<i64>, due_day: &Option<i64>) -> Result<(), AppError> {
@@ -356,7 +359,7 @@ pub async fn get_history(
         crate::models::CardTransactionHistory,
         r#"
         SELECT transaction_id as "transaction_id!",
-        total_due_input as "total_due_input!: f32",
+        total_due_input_paise as "total_due_input_paise!: i64",
         timestamp as "timestamp!: String"
         FROM card_events
         WHERE card_id = ?
@@ -371,7 +374,7 @@ pub async fn get_history(
         .into_iter()
         .map(|h| HistoryItem {
             transaction_id: h.transaction_id,
-            total_due_input: h.total_due_input,
+            total_due_input: rupees(h.total_due_input_paise),
             timestamp: to_rfc3339(&h.timestamp),
         })
         .collect();
@@ -427,7 +430,7 @@ pub async fn reset_transactions(
         })?;
 
     sqlx::query!(
-        "UPDATE card_running_state SET last_total_due = 0, last_delta = 0 WHERE card_id = ?",
+        "UPDATE card_running_state SET last_total_due_paise = 0, last_delta_paise = 0 WHERE card_id = ?",
         card_id
     )
     .execute(&mut *tx)
@@ -502,7 +505,7 @@ pub async fn delete_transaction(
         r#"
         SELECT 
             transaction_id as "transaction_id!",
-            total_due_input as "total_due_input!: f32",
+            total_due_input_paise as "total_due_input_paise!: i64",
             timestamp as "timestamp!: String"
         FROM card_events
         WHERE card_id = ?
@@ -522,7 +525,7 @@ pub async fn delete_transaction(
             r#"
             SELECT 
                 transaction_id as "transaction_id!",
-                total_due_input as "total_due_input!: f32",
+                total_due_input_paise as "total_due_input_paise!: i64",
                 timestamp as "timestamp!: String"
             FROM card_events
             WHERE card_id = ? AND transaction_id != ?
@@ -537,25 +540,22 @@ pub async fn delete_transaction(
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
         let delta = if let Some(prev) = second_latest {
-            latest.total_due_input - prev.total_due_input
+            latest.total_due_input_paise - prev.total_due_input_paise
         } else {
             // Only one transaction left - delta equals total
-            latest.total_due_input
+            latest.total_due_input_paise
         };
-        (latest.total_due_input, delta)
+        (latest.total_due_input_paise, delta)
     } else {
         // No transactions left
-        (0.0, 0.0)
+        (0, 0)
     };
-
-    let new_total_due_f32 = new_total_due;
-    let new_delta_f32 = new_delta;
 
     // Update the running state
     sqlx::query!(
-        "UPDATE card_running_state SET last_total_due = ?, last_delta = ? WHERE card_id = ?",
-        new_total_due_f32,
-        new_delta_f32,
+        "UPDATE card_running_state SET last_total_due_paise = ?, last_delta_paise = ? WHERE card_id = ?",
+        new_total_due,
+        new_delta,
         card_id
     )
     .execute(&mut *tx)
