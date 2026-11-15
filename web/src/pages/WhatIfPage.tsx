@@ -224,6 +224,11 @@ export default function WhatIfPage() {
                   Assumes salary and fixed payments continue, you spend {spendPct}% of your allowance, the SIP is not valued
                   (contributions only), and deposits compound quarterly.
                 </p>
+                <p>
+                  To keep it simple, a month's spending leaves your account all at once on the 15th, and card EMIs are
+                  paid on the day your first card's bill is due. Real days differ, so a dip in the middle of a month may
+                  be a little deeper or shallower than it will really be.
+                </p>
               </div>
             )}
           </section>
