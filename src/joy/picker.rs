@@ -89,6 +89,8 @@ pub struct Candidate {
     pub window_miss: Option<String>,
     /// Learned liking for this kind of date (see `taste`): about 0.7 to 1.3, 1.0 = no opinion.
     pub taste: f64,
+    /// Would rain spoil it? From the slip's cover, falling back to the "outdoors" tag.
+    pub outdoor: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -201,7 +203,7 @@ pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
         w *= 0.5;
     }
     // Rain doesn't rule outdoor plans out, it just lets the cozy ones float up.
-    if rain_likely && c.tags.iter().any(|t| t == "outdoors") {
+    if rain_likely && c.outdoor {
         w *= 0.3;
     }
     w
@@ -324,6 +326,7 @@ mod tests {
             season: None,
             window_miss: None,
             taste: 1.0,
+            outdoor: false,
         }
     }
 
@@ -509,9 +512,21 @@ mod tests {
     }
 
     #[test]
+    fn an_outdoor_slip_is_damped_in_rain_whether_or_not_it_carries_the_tag() {
+        let mut c = cand(1, 0, "local", Duration::Short);
+        c.tags = vec!["chill".into()]; // no "outdoors" tag...
+        c.outdoor = true; // ...but its cover says outdoor
+        assert!(weight(&c, NOW, true) < weight(&c, NOW, false));
+        let mut indoor = cand(2, 0, "local", Duration::Short);
+        indoor.tags = vec!["outdoors".into()]; // tagged, but its cover says indoor
+        indoor.outdoor = false;
+        assert_eq!(weight(&indoor, NOW, true), weight(&indoor, NOW, false), "the cover wins over the tag");
+    }
+
+    #[test]
     fn rain_sinks_outdoor_slips_but_never_removes_them() {
         let mut out = cand(1, 0, "local", Duration::Short);
-        out.tags = vec!["outdoors".into()];
+        out.outdoor = true;
         let cozy = cand(2, 0, "home", Duration::Short);
         assert_eq!(weight(&out, NOW, false), weight(&cozy, NOW, false));
         assert!(weight(&out, NOW, true) < weight(&cozy, NOW, true));

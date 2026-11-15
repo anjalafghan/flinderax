@@ -109,6 +109,7 @@ impl Activity {
             season: self.season(),
             window_miss: None,
             taste: 1.0,
+            outdoor: self.outdoor(),
         }
     }
 }

@@ -156,6 +156,15 @@ async fn rain(ctx: &Ctx) -> Option<u8> {
     weather_for(ctx).tonight().await.filter(|p| *p >= weather::LIKELY_PERCENT)
 }
 
+/// Rain for the draw: tonight's forecast says nothing about next Saturday, so a draw for another
+/// day isn't damped by it.
+pub(crate) async fn rain_for(ctx: &Ctx, slot: Option<&Slot>) -> Option<u8> {
+    if slot.is_some_and(|sl| !sl.today) {
+        return None;
+    }
+    rain(ctx).await
+}
+
 /// `GET /jar`
 /// "foodie" is how we eat out, so it reads as "Restaurant" and leads the mood list. It is still the
 /// `foodie` tag underneath: every foodie slip counts, nothing needs re-tagging.
@@ -213,7 +222,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
             id: a.id,
             title: ctx.personalize(&a.title),
             setting: a.setting.clone(),
-            outdoor: a.tag_list().iter().any(|t| t == "outdoors"),
+            outdoor: a.outdoor(),
         })
         .collect();
     Ok(Json(DecideView {
@@ -499,7 +508,7 @@ pub async fn matching(
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
     let jar = jar_data(db, couple, ctx, j.who, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
     let cands = jar.candidates(ctx, &f);
-    let filters = jar.filters(&f, rain(ctx).await.is_some());
+    let filters = jar.filters(&f, rain_for(ctx, jar.slot.as_ref()).await.is_some());
     let ids: Vec<i64> = cands.iter().filter(|c| picker::matches(c, &filters)).map(|c| c.id).collect();
     Ok(Json(MatchCount { count: ids.len(), total: cands.len(), ids }))
 }
@@ -655,7 +664,7 @@ pub async fn pick(
     if let Some(m) = &middle {
         cands.retain(|c| m.allows(&c.energy, &c.tags));
     }
-    let filters = jar.filters(&f, rain(ctx).await.is_some());
+    let filters = jar.filters(&f, rain_for(ctx, jar.slot.as_ref()).await.is_some());
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map_err(internal)?.as_secs() as i64;
     let result = picker::pick(&cands, &filters, &excluded, now, &mut thread_rng());
 
