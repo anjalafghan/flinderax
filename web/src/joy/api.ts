@@ -2,7 +2,7 @@
 // the HTTP status and parsed body, because a refused slip save is a 422 that carries a FormView.
 import { adoptRenewedToken } from "@/services/renew";
 import type { JoySummary } from "@/services/types";
-import { clearSession } from "@/session";
+import { authHeadersFor, clearSession } from "@/session";
 
 export interface Opt {
   value: string;
@@ -240,8 +240,7 @@ interface Options {
 /** The bearer header from localStorage. Empty when storage is blocked: the server then answers 401. */
 export function authHeaders(): Record<string, string> {
   try {
-    const token = localStorage.getItem("token");
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return authHeadersFor(localStorage.getItem("token"));
   } catch {
     return {};
   }

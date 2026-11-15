@@ -6,9 +6,35 @@
 const PERSONAL_KEYS = ["token", "expires_at", "flinderax-whatif-v1"];
 const DATA_PREFIX = "fx-data-";
 
-/** Cache name public/sw.js uses for a token: a hash of the Authorization header value. */
+// A web login lives in an HttpOnly cookie that scripts cannot read. What the page keeps under
+// "token" is only an id for this login ("s_…"): it names the saved offline copies and tells the
+// page it is signed in. Older logins still hold a bearer token there and keep working until they end.
+const SESSION_PREFIX = "s_";
+
+export function newSessionId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  return SESSION_PREFIX + [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export const isCookieSession = (token: string | null): token is string => !!token && token.startsWith(SESSION_PREFIX);
+
+/** What to remember after a sign-in answer: a cookie login keeps only an id (the token is in the
+ *  HttpOnly cookie and is not kept anywhere scripts can read); an older server answer keeps the token. */
+export function loginToKeep(res: { access_token: string; expires_at: number; cookie?: boolean }): { token: string; expiresAt: number } {
+  return { token: res.cookie ? newSessionId() : res.access_token, expiresAt: res.expires_at };
+}
+
+/** Headers for an API request: the session id and the marker the server requires on changes (cookie
+ *  login), or the bearer header (older login), or nothing when signed out. */
+export function authHeadersFor(token: string | null): Record<string, string> {
+  if (!token) return {};
+  return isCookieSession(token) ? { "X-Session-Id": token, "X-Joy": "1" } : { Authorization: `Bearer ${token}` };
+}
+
+/** Cache name public/sw.js uses for a login: a hash of the Authorization header, or "sid:" + the session id. */
 export async function offlineCacheName(token: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`Bearer ${token}`));
+  const key = isCookieSession(token) ? `sid:${token}` : `Bearer ${token}`;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
   const hex = [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
   return DATA_PREFIX + hex;
 }

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { BackupSection } from "@/components/feature/BackupSection";
 import { sessionApi } from "@/services/session";
+import { loginToKeep } from "@/session";
 
 const msg = (e: unknown) => (e instanceof Error && e.message ? e.message : "Something went wrong. Please try again.");
 
@@ -43,7 +44,8 @@ function ChangePassword() {
     try {
       const t = await sessionApi.changePassword(current, next);
       // Every other sign-in has just ended; this one carries on with the fresh token.
-      login(t.access_token, t.expires_at);
+      const kept = loginToKeep(t);
+      login(kept.token, kept.expiresAt);
       setCurrent("");
       setNext("");
       setAgain("");

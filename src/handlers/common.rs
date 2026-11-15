@@ -105,7 +105,7 @@ pub async fn login(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(login_payload): Json<LoginPayload>,
-) -> Result<Json<LoginResponse>, AppError> {
+) -> Result<Response, AppError> {
     let ip_key = format!("login-ip:{}", ratelimit::client_key(&headers));
     if !ratelimit::allow(&ip_key, LOGIN_ATTEMPTS_PER_MINUTE * 3) {
         return Err(too_many());
@@ -154,14 +154,45 @@ pub async fn login(
         .await?;
     let token = get_paseto_token(&user_id, user.user_role, version, &state.paseto_key, expiration)?;
 
-    Ok(Json(LoginResponse {
-        access_token: token,
-        expires_at: expiration.unix_timestamp(),
-    }))
+    Ok(login_response(&headers, token, expiration))
 }
 /// How long a sign-in lasts. A session that is being used renews itself (see the token middleware),
 /// so someone who opens the app every few weeks never signs in again.
 pub const SESSION_LIFETIME: Duration = Duration::days(30);
+
+/// The cookie that carries a web session. HttpOnly, so scripts on the page cannot read it, and
+/// SameSite=Strict, so other sites cannot send it. `Secure` is added when the request came in over
+/// https (Fly terminates TLS and says so); plain http is only local development.
+pub const SESSION_COOKIE: &str = "joy_session";
+
+pub fn is_https(headers: &HeaderMap) -> bool {
+    headers.get("x-forwarded-proto").and_then(|v| v.to_str().ok()) == Some("https")
+}
+
+pub fn session_cookie(token: &str, secure: bool) -> String {
+    format!(
+        "{SESSION_COOKIE}={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={}{}",
+        SESSION_LIFETIME.whole_seconds(),
+        if secure { "; Secure" } else { "" }
+    )
+}
+
+pub fn cleared_cookie(secure: bool) -> String {
+    format!("{SESSION_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0{}", if secure { "; Secure" } else { "" })
+}
+
+/// A sign-in answer: the token in the body (for scripts) and in the session cookie (for the web app).
+pub fn login_response(headers: &HeaderMap, token: String, expiration: OffsetDateTime) -> Response {
+    let cookie = session_cookie(&token, is_https(headers));
+    let body = LoginResponse { access_token: token, expires_at: expiration.unix_timestamp(), cookie: true };
+    ([(axum::http::header::SET_COOKIE, cookie)], Json(body)).into_response()
+}
+
+/// `POST /api/common/logout`: ends the session on this device. Needs no valid session, so it works
+/// when the cookie is already stale. (Other devices stay signed in; see logout-everywhere.)
+pub async fn logout(headers: HeaderMap) -> Response {
+    ([(axum::http::header::SET_COOKIE, cleared_cookie(is_https(&headers)))], Json(serde_json::json!({ "status": true }))).into_response()
+}
 
 pub fn verify_user(database_password: String, user_input_password: String) -> Result<(), AppError> {
     let parsed_hash = PasswordHash::new(&database_password)

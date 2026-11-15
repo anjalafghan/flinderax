@@ -1,3 +1,4 @@
+import { loginToKeep } from "@/session";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 ;
@@ -39,7 +40,7 @@ export default function AuthPage() {
 
   const loginMutation = useMutation({
     mutationFn: async () => {
-      const res = await api.post<{ access_token: string; expires_at: number }>(
+      const res = await api.post<{ access_token: string; expires_at: number; cookie?: boolean }>(
         "/api/common/login",
         {
           user_name: loginUser,
@@ -50,7 +51,8 @@ export default function AuthPage() {
     },
     onSuccess: (data) => {
       toast.success("Welcome back!", { duration: 1200 });
-      login(data.access_token, data.expires_at);
+      const kept = loginToKeep(data);
+      login(kept.token, kept.expiresAt);
       navigate("/");
     },
     onError: (error) => {

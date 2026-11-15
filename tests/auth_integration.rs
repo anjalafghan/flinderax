@@ -1176,3 +1176,92 @@ async fn moving_a_payments_day_does_not_post_that_month_twice() {
     joy::handlers::autopost::apply(&db, &uid, time::macros::date!(2026 - 12 - 21)).await.ok().unwrap();
     assert_eq!(balance().await, 6_000_000);
 }
+
+/// Sends a request and returns status, headers and body text.
+async fn raw(app: &Router, method: &str, path: &str, headers: &[(&str, &str)], body: Option<Value>) -> (StatusCode, axum::http::HeaderMap, String) {
+    let mut req = Request::builder().method(method).uri(path).header("fly-client-ip", "10.0.2.1");
+    for (k, v) in headers {
+        req = req.header(*k, *v);
+    }
+    let req = match body {
+        Some(b) => req.header("content-type", "application/json").body(Body::from(b.to_string())),
+        None => req.body(Body::empty()),
+    }
+    .unwrap();
+    let res = app.clone().oneshot(req).await.unwrap();
+    let (status, h) = (res.status(), res.headers().clone());
+    let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    (status, h, String::from_utf8_lossy(&bytes).into_owned())
+}
+
+fn cookie_of(h: &axum::http::HeaderMap) -> String {
+    h.get("set-cookie").expect("a session cookie").to_str().unwrap().to_string()
+}
+
+#[tokio::test]
+async fn signing_in_sets_an_http_only_session_cookie_that_works_for_the_app() {
+    let app = test_app().await;
+    post(&app, "10.0.2.1", "/api/common/register", json!({"user_name": "cookieuser", "user_password": "correct horse"})).await;
+    let (s, h, body) = raw(&app, "POST", "/api/common/login", &[("x-forwarded-proto", "https")], Some(json!({"user_name": "cookieuser", "user_password": "correct horse"}))).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    let set = cookie_of(&h);
+    for part in ["joy_session=", "HttpOnly", "Secure", "SameSite=Strict", "Path=/", "Max-Age=2592000"] {
+        assert!(set.contains(part), "{part} in {set}");
+    }
+    assert_eq!(serde_json::from_str::<Value>(&body).unwrap()["cookie"], true, "the page learns it is cookie-signed");
+    let jar = set.split(';').next().unwrap().to_string();
+
+    // Plain http (local development) must still work: no Secure flag there.
+    let (_, h, _) = raw(&app, "POST", "/api/common/login", &[], Some(json!({"user_name": "cookieuser", "user_password": "correct horse"}))).await;
+    assert!(!cookie_of(&h).contains("Secure"));
+
+    // Reading works with just the cookie.
+    let (s, _, _) = raw(&app, "GET", "/api/account/list", &[("cookie", &jar)], None).await;
+    assert_eq!(s, StatusCode::OK);
+    // Writing needs the page's own header too, which another site cannot add.
+    let new_acct = json!({"name": "Cash", "kind": "cash", "balance_paise": 100});
+    let (s, _, _) = raw(&app, "POST", "/api/account/create", &[("cookie", &jar)], Some(new_acct.clone())).await;
+    assert_eq!(s, StatusCode::FORBIDDEN, "a cookie alone cannot change anything");
+    let (s, _, b) = raw(&app, "POST", "/api/account/create", &[("cookie", &jar), ("x-joy", "1")], Some(new_acct)).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+
+    // A bearer token (scripts, the phone shortcut's siblings) still works without the header.
+    let token = serde_json::from_str::<Value>(&raw(&app, "POST", "/api/common/login", &[], Some(json!({"user_name": "cookieuser", "user_password": "correct horse"}))).await.2).unwrap()["access_token"].as_str().unwrap().to_string();
+    let (s, _, _) = raw(&app, "POST", "/api/account/create", &[("authorization", &format!("Bearer {token}"))], Some(json!({"name": "Cash2", "kind": "cash", "balance_paise": 1}))).await;
+    assert_eq!(s, StatusCode::OK);
+    // A bad cookie is just signed out.
+    let (s, _, _) = raw(&app, "GET", "/api/account/list", &[("cookie", "joy_session=nonsense")], None).await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn signing_out_clears_the_cookie_and_ending_every_session_ends_it() {
+    let app = test_app().await;
+    post(&app, "10.0.2.2", "/api/common/register", json!({"user_name": "leaver", "user_password": "correct horse"})).await;
+    let (_, h, _) = raw(&app, "POST", "/api/common/login", &[], Some(json!({"user_name": "leaver", "user_password": "correct horse"}))).await;
+    let jar = cookie_of(&h).split(';').next().unwrap().to_string();
+
+    let (s, h, _) = raw(&app, "POST", "/api/common/logout", &[], Some(json!({}))).await;
+    assert_eq!(s, StatusCode::OK, "signing out needs no session: it must work when the cookie is stale");
+    let cleared = cookie_of(&h);
+    assert!(cleared.contains("joy_session=;") && cleared.contains("Max-Age=0") && cleared.contains("HttpOnly"), "{cleared}");
+
+    let (s, _, _) = raw(&app, "POST", "/api/common/logout-everywhere", &[("cookie", &jar), ("x-joy", "1")], Some(json!({}))).await;
+    assert_eq!(s, StatusCode::OK);
+    let (s, _, _) = raw(&app, "GET", "/api/account/list", &[("cookie", &jar)], None).await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED, "the old cookie is dead");
+}
+
+#[tokio::test]
+async fn a_cookie_session_is_renewed_in_the_cookie() {
+    let (app, db) = test_app_with_db().await;
+    post(&app, "10.0.2.3", "/api/common/register", json!({"user_name": "renewc", "user_password": "correct horse"})).await;
+    let (id, role, version): (String, String, i64) =
+        sqlx::query_as("SELECT user_id, user_role, token_version FROM users WHERE user_name = 'renewc'").fetch_one(&db).await.unwrap();
+    let key = Arc::new(PasetoSymmetricKey::from(Key::from(&[7u8; 32])));
+    let old = joy::handlers::common::get_paseto_token(&id, role, version, &key, time::OffsetDateTime::now_utc() + time::Duration::days(2)).ok().unwrap();
+    let (s, h, _) = raw(&app, "GET", "/api/account/list", &[("cookie", &format!("joy_session={old}"))], None).await;
+    assert_eq!(s, StatusCode::OK);
+    let set = cookie_of(&h);
+    assert!(set.starts_with("joy_session=") && !set.starts_with(&format!("joy_session={old}")) && set.contains("Max-Age=2592000"), "{set}");
+}
