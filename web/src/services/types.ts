@@ -234,6 +234,8 @@ export interface RecordMove {
   mode: MoveMode;
   from_account_id?: string | null;
   to_account_id?: string | null;
+  /** One per tap. A retry with the same key never moves the money twice. */
+  idempotency_key?: string;
 }
 
 export interface MoveRow {

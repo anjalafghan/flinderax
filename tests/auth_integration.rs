@@ -872,3 +872,38 @@ async fn learned_rules_hand_set_categories_and_layouts_can_be_reset() {
     let (st, b) = authed_post(&app, &t, "/api/ingest/statement/layouts/clear", json!({})).await;
     assert!(st.is_success(), "{b}");
 }
+
+#[tokio::test]
+async fn a_move_with_the_same_idempotency_key_moves_the_money_once() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.91", "mover").await;
+    let mut ids = vec![];
+    for (name, role) in [("Spending", "spending"), ("Reserve", "reserve")] {
+        let (s, b) = authed_post(&app, &t, "/api/account/create", json!({"name": name, "kind": "bank", "balance_paise": 1_000_000, "role": role})).await;
+        assert_eq!(s, StatusCode::OK, "{b}");
+        ids.push(serde_json::from_str::<Value>(&b).unwrap()["account_id"].as_str().unwrap().to_string());
+    }
+    let body = |key: &str, amount: i64| json!({"kind": "allocation", "key": "2026-11-01", "amount_paise": amount, "mode": "moved",
+        "from_account_id": ids[0], "to_account_id": ids[1], "idempotency_key": key});
+    let (s, first) = authed_post(&app, &t, "/api/moves/record", body("k-1", 100_000)).await;
+    assert_eq!(s, StatusCode::OK, "{first}");
+    // A retry long after the 10-second window, e.g. from an offline queue, with the same key.
+    sqlx::query("UPDATE moves SET created_at = datetime('now', '-1 hours')").execute(&db).await.unwrap();
+    let (s, again) = authed_post(&app, &t, "/api/moves/record", body("k-1", 100_000)).await;
+    assert_eq!(s, StatusCode::OK, "{again}");
+    assert_eq!(
+        serde_json::from_str::<Value>(&first).unwrap()["move_id"],
+        serde_json::from_str::<Value>(&again).unwrap()["move_id"],
+        "same move comes back"
+    );
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM moves").fetch_one(&db).await.unwrap();
+    assert_eq!(count, 1);
+    let bal: i64 = sqlx::query_scalar("SELECT balance_paise FROM accounts WHERE account_id = ?").bind(&ids[0]).fetch_one(&db).await.unwrap();
+    assert_eq!(bal, 900_000, "moved once");
+
+    // A different key is a different move.
+    let (s, _) = authed_post(&app, &t, "/api/moves/record", body("k-2", 100_000)).await;
+    assert_eq!(s, StatusCode::OK);
+    let bal: i64 = sqlx::query_scalar("SELECT balance_paise FROM accounts WHERE account_id = ?").bind(&ids[0]).fetch_one(&db).await.unwrap();
+    assert_eq!(bal, 800_000);
+}

@@ -163,7 +163,8 @@ export const cardPlanApi = {
 };
 
 export const movesApi = {
-  record: (m: RecordMove) => data(api.post<{ move_id: string; status: boolean }>("/api/moves/record", m)),
+  record: (m: RecordMove) =>
+    data(api.post<{ move_id: string; status: boolean }>("/api/moves/record", { idempotency_key: crypto.randomUUID(), ...m })),
   undo: (move_id: string) => data(api.post<Ok>("/api/moves/undo", { move_id })),
   list: () => data(api.get<MoveRow[]>("/api/moves/list")),
 };
