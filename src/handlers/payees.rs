@@ -293,7 +293,7 @@ mod tests {
         let key = rusty_paseto::prelude::PasetoSymmetricKey::<rusty_paseto::core::V4, rusty_paseto::core::Local>::from(
             rusty_paseto::prelude::Key::from(&[7u8; 32][..]),
         );
-        AppState { db, redis: None, paseto_key: std::sync::Arc::new(key) }
+        AppState { db, paseto_key: std::sync::Arc::new(key) }
     }
 
     /// `AppError` has no `Debug`, so unwrap handler results by hand.

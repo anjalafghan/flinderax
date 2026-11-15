@@ -12,6 +12,10 @@ use std::sync::Arc;
 use tower::ServiceExt;
 
 async fn test_app() -> Router {
+    test_app_with_db().await.0
+}
+
+async fn test_app_with_db() -> (Router, sqlx::SqlitePool) {
     // Sign-ups need the code from the SIGNUP_CODE secret; the tests use a fixed one.
     // Safety: every test in this binary sets the same value before any request reads it.
     unsafe { std::env::set_var("SIGNUP_CODE", "test-signup-code") };
@@ -22,11 +26,10 @@ async fn test_app() -> Router {
         .unwrap();
     sqlx::migrate!().run(&db).await.unwrap();
     let key = PasetoSymmetricKey::from(Key::from(&[7u8; 32]));
-    build_router(AppState {
-        db,
-        redis: None,
+    (build_router(AppState {
+        db: db.clone(),
         paseto_key: Arc::new(key),
-    })
+    }), db)
 }
 
 /// Each test uses its own client IP: the rate limiter is process-wide.
@@ -72,12 +75,13 @@ async fn register_then_login_works() {
 
 #[tokio::test]
 async fn register_cannot_self_assign_admin() {
-    let app = test_app().await;
+    let (app, db) = test_app_with_db().await;
     let (s, _) = post(&app, "10.0.0.2", "/api/common/register",
         json!({"user_name": "mallory", "user_password": "hunter2hunter2", "user_role": "admin"})).await;
     assert_eq!(s, StatusCode::OK);
-    let token = login_token(&app, "10.0.0.2", "mallory", "hunter2hunter2").await;
-    assert_eq!(get(&app, "/api/user/get", Some(&token)).await, StatusCode::FORBIDDEN);
+    let role: String = sqlx::query_scalar("SELECT user_role FROM users WHERE user_name = 'mallory'")
+        .fetch_one(&db).await.unwrap();
+    assert_eq!(role, "user");
 }
 
 #[tokio::test]
@@ -127,7 +131,6 @@ async fn protected_routes_need_a_token() {
     let app = test_app().await;
     assert_eq!(get(&app, "/api/account/list", None).await, StatusCode::UNAUTHORIZED);
     assert_eq!(get(&app, "/api/account/list", Some("garbage")).await, StatusCode::UNAUTHORIZED);
-    assert_eq!(get(&app, "/api/user/get", None).await, StatusCode::UNAUTHORIZED);
     assert_eq!(get(&app, "/api/nope", None).await, StatusCode::NOT_FOUND);
 }
 
@@ -176,8 +179,21 @@ async fn card_history_is_only_visible_to_its_owner() {
     assert!(s.is_success(), "{s} {b}");
     let card_id = serde_json::from_str::<Value>(&b).unwrap()["card_id"].as_str().unwrap().to_string();
 
-    let (s, _) = authed_post(&app, &owner, "/api/card/history", json!({"card_id": card_id})).await;
+    let (s, b) = authed_post(&app, &owner, "/api/card/history", json!({"card_id": card_id})).await;
     assert_eq!(s, StatusCode::OK);
+    // History is plain JSON now (it used to be protobuf).
+    assert!(serde_json::from_str::<Value>(&b).unwrap()["histories"].is_array(), "{b}");
+
+    // The card list is JSON too: colours stay packed 0xRRGGBB integers, and only the owner's cards show.
+    let list = authed_get(&app, &owner, "/api/card/get_all_cards").await;
+    let cards = list["cards"].as_array().expect("cards array");
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0]["card_id"], card_id);
+    assert_eq!(cards[0]["card_name"], "Millennia");
+    assert_eq!(cards[0]["card_primary_color"], 0);
+    assert_eq!(cards[0]["card_secondary_color"], 0xFFFFFF);
+    let theirs = authed_get(&app, &snoop, "/api/card/get_all_cards").await;
+    assert_eq!(theirs["cards"].as_array().unwrap().len(), 0);
     let (s, _) = authed_post(&app, &snoop, "/api/card/history", json!({"card_id": card_id})).await;
     assert_eq!(s, StatusCode::NOT_FOUND);
 
@@ -638,13 +654,10 @@ async fn security_headers_and_export() {
 }
 
 #[tokio::test]
-async fn old_joy_links_redirect_under_joy() {
+async fn old_envelope_links_redirect_under_joy() {
     let app = test_app().await;
     for (from, to) in [
         ("/e/AbC123_-xyz", "/joy/e/AbC123_-xyz"),
-        ("/wishlist", "/joy/slips"),
-        ("/history", "/joy/kept"),
-        ("/year/2026/10", "/joy/year/2026/10"),
     ] {
         let res = app.clone().oneshot(Request::get(from).body(Body::empty()).unwrap()).await.unwrap();
         assert_eq!(res.status(), StatusCode::PERMANENT_REDIRECT, "{from}");

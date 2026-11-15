@@ -98,19 +98,12 @@ async function json<T>(method: Method, url: string, body?: unknown): Promise<Api
   };
 }
 
-async function binary(method: "GET" | "POST", url: string, body?: unknown): Promise<ArrayBuffer> {
-  const response = await send(method, url, body);
-  return response.arrayBuffer();
-}
-
 const api = {
   get: <T>(url: string) => json<T>("GET", url),
   post: <T>(url: string, body: unknown) => json<T>("POST", url, body),
   put: <T>(url: string, body: unknown) => json<T>("PUT", url, body),
   patch: <T>(url: string, body: unknown) => json<T>("PATCH", url, body),
   del: <T = void>(url: string) => json<T>("DELETE", url),
-  postProtobuf: (url: string, body: unknown) => binary("POST", url, body),
-  getProtobuf: (url: string) => binary("GET", url),
 };
 
 export default api;

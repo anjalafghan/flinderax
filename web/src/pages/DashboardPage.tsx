@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import api from "@/services/api";
-import { decodeCardList } from "@/proto/decoder";
 import { Header } from "@/components/layout/Header";
 import { CardCarousel } from "@/components/feature/CardCarousel";
 import { Button } from "@/components/ui/button";
@@ -36,6 +35,18 @@ const QUICK_ACTIONS: { to: string; label: string; hint: string; icon: LucideIcon
   { to: "/joy", label: "Plan a date", hint: "Pick one for the week", icon: Heart },
 ];
 
+/** A card as /api/card/get_all_cards sends it; colours are packed 0xRRGGBB integers. */
+interface CardWire {
+  card_id: string;
+  card_name: string;
+  card_bank: string;
+  card_primary_color: number;
+  card_secondary_color: number;
+  last_4_digits: string | null;
+  last_total_due: number | null;
+  last_delta: number | null;
+}
+
 export interface CardData {
   card_id: string;
   card_name: string;
@@ -45,7 +56,7 @@ export interface CardData {
   last_4_digits: string | null;
   last_total_due: number | null;
   last_delta: number | null;
-  /** Only present on the single-card endpoint, not the protobuf list. */
+  /** Only present on the single-card endpoint, not the card list. */
   statement_day?: number | null;
   due_day?: number | null;
   credit_limit_paise?: number | null;
@@ -99,10 +110,9 @@ function MoneyDashboard() {
   const { data: cards, isLoading } = useQuery({
     queryKey: ["cards"],
     queryFn: async () => {
-      const buffer = await api.getProtobuf("/api/card/get_all_cards");
-      const decoded = await decodeCardList(buffer);
+      const res = await api.get<{ cards: CardWire[] }>("/api/card/get_all_cards");
 
-      return decoded.cards.map((c) => ({
+      return res.data.cards.map((c) => ({
         card_id: c.card_id,
         card_name: c.card_name,
         card_bank: c.card_bank,

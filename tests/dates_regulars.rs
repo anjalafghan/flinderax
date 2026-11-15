@@ -43,7 +43,7 @@ async fn setup() -> T {
     let db = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
     sqlx::migrate!().run(&db).await.unwrap();
     let key = PasetoSymmetricKey::from(Key::from(&[7u8; 32]));
-    let app = build_router(AppState { db: db.clone(), redis: None, paseto_key: Arc::new(key) });
+    let app = build_router(AppState { db: db.clone(), paseto_key: Arc::new(key) });
     T { app, db }
 }
 

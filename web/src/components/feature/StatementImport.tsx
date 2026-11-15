@@ -2,7 +2,6 @@ import { useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } 
 import { useQuery } from "@tanstack/react-query";
 
 import api, { ingestApi } from "@/services/api";
-import { decodeCardList } from "@/proto/decoder";
 import type { SignRule, StatementMapping, StatementNeedsMapping, StatementPreview, StatementResult, StatementTarget } from "@/services/types";
 import { INGEST_INVALIDATE, useAccounts, usePlannerMutation } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
@@ -406,8 +405,10 @@ export function StatementImport() {
   const cards = useQuery({
     queryKey: CARDS_KEY,
     queryFn: async () => {
-      const decoded = await decodeCardList(await api.getProtobuf("/api/card/get_all_cards"));
-      return decoded.cards.map((c) => ({ card_id: c.card_id, card_name: c.card_name, last_4_digits: c.last_4_digits }));
+      const res = await api.get<{ cards: { card_id: string; card_name: string; last_4_digits: string | null }[] }>(
+        "/api/card/get_all_cards",
+      );
+      return res.data.cards.map((c) => ({ card_id: c.card_id, card_name: c.card_name, last_4_digits: c.last_4_digits }));
     },
     retry: 1,
   });

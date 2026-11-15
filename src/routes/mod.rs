@@ -16,5 +16,4 @@ pub mod plan;
 pub mod reminders;
 pub mod review;
 pub mod rewards;
-pub mod user;
 pub mod work;

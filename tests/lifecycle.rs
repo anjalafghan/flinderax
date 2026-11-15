@@ -40,7 +40,7 @@ async fn setup() -> T {
     let db = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
     sqlx::migrate!().run(&db).await.unwrap();
     let key = PasetoSymmetricKey::from(Key::from(&[7u8; 32]));
-    let app = build_router(AppState { db: db.clone(), redis: None, paseto_key: Arc::new(key) });
+    let app = build_router(AppState { db: db.clone(), paseto_key: Arc::new(key) });
     T { app, db }
 }
 
@@ -160,7 +160,7 @@ impl T {
 }
 
 fn photo_dir(couple: &str) -> std::path::PathBuf {
-    joy::import_joy::photos_root().join(couple)
+    joy::joy::photos::photos_root().join(couple)
 }
 
 #[tokio::test]
@@ -313,38 +313,31 @@ async fn export_has_the_new_tables_and_no_secrets() {
 }
 
 #[tokio::test]
-async fn admin_cannot_delete_the_last_admin_or_themselves() {
+async fn the_last_admin_cannot_be_deleted() {
     let t = setup().await;
     let (_, admin_id, admin) = t.user("root").await;
     t.make_admin(&admin_id).await;
-    let (other_name, other_id, _) = t.user("plain").await;
+    let (_, other_id, _) = t.user("plain").await;
 
     // The only admin, deleting their own account: refused.
     let r = t.post("/api/common/delete-account", &admin, json!({"password": PW, "confirm": "delete"})).await;
     assert_eq!(r.status, StatusCode::CONFLICT, "{}", r.text);
     assert_eq!(t.scalar(&format!("SELECT COUNT(*) FROM users WHERE user_id = '{admin_id}'")).await, 1);
-    // The admin route refuses self-deletion too.
-    let admin_name = t.text(&format!("SELECT user_name FROM users WHERE user_id = '{admin_id}'")).await;
-    let r = t.call(Method::POST, "/api/user/delete", Some(&admin), Some(Value::String(admin_name.clone())), "10.77.0.2").await;
-    assert_ne!(r.status, StatusCode::OK);
     // The guard itself, whoever calls it.
     let err = joy::handlers::lifecycle::delete_user(&t.db, &admin_id).await;
     assert!(matches!(err, Err(joy::handlers::common::AppError(StatusCode::CONFLICT, _))));
 
     // With a second admin, one can remove the other, and then the survivor is protected again.
     t.make_admin(&other_id).await;
-    let r = t.call(Method::POST, "/api/user/delete", Some(&admin), Some(Value::String(other_name)), "10.77.0.2").await;
-    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert!(joy::handlers::lifecycle::delete_user(&t.db, &other_id).await.is_ok());
     assert_eq!(t.scalar(&format!("SELECT COUNT(*) FROM users WHERE user_id = '{other_id}'")).await, 0);
     assert_eq!(t.scalar("SELECT COUNT(*) FROM users WHERE user_role = 'admin'").await, 1);
 }
 
 #[tokio::test]
-async fn admin_delete_cleans_up_the_couple_and_its_photos() {
+async fn deleting_an_account_cleans_up_the_couple_and_its_photos() {
     let t = setup().await;
-    let (_, admin_id, admin) = t.user("boss").await;
-    t.make_admin(&admin_id).await;
-    let (name, id, token) = t.user("solo").await;
+    let (_, id, token) = t.user("solo").await;
     assert!(t.post("/api/couple/create", &token, json!({})).await.status.is_success());
     let couple = t.text(&format!("SELECT couple_id FROM couples WHERE user_0 = '{id}'")).await;
     t.seed(&id).await;
@@ -352,7 +345,7 @@ async fn admin_delete_cleans_up_the_couple_and_its_photos() {
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("1.jpg"), b"x").unwrap();
 
-    let r = t.call(Method::POST, "/api/user/delete", Some(&admin), Some(Value::String(name)), "10.77.0.2").await;
+    let r = t.post("/api/common/delete-account", &token, json!({"password": PW, "confirm": "delete"})).await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
     assert!(t.leftovers(&id).await.is_empty());
     assert_eq!(t.scalar(&format!("SELECT COUNT(*) FROM couples WHERE couple_id = '{couple}'")).await, 0);

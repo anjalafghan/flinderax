@@ -47,8 +47,6 @@ Configuration (env or `.env`):
 | `JOY_PHOTOS_DIR` | where Dates photos are stored |
 | `TZ` | local time zone for dates (`Asia/Kolkata`) |
 | `FLINDERAX_UTC_OFFSET_MINUTES` | what "today" is for the money side (330 = IST). The name is kept from the old app |
-| `CORS_ORIGINS` | optional, comma-separated; off by default since the server serves the app itself |
-| `REDIS_URL` | optional cache |
 
 ```
 bun run test           # cargo unit tests + web tests (bun test)
@@ -159,7 +157,7 @@ Everything is data, nothing is hard-coded: accounts (`bank`, `cash`, `fd`, `rd`)
 | Area | Endpoints |
 |------|-----------|
 | Auth | `/api/common/register`, `/api/common/login` |
-| Cards | `/api/card/{create,update,delete,get_card,history,reset,insert_transaction,delete_transaction,defer_*}`, `GET /api/card/get_all_cards` (protobuf) |
+| Cards | `/api/card/{create,update,delete,get_card,history,reset,delete_transaction,defer_*}`, `GET /api/card/get_all_cards` |
 | Card cycles | `/api/card/snapshot`, `/api/card/breakdown`, `/api/card/emi/{create,update,delete}`, `/api/card/pending/{create,clear}` |
 | Accounts | `/api/account/{create,update,update_balance,delete}`, `GET /api/account/list` |
 | Plan | `/api/plan/commitment/{create,update,delete}`, `/api/plan/income/{create,update,delete}`, `/api/plan/settings/update`; `GET` `.../commitment/list`, `.../income/list`, `settings/get` |

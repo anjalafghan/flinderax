@@ -11,6 +11,5 @@ web/dist/
 *.db-journal
 *.db-shm
 *.db-wal
-load-test.js
 *.md
 fly.toml

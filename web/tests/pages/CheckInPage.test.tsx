@@ -101,8 +101,6 @@ function fakeServer() {
     if (url === "/api/ingest/holder-names") return respond({ names: [] });
     return respond([]);
   });
-  // The card list is a protobuf request the statement widget makes; it isn't part of this page's data.
-  spyOn(api, "getProtobuf").mockRejectedValue(new Error("offline"));
 }
 
 function renderPage(seed: { status: CheckinStatus; report?: QuarterReport | Error; history?: CheckinHistory }) {

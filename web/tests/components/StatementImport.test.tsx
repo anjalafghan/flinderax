@@ -43,8 +43,6 @@ const needsMapping = {
 };
 
 const renderImport = () => {
-  // The cards list is a protobuf request; these tests don't need it, so it fails quietly.
-  spyOn(api, "getProtobuf").mockRejectedValue(new Error("offline"));
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
       <StatementImport />

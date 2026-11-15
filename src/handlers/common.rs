@@ -45,14 +45,6 @@ pub fn not_found(msg: impl Into<String>) -> AppError {
     AppError(StatusCode::NOT_FOUND, msg.into())
 }
 
-/// Drops the cached protobuf card list for this user (same key the card handlers use).
-pub async fn invalidate_cards_cache(state: &AppState, user_id: &str) {
-    if let Some(mut redis) = state.redis.clone() {
-        let key = format!("user_cards_proto_v2:{}", user_id);
-        let _: () = redis::AsyncCommands::del(&mut redis, key).await.unwrap_or_default();
-    }
-}
-
 /// Today's date for planning. Bank cycles are local, so the offset is configurable
 /// (`FLINDERAX_UTC_OFFSET_MINUTES`, default +330 = IST).
 pub fn today_local() -> time::Date {

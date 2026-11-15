@@ -11,7 +11,7 @@ use time::{macros::format_description, Date};
 use crate::{
     handlers::{
         card::{ensure_card_owned, record_total},
-        common::{bad_request, invalidate_cards_cache, not_found, today_local, AppError},
+        common::{bad_request, not_found, today_local, AppError},
     },
     models::AppState,
     planner::{
@@ -89,7 +89,6 @@ pub async fn snapshot(
         record_total(&mut tx, &p.card_id, (p.outstanding_paise as f64 / 100.0) as f32).await?;
     tx.commit().await?;
 
-    invalidate_cards_cache(&state, &user_id).await;
     Ok(Json(SnapshotResponse { snapshot_id, transaction_id, status: true }))
 }
 
@@ -374,7 +373,6 @@ pub async fn emi_create(
     )
     .execute(&state.db)
     .await?;
-    invalidate_cards_cache(&state, &user_id).await;
     Ok(Json(IdResponse { id, status: true }))
 }
 
@@ -402,7 +400,6 @@ pub async fn emi_update(
     if res.rows_affected() == 0 {
         return Err(not_found("EMI not found"));
     }
-    invalidate_cards_cache(&state, &user_id).await;
     Ok(Json(StatusOk { status: true }))
 }
 
@@ -421,7 +418,6 @@ pub async fn emi_delete(
     if res.rows_affected() == 0 {
         return Err(not_found("EMI not found"));
     }
-    invalidate_cards_cache(&state, &user_id).await;
     Ok(Json(StatusOk { status: true }))
 }
 
@@ -461,7 +457,6 @@ pub async fn pending_create(
     )
     .execute(&state.db)
     .await?;
-    invalidate_cards_cache(&state, &user_id).await;
     Ok(Json(IdResponse { id, status: true }))
 }
 
@@ -483,7 +478,6 @@ pub async fn pending_clear(
     if res.rows_affected() == 0 {
         return Err(not_found("Pending charge not found"));
     }
-    invalidate_cards_cache(&state, &user_id).await;
     Ok(Json(StatusOk { status: true }))
 }
 

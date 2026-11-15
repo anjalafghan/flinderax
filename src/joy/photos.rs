@@ -147,3 +147,13 @@ mod tests {
         assert!(process(b"definitely not a photo").is_err());
     }
 }
+
+/// Where Dates photos live: `JOY_PHOTOS_DIR`, else `joy-photos` next to the database file.
+pub fn photos_root() -> std::path::PathBuf {
+    if let Ok(dir) = std::env::var("JOY_PHOTOS_DIR") {
+        return dir.into();
+    }
+    let url = std::env::var("DATABASE_URL").unwrap_or_default();
+    let file = url.trim_start_matches("sqlite:").trim_start_matches("//").split('?').next().unwrap_or("");
+    std::path::Path::new(file).parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(std::path::Path::new(".")).join("joy-photos")
+}

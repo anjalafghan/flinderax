@@ -1,14 +1,11 @@
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
-use redis::aio::ConnectionManager;
-use sqlx::FromRow;
 use sqlx::SqlitePool;
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: SqlitePool,
-    pub redis: Option<ConnectionManager>,
     pub paseto_key: Arc<rusty_paseto::prelude::PasetoSymmetricKey<rusty_paseto::core::V4, rusty_paseto::core::Local>>,
 }
 
@@ -22,20 +19,6 @@ pub struct CreateUserPayload {
     /// Must match the `SIGNUP_CODE` secret. With no secret set, sign-ups are closed.
     #[serde(default)]
     pub signup_code: String,
-}
-#[derive(serde::Serialize)]
-pub struct GetUserResponse {
-    pub user_id: String,
-    pub user_name: String,
-    pub user_role: String,
-}
-
-#[derive(FromRow, Debug, serde::Serialize)]
-pub struct GetUsers {
-    pub user_id: String,
-    pub user_name: String,
-    pub user_password: String,
-    pub user_role: String,
 }
 #[derive(serde::Serialize)]
 pub struct CreateUserResponse {
@@ -112,19 +95,6 @@ pub struct ShowGetCardResponse {
     pub credit_limit_paise: Option<i64>,
     pub pay_from_account_id: Option<String>,
 }
-#[derive(Deserialize)]
-pub struct InsertTransactionPayload {
-    pub card_id: String,
-    pub amount_due: f32,
-}
-
-#[derive(Serialize)]
-pub struct InsertTransactionResponse {
-    pub transaction_id: String,
-    pub amount_due: f32,
-    pub status: bool,
-}
-
 #[derive(Deserialize, Serialize)]
 pub struct CardTransactionHistory {
     pub transaction_id: String,
@@ -152,20 +122,6 @@ pub struct ResetTransactionsPayload {
 pub struct DeleteTransactionPayload {
     pub card_id: String,
     pub transaction_id: String,
-}
-
-#[derive(Deserialize)]
-pub struct DeferUpdatePayload {
-    pub card_id: String,
-    pub amount: f32,
-}
-
-#[derive(Serialize)]
-pub struct DeferUpdateResponse {
-    pub batch_id: String,
-    pub item_id: String,
-    pub total_pending: f32,
-    pub status: bool,
 }
 
 #[derive(Serialize)]

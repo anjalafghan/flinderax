@@ -1,83 +1,74 @@
 use axum::{
     extract::State,
-    http::{header, StatusCode},
-    response::IntoResponse,
+    http::StatusCode,
     Extension, Json,
 };
 use time::{format_description::well_known::Rfc3339, OffsetDateTime, PrimitiveDateTime, macros::format_description};
 use nanoid::nanoid;
-use prost::Message;
-use redis::AsyncCommands;
 use tracing::error;
 
  use crate::{
      handlers::{
-         color::{self, pack, unpack},
          account::ensure_account_owned,
-         common::{bad_request, invalidate_cards_cache, not_found, validate_day, AppError},
+         common::{not_found, validate_day, AppError},
      },
-     validate::{non_negative_amount, positive_amount},
      models::{
          AppState, CardResponse, CreateCardPayload, DeleteCardPayload, DeleteTransactionPayload,
          DeleteTransactionResponse, GetCardForUser,
-         InsertTransactionPayload, InsertTransactionResponse, ResetTransactionsPayload,
-         ShowGetCardResponse, UpdateCardPayload, DeferUpdatePayload, DeferUpdateResponse,
+         ResetTransactionsPayload,
+         ShowGetCardResponse, UpdateCardPayload,
          DeferredBatchStatus, DeferredItemStatus, SettleDeferredPayload, SettleDeferredResponse,
      },
  };
-struct Timestamp {
-    seconds: i64,
-    nanos: i32,
-}
-
-fn parse_timestamp(timestamp_str: &str) -> Timestamp {
+/// The history timestamp as RFC 3339 (the column holds either that or `YYYY-MM-DD HH:MM:SS`, both UTC).
+fn to_rfc3339(timestamp_str: &str) -> String {
     if let Ok(dt) = OffsetDateTime::parse(timestamp_str, &Rfc3339) {
-        Timestamp {
-            seconds: dt.unix_timestamp(),
-            nanos: dt.nanosecond() as i32,
-        }
-    } else {
-        let format = format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
-        if let Ok(primitive_dt) = PrimitiveDateTime::parse(timestamp_str, &format) {
-            let dt = primitive_dt.assume_utc();
-            Timestamp {
-                seconds: dt.unix_timestamp(),
-                nanos: dt.nanosecond() as i32,
-            }
-        } else {
-            Timestamp {
-                seconds: 0,
-                nanos: 0,
-            }
-        }
+        return dt.format(&Rfc3339).unwrap_or_else(|_| timestamp_str.to_string());
     }
+    let format = format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
+    PrimitiveDateTime::parse(timestamp_str, &format)
+        .ok()
+        .and_then(|dt| dt.assume_utc().format(&Rfc3339).ok())
+        .unwrap_or_else(|| timestamp_str.to_string())
 }
 
-impl From<crate::models::CardTransactionHistory> for crate::proto::CardTransactionHistory {
-    fn from(value: crate::models::CardTransactionHistory) -> Self {
-        let timestamp = parse_timestamp(&value.timestamp);
-        crate::proto::CardTransactionHistory {
-            transaction_id: value.transaction_id,
-            total_due_input: value.total_due_input,
-            timestamp_seconds: timestamp.seconds,
-            timestamp_nanos: timestamp.nanos,
-        }
-    }
+#[derive(serde::Serialize)]
+pub struct CardListItem {
+    card_id: String,
+    card_name: String,
+    card_bank: String,
+    /// Colours are packed 0xRRGGBB integers (see `pack`).
+    card_primary_color: i64,
+    card_secondary_color: i64,
+    last_total_due: Option<f32>,
+    last_delta: Option<f32>,
+    last_4_digits: Option<String>,
 }
 
-impl From<crate::models::ShowGetCardResponse> for crate::proto::Card {
-    fn from(param: crate::models::ShowGetCardResponse) -> Self {
-        crate::proto::Card {
-            card_id: param.card_id,
-            card_name: param.card_name,
-            card_bank: param.card_bank,
-            card_primary_color: color::pack(param.card_primary_color),
-            card_secondary_color: color::pack(param.card_secondary_color),
-            last_total_due: param.last_total_due,
-            last_delta: param.last_delta,
-            last_4_digits: param.last_4_digits,
-        }
-    }
+#[derive(serde::Serialize)]
+pub struct CardListResponse {
+    cards: Vec<CardListItem>,
+}
+
+#[derive(serde::Serialize)]
+pub struct HistoryItem {
+    transaction_id: String,
+    total_due_input: f32,
+    timestamp: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct HistoryResponse {
+    histories: Vec<HistoryItem>,
+}
+
+/// A card colour as one 0xRRGGBB integer.
+fn pack(color: (u8, u8, u8)) -> i32 {
+    ((color.0 as i32) << 16) | ((color.1 as i32) << 8) | (color.2 as i32)
+}
+
+fn unpack(color: i64) -> (u8, u8, u8) {
+    (((color >> 16) & 0xFF) as u8, ((color >> 8) & 0xFF) as u8, (color & 0xFF) as u8)
 }
 
 pub async fn create_card(
@@ -93,8 +84,8 @@ pub async fn create_card(
     validate_cycle(&card_details.statement_day, &card_details.due_day)?;
     ensure_account_owned(&state.db, &card_details.pay_from_account_id, &user_id).await?;
     let card_id = nanoid!();
-    let primary_color = color::pack(card_details.card_primary_color);
-    let secondary_color = color::pack(card_details.card_secondary_color);
+    let primary_color = pack(card_details.card_primary_color);
+    let secondary_color = pack(card_details.card_secondary_color);
 
     sqlx::query!(
         "INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color, last_4_digits, statement_day, due_day, credit_limit_paise, pay_from_account_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -128,11 +119,6 @@ pub async fn create_card(
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Invalidate cache
-    if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards_proto_v2:{}", user_id);
-        let _: () = redis.del(cache_key).await.unwrap_or_default();
-    }
 
     Ok(Json(CardResponse {
         card_id,
@@ -176,11 +162,6 @@ pub async fn update(
         return Err(not_found("Card not found or you don't have permission to modify it"));
     }
 
-    // Invalidate cache
-    if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards_proto_v2:{}", user_id);
-        let _: () = redis.del(cache_key).await.unwrap_or_default();
-    }
 
     Ok(Json(CardResponse {
         card_id: update_card_details.card_id,
@@ -232,15 +213,7 @@ pub async fn get_card(
 pub async fn get_all_cards(
     State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
-) -> Result<impl IntoResponse, AppError> {
-    let cache_key = format!("user_cards_proto_v2:{}", user_id);
-
-    // Check Redis cache if available
-    if let Some(mut redis) = state.redis.clone()
-        && let Ok(Some(cached_data)) = redis.get::<_, Option<Vec<u8>>>(&cache_key).await {
-            return Ok(([(header::CONTENT_TYPE, "application/x-protobuf")], cached_data));
-        }
-
+) -> Result<Json<CardListResponse>, AppError> {
     let cards = sqlx::query!(
         "SELECT c.card_id, c.card_name, c.card_bank, c.card_primary_color, c.card_secondary_color, c.last_4_digits,
                 crs.last_total_due, crs.last_delta
@@ -253,36 +226,21 @@ pub async fn get_all_cards(
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let proto_cards: Vec<crate::proto::Card> = cards
+    let cards = cards
         .into_iter()
-        .map(|card| crate::proto::Card {
+        .map(|card| CardListItem {
             card_id: card.card_id.unwrap(),
             card_name: card.card_name,
             card_bank: card.card_bank,
-            card_primary_color: card.card_primary_color as i32,
-            card_secondary_color: card.card_secondary_color as i32,
+            card_primary_color: card.card_primary_color,
+            card_secondary_color: card.card_secondary_color,
             last_total_due: Some(card.last_total_due as f32),
             last_delta: Some(card.last_delta as f32),
             last_4_digits: card.last_4_digits,
         })
         .collect();
 
-    let card_list = crate::proto::CardList { cards: proto_cards };
-
-    let mut buf = Vec::new();
-    card_list.encode(&mut buf).map_err(|e: prost::EncodeError| {
-        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
-
-    // Cache the result if Redis is available
-    if let Some(mut redis) = state.redis.clone() {
-        let _: () = redis
-            .set_ex(cache_key, buf.clone(), 3600)
-            .await
-            .unwrap_or_default();
-    }
-
-    Ok(([(header::CONTENT_TYPE, "application/x-protobuf")], buf))
+    Ok(Json(CardListResponse { cards }))
 }
 
 pub async fn delete_card(
@@ -308,11 +266,6 @@ pub async fn delete_card(
         ));
     }
 
-    // Invalidate cache
-    if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards_proto_v2:{}", user_id);
-        let _: () = redis.del(cache_key).await.unwrap_or_default();
-    }
 
     Ok(Json(CardResponse {
         card_id,
@@ -393,55 +346,11 @@ pub(crate) async fn ensure_card_owned(
     Ok(())
 }
 
-/// Converts a legacy rupees `f32` amount to paise (saturating, so huge values fail the bounds
-/// check instead of wrapping), after rejecting NaN and infinity.
-fn rupees_to_paise(amount: f32) -> Result<i64, AppError> {
-    if !amount.is_finite() {
-        return Err(bad_request("Amount must be a number."));
-    }
-    Ok((amount as f64 * 100.0).round() as i64)
-}
-
-/// Runs one of `crate::validate`'s paise bounds against a rupees `f32` amount and maps a
-/// failure to 400.
-fn check_rupees(amount: f32, check: fn(i64) -> Result<i64, String>) -> Result<(), AppError> {
-    let paise = rupees_to_paise(amount)?;
-    check(paise).map(|_| ()).map_err(bad_request)
-}
-
-pub async fn insert_transaction(
-    State(state): State<AppState>,
-    Extension((user_id, _role)): Extension<(String, String)>,
-    Json(insert_transaction): Json<InsertTransactionPayload>,
-) -> Result<Json<InsertTransactionResponse>, AppError> {
-    check_rupees(insert_transaction.amount_due, non_negative_amount)?;
-    ensure_card_owned(&state.db, &insert_transaction.card_id, &user_id).await?;
-    let mut tx = state.db.begin().await.map_err(|e| {
-        error!("Error setting transaction check {} ", e);
-        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
-
-    let (transaction_id, last_delta) =
-        record_total(&mut tx, &insert_transaction.card_id, insert_transaction.amount_due).await?;
-
-    tx.commit()
-        .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    invalidate_cards_cache(&state, &user_id).await;
-
-    Ok(Json(InsertTransactionResponse {
-        transaction_id,
-        amount_due: last_delta as f32,
-        status: true,
-    }))
-}
-
 pub async fn get_history(
     State(state): State<AppState>,
     Extension((user_id, _role)): Extension<(String, String)>,
     Json(payload): Json<crate::models::GetHistoryPayload>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<HistoryResponse>, AppError> {
     ensure_card_owned(&state.db, &payload.card_id, &user_id).await?;
     let history = sqlx::query_as!(
         crate::models::CardTransactionHistory,
@@ -458,19 +367,16 @@ pub async fn get_history(
     .await
     .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let proto_histories: Vec<crate::proto::CardTransactionHistory> =
-        history.into_iter().map(|h| h.into()).collect();
+    let histories = history
+        .into_iter()
+        .map(|h| HistoryItem {
+            transaction_id: h.transaction_id,
+            total_due_input: h.total_due_input,
+            timestamp: to_rfc3339(&h.timestamp),
+        })
+        .collect();
 
-    let response = crate::proto::CardHistoryList {
-        histories: proto_histories,
-    };
-
-    let mut buf = Vec::new();
-    response.encode(&mut buf).map_err(|e: prost::EncodeError| {
-        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
-
-    Ok(([(header::CONTENT_TYPE, "application/x-protobuf")], buf))
+    Ok(Json(HistoryResponse { histories }))
 }
 
 pub async fn reset_transactions(
@@ -536,10 +442,6 @@ pub async fn reset_transactions(
         AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
 
-    if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards_proto_v2:{}", user_id);
-        let _: () = redis.del(cache_key).await.unwrap_or_default();
-    }
 
     Ok(Json(CardResponse {
         card_id: card_id.to_string(),
@@ -665,107 +567,9 @@ pub async fn delete_transaction(
         AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
 
-    // Invalidate cache
-    if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards_proto_v2:{}", user_id);
-        let _: () = redis.del(cache_key).await.unwrap_or_default();
-    }
 
     Ok(Json(DeleteTransactionResponse {
         transaction_id: transaction_id.to_string(),
-        status: true,
-    }))
-}
-
-pub async fn defer_update(
-    State(state): State<AppState>,
-    Extension((user_id, _role)): Extension<(String, String)>,
-    Json(payload): Json<DeferUpdatePayload>,
-) -> Result<Json<DeferUpdateResponse>, AppError> {
-    check_rupees(payload.amount, positive_amount)?;
-    let card_id = &payload.card_id;
-
-    let card_exists = sqlx::query!(
-        "SELECT card_id FROM cards WHERE card_id = ? AND user_id = ?",
-        card_id,
-        user_id
-    )
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if card_exists.is_none() {
-        return Err(AppError(
-            StatusCode::NOT_FOUND,
-            "Card not found or you don't have permission to modify it".to_string(),
-        ));
-    }
-
-    let mut tx = state.db.begin().await.map_err(|e| {
-        error!("Error starting transaction: {}", e);
-        AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
-
-    let batch_id = sqlx::query!(
-        "SELECT batch_id FROM deferred_payment_batches WHERE user_id = ? AND status = 'pending' LIMIT 1",
-        user_id
-    )
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let batch_id = if let Some(b) = batch_id {
-        b.batch_id.unwrap()
-    } else {
-        let new_batch_id = nanoid!();
-        sqlx::query!(
-            "INSERT INTO deferred_payment_batches (batch_id, user_id, total_amount, status) VALUES (?, ?, 0, 'pending')",
-            new_batch_id,
-            user_id
-        )
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-        new_batch_id
-    };
-
-    let item_id = nanoid!();
-    sqlx::query!(
-        "INSERT INTO deferred_payment_items (item_id, batch_id, card_id, amount) VALUES (?, ?, ?, ?)",
-        item_id,
-        batch_id,
-        card_id,
-        payload.amount
-    )
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    sqlx::query!(
-        "UPDATE deferred_payment_batches SET total_amount = total_amount + ? WHERE batch_id = ?",
-        payload.amount,
-        batch_id
-    )
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    tx.commit()
-        .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let total = sqlx::query!(
-        "SELECT total_amount FROM deferred_payment_batches WHERE batch_id = ?",
-        batch_id
-    )
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(DeferUpdateResponse {
-        batch_id,
-        item_id,
-        total_pending: total.total_amount as f32,
         status: true,
     }))
 }
@@ -902,10 +706,6 @@ pub async fn settle_deferred(
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    if let Some(mut redis) = state.redis.clone() {
-        let cache_key = format!("user_cards_proto_v2:{}", user_id);
-        let _: () = redis.del(cache_key).await.unwrap_or_default();
-    }
 
     Ok(Json(SettleDeferredResponse {
         batch_id: payload.batch_id,

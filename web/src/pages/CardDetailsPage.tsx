@@ -15,7 +15,6 @@ import {
 import { toast } from "sonner";
 
 import api from "@/services/api";
-import { decodeCardHistoryList } from "@/proto/decoder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard } from "@/components/feature/CreditCard";
@@ -62,15 +61,14 @@ export default function CardDetailsPage() {
 
   const breakdownQuery = useBreakdown(id);
 
-  // Fetch History (protobuf)
+  // Fetch History
   const historyQuery = useQuery({
     queryKey: ["history", id],
     queryFn: async () => {
-      const buffer = await api.postProtobuf("/api/card/history", {
-        card_id: id,
-      });
-      const decoded = await decodeCardHistoryList(buffer);
-      return decoded.histories;
+      const res = await api.post<{
+        histories: { transaction_id: string; total_due_input: number; timestamp: string }[];
+      }>("/api/card/history", { card_id: id });
+      return res.data.histories;
     },
     enabled: !!id,
   });

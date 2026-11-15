@@ -267,7 +267,6 @@ mod tests {
         );
         AppState {
             db,
-            redis: None,
             paseto_key: std::sync::Arc::new(key),
         }
     }

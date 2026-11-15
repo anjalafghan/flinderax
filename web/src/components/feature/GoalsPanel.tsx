@@ -16,7 +16,6 @@ import { GOAL_STATUS_LABEL, GOAL_STATUS_TONE, monthsCoveredLabel, progressPercen
 import { useArchivedGoals, useUnarchiveGoal } from "@/hooks/usePlanner";
 import { EmptyScene } from "@/components/ui/EmptyScene";
 import { celebrate } from "@/utils/motion";
-import { useAnimatedList } from "@/hooks/useAnimatedList";
 import { RewardChips } from "@/components/feature/RewardChips";
 import { useRewards } from "@/services/rewards";
 import { forGoal } from "@/utils/rewards";
@@ -257,7 +256,6 @@ function ArchivedGoals() {
 }
 
 export function GoalsPanel() {
-  const listRef = useAnimatedList<HTMLUListElement>();
   const { data, isLoading, isError } = useGoals();
   const save = useSaveGoal();
   const [adding, setAdding] = useState(false);
@@ -303,7 +301,7 @@ export function GoalsPanel() {
 
         {data && data.goals.length === 0 && <EmptyScene scene="sprout" title="No goals yet">Plant one: a trip, a wedding, a rainy-day fund.</EmptyScene>}
         {data && data.goals.length > 0 && (
-          <ul className="ledger" ref={listRef}>
+          <ul className="ledger">
             {data.goals.map((g) => (
               <GoalItem key={g.id} goal={g} />
             ))}

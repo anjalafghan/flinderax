@@ -262,7 +262,7 @@ pub async fn remove_couple_photos(couple: &str) {
     if couple.is_empty() || !couple.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
         return;
     }
-    let dir = crate::import_joy::photos_root().join(couple);
+    let dir = crate::joy::photos::photos_root().join(couple);
     if let Err(e) = tokio::fs::remove_dir_all(&dir).await
         && e.kind() != std::io::ErrorKind::NotFound
     {

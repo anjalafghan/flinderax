@@ -567,7 +567,7 @@ mod tests {
 
     fn state(db: SqlitePool) -> AppState {
         let key = rusty_paseto::prelude::PasetoSymmetricKey::from(rusty_paseto::prelude::Key::from(&[7u8; 32]));
-        AppState { db, redis: None, paseto_key: std::sync::Arc::new(key) }
+        AppState { db, paseto_key: std::sync::Arc::new(key) }
     }
 
     fn ids(groups: &[Group]) -> Vec<i64> {

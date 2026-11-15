@@ -79,7 +79,7 @@ pub async fn joy(state: &AppState, user_id: &str) -> Result<Joy, AppError> {
 /// A couple's settings with the usual public URL and photo root.
 pub async fn load_ctx(db: &SqlitePool, couple: &str) -> Result<Ctx, AppError> {
     let public_url = std::env::var("PUBLIC_URL").unwrap_or_else(|_| "https://joy.fly.dev".into());
-    Ok(ctx::load(db, couple, &public_url, &crate::import_joy::photos_root()).await?)
+    Ok(ctx::load(db, couple, &public_url, &crate::joy::photos::photos_root()).await?)
 }
 
 pub fn internal(e: impl std::fmt::Display) -> AppError {

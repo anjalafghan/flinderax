@@ -12,7 +12,6 @@ use rusty_paseto::{
     prelude::{PasetoParser, PasetoSymmetricKey},
 };
 use std::sync::Arc;
-use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::compression::{CompressionLayer, CompressionLevel};
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultOnResponse, TraceLayer};
@@ -63,37 +62,11 @@ async fn api_not_found() -> AppError {
     AppError(StatusCode::NOT_FOUND, "Not found".to_string())
 }
 
-/// The web app is served by this same server, so cross-origin access is off unless
-/// `CORS_ORIGINS` (comma-separated) lists origins that may call the API.
-fn cors_layer() -> CorsLayer {
-    let origins: Vec<_> = std::env::var("CORS_ORIGINS")
-        .unwrap_or_default()
-        .split(',')
-        .filter_map(|o| o.trim().parse().ok())
-        .collect();
-    if origins.is_empty() {
-        return CorsLayer::new();
-    }
-    CorsLayer::new()
-        .allow_origin(AllowOrigin::list(origins))
-        .allow_methods(Any)
-        .allow_headers(Any)
-}
-
 pub fn build_router(state: AppState) -> Router {
     let dir = static_dir();
     let index = format!("{dir}/index.html");
 
     Router::new()
-        .nest(
-            "/api/user",
-            routes::user::routes(state.clone())
-                .layer(trace_layer())
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    token_validator_middleware,
-                )),
-        )
         .nest(
             "/api/common",
             routes::common::routes(state.clone()).layer(trace_layer()),
@@ -125,17 +98,10 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/hook", routes::ingest::hook_routes(state.clone()).layer(trace_layer()))
         // Unknown API paths must 404 instead of falling through to the SPA's index.html.
         .route("/api/{*rest}", any(api_not_found))
-        // Joy's old addresses (envelope links already sent on WhatsApp, bookmarks) now live under /joy.
+        // Joy's envelope links were already sent on WhatsApp, so the old /e/{token} address still redirects.
         .route("/e/{token}", axum::routing::get(old_joy_envelope))
-        .route("/wishlist", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/slips") }))
-        .route("/history", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/kept") }))
-        .route("/regulars", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/regulars") }))
-        .route("/year", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/year") }))
-        .route("/year/{*rest}", axum::routing::get(old_joy_year))
-        .route("/who", axum::routing::get(|| async { axum::response::Redirect::permanent("/joy/settings") }))
-        .route("/login", axum::routing::get(|| async { axum::response::Redirect::permanent("/auth") }))
         // Static files come from the fallback. It must be set before the layers below: `Router::layer`
-        // only wraps what exists when it is called, so headers, CORS and compression would skip it.
+        // only wraps what exists when it is called, so headers and compression would skip it.
         // `<file>.br` / `<file>.gz` are served when present, so those aren't compressed on the fly.
         .fallback_service(
             ServeDir::new(&dir)
@@ -143,7 +109,6 @@ pub fn build_router(state: AppState) -> Router {
                 .precompressed_gzip()
                 .fallback(axum::handler::HandlerWithoutStateExt::into_service(spa_fallback(&index))),
         )
-        .layer(cors_layer())
         .layer(middleware::from_fn(crate::headers::security_headers))
         // Level 4 instead of brotli's default (11): dynamic JSON gets compressed on every request, and
         // on a shared CPU the default costs far more than the few percent of size it saves.
@@ -206,29 +171,6 @@ async fn authenticate(token: &str, state: &AppState) -> Result<(String, String),
     }
 }
 
-pub async fn token_validator_auth_middleware(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    mut request: Request,
-    next: Next,
-) -> Result<Response, AppError> {
-    match get_token(&headers) {
-        Some(token) => {
-            let (user_id, role) = authenticate(token, &state).await?;
-            if role != "admin" {
-                return Err(AppError(
-                    StatusCode::FORBIDDEN,
-                    "User is not an admin".to_string(),
-                ));
-            }
-            request.extensions_mut().insert((user_id, role));
-            let response = next.run(request).await;
-            Ok(response)
-        }
-        _ => Err(AppError(StatusCode::UNAUTHORIZED, "error".to_string())),
-    }
-}
-
 fn get_token(headers: &HeaderMap) -> Option<&str> {
     let header_value = headers.get("Authorization")?.to_str().ok()?;
     header_value
@@ -283,13 +225,4 @@ async fn old_joy_envelope(axum::extract::Path(token): axum::extract::Path<String
         return axum::http::StatusCode::NOT_FOUND.into_response();
     }
     axum::response::Redirect::permanent(&format!("/joy/e/{token}")).into_response()
-}
-
-/// `/year/2026` and `/year/2026/10` (Joy) → the same under `/joy`.
-async fn old_joy_year(axum::extract::Path(rest): axum::extract::Path<String>) -> axum::response::Response {
-    use axum::response::IntoResponse;
-    if !rest.chars().all(|c| c.is_ascii_digit() || c == '/') {
-        return axum::http::StatusCode::NOT_FOUND.into_response();
-    }
-    axum::response::Redirect::permanent(&format!("/joy/year/{rest}")).into_response()
 }
