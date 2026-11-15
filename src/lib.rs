@@ -6,6 +6,7 @@ pub mod alerts;
 pub mod app;
 pub mod backup;
 pub mod handlers;
+pub mod housekeeping;
 pub mod headers;
 pub mod joy;
 pub mod models;
