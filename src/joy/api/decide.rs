@@ -76,6 +76,8 @@ pub struct DecideView {
     pub middle: middle::MiddleView,
     /// The dates we could draw for ("Thursday evening"), the next one selected; empty without a schedule.
     pub whens: Vec<Opt>,
+    /// A kept date whose day has passed and nobody has said how it went: "did it happen?".
+    pub to_close: Option<ToClose>,
     /// The next kept date's day-of plan, until it's over.
     pub next_plan: Option<dayplan::DayPlan>,
     /// Tonight's question for a regular ("Blue Tokai?"), and what we could still spend on them.
@@ -121,6 +123,14 @@ async fn nudge(db: &SqlitePool, couple: &str, ctx: &Ctx, who: Option<usize>) -> 
             return Ok((format!("It's been {weeks} weeks since your last date."), false));
         }
     Ok((String::new(), false))
+}
+
+#[derive(Debug, Serialize)]
+pub struct ToClose {
+    pub id: i64,
+    pub title: String,
+    /// "14 Oct"
+    pub when: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -173,6 +183,11 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
         .find(|r| !sealed_for(r, who))
         .map(|r| Memory { title: ctx.personalize(&r.title), when: format!("{} {}", r.day_label(), r.day.get(..4).unwrap_or("")) });
     let nudge = nudge(db, couple, ctx, who).await?;
+    let to_close = db::to_close(db, couple)
+        .await?
+        .into_iter()
+        .find(|r| !sealed_for(r, who))
+        .map(|r| ToClose { id: r.id, title: ctx.personalize(&r.title), when: r.day_label() });
     let middle = middle::view(db, couple, ctx, who, &me.partner).await?;
     let jar = jar_data(db, couple, ctx, j.who, None).await?;
     let acts = &jar.acts;
@@ -235,6 +250,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
         nudge_soon: nudge.1,
         middle,
         whens,
+        to_close,
         next_plan,
         regulars: regular::card(db, couple, ctx).await?,
     }))

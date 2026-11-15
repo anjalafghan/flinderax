@@ -17,6 +17,7 @@ import { createChoreo } from "./choreo";
 import DayPlanView from "./DayPlanView";
 import { attachDrag, attachPress } from "./drag";
 import { RegularCard } from "../regulars/RegularCard";
+import { CloseOut } from "./CloseOut";
 import { applyRelax, EMPTY_FILTERS, filtersToForm, putBackForm, stampDate, vetoForm, type Filters, type PickForm } from "./form";
 import HeartLayer, { type HeartHandle } from "./HeartLayer";
 import JarCanvas, { type JarHandle } from "./JarCanvas";
@@ -744,6 +745,7 @@ export default function JarPage() {
 
           <aside className="shelf-notes" aria-label="Notes from the shelf">
             <RegularCard card={v.regulars} onChange={reload} />
+            {v.to_close && <CloseOut item={v.to_close} onDone={reload} />}
             {v.memory && (
               <div className="keepsake grain">
                 <span className="keepsake-k">This week, a year ago</span>

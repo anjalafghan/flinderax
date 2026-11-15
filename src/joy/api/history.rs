@@ -450,6 +450,8 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
     let (db, couple, ctx, who) = (&s.db, j.couple.as_str(), &j.ctx, Some(j.who));
     let rain = super::weather_for(ctx).tonight().await.is_some_and(|p| p >= weather::LIKELY_PERCENT);
     let (done, skipped): (Vec<_>, Vec<_>) = db::history(db, couple).await?.into_iter().partition(|r| r.outcome == "did_it");
+    // A cancelled date is neither done nor a put-back.
+    let skipped: Vec<_> = skipped.into_iter().filter(|r| r.outcome != "cancelled").collect();
     // A slip that's now a sealed surprise for this viewer mustn't show up in the
     // "put back" footnote either, or it would give the surprise away.
     let sealed_titles: Vec<&str> = done.iter().filter(|r| sealed_for(r, who)).map(|r| r.title.as_str()).collect();
@@ -661,6 +663,29 @@ pub async fn reveal(State(s): State<AppState>, Extension((user_id, _)): User, Pa
         return Err(forbidden("Only whoever planned it can reveal it."));
     }
     db::reveal(&s.db, &j.couple, id).await?;
+    Ok(go(kept_to(id)))
+}
+
+#[derive(Deserialize)]
+pub struct HappenedBody {
+    #[serde(deserialize_with = "flex")]
+    happened: String,
+}
+
+/// `POST /history/{id}/happened`: "did it happen?" for a kept date whose day has passed. Yes
+/// confirms it; no cancels it. A date still to come can't be closed.
+pub async fn happened(
+    State(s): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(id): Path<i64>,
+    Json(b): Json<HappenedBody>,
+) -> Result<Json<Go>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    let yes = matches!(b.happened.as_str(), "1" | "true" | "yes");
+    if !db::set_happened(&s.db, &j.couple, id, yes).await? {
+        return Err(unprocessable("That date hasn't happened yet."));
+    }
     Ok(go(kept_to(id)))
 }
 
@@ -1065,6 +1090,7 @@ pub fn router() -> Router<AppState> {
         .route("/history/{id}", post(rate))
         .route("/history/{id}/reveal", post(reveal))
         .route("/history/{id}/delete", post(delete))
+        .route("/history/{id}/happened", post(happened))
         .route("/putbacks/clear", post(clear_putbacks))
         .route("/history/{id}/cost", post(set_cost))
         .route("/history/{id}/day", post(set_day))

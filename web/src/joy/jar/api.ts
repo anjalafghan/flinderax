@@ -88,6 +88,8 @@ export interface DecideView {
   my_turn: boolean;
   rain: number | null;
   memory: { title: string; when: string } | null;
+  /** A kept date whose day has passed and nobody has said how it went. */
+  to_close: { id: number; title: string; when: string } | null;
   budget: BudgetView;
   nudge: string;
   nudge_soon: boolean;

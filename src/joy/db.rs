@@ -196,8 +196,16 @@ fn blank_as_zero<'de, D: serde::Deserializer<'de>>(d: D) -> Result<i64, D::Error
     s.parse().map_err(serde::de::Error::custom)
 }
 
+/// `times_done` counts kept dates whose day has passed. `last_done_at` is the latest kept date,
+/// planned or done, so a slip that is booked is not handed out again. Both are derived from the
+/// history; the stored columns of the same names are no longer read.
 const COLS: &str = "id, title, notes, est_cost, setting, area, venue, lat, lng, duration, tags, energy, \
-                    added_by, times_done, last_done_at, last_skipped_at, generated, \
+                    added_by, \
+                    (SELECT COUNT(*) FROM joy_history h WHERE h.activity_id = joy_activities.id AND h.outcome = 'did_it' \
+                       AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()) AS times_done, \
+                    (SELECT MAX(COALESCE(h.planned_at, h.picked_at)) FROM joy_history h \
+                      WHERE h.activity_id = joy_activities.id AND h.outcome = 'did_it') AS last_done_at, \
+                    last_skipped_at, generated, \
                     closed_days, season_from, season_to, est_from_actual, \
                     hours, best_time, minutes, booking, book_ahead_days, cover, bring, station, station_walk_min";
 
@@ -531,6 +539,35 @@ pub async fn accept(db: &SqlitePool, couple: &str, id: i64, drawn_by: Option<usi
     .await?;
     tx.commit().await?;
     Ok(row)
+}
+
+/// The most recent kept date whose day has passed and that nobody has confirmed, rated or priced:
+/// the "did it happen?" question. Sealed surprises are left to their planner (the caller filters).
+pub async fn to_close(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<HistoryRow>> {
+    sqlx::query_as(&format!(
+        "SELECT {HISTORY_COLS} FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id
+         WHERE h.couple_id = ? AND h.outcome = 'did_it' AND h.confirmed_at IS NULL
+           AND h.rating IS NULL AND h.actual_cost IS NULL AND a.custom = 0
+           AND COALESCE(h.planned_at, h.picked_at) <= unixepoch() - 3 * 3600
+         ORDER BY COALESCE(h.planned_at, h.picked_at) DESC LIMIT 5"
+    ))
+    .bind(couple)
+    .fetch_all(db)
+    .await
+}
+
+/// Close out a kept date whose day has passed. `true` confirms it; `false` cancels it (outcome
+/// 'cancelled'), which takes it out of Kept, the recap, the budget and what the jar has learned.
+/// Returns false when there is no such date, or its day has not come yet.
+pub async fn set_happened(db: &SqlitePool, couple: &str, id: i64, happened: bool) -> sqlx::Result<bool> {
+    let sql = if happened {
+        "UPDATE joy_history SET confirmed_at = unixepoch() WHERE id = ? AND couple_id = ? AND outcome = 'did_it'
+           AND COALESCE(planned_at, picked_at) <= unixepoch()"
+    } else {
+        "UPDATE joy_history SET outcome = 'cancelled' WHERE id = ? AND couple_id = ? AND outcome = 'did_it'
+           AND COALESCE(planned_at, picked_at) <= unixepoch()"
+    };
+    Ok(sqlx::query(sql).bind(id).bind(couple).execute(db).await?.rows_affected() == 1)
 }
 
 /// A date we had that never was a slip: kept straight into Kept on `on` ("YYYY-MM-DD", local

@@ -339,7 +339,8 @@ async fn accepting_stamps_a_date_once() {
     let hid = t.scalar(&format!("SELECT max(id) FROM joy_history WHERE activity_id = {id}")).await;
     assert_eq!(r.json["history_ids"], hid.to_string());
     assert_eq!(t.scalar(&format!("SELECT drawn_by FROM joy_history WHERE id = {hid}")).await, 1, "Neha is slot 1");
-    assert_eq!(t.scalar(&format!("SELECT times_done FROM joy_activities WHERE id = {id}")).await, 1);
+    // Keeping a date is not doing it: it counts once its day has passed (see the planned-date tests).
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_history WHERE activity_id = {id} AND outcome = 'did_it'")).await, 1);
 
     // A double tap records one date. Options also work from the query string.
     t.post(&format!("/api/dates/accept/{id}"), &neha, json!({})).await;
@@ -761,4 +762,77 @@ async fn vetoes_archived_slips_and_put_backs_can_all_be_cleared() {
     let r = t.post("/api/dates/putbacks/clear", &rohit, json!({})).await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
     assert_eq!(t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'skipped'").await, 0);
+}
+
+// ── a planned date has not happened yet ───────────────────────────────────
+
+async fn done_count(t: &T, couple: &str, id: i64) -> (i64, Option<i64>) {
+    let a = joy::joy::db::get(&t.db, couple, id).await.unwrap().unwrap();
+    (a.times_done, a.last_done_at)
+}
+
+#[tokio::test]
+async fn a_date_planned_for_later_is_not_done_until_its_day_has_passed() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let id = t.id_of(&couple, "Cook together").await;
+    t.post(&format!("/api/dates/accept/{id}"), &rohit, json!({})).await;
+    let hid = t.scalar(&format!("SELECT max(id) FROM joy_history WHERE activity_id = {id}")).await;
+
+    // Planned three weeks out: not done, but booked, so the draw doesn't hand it out again.
+    t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch('now', '+21 days') WHERE id = {hid}")).await;
+    let (n, last) = done_count(&t, &couple, id).await;
+    assert_eq!(n, 0, "it has not happened");
+    assert!(last.is_some_and(|l| l > 0), "but it is booked, so the slip counts as just used");
+
+    // It doesn't teach taste either.
+    let tags: Vec<String> = joy::joy::db::get(&t.db, &couple, id).await.unwrap().unwrap().tag_list();
+    let taste = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste;
+    assert!((taste.factor(&tags) - 1.0).abs() < 1e-9, "a planned date is not a liked one");
+
+    // Once the day has passed it is done.
+    t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch('now', '-1 days') WHERE id = {hid}")).await;
+    assert_eq!(done_count(&t, &couple, id).await.0, 1);
+}
+
+#[tokio::test]
+async fn saying_it_did_not_happen_cancels_it_everywhere() {
+    let t = setup().await;
+    let (rohit, neha, couple) = t.couple().await;
+    let id = t.id_of(&couple, "Cook together").await;
+    t.post(&format!("/api/dates/accept/{id}"), &rohit, json!({})).await;
+    let hid = t.scalar(&format!("SELECT max(id) FROM joy_history WHERE activity_id = {id}")).await;
+    t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch('now', '-1 days') WHERE id = {hid}")).await;
+
+    // It shows up as a date to close out, for either of them.
+    let jar = t.get("/api/dates/jar", &neha).await;
+    assert_eq!(jar.json["to_close"]["id"], hid, "{}", jar.text);
+
+    let r = t.post(&format!("/api/dates/history/{hid}/happened"), &neha, json!({"happened": false})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_history WHERE id = {hid} AND outcome = 'cancelled'")).await, 1);
+    assert_eq!(done_count(&t, &couple, id).await, (0, None), "the slip is as if it was never kept");
+    assert!(t.get("/api/dates/jar", &rohit).await.json["to_close"].is_null());
+    assert!(!t.get("/api/dates/kept", &rohit).await.text.contains(&format!("\"id\":{hid},")), "gone from Kept");
+}
+
+#[tokio::test]
+async fn confirming_a_date_clears_the_question_and_a_future_one_cannot_be_closed() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    let id = t.id_of(&couple, "Cook together").await;
+    t.post(&format!("/api/dates/accept/{id}"), &rohit, json!({})).await;
+    let hid = t.scalar(&format!("SELECT max(id) FROM joy_history WHERE activity_id = {id}")).await;
+
+    t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch('now', '+2 days') WHERE id = {hid}")).await;
+    assert!(t.get("/api/dates/jar", &rohit).await.json["to_close"].is_null(), "not yet");
+    let r = t.post(&format!("/api/dates/history/{hid}/happened"), &rohit, json!({"happened": true})).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "it hasn't happened yet");
+
+    t.exec(&format!("UPDATE joy_history SET planned_at = unixepoch('now', '-4 hours') WHERE id = {hid}")).await;
+    assert_eq!(t.get("/api/dates/jar", &rohit).await.json["to_close"]["id"], hid);
+    let r = t.post(&format!("/api/dates/history/{hid}/happened"), &rohit, json!({"happened": true})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert!(t.get("/api/dates/jar", &rohit).await.json["to_close"].is_null());
+    assert_eq!(done_count(&t, &couple, id).await.0, 1);
 }

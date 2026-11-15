@@ -609,7 +609,9 @@ pub async fn learned(db: &SqlitePool, couple: &str) -> Result<Learned, AppError>
     let (cab_ratio, rides) = db::cab_ratio(db, couple).await?;
     let usable = |r: f64, n: i64| (n >= db::MIN_SAMPLES).then(|| r.clamp(FACTOR_RANGE.0, FACTOR_RANGE.1));
     let rows: Vec<(String, String, Option<i64>)> = sqlx::query_as(
-        "SELECT a.tags, h.outcome, h.rating FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id WHERE h.couple_id = ?",
+        // A date still to come has not been liked or disliked yet.
+        "SELECT a.tags, h.outcome, h.rating FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id
+         WHERE h.couple_id = ? AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()",
     )
     .bind(couple)
     .fetch_all(db)
