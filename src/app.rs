@@ -58,6 +58,18 @@ fn protected(state: &AppState, router: Router) -> Router {
         ))
 }
 
+/// Liveness for Fly: answers 200 only when the database can be queried, so a machine whose
+/// migrations failed or whose volume is unreadable is never sent traffic.
+async fn healthz(State(state): State<AppState>) -> StatusCode {
+    match sqlx::query("SELECT 1").execute(&state.db).await {
+        Ok(_) => StatusCode::OK,
+        Err(e) => {
+            error!("healthz: database check failed: {e}");
+            StatusCode::SERVICE_UNAVAILABLE
+        }
+    }
+}
+
 async fn api_not_found() -> AppError {
     AppError(StatusCode::NOT_FOUND, "Not found".to_string())
 }
@@ -98,6 +110,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/hook", routes::ingest::hook_routes(state.clone()).layer(trace_layer()))
         // Unknown API paths must 404 instead of falling through to the SPA's index.html.
         .route("/api/{*rest}", any(api_not_found))
+        .route("/healthz", axum::routing::get(healthz).with_state(state.clone()))
         // Joy's envelope links were already sent on WhatsApp, so the old /e/{token} address still redirects.
         .route("/e/{token}", axum::routing::get(old_joy_envelope))
         // Static files come from the fallback. It must be set before the layers below: `Router::layer`
@@ -113,6 +126,12 @@ pub fn build_router(state: AppState) -> Router {
         // Level 4 instead of brotli's default (11): dynamic JSON gets compressed on every request, and
         // on a shared CPU the default costs far more than the few percent of size it saves.
         .layer(CompressionLayer::new().quality(CompressionLevel::Precise(4)))
+        // A stuck handler answers 504 instead of holding a connection (and a pool slot) forever.
+        // 60 s leaves room for photo and statement uploads on a slow phone connection.
+        .layer(tower_http::timeout::TimeoutLayer::with_status_code(
+            StatusCode::GATEWAY_TIMEOUT,
+            std::time::Duration::from_secs(60),
+        ))
         // Safety net: a panic in one request answers 500 instead of taking the server down.
         .layer(tower_http::catch_panic::CatchPanicLayer::new())
 }

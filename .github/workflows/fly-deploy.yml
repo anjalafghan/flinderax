@@ -1,13 +1,17 @@
 # See https://fly.io/docs/app-guides/continuous-deployment-with-github-actions/
 
 name: Fly Deploy
+# Deploys only after CI is green on master. Needs the FLY_API_TOKEN repository secret
+# (`fly tokens create deploy`); until it is set, deploy by hand: fly deploy --depot=false
 on:
-  push:
-    branches:
-      - master
+  workflow_run:
+    workflows: [CI]
+    branches: [master]
+    types: [completed]
 jobs:
   deploy:
     name: Deploy app
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     concurrency: deploy-group    # optional: ensure only one action runs at a time
     steps:

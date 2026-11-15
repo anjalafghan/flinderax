@@ -105,7 +105,7 @@ impl T {
     async fn loner(&self) -> (String, String) {
         let c = self.user("carol").await;
         assert!(self.post("/api/couple/create", &c, json!({})).await.status.is_success());
-        let id = self.text(&"SELECT couple_id FROM couples WHERE user_0 = (SELECT user_id FROM users ORDER BY rowid DESC LIMIT 1)".to_string())
+        let id = self.text("SELECT couple_id FROM couples WHERE user_0 = (SELECT user_id FROM users ORDER BY rowid DESC LIMIT 1)")
         .await;
         (c, id)
     }

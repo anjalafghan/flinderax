@@ -1783,11 +1783,10 @@ pub async fn backfill_visit_history(db: &SqlitePool, photos_root: &std::path::Pa
         let Some(h) = h else { continue };
         let dir = photos_root.join(&couple);
         let file = crate::joy::photos::new_date_file(h);
-        if let Some(dest) = crate::joy::photos::date_path(&dir, &file) {
-            if tokio::fs::copy(crate::joy::photos::visit_path(&dir, vid), &dest).await.is_ok() {
+        if let Some(dest) = crate::joy::photos::date_path(&dir, &file)
+            && tokio::fs::copy(crate::joy::photos::visit_path(&dir, vid), &dest).await.is_ok() {
                 add_photo(db, &couple, h, &file).await?;
             }
-        }
     }
     Ok(())
 }
@@ -1827,11 +1826,10 @@ pub async fn visit(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Optio
 }
 
 pub async fn delete_visit(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<()> {
-    if let Some(v) = visit(db, couple, id).await? {
-        if let Some(h) = v.history_id {
+    if let Some(v) = visit(db, couple, id).await?
+        && let Some(h) = v.history_id {
             delete_history(db, couple, h).await?;
         }
-    }
     sqlx::query(
         "DELETE FROM joy_regular_visits WHERE id = ? AND regular_id IN (SELECT id FROM joy_regulars WHERE couple_id = ?)",
     )

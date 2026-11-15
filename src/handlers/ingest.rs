@@ -593,13 +593,13 @@ pub async fn summary(
         .map(|(month, cats)| {
             let mut by_category: Vec<CategoryAmount> =
                 cats.into_iter().map(|(category, amount_paise)| CategoryAmount { category, amount_paise }).collect();
-            by_category.sort_by(|a, b| b.amount_paise.cmp(&a.amount_paise));
+            by_category.sort_by_key(|a| std::cmp::Reverse(a.amount_paise));
             MonthSpend { spent_paise: by_category.iter().map(|c| c.amount_paise).sum(), month, by_category }
         })
         .collect();
     let mut top_merchants: Vec<MerchantSpend> =
         merchants.into_values().map(|(merchant, amount_paise, count)| MerchantSpend { merchant, amount_paise, count }).collect();
-    top_merchants.sort_by(|a, b| b.amount_paise.cmp(&a.amount_paise));
+    top_merchants.sort_by_key(|a| std::cmp::Reverse(a.amount_paise));
     top_merchants.truncate(8);
 
     let uncategorized_count = sqlx::query_scalar!(

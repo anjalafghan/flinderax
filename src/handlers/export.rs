@@ -88,6 +88,11 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
         ("gifts", "SELECT * FROM gifts WHERE user_id = ?"),
         ("gift_seasons", "SELECT * FROM gift_seasons WHERE user_id = ?"),
         ("job_leads", "SELECT * FROM job_leads WHERE user_id = ?"),
+        ("followups", "SELECT * FROM followups WHERE user_id = ?"),
+        ("person_facts", "SELECT * FROM person_facts WHERE user_id = ?"),
+        ("rewards", "SELECT * FROM rewards WHERE user_id = ?"),
+        ("reward_claims", "SELECT * FROM reward_claims WHERE user_id = ?"),
+        ("reward_settings", "SELECT * FROM reward_settings WHERE user_id = ?"),
     ];
     for (name, sql) in mine {
         out.insert((*name).into(), Value::Array(rows(db, sql, &user_id).await?));

@@ -96,7 +96,7 @@ pub fn detect(debits: &[Seen], known: &[String]) -> Vec<Recurring> {
             }
         }
     }
-    out.sort_by(|a, b| b.amount_paise.cmp(&a.amount_paise));
+    out.sort_by_key(|a| std::cmp::Reverse(a.amount_paise));
     out
 }
 
