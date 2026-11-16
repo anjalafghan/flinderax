@@ -1431,8 +1431,8 @@ mod tests {
     async fn packs_split_the_starter_slips_and_adding_one_twice_adds_nothing_new() {
         let db = test_db().await;
         let packs = starter_packs(&db, "A").await.unwrap();
-        assert_eq!(packs.iter().map(|p| p.key.as_str()).collect::<Vec<_>>(), ["home", "apart", "mumbai"]);
-        assert_eq!(packs.iter().map(|p| p.total).sum::<i64>(), 333, "every starter slip is in exactly one pack");
+        assert_eq!(packs.iter().map(|p| p.key.as_str()).collect::<Vec<_>>(), ["home", "apart", "together", "mumbai"]);
+        assert_eq!(packs.iter().map(|p| p.total).sum::<i64>(), 398, "every starter slip is in exactly one pack");
         assert!(packs.iter().all(|p| p.total > 0 && p.added == 0));
 
         let n = add_pack(&db, "A", "home").await.unwrap().unwrap();
@@ -1449,8 +1449,8 @@ mod tests {
     #[tokio::test]
     async fn seed_copies_every_starter_slip() {
         let db = test_db().await;
-        assert_eq!(seed_new_couple(&db, "A").await.unwrap(), 333);
-        assert_eq!(list(&db, "A", false).await.unwrap().len(), 333);
+        assert_eq!(seed_new_couple(&db, "A").await.unwrap(), 398);
+        assert_eq!(list(&db, "A", false).await.unwrap().len(), 398);
         assert!(list(&db, "B", false).await.unwrap().is_empty());
     }
 

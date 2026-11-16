@@ -5,10 +5,11 @@ use super::*;
 use serde::Deserialize;
 use sqlx::{FromRow, SqlitePool};
 
-/// A pack of starter slips a couple can add: "At home", "Long distance", "Mumbai".
-pub const PACKS: [(&str, &str, &str); 3] = [
+/// A pack of starter slips a couple can add: "At home", "Long distance", "Together days", "Mumbai".
+pub const PACKS: [(&str, &str, &str); 4] = [
     ("home", "At home", "Cooking, games and cosy plans for a night in."),
     ("apart", "Long distance", "Things to do together while you are in different places."),
+    ("together", "Together days", "Evenings and whole days when you can finally meet, in and around Mumbai."),
     ("mumbai", "Mumbai", "Places and outings in and around Mumbai, with hours and prices."),
 ];
 

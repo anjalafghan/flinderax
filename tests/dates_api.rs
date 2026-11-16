@@ -1160,7 +1160,7 @@ async fn a_couple_can_start_empty_and_choose_starter_packs() {
 
     let packs = t.get("/api/dates/packs", &a).await.json;
     let keys: Vec<&str> = packs.as_array().unwrap().iter().map(|p| p["key"].as_str().unwrap()).collect();
-    assert_eq!(keys, ["home", "apart", "mumbai"]);
+    assert_eq!(keys, ["home", "apart", "together", "mumbai"]);
     assert!(packs.as_array().unwrap().iter().all(|p| p["added"] == 0 && p["total"].as_i64().unwrap() > 0));
 
     let r = t.post("/api/dates/packs/add", &a, json!({"pack": "home"})).await;
