@@ -25,7 +25,7 @@ use crate::{
     models::AppState,
     planner::{
         life::LifeProfile,
-        lifeline::{band, compare, note, simulate_with, validate, Band, Tweaks, GAINS_TAX_BPS, Choice, Consequences, LifelineNote, Line, LineInput, MAX_CHOICES},
+        lifeline::{band, compare, note, simulate_with, validate, Band, Earmark, Tweaks, GAINS_TAX_BPS, Choice, Consequences, LifelineNote, Line, LineInput, MAX_CHOICES},
     },
     validate::MAX_AMOUNT_PAISE,
 };
@@ -97,25 +97,32 @@ pub struct ChoicePatch {
 }
 
 /// The profile, expenses and starting wealth every line for this user is drawn from.
-struct Basis {
-    profile: LifeProfile,
+pub(crate) struct Basis {
+    pub(crate) profile: LifeProfile,
     saved_profile: bool,
     working: Working,
 }
 
 impl Basis {
-    fn input(&self, choices: Vec<Choice>) -> LineInput {
+    pub(crate) fn input(&self, choices: Vec<Choice>) -> LineInput {
         LineInput {
             profile: self.profile.clone(),
             expenses_paise: self.working.expenses_paise,
             wealth_paise: self.working.wealth_paise,
             choices,
+            earmark: None,
         }
     }
 
     /// The expected line, after an estimated tax on investment gains.
-    fn line(&self, choices: Vec<Choice>, today: Date) -> Line {
+    pub(crate) fn line(&self, choices: Vec<Choice>, today: Date) -> Line {
         simulate_with(&self.input(choices), today, &Tweaks { gains_tax_bps: GAINS_TAX_BPS, ..Default::default() })
+    }
+
+    /// The same expected line with an education earmark taken out of savings.
+    pub(crate) fn line_with_earmark(&self, choices: Vec<Choice>, today: Date, earmark: Earmark) -> Line {
+        let input = LineInput { earmark: Some(earmark), ..self.input(choices) };
+        simulate_with(&input, today, &Tweaks { gains_tax_bps: GAINS_TAX_BPS, ..Default::default() })
     }
 
     fn band(&self, choices: Vec<Choice>, today: Date) -> Band {
@@ -123,7 +130,7 @@ impl Basis {
     }
 }
 
-async fn basis(db: &SqlitePool, user_id: &str, today: Date) -> Result<Basis, AppError> {
+pub(crate) async fn basis(db: &SqlitePool, user_id: &str, today: Date) -> Result<Basis, AppError> {
     let (profile, saved_profile) = load_profile(db, user_id).await?;
     let expenses = resolve_expenses(db, user_id, today, &profile).await?;
     autopost::apply(db, user_id, today).await?;
@@ -160,7 +167,7 @@ async fn basis(db: &SqlitePool, user_id: &str, today: Date) -> Result<Basis, App
     })
 }
 
-async fn saved_choices(db: &SqlitePool, user_id: &str) -> Result<Vec<SavedChoice>, AppError> {
+pub(crate) async fn saved_choices(db: &SqlitePool, user_id: &str) -> Result<Vec<SavedChoice>, AppError> {
     let rows: Vec<(String, String, String, i64)> = sqlx::query_as(
         "SELECT choice_id, label, choice_json, in_plan FROM life_choices WHERE user_id = ? ORDER BY created_at, choice_id",
     )

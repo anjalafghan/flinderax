@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Baby, ChevronDown, GraduationCap, Heart, Shield, Sunset, type LucideIcon } from "lucide-react";
 
 import { ForecastPanel } from "@/components/feature/ForecastPanel";
+import { EducationCard } from "@/components/feature/life/EducationCard";
 import { LifeLine } from "@/components/feature/life/LifeLine";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -635,6 +636,8 @@ export default function LifePage() {
         )}
 
         <LifeLine />
+
+        <EducationCard />
 
         {data && (
           <>
