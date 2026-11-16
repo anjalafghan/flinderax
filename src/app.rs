@@ -97,6 +97,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/dates", protected(&state, routes::dates::routes(state.clone())))
         .nest("/api/public/dates", routes::dates::public_routes(state.clone()).layer(trace_layer()))
         .nest("/api/bills", protected(&state, routes::bills::routes(state.clone())))
+        .nest("/api/year", protected(&state, routes::year::routes(state.clone())))
         .nest("/api/checkin", protected(&state, routes::checkin::routes(state.clone())))
         .nest("/api/diet", protected(&state, routes::diet::routes(state.clone())))
         .nest("/api/people", protected(&state, routes::people::routes(state.clone())))

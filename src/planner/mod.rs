@@ -41,6 +41,7 @@ pub mod rewards;
 pub mod streaks;
 pub mod tax;
 pub mod work;
+pub mod year_ahead;
 
 use serde::Serialize;
 use time::{Date, Duration, Month};

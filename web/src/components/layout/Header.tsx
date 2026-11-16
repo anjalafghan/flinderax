@@ -16,7 +16,7 @@ interface Tab {
 const TABS: Tab[] = [
   { to: "/", label: "Today", icon: Sun, prefixes: ["/", "/cards"] },
   { to: "/money", label: "Money", icon: Wallet, prefixes: ["/money", "/accounts", "/spending"] },
-  { to: "/life", label: "Life", icon: Route, prefixes: ["/life", "/plan", "/what-if", "/working", "/work"] },
+  { to: "/life", label: "Life", icon: Route, prefixes: ["/life", "/plan", "/what-if", "/working", "/work", "/year"] },
   { to: "/joy", label: "People", icon: Users, prefixes: ["/joy", "/people"] },
   { to: "/health", label: "Health", icon: HeartPulse, prefixes: ["/health", "/week"] },
   { to: "/review", label: "Review", icon: ClipboardCheck, prefixes: ["/review"] },
@@ -28,6 +28,7 @@ const SUBTABS: Record<string, { to: string; label: string; prefixes: string[] }[
     { to: "/life", label: "Life line", prefixes: ["/life"] },
     { to: "/plan", label: "Budget", prefixes: ["/plan", "/working"] },
     { to: "/what-if", label: "What-if", prefixes: ["/what-if"] },
+    { to: "/year", label: "Year ahead", prefixes: ["/year"] },
     { to: "/work", label: "Work", prefixes: ["/work"] },
   ],
   "/joy": [

@@ -17,3 +17,4 @@ pub mod reminders;
 pub mod review;
 pub mod rewards;
 pub mod work;
+pub mod year;
