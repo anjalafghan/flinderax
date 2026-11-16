@@ -2,8 +2,10 @@
 //! seven. There's no scheduler (the machine sleeps when idle), so the first request of each day
 //! makes the copy. `VACUUM INTO` writes a consistent snapshot while the app keeps running.
 //!
-//! Copies stay on the Fly volume; pull them to another machine with `fly ssh sftp` (see
-//! `docs/backups.md`).
+//! Daily copies stay on the Fly volume. To get one off the volume, a scheduled job calls
+//! `POST /api/internal/backup/run` (see `handlers::backup`), which takes a fresh snapshot and
+//! streams it back; `fly ssh sftp` also works (see `docs/backups.md`).
+//! `BACKUP_DIR` overrides the folder and `BACKUP_KEEP` the number of copies kept (default 7).
 
 use std::{
     path::{Path, PathBuf},
@@ -12,13 +14,20 @@ use std::{
 
 use time::Date;
 
-const KEEP: usize = 7;
+const DEFAULT_KEEP: usize = 7;
+
+fn keep() -> usize {
+    std::env::var("BACKUP_KEEP").ok().and_then(|v| v.parse().ok()).filter(|n| *n >= 1).unwrap_or(DEFAULT_KEEP)
+}
 
 /// The day the last copy was made in this process, so the check is free after the first call.
 static LAST: Mutex<Option<Date>> = Mutex::new(None);
 
 /// `backups/` next to the database file named in `DATABASE_URL`; `None` for in-memory databases.
 pub fn backup_dir() -> Option<PathBuf> {
+    if let Some(dir) = std::env::var("BACKUP_DIR").ok().filter(|d| !d.trim().is_empty()) {
+        return Some(PathBuf::from(dir));
+    }
     let url = std::env::var("DATABASE_URL").ok()?;
     let file = url.trim_start_matches("sqlite:").trim_start_matches("//").split('?').next()?.to_string();
     if file.is_empty() || file.contains(":memory:") {
@@ -56,7 +65,32 @@ async fn run(db: &sqlx::SqlitePool, dir: &Path, today: Date) -> Result<PathBuf, 
     Ok(target)
 }
 
-/// Deletes all but the newest `KEEP` copies (names sort by date).
+/// Writes a consistent snapshot of the live database to `target` (replacing any file there).
+/// `VACUUM INTO` runs while the app keeps serving. Used by the on-demand backup and the restore drill.
+pub async fn snapshot_to(db: &sqlx::SqlitePool, target: &Path) -> Result<(), String> {
+    if let Some(parent) = target.parent().filter(|p| !p.as_os_str().is_empty()) {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    if target.exists() {
+        std::fs::remove_file(target).map_err(|e| e.to_string())?;
+    }
+    let path = target.to_string_lossy().replace('\'', "''");
+    sqlx::query(&format!("VACUUM INTO '{path}'")).execute(db).await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// A fresh snapshot as bytes, for the off-volume pull. The temporary file is removed afterwards
+/// and never matches the `joy-*.db` pattern the daily pruning looks at.
+pub async fn snapshot_bytes(db: &sqlx::SqlitePool) -> Result<Vec<u8>, String> {
+    let dir = backup_dir().ok_or("no on-disk database")?;
+    let tmp = dir.join(format!("pull-{}.tmp", std::process::id()));
+    let made = snapshot_to(db, &tmp).await;
+    let bytes = made.and_then(|_| std::fs::read(&tmp).map_err(|e| e.to_string()));
+    let _ = std::fs::remove_file(&tmp);
+    bytes
+}
+
+/// Deletes all but the newest `keep()` copies (names sort by date).
 fn prune(dir: &Path) -> std::io::Result<()> {
     let mut copies: Vec<PathBuf> = std::fs::read_dir(dir)?
         .flatten()
@@ -64,7 +98,7 @@ fn prune(dir: &Path) -> std::io::Result<()> {
         .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("joy-") && n.ends_with(".db")))
         .collect();
     copies.sort();
-    let extra = copies.len().saturating_sub(KEEP);
+    let extra = copies.len().saturating_sub(keep());
     for old in &copies[..extra] {
         std::fs::remove_file(old)?;
     }
