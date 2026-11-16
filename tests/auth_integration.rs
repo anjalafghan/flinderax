@@ -1096,21 +1096,30 @@ async fn an_export_can_be_loaded_back_and_exports_the_same_again() {
     authed_post(&app, &t, "/api/ingest/transactions/create",
         json!({"occurred_on": today, "direction": "debit", "amount_paise": 25_000, "merchant": "Chai", "category": "food"})).await;
     authed_post(&app, &t, "/api/plan/scenarios", json!({"drafts": [{"id": "d1"}]})).await;
+    // Correcting a category teaches the merchant memory (no "remember" flag needed).
+    let txn_id = authed_get(&app, &t, "/api/ingest/transactions").await[0]["txn_id"].as_str().unwrap().to_string();
+    let (s, b) = authed_post(&app, &t, "/api/ingest/transactions/update", json!({"txn_id": txn_id, "category": "dates", "merchant": "UPI/CORNER CAFE@okaxis"})).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
 
     let before = authed_get(&app, &t, "/api/export").await;
     assert!(!before["data"]["accounts"].as_array().unwrap().is_empty());
+    let rules = before["data"]["merchant_rules"].as_array().unwrap();
+    assert!(rules.iter().any(|r| r["pattern"] == "corner cafe" && r["category"] == "dates"), "export holds the rule: {rules:?}");
 
     // Lose it all (and add something that was never in the backup).
     sqlx::query("DELETE FROM transactions").execute(&db).await.unwrap();
     sqlx::query("DELETE FROM cards").execute(&db).await.unwrap();
     sqlx::query("DELETE FROM accounts").execute(&db).await.unwrap();
     sqlx::query("DELETE FROM whatif_scenarios").execute(&db).await.unwrap();
+    sqlx::query("DELETE FROM merchant_rules").execute(&db).await.unwrap();
     authed_post(&app, &t, "/api/account/create", json!({"name": "Junk", "kind": "cash", "balance_paise": 1})).await;
 
     let (s, b) = authed_post(&app, &t, "/api/import", before.clone()).await;
     assert_eq!(s, StatusCode::OK, "{b}");
     let after = authed_get(&app, &t, "/api/export").await;
     assert_eq!(after["data"], before["data"], "export -> wipe -> import -> export is the same file");
+    let restored: String = sqlx::query_scalar("SELECT category FROM merchant_rules WHERE pattern = 'corner cafe'").fetch_one(&db).await.unwrap();
+    assert_eq!(restored, "dates", "import restores the merchant rule");
 
     // Someone else's backup is not loadable into your account: ids are theirs.
     let other = new_user(&app, "10.0.1.1", "intruder").await;

@@ -677,7 +677,7 @@ pub struct Learned {
     pub cab: Option<f64>,
     pub rides: i64,
     /// How much this couple tends to enjoy each kind of date (nudges the draw).
-    pub taste: crate::joy::taste::Taste,
+    pub taste: crate::joy::taste::PartnerTaste,
 }
 
 /// Learned factors are clamped so one odd night can't wreck every estimate.
@@ -689,27 +689,60 @@ pub async fn learned(db: &SqlitePool, couple: &str) -> Result<Learned, AppError>
     let (cab_ratio, rides) = db::cab_ratio(db, couple).await?;
     let usable = |r: f64, n: i64| (n >= db::MIN_SAMPLES).then(|| r.clamp(FACTOR_RANGE.0, FACTOR_RANGE.1));
     // Every outing that has happened, with what kind it was and how long ago.
-    type Row = (String, String, String, i64, String, Option<i64>, i64);
+    type Row = (String, String, String, i64, String, Option<i64>, i64, String);
     let rows: Vec<Row> = sqlx::query_as(
         "SELECT a.tags, a.setting, a.energy, a.est_cost, h.outcome, h.rating,
-                (unixepoch() - COALESCE(h.planned_at, h.picked_at)) / 86400
+                (unixepoch() - COALESCE(h.planned_at, h.picked_at)) / 86400, a.duration
          FROM joy_history h JOIN joy_activities a ON a.id = h.activity_id
          WHERE h.couple_id = ? AND COALESCE(h.planned_at, h.picked_at) <= unixepoch()",
     )
     .bind(couple)
     .fetch_all(db)
     .await?;
-    // A put-back counts against a slip only when it was "not my thing".
-    let passed: Vec<Row> = sqlx::query_as(
-        "SELECT a.tags, a.setting, a.energy, a.est_cost, 'skipped', NULL, (unixepoch() - p.at) / 86400
+    // A put-back counts against a slip only when it was "not my thing"; it is that partner's mark.
+    type Marked = (Row, Option<i64>);
+    let passed: Vec<Marked> = sqlx::query_as(
+        "SELECT a.tags, a.setting, a.energy, a.est_cost, 'skipped', NULL, (unixepoch() - p.at) / 86400, a.duration, p.who
          FROM joy_peeks p JOIN joy_activities a ON a.id = p.activity_id WHERE p.couple_id = ? AND p.reason = 'not_my_thing'",
     )
     .bind(couple)
     .fetch_all(db)
-    .await?;
-    let taste = crate::joy::taste::Taste::from_events(rows.iter().chain(passed.iter()).map(|(tags, setting, energy, cost, outcome, rating, age)| {
-        crate::joy::taste::Event { tags, setting, energy, cost: *cost, outcome, rating: *rating, age_days: *age }
-    }));
+    .await?
+    .into_iter()
+    .map(|(a, b, c, d, e, f, g, h, who): (String, String, String, i64, String, Option<i64>, i64, String, Option<i64>)| ((a, b, c, d, e, f, g, h), who))
+    .collect();
+    // Quiet marks: each partner's own "want" or "no". Only the blended factor ever leaves this function.
+    let wants: Vec<Marked> = sqlx::query_as::<_, (String, String, String, i64, String, i64, String)>(
+        "SELECT a.tags, a.setting, a.energy, a.est_cost, a.duration, w.person, w.level
+         FROM joy_wants w JOIN joy_activities a ON a.id = w.activity_id WHERE a.couple_id = ?",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .filter_map(|(tags, setting, energy, cost, dur, person, level)| {
+        let (outcome, rating) = crate::joy::taste::want_as_outcome(&level)?;
+        Some(((tags, setting, energy, cost, outcome.to_string(), rating, 0, dur), Some(person)))
+    })
+    .collect();
+    // Effort and time moods are implied by energy and duration, so past outings teach them too.
+    let tag_row = |(tags, _, energy, _, _, _, _, dur): &Row| {
+        let own = tags.split(',').map(|t| t.trim().to_lowercase()).filter(|t| !t.is_empty()).collect();
+        crate::joy::tags::with_implied(own, crate::joy::picker::Duration::parse(dur).unwrap_or(crate::joy::picker::Duration::Short), energy).join(",")
+    };
+    let history_tags: Vec<String> = rows.iter().map(tag_row).collect();
+    let marked: Vec<&Marked> = passed.iter().chain(wants.iter()).collect();
+    let marked_tags: Vec<String> = marked.iter().map(|(r, _)| tag_row(r)).collect();
+    fn event<'a>(r: &'a Row, tags: &'a str) -> crate::joy::taste::Event<'a> {
+        crate::joy::taste::Event { tags, setting: &r.1, energy: &r.2, cost: r.3, outcome: &r.4, rating: r.5, age_days: r.6 }
+    }
+    // A mark with no partner recorded is the household's; the rest are that partner's own.
+    let household = rows.iter().zip(&history_tags).map(|(r, t)| event(r, t)).chain(marked.iter().zip(&marked_tags).filter(|((_, who), _)| !matches!(who, Some(0 | 1))).map(|((r, _), t)| event(r, t)));
+    let partner = marked.iter().zip(&marked_tags).filter_map(|((r, who), t)| match who {
+        Some(w @ (0 | 1)) => Some(crate::joy::taste::PartnerEvent { who: *w as usize, event: event(r, t) }),
+        _ => None,
+    });
+    let taste = crate::joy::taste::PartnerTaste::new(household, partner);
     Ok(Learned { cost: usable(ratio, n), cost_ratio: ratio, cost_samples: n, cab: usable(cab_ratio, rides), rides, taste })
 }
 

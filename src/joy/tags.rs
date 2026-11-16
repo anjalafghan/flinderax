@@ -4,8 +4,13 @@
 //! is kept as they wrote it (lower-cased).
 
 /// The moods the jar, the filters and "Meet in the middle" speak in.
-pub const CANONICAL: [&str; 12] =
-    ["romantic", "chill", "foodie", "cozy", "games", "cultural", "outdoors", "creative", "adventurous", "music", "active", "nightlife"];
+pub const CANONICAL: [&str; 23] = [
+    "romantic", "chill", "foodie", "cozy", "games", "cultural", "outdoors", "creative", "adventurous", "music", "active", "nightlife",
+    // what it is
+    "social", "learning", "wellness", "sweet", "movies", "milestone", "spontaneous", "scenic",
+    // how much of us it takes: a tired night, a short window, a long stretch
+    "low-effort", "quick", "leisurely",
+];
 
 /// (what people write, the canonical word)
 const ALIASES: &[(&str, &str)] = &[
@@ -46,7 +51,68 @@ const ALIASES: &[(&str, &str)] = &[
     ("exercise", "active"),
     ("party", "nightlife"),
     ("night", "nightlife"),
+    ("friends", "social"),
+    ("group", "social"),
+    ("hangout", "social"),
+    ("class", "learning"),
+    ("workshop", "learning"),
+    ("course", "learning"),
+    ("spa", "wellness"),
+    ("self-care", "wellness"),
+    ("yoga", "wellness"),
+    ("dessert", "sweet"),
+    ("cafe", "sweet"),
+    ("coffee", "sweet"),
+    ("film", "movies"),
+    ("cinema", "movies"),
+    ("theatre", "movies"),
+    ("anniversary", "milestone"),
+    ("birthday", "milestone"),
+    ("celebration", "milestone"),
+    ("last-minute", "spontaneous"),
+    ("impulsive", "spontaneous"),
+    ("view", "scenic"),
+    ("sunset", "scenic"),
+    ("drive", "scenic"),
+    ("easy", "low-effort"),
+    ("effortless", "low-effort"),
+    ("low effort", "low-effort"),
+    ("tired", "low-effort"),
+    ("fast", "quick"),
+    ("short", "quick"),
+    ("less time", "quick"),
+    ("long", "leisurely"),
+    ("unhurried", "leisurely"),
+    ("slow", "leisurely"),
+    ("more time", "leisurely"),
 ];
+
+/// The effort and time moods a slip has by its own fields, so older slips (and ones nobody tagged)
+/// take part in "something easy tonight" and in the taste model without being edited. Never
+/// stored: change a slip's duration or energy and these follow.
+pub fn implied(duration: crate::joy::picker::Duration, energy: &str) -> Vec<&'static str> {
+    use crate::joy::picker::Duration::*;
+    let mut v = Vec::new();
+    if energy == "low" {
+        v.push("low-effort");
+    }
+    match duration {
+        Short => v.push("quick"),
+        FullDay | Weekend => v.push("leisurely"),
+        HalfDay => {}
+    }
+    v
+}
+
+/// `tags` plus whatever `implied` adds that is not already there (own tags keep their order).
+pub fn with_implied(mut tags: Vec<String>, duration: crate::joy::picker::Duration, energy: &str) -> Vec<String> {
+    for t in implied(duration, energy) {
+        if !tags.iter().any(|x| x == t) {
+            tags.push(t.to_string());
+        }
+    }
+    tags
+}
 
 /// One tag, lower-cased, with a known alias mapped to its canonical word.
 pub fn canonical(tag: &str) -> String {
@@ -75,6 +141,9 @@ mod tests {
         assert_eq!(canonical("  Board   Games "), "games");
         assert_eq!(canonical("Restaurant"), "foodie");
         assert_eq!(canonical("outdoor"), "outdoors");
+        assert_eq!(canonical("Low  Effort"), "low-effort");
+        assert_eq!(canonical("Less time"), "quick");
+        assert_eq!(canonical("more time"), "leisurely");
     }
 
     #[test]
@@ -89,6 +158,16 @@ mod tests {
     fn a_list_is_cleaned_and_deduplicated_in_order() {
         assert_eq!(normalise("Cosy, cozy, Food, , pottery, FOODIE"), "cozy,foodie,pottery");
         assert_eq!(normalise(""), "");
+    }
+
+    #[test]
+    fn effort_and_time_follow_from_energy_and_duration() {
+        use crate::joy::picker::Duration::*;
+        assert_eq!(implied(Short, "low"), ["low-effort", "quick"]);
+        assert_eq!(implied(HalfDay, "med"), Vec::<&str>::new());
+        assert_eq!(implied(Weekend, "high"), ["leisurely"]);
+        let own = with_implied(vec!["quick".into(), "foodie".into()], Short, "low");
+        assert_eq!(own, ["quick", "foodie", "low-effort"], "no repeats; own tags stay first");
     }
 
     #[test]

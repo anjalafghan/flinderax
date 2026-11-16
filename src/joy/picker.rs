@@ -244,6 +244,16 @@ pub fn matches(c: &Candidate, f: &Filters) -> bool {
     k.budget && k.duration && k.distance && k.setting && k.mood && k.open && k.window
 }
 
+/// The slips a draw could return (they pass every filter and were not put back), with the chance of
+/// each, in input order. The chances sum to 1; empty when nothing can be drawn. Log these next to the
+/// slip that was shown so a later model can be judged against what was actually on offer.
+pub fn draw_probabilities(all: &[Candidate], f: &Filters, excluded: &[i64], now: i64) -> Vec<(i64, f64)> {
+    let pool: Vec<&Candidate> = all.iter().filter(|c| matches(c, f) && !excluded.contains(&c.id)).collect();
+    let weights: Vec<f64> = pool.iter().map(|c| weight(c, now, f.rain_likely)).collect();
+    let total: f64 = weights.iter().sum();
+    pool.iter().zip(&weights).map(|(c, w)| (c.id, w / total)).collect()
+}
+
 pub fn pick<R: Rng>(
     all: &[Candidate],
     f: &Filters,
@@ -521,6 +531,43 @@ mod tests {
         let fresh_wins = results.iter().filter(|p| **p == PickResult::Pick(1)).count();
         // weights 3.0 vs ~1.03 -> ~74%
         assert!((2700..3200).contains(&fresh_wins), "fresh won {fresh_wins}/4000");
+    }
+
+    #[test]
+    fn draw_probabilities_sum_to_one_and_follow_the_weights() {
+        let mut fresh = cand(1, 0, "home", Duration::Short);
+        fresh.last_done_at = None;
+        let mut stale = cand(2, 0, "home", Duration::Short);
+        stale.last_done_at = Some(NOW - 90 * DAY);
+        let all = [fresh.clone(), stale.clone()];
+        let probs = draw_probabilities(&all, &filters(0), &[], NOW);
+        assert_eq!(probs.iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec![1, 2]);
+        let total: f64 = probs.iter().map(|(_, p)| p).sum();
+        assert!((total - 1.0).abs() < 1e-9, "{total}");
+        let (w1, w2) = (weight(&fresh, NOW, false), weight(&stale, NOW, false));
+        assert!((probs[0].1 - w1 / (w1 + w2)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn draw_probabilities_leave_out_filtered_and_excluded_slips() {
+        let all = [cand(1, 0, "home", Duration::Short), cand(2, 9_000_000, "home", Duration::Short), cand(3, 0, "home", Duration::Short)];
+        let probs = draw_probabilities(&all, &filters(0), &[3], NOW);
+        assert_eq!(probs.iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec![1]);
+        assert!((probs[0].1 - 1.0).abs() < 1e-9);
+        assert!(draw_probabilities(&[], &filters(0), &[], NOW).is_empty());
+        assert!(draw_probabilities(&all, &filters(0), &[1, 3], NOW).is_empty());
+    }
+
+    #[test]
+    fn pick_only_returns_slips_that_have_a_draw_probability() {
+        let all = [cand(1, 0, "home", Duration::Short), cand(2, 0, "home", Duration::Short), cand(3, 0, "home", Duration::Short)];
+        let ids: Vec<i64> = draw_probabilities(&all, &filters(0), &[2], NOW).into_iter().map(|(id, _)| id).collect();
+        for p in picks(&all, &filters(0), &[2], 200) {
+            match p {
+                PickResult::Pick(id) => assert!(ids.contains(&id), "{id}"),
+                other => panic!("{other:?}"),
+            }
+        }
     }
 
     #[test]

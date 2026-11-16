@@ -295,7 +295,7 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
           <label htmlFor="f-tags">Vibes</label>
           <input id="f-tags" name="tags" value={s.tags} onChange={(e) => set("tags", e.target.value)} autoComplete="off" placeholder="romantic, foodie" aria-describedby="tags-hint" list="tag-words" />
           <datalist id="tag-words">
-            {["romantic", "chill", "foodie", "cozy", "games", "cultural", "outdoors", "creative", "adventurous", "music", "active", "nightlife"].map((w) => (
+            {["romantic", "chill", "foodie", "cozy", "games", "cultural", "outdoors", "creative", "adventurous", "music", "active", "nightlife", "social", "learning", "wellness", "sweet", "movies", "milestone", "spontaneous", "scenic", "low-effort", "quick", "leisurely"].map((w) => (
               <option key={w} value={w} />
             ))}
           </datalist>

@@ -169,7 +169,13 @@ pub(crate) async fn rain_for(ctx: &Ctx, slot: Option<&Slot>) -> Option<u8> {
 /// "foodie" is how we eat out, so it reads as "Restaurant" and leads the mood list. It is still the
 /// `foodie` tag underneath: every foodie slip counts, nothing needs re-tagging.
 fn mood_label(tag: &str) -> String {
-    if tag == "foodie" { "Restaurant".into() } else { tag.into() }
+    match tag {
+        "foodie" => "Restaurant".into(),
+        "low-effort" => "Low effort".into(),
+        "quick" => "Quick".into(),
+        "leisurely" => "Plenty of time".into(),
+        _ => tag.into(),
+    }
 }
 
 fn mood_order(mut tags: Vec<String>) -> Vec<String> {
@@ -212,7 +218,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): Extension<
         Some(r) => dayplan::build(db, couple, ctx, &r, who).await?,
         None => None,
     };
-    let mut tags: Vec<String> = acts.iter().flat_map(|a| a.tag_list()).collect();
+    let mut tags: Vec<String> = acts.iter().flat_map(|a| a.draw_tags()).collect();
     tags.sort();
     tags.dedup();
     let tags = mood_order(tags);
@@ -686,6 +692,15 @@ pub async fn pick(
     let filters = jar.filters(&f, rain_for(ctx, jar.slot.as_ref()).await.is_some());
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map_err(internal)?.as_secs() as i64;
     let result = picker::pick(&cands, &filters, &excluded, now, &mut thread_rng());
+    if let PickResult::Pick(id) = &result {
+        let chances = picker::draw_probabilities(&cands, &filters, &excluded, now);
+        if let Some((_, p)) = chances.iter().find(|(c, _)| c == id) {
+            // A failed log must never fail the draw.
+            if let Err(e) = db::log_draw(db, couple, *id, j.who, *p, chances.len()).await {
+                tracing::warn!(error = %e, "could not log draw");
+            }
+        }
+    }
 
     let card_out = match result {
         PickResult::Pick(id) => {
@@ -783,7 +798,7 @@ async fn card(
                 budget: f.filters().budget,
                 km: distance_from(ctx, a, f.from()),
                 max_km: f.filters().max_km,
-                taste: learned.taste.factor_for(&crate::joy::taste::features(&a.tag_list(), &a.setting, &a.energy, a.effective_cost(learned.cost))),
+                taste: learned.taste.factor_for(&crate::joy::taste::features(&a.draw_tags(), &a.setting, &a.energy, a.effective_cost(learned.cost))),
                 both_want: db::wants(db, couple).await?.iter().filter(|(id, _, l)| *id == a.id && l == "want").count() == 2,
                 money: &money,
             })

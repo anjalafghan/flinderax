@@ -30,6 +30,8 @@ pub mod insights;
 pub mod joy;
 pub mod life;
 pub mod lifeline;
+pub mod merchant;
+pub mod merchant_seed;
 pub mod people;
 pub mod projection;
 pub mod recurring;

@@ -146,6 +146,7 @@ pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Exte
             ("goals", "SELECT * FROM couple_goals WHERE couple_id = ?"),
             ("goal_contributions", "SELECT c.* FROM couple_goal_contributions c JOIN couple_goals g ON g.goal_id = c.goal_id WHERE g.couple_id = ?"),
             ("peeks", "SELECT * FROM joy_peeks WHERE couple_id = ?"),
+            ("draws", "SELECT * FROM joy_draws WHERE couple_id = ?"),
             ("settlements", "SELECT * FROM joy_settlements WHERE couple_id = ?"),
         ];
         let mut d = Map::new();

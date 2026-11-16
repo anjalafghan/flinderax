@@ -82,6 +82,12 @@ impl Activity {
         self.tags.split(',').map(|t| t.trim().to_lowercase()).filter(|t| !t.is_empty()).collect()
     }
 
+    /// Tags for the draw and the taste model: the ones written plus effort and time implied by
+    /// energy and duration. Not for display or storage.
+    pub fn draw_tags(&self) -> Vec<String> {
+        crate::joy::tags::with_implied(self.tag_list(), self.duration(), &self.energy)
+    }
+
     pub fn duration(&self) -> Duration {
         Duration::parse(&self.duration).unwrap_or(Duration::Short)
     }
@@ -126,7 +132,7 @@ impl Activity {
             est_cost: self.effective_cost(factor),
             setting: self.setting.clone(),
             duration: self.duration(),
-            tags: self.tag_list(),
+            tags: self.draw_tags(),
             energy: self.energy.clone(),
             last_done_at: self.last_done_at,
             last_skipped_at: self.last_skipped_at,
@@ -606,6 +612,23 @@ pub fn tags_fit(tags: &str) -> bool {
 
 /// The one-tap reasons for putting a slip back. Anything else is stored as no reason.
 pub const PUT_BACK_REASONS: [&str; 4] = ["not_tonight", "too_far", "too_pricey", "not_my_thing"];
+
+/// Remember that the jar showed this slip, and the chance it had (see `picker::draw_probabilities`).
+/// Only the draw's own numbers are kept: nothing here says why anyone liked or disliked it.
+pub async fn log_draw(db: &SqlitePool, couple: &str, id: i64, who: usize, probability: f64, pool_size: usize) -> sqlx::Result<()> {
+    sqlx::query(
+        "INSERT INTO joy_draws (couple_id, activity_id, who, probability, pool_size)
+         SELECT ?1, id, ?3, ?4, ?5 FROM joy_activities WHERE id = ?2 AND couple_id = ?1",
+    )
+    .bind(couple)
+    .bind(id)
+    .bind(who as i64)
+    .bind(probability)
+    .bind(pool_size as i64)
+    .execute(db)
+    .await
+    .map(|_| ())
+}
 
 /// Put a slip back while drawing. This is a peek, not a date: it never touches the history, and
 /// it only damps the slip for a few days (`last_skipped_at`).
