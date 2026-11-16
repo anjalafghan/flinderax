@@ -1,6 +1,7 @@
 pub mod account;
 pub mod analytics;
 pub mod autopost;
+pub mod backup;
 pub mod bills;
 pub mod calibration;
 pub mod card;
