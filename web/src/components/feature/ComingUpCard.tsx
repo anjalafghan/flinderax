@@ -5,7 +5,7 @@ import api from "@/services/api";
 
 interface Entry {
   on: string;
-  kind: "bill" | "date" | "birthday" | "follow_up";
+  kind: "bill" | "date" | "birthday" | "follow_up" | "milestone";
   title: string;
   detail: string;
   link: string;

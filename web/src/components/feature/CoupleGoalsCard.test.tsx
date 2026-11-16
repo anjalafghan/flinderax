@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { CoupleGoalsCard } from "./CoupleGoalsCard";
 
 let calls: { url: string; body?: unknown }[];
@@ -9,9 +10,11 @@ const realFetch = globalThis.fetch;
 
 const view = () =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <CoupleGoalsCard />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <CoupleGoalsCard />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 
 const goal = {
@@ -52,6 +55,12 @@ describe("CoupleGoalsCard", () => {
     expect(screen.getByText(/₹2,500 a month/)).toBeTruthy();
     expect(screen.getByText(/asha ₹10,000/)).toBeTruthy();
     expect(screen.getByText(/ravi ₹5,000/)).toBeTruthy();
+  });
+
+  test("each goal links to its budget page", async () => {
+    view();
+    const link = await screen.findByRole("link", { name: /plan the budget/i });
+    expect(link.getAttribute("href")).toBe("/wedding/g1");
   });
 
   test("adding money sends it in paise to that goal", async () => {

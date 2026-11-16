@@ -132,6 +132,15 @@ pub fn build_router(state: AppState) -> Router {
                     .route("/{id}/contribute", axum::routing::post(crate::handlers::couple_goals::contribute))
                     .route("/{id}/contributions/{cid}/delete", axum::routing::post(crate::handlers::couple_goals::delete_contribution))
                     .route("/{id}/archive", axum::routing::post(crate::handlers::couple_goals::archive))
+                    .route("/{id}/budget", axum::routing::get(crate::handlers::wedding::budget))
+                    .route("/{id}/items", axum::routing::post(crate::handlers::wedding::create_item))
+                    .route("/{id}/items/{item_id}", axum::routing::post(crate::handlers::wedding::update_item))
+                    .route("/{id}/items/{item_id}/delete", axum::routing::post(crate::handlers::wedding::delete_item))
+                    .route("/{id}/items/{item_id}/milestones", axum::routing::post(crate::handlers::wedding::create_milestone))
+                    .route("/{id}/milestones/{mid}", axum::routing::post(crate::handlers::wedding::update_milestone))
+                    .route("/{id}/milestones/{mid}/delete", axum::routing::post(crate::handlers::wedding::delete_milestone))
+                    .route("/{id}/milestones/{mid}/pay", axum::routing::post(crate::handlers::wedding::pay))
+                    .route("/{id}/milestones/{mid}/unpay", axum::routing::post(crate::handlers::wedding::unpay))
                     .with_state(state.clone()),
             ),
         )

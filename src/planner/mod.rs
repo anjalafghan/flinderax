@@ -20,6 +20,7 @@ pub mod calibration;
 pub mod checkin;
 pub mod coming;
 pub mod couple_goals;
+pub mod wedding;
 pub mod cycle;
 pub mod diet;
 pub mod forecast;

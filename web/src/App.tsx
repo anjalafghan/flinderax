@@ -30,6 +30,7 @@ const PersonPage = lazy(() => import('./pages/PersonPage'))
 const WorkPage = lazy(() => import('./pages/WorkPage'))
 const WeekPage = lazy(() => import('./pages/WeekPage'))
 const YearPage = lazy(() => import('./pages/YearPage'))
+const WeddingPage = lazy(() => import('./pages/WeddingPage'))
 // Toasts are rare and sonner is ~35 KB, so its Toaster is a lazy chunk, not part of the shell.
 const Toaster = lazy(() => import('sonner').then((m) => ({ default: m.Toaster })))
 
@@ -86,6 +87,7 @@ function App() {
             <Route path="/work" element={<WorkPage />} />
             <Route path="/week" element={<WeekPage />} />
             <Route path="/year" element={<YearPage />} />
+            <Route path="/wedding/:goalId" element={<WeddingPage />} />
             <Route path="/review" element={<ReviewPage />} />
             <Route path="/life" element={<LifePage />} />
             <Route path="/checkin" element={<CheckInPage />} />

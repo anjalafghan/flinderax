@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 import api from "@/services/api";
 import { formatINR, toPaise } from "@/utils/money";
@@ -71,6 +72,9 @@ export function CoupleGoalsCard() {
               {g.monthly_needed_paise ? ` · ${formatINR(g.monthly_needed_paise)} a month to get there` : ""}
             </span>
             <span className="text-muted-foreground">{g.shares.map((s) => `${s.name} ${formatINR(s.paise)}`).join(" · ")}</span>
+            <Link to={`/wedding/${g.goal_id}`} className="text-sm font-medium text-primary">
+              Plan the budget
+            </Link>
             <span className="flex items-center gap-2">
               <input
                 aria-label={`Add to ${g.name}`}

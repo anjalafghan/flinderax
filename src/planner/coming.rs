@@ -11,6 +11,8 @@ pub enum Kind {
     Date,
     Birthday,
     FollowUp,
+    /// A payment due on a goal's budget (the wedding). Overdue ones stay on the list until paid.
+    Milestone,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -53,13 +55,14 @@ pub fn merge(items: Vec<Item>, today: Date, days: i64) -> Vec<Entry> {
             let days_away = (item.on - today).whole_days();
             Entry { when: when_label(days_away), days_away, item }
         })
-        .filter(|e| e.days_away <= days && (e.days_away >= 0 || e.item.kind == Kind::FollowUp))
+        .filter(|e| e.days_away <= days && (e.days_away >= 0 || matches!(e.item.kind, Kind::FollowUp | Kind::Milestone)))
         .collect();
     let rank = |k: Kind| match k {
         Kind::Bill => 0,
         Kind::Date => 1,
         Kind::Birthday => 2,
         Kind::FollowUp => 3,
+        Kind::Milestone => 4,
     };
     out.sort_by(|a, b| (a.item.on, rank(a.item.kind), &a.item.title).cmp(&(b.item.on, rank(b.item.kind), &b.item.title)));
     out
@@ -98,6 +101,20 @@ mod tests {
         assert_eq!(got, ["Rent", "Dinner at Saltt", "Ask about the move", "Asha"]);
         let again: Vec<String> = merge(items, TODAY, 14).iter().map(|e| e.when.clone()).collect();
         assert_eq!(again, ["Tomorrow", "Tomorrow", "Tomorrow", "In 2 days"]);
+    }
+
+    #[test]
+    fn an_unpaid_milestone_stays_on_the_list_when_overdue_and_sorts_after_the_rest_of_its_day() {
+        let items = vec![
+            item(date!(2026 - 11 - 16), Kind::Milestone, "Wedding: Venue"),
+            item(date!(2026 - 11 - 16), Kind::Bill, "Rent"),
+            item(date!(2026 - 11 - 10), Kind::Milestone, "Wedding: Caterer"),
+            item(date!(2026 - 12 - 30), Kind::Milestone, "Wedding: Too far"),
+        ];
+        let got = merge(items, TODAY, 14);
+        let titles: Vec<&str> = got.iter().map(|e| e.item.title.as_str()).collect();
+        assert_eq!(titles, ["Wedding: Caterer", "Rent", "Wedding: Venue"]);
+        assert_eq!(got[0].when, "Overdue by 5 days");
     }
 
     #[test]

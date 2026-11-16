@@ -11,6 +11,7 @@ use crate::{
         coming,
         common::{today_local, AppError},
         couple::couple_of,
+        wedding,
         year::lumpy_for,
     },
     models::AppState,
@@ -72,10 +73,12 @@ pub async fn counts(db: &SqlitePool, user_id: &str, today: Date) -> Result<Count
     let large_amounts_soon = lumpy_for(db, user_id)
         .await?
         .iter()
-        .filter(|l| l.direction == Direction::Out)
+        // Wedding payments are counted on their own, below.
+        .filter(|l| l.direction == Direction::Out && l.kind != "wedding")
         .filter(|l| next_occurrence(l, today).is_some_and(|d| d <= soon_end))
         .count();
 
+    let milestones_soon = wedding::milestone_items(db, user_id, today, SOON_DAYS).await?.len();
     let coming = coming::gather(db, user_id, today, SOON_DAYS).await?;
     let birthdays_soon = coming.iter().filter(|e| e.item.kind == ComingKind::Birthday && e.days_away <= BIRTHDAY_DAYS).count();
     let followups_overdue = coming.iter().filter(|e| e.item.kind == ComingKind::FollowUp && e.days_away < 0).count();
@@ -84,7 +87,7 @@ pub async fn counts(db: &SqlitePool, user_id: &str, today: Date) -> Result<Count
         uncategorized: uncategorized as usize,
         goals_behind,
         large_amounts_soon,
-        milestones_soon: 0,
+        milestones_soon,
         birthdays_soon,
         followups_overdue,
     })

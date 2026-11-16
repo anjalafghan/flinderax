@@ -37,13 +37,21 @@ pub struct ComingUp {
 
 pub async fn get(State(state): State<AppState>, Extension((user_id, _)): User, Query(q): Query<Q>) -> Result<Json<ComingUp>, AppError> {
     let days = q.days.unwrap_or(14).clamp(1, 60);
-    Ok(Json(ComingUp { items: gather(&state.db, &user_id, today_local(), days).await? }))
+    Ok(Json(ComingUp { items: collect(&state.db, &user_id, today_local(), days, true).await? }))
 }
 
-/// Everything coming up for one person in the next `days` days, soonest first.
+/// Everything coming up for one person in the next `days` days, soonest first. Budget payments
+/// (wedding milestones) are left out: this is what the push digest counts.
 pub async fn gather(db: &sqlx::SqlitePool, user_id: &str, today: Date, days: i64) -> Result<Vec<Entry>, AppError> {
+    collect(db, user_id, today, days, false).await
+}
+
+async fn collect(db: &sqlx::SqlitePool, user_id: &str, today: Date, days: i64, with_milestones: bool) -> Result<Vec<Entry>, AppError> {
     let user_id = user_id.to_string();
     let mut items: Vec<Item> = Vec::new();
+    if with_milestones {
+        items.extend(crate::handlers::wedding::milestone_items(db, &user_id, today, days).await?);
+    }
 
     autopost::apply(db, &user_id, today).await?;
     let input = load_input(db, &user_id, today).await?;

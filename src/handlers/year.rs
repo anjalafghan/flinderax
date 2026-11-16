@@ -12,6 +12,7 @@ use time::{macros::format_description, Date};
 use crate::{
     handlers::{
         common::{bad_request, not_found, today_local, AppError},
+        couple::couple_of,
         dashboard::load_input,
     },
     models::AppState,
@@ -78,7 +79,28 @@ async fn rows(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<Row>, AppError
 /// Every dated amount that should appear in the year view for this user. Other features (wedding
 /// payments) add theirs here.
 pub async fn lumpy_for(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<Lumpy>, AppError> {
-    Ok(rows(db, user_id).await?.iter().filter_map(Row::lumpy).collect())
+    let mut out: Vec<Lumpy> = rows(db, user_id).await?.iter().filter_map(Row::lumpy).collect();
+    out.extend(wedding_lumpy(db, user_id).await?);
+    Ok(out)
+}
+
+/// Unpaid, dated wedding payments of the couple's goals, as one-off outflows.
+async fn wedding_lumpy(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<Lumpy>, AppError> {
+    let Some((couple, _)) = couple_of(db, user_id).await? else { return Ok(vec![]) };
+    let rows: Vec<(String, i64, String, String)> = sqlx::query_as(
+        "SELECT m.due_on, m.amount_paise, i.name, g.name FROM goal_milestones m \
+         JOIN goal_items i ON i.item_id = m.item_id JOIN couple_goals g ON g.goal_id = i.goal_id \
+         WHERE g.couple_id = ? AND g.archived = 0 AND i.archived = 0 AND m.paid_on IS NULL AND m.due_on IS NOT NULL",
+    )
+    .bind(&couple)
+    .fetch_all(db)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(due, amount, item, goal)| {
+            Some(Lumpy { on: parse_date(&due)?, label: format!("{goal}: {item}"), amount_paise: amount, direction: Direction::Out, yearly: false, kind: "wedding".into() })
+        })
+        .collect())
 }
 
 /// `GET /api/year`: the twelve-month view, built on the same inputs as Safe to Spend.
