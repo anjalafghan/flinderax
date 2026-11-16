@@ -1180,3 +1180,39 @@ async fn a_couple_can_start_empty_and_choose_starter_packs() {
     let b = t.user("packb").await;
     assert_eq!(t.post("/api/couple/create", &b, json!({"packs": ["nope"]})).await.status, StatusCode::BAD_REQUEST);
 }
+
+#[tokio::test]
+async fn every_draw_logs_the_chance_the_shown_slip_had() {
+    let t = setup().await;
+    let (rohit, _, couple) = t.couple().await;
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_draws").await, 0);
+    let first = drawn(&t.post("/api/dates/pick", &rohit, json!({})).await.json);
+    let rows: Vec<(i64, i64, f64, i64)> = sqlx::query_as("SELECT activity_id, who, probability, pool_size FROM joy_draws WHERE couple_id = ? ORDER BY id")
+        .bind(&couple)
+        .fetch_all(&t.db)
+        .await
+        .unwrap();
+    assert_eq!(rows.len(), 1, "one row per slip shown");
+    let (shown, who, p, pool) = rows[0];
+    assert_eq!(shown, first);
+    assert!((0..=1).contains(&who));
+    assert!(p > 0.0 && p <= 1.0, "{p}");
+    assert!(pool >= 1 && p >= 1.0 / (pool as f64) / 20.0, "a chance of {p} in a pool of {pool}");
+
+    // A put-back draws again: the next row is for the new slip, and the pool shrinks by one.
+    let r = t.post("/api/dates/pick", &rohit, json!({"current": first, "reroll": true, "excluded": [first]})).await;
+    let second = drawn(&r.json);
+    let rows: Vec<(i64, i64)> = sqlx::query_as("SELECT activity_id, pool_size FROM joy_draws WHERE couple_id = ? ORDER BY id").bind(&couple).fetch_all(&t.db).await.unwrap();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[1].0, second);
+    assert_eq!(rows[1].1, pool - 1);
+}
+
+#[tokio::test]
+async fn a_draw_with_nothing_to_show_logs_nothing() {
+    let t = setup().await;
+    let (rohit, _, _) = t.couple().await;
+    let r = t.post("/api/dates/pick", &rohit, json!({"tag": "zzz-no-such-tag"})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_draws").await, 0);
+}
