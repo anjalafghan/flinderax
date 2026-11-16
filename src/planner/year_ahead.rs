@@ -84,10 +84,12 @@ fn lumpy_dates(l: &Lumpy, from: Date, to: Date) -> Vec<Date> {
     for year in from.year() - 1..=to.year() {
         let d = Date::from_calendar_date(year, l.on.month(), l.on.day())
             .or_else(|_| Date::from_calendar_date(year, l.on.month(), 28));
-        if let Ok(d) = d {
-            if d >= l.on && d >= from && d < to {
-                out.push(d);
-            }
+        if let Ok(d) = d
+            && d >= l.on
+            && d >= from
+            && d < to
+        {
+            out.push(d);
         }
     }
     out

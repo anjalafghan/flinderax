@@ -1470,3 +1470,46 @@ async fn people_can_turn_notifications_on_and_off_and_a_scheduled_job_can_trigge
     assert_eq!(s, StatusCode::OK, "{body}");
     assert_eq!(serde_json::from_str::<Value>(&body).unwrap()["sent"], 0);
 }
+
+#[tokio::test]
+async fn the_year_ahead_shows_planned_outflows_and_keeps_them_private() {
+    let app = test_app().await;
+    let (a, b) = (new_user(&app, "10.0.4.1", "yearA").await, new_user(&app, "10.0.4.2", "yearB").await);
+    authed_post(&app, &a, "/api/account/create", json!({"name": "HDFC", "kind": "bank", "balance_paise": 100_000})).await;
+
+    let in_four_months = (time::OffsetDateTime::now_utc().date() + time::Duration::days(120)).to_string();
+    let (s, body) = authed_post(&app, &a, "/api/year/outflows",
+        json!({"label": "Term premium", "on_day": in_four_months, "amount_paise": 5_000_000, "kind": "premium", "yearly": true})).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    let id = serde_json::from_str::<Value>(&body).unwrap()["outflow_id"].as_str().unwrap().to_string();
+
+    // Bad input is refused.
+    for bad in [
+        json!({"label": "", "on_day": in_four_months, "amount_paise": 1}),
+        json!({"label": "x", "on_day": "soon", "amount_paise": 1}),
+        json!({"label": "x", "on_day": in_four_months, "amount_paise": 0}),
+        json!({"label": "x", "on_day": in_four_months, "amount_paise": 1, "kind": "nope"}),
+        json!({"label": "x", "on_day": in_four_months, "amount_paise": 1, "direction": "sideways"}),
+    ] {
+        let (s, _) = authed_post(&app, &a, "/api/year/outflows", bad).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST);
+    }
+
+    let list = authed_get(&app, &a, "/api/year/outflows").await;
+    assert_eq!(list.as_array().unwrap().len(), 1);
+    assert!(list[0]["set_aside_monthly_paise"].as_i64().unwrap() > 0);
+
+    let year = authed_get(&app, &a, "/api/year").await;
+    assert_eq!(year["months"].as_array().unwrap().len(), 12);
+    assert_eq!(year["total_lumpy_out_paise"], 5_000_000);
+    assert!(year["first_short_month"].is_string(), "100k plus no income does not cover a 50,000 premium: {year}");
+
+    // Another person sees none of it and cannot delete it.
+    assert_eq!(authed_get(&app, &b, "/api/year/outflows").await.as_array().unwrap().len(), 0);
+    let (s, _) = authed_post(&app, &b, &format!("/api/year/outflows/{id}/delete"), json!({})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+
+    let (s, _) = authed_post(&app, &a, &format!("/api/year/outflows/{id}/delete"), json!({})).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(authed_get(&app, &a, "/api/year").await["total_lumpy_out_paise"], 0);
+}
