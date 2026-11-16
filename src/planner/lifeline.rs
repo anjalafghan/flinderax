@@ -111,6 +111,21 @@ pub struct LineInput {
     /// What is owned today, less loans. May be negative.
     pub wealth_paise: i64,
     pub choices: Vec<Choice>,
+    /// Money set aside for the first child's education, if there is a plan for it.
+    pub earmark: Option<Earmark>,
+}
+
+/// A pot kept apart for the first child's education. It starts from `corpus_paise` (taken out of
+/// savings), grows at `return_bps`, takes `monthly_paise` a month up to the last fee, and pays each
+/// fee in `payouts` first. What it cannot cover comes from savings. Where an earmark is given it
+/// stands in for the default education estimate of the first child.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Earmark {
+    pub corpus_paise: i64,
+    pub monthly_paise: i64,
+    pub return_bps: i64,
+    /// (months from this month, fee then in paise), any order.
+    pub payouts: Vec<(i64, i64)>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -482,11 +497,14 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
         if birth_year + CHILD_YEARS >= ty {
             let month = months_from(today, birth_year + CHILD_YEARS, 6);
             let cost = p.child_education_today_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
-            lumps.push(Lump {
-                month,
-                amount: grow(cost, EDUCATION_INFLATION_BPS, month),
-                label: format!("{name}'s education"),
-            });
+            // With an education plan, its own fees (paid from the earmark) replace this estimate.
+            if !(n == 0 && input.earmark.is_some()) {
+                lumps.push(Lump {
+                    month,
+                    amount: grow(cost, EDUCATION_INFLATION_BPS, month),
+                    label: format!("{name}'s education"),
+                });
+            }
             child_spans.push((months_from(today, *birth_year, 1), month));
         }
     }
@@ -500,6 +518,11 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
 
     let mut wealth = input.wealth_paise.clamp(-MAX_AMOUNT_PAISE, MAX_AMOUNT_PAISE) as f64;
     // Starting in debt is allowed; going further below it is "short".
+    // The earmark is taken out of savings (no more than there is) and kept as its own pot.
+    let earmark = input.earmark.as_ref();
+    let mut pot = earmark.map_or(0.0, |e| (e.corpus_paise.clamp(0, MAX_AMOUNT_PAISE) as f64).min(wealth.max(0.0)));
+    wealth -= pot;
+    let last_fee = earmark.and_then(|e| e.payouts.iter().map(|(m, _)| *m).max()).unwrap_or(0);
     let floor = wealth.min(0.0);
     let mut loans: Vec<f64> = homes.iter().map(|h| h.loan).collect();
     let mut rows: Vec<Row> = Vec::new();
@@ -561,6 +584,29 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
                 events.push(lump.label.clone());
             }
         }
+        if let Some(e) = earmark {
+            // Growth first, then the month's top-up, then any fee: the order the plan's maths uses.
+            if m > 0 {
+                pot *= 1.0 + rate(e.return_bps.clamp(0, 3_000)) / 12.0;
+            }
+            if m >= 1 && m <= last_fee {
+                let top_up = e.monthly_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
+                spend += top_up;
+                pot += top_up;
+            }
+            for (_, fee) in e.payouts.iter().filter(|(pm, _)| *pm == m) {
+                let fee = (*fee).clamp(0, MAX_AMOUNT_PAISE) as f64;
+                let from_pot = pot.min(fee);
+                pot -= from_pot;
+                spend += fee - from_pot;
+                if fee - from_pot > 0.0 {
+                    lump_labels.push("Child's education");
+                }
+                if !events.iter().any(|e| e == "Child's education") {
+                    events.push("Child's education".into());
+                }
+            }
+        }
         if m == retire_month {
             events.push(format!("Retire at {retire_age}"));
         }
@@ -607,7 +653,7 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
             let i = year_index;
             let home_value: f64 = homes.iter().filter(|h| h.from <= m).map(|h| grow(h.price, infl_bps, m - h.from)).sum();
             let owed: f64 = homes.iter().zip(&loans).filter(|(h, _)| h.from <= m).map(|(_, l)| *l).sum();
-            let net = wealth + home_value - owed;
+            let net = wealth + pot + home_value - owed;
             let deflate = (1.0 + inflation).powf((m + 1) as f64 / 12.0);
             let net_today = to_paise(net / deflate);
             // Free: savings alone would pay a year of today's costs for good, and nothing is short.
@@ -652,6 +698,9 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
             "Estimate: raising a child costs {} a month in today's money until 18, plus education.",
             inr(CHILD_MONTHLY_TODAY)
         ));
+    }
+    if earmark.is_some() {
+        notes.push("The education plan's fees replace the default estimate. Its top-up goes into a separate pot that pays them first, and what it cannot cover comes from savings.".to_string());
     }
     if !homes.is_empty() {
         notes.push("A home is counted in net worth and keeps its value in today's money.".to_string());
@@ -808,6 +857,7 @@ mod tests {
             expenses_paise: 7_000_000,
             wealth_paise: 100_000_000,
             choices,
+            earmark: None,
         }
     }
 
@@ -1108,6 +1158,75 @@ mod tests {
         assert_eq!(rough(-10_00_00_000_00), "₹10 crore");
         assert_eq!(rough(57_40_000_00), "₹57.4 lakh");
         assert_eq!(rough(45_000_00), "₹45,000");
+    }
+
+    fn year_of(l: &Line, event: &str) -> Option<i64> {
+        l.rows.iter().find(|r| r.events.iter().any(|e| e == event)).map(|r| r.year)
+    }
+
+    fn with_child_and_earmark(earmark: Option<Earmark>) -> Line {
+        let mut i = input(vec![Choice::Child { birth_year: 2026, another: false }]);
+        i.earmark = earmark;
+        simulate(&i, today())
+    }
+
+    #[test]
+    fn an_earmark_replaces_the_default_education_estimate_and_pays_the_fee_from_its_pot() {
+        let fee_month = months_from(today(), 2044, 6);
+        let none = with_child_and_earmark(None);
+        assert_eq!(year_of(&none, "Child's education"), Some(2044));
+        // A pot that already holds the fee and needs no top-up: the fee costs savings nothing at
+        // the time, so the line only differs by what the pot earned against what savings earned.
+        let covered = with_child_and_earmark(Some(Earmark { corpus_paise: 50_000_000, monthly_paise: 0, return_bps: 1_150, payouts: vec![(fee_month, 40_000_000)] }));
+        assert_eq!(year_of(&covered, "Child's education"), Some(2044));
+        let fee_year = covered.rows.iter().find(|r| r.year == 2044).unwrap();
+        let plain_year = none.rows.iter().find(|r| r.year == 2044).unwrap();
+        assert!(fee_year.spend_paise < plain_year.spend_paise, "the fee came out of the pot, not the month's money");
+        assert!(covered.notes.iter().any(|n| n.contains("education plan")));
+    }
+
+    #[test]
+    fn what_the_pot_cannot_cover_comes_from_savings_and_the_top_up_is_spent_each_month() {
+        let fee_month = months_from(today(), 2036, 6);
+        let fee = 30_000_000;
+        let thin = with_child_and_earmark(Some(Earmark { corpus_paise: 0, monthly_paise: 0, return_bps: 1_150, payouts: vec![(fee_month, fee)] }));
+        let topped = with_child_and_earmark(Some(Earmark { corpus_paise: 0, monthly_paise: 250_000, return_bps: 1_150, payouts: vec![(fee_month, fee)] }));
+        let spend = |l: &Line, y: i64| l.rows.iter().find(|r| r.year == y).unwrap().spend_paise;
+        assert!(spend(&thin, 2036) >= fee, "an empty pot leaves the whole fee to savings");
+        assert!(spend(&topped, 2030) > spend(&thin, 2030), "the top-up is a monthly cost");
+        assert!(spend(&topped, 2036) < spend(&thin, 2036) - 100_000_000 / 100, "and the pot takes the fee");
+        // The top-up stops after the last fee.
+        assert_eq!(spend(&topped, 2040), spend(&thin, 2040));
+    }
+
+    #[test]
+    fn a_top_up_that_matches_the_plan_changes_the_line_a_little_not_a_lot() {
+        use crate::planner::education::{earmark, Plan};
+        let plan = Plan::starter(2026);
+        let base = {
+            let mut i = input(vec![Choice::Child { birth_year: 2026, another: false }]);
+            i.profile.my_take_home_paise = 30_000_000;
+            i
+        };
+        let mut with = base.clone();
+        with.earmark = Some(earmark(&plan, today()));
+        let (b, w) = (simulate(&base, today()), simulate(&with, today()));
+        let c = compare(&b, &w);
+        assert!(!c.lines.is_empty());
+        // Saving into a pot that earns a return and is spent on fees is not wildly different from
+        // paying the fees later out of savings that earn a return.
+        assert!(c.at_end_change_paise.abs() < b.marks.at_end_today_paise.abs() / 2 + 1, "{c:?}");
+    }
+
+    #[test]
+    fn an_earmark_larger_than_savings_only_takes_what_there_is() {
+        let mut small = input(vec![]);
+        small.wealth_paise = 1_000_000;
+        let mut earmarked = small.clone();
+        earmarked.earmark = Some(Earmark { corpus_paise: 900_000_000, monthly_paise: 0, return_bps: EQUITY_RETURN_BPS, payouts: vec![] });
+        let (a, b) = (simulate(&small, today()), simulate(&earmarked, today()));
+        let (x, y) = (a.rows[0].net_worth_paise, b.rows[0].net_worth_paise);
+        assert!((x - y).abs() < x.abs() / 100, "moving savings into a pot that earns the same loses and creates almost nothing: {x} vs {y}");
     }
 
     #[test]

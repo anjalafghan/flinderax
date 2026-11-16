@@ -29,6 +29,7 @@ pub mod history;
 pub mod insights;
 pub mod joy;
 pub mod life;
+pub mod education;
 pub mod lifeline;
 pub mod merchant;
 pub mod merchant_seed;

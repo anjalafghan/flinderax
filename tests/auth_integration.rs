@@ -185,6 +185,18 @@ async fn authed_post(app: &Router, token: &str, path: &str, body: Value) -> (Sta
     (status, String::from_utf8_lossy(&bytes).into_owned())
 }
 
+async fn authed_put(app: &Router, token: &str, path: &str, body: Value) -> (StatusCode, String) {
+    let req = Request::put(path)
+        .header("content-type", "application/json")
+        .header("authorization", format!("Bearer {token}"))
+        .body(Body::from(body.to_string()))
+        .unwrap();
+    let res = app.clone().oneshot(req).await.unwrap();
+    let status = res.status();
+    let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    (status, String::from_utf8_lossy(&bytes).into_owned())
+}
+
 #[tokio::test]
 async fn card_history_is_only_visible_to_its_owner() {
     let app = test_app().await;
@@ -1096,6 +1108,12 @@ async fn an_export_can_be_loaded_back_and_exports_the_same_again() {
     authed_post(&app, &t, "/api/ingest/transactions/create",
         json!({"occurred_on": today, "direction": "debit", "amount_paise": 25_000, "merchant": "Chai", "category": "food"})).await;
     authed_post(&app, &t, "/api/plan/scenarios", json!({"drafts": [{"id": "d1"}]})).await;
+    let this_year = joy::handlers::common::today_local().year();
+    let (s, b) = authed_put(&app, &t, "/api/plan/education", json!({
+        "child_birth_year": this_year, "inflation_bps": 1000, "return_bps": 1100, "corpus_paise": 2_500_000,
+        "stages": [{"name": "College", "start_age": 18, "today_cost_paise": 150_000_000}],
+    })).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
     // Correcting a category teaches the merchant memory (no "remember" flag needed).
     let txn_id = authed_get(&app, &t, "/api/ingest/transactions").await[0]["txn_id"].as_str().unwrap().to_string();
     let (s, b) = authed_post(&app, &t, "/api/ingest/transactions/update", json!({"txn_id": txn_id, "category": "dates", "merchant": "UPI/CORNER CAFE@okaxis"})).await;
@@ -1111,6 +1129,7 @@ async fn an_export_can_be_loaded_back_and_exports_the_same_again() {
     sqlx::query("DELETE FROM cards").execute(&db).await.unwrap();
     sqlx::query("DELETE FROM accounts").execute(&db).await.unwrap();
     sqlx::query("DELETE FROM whatif_scenarios").execute(&db).await.unwrap();
+    sqlx::query("DELETE FROM education_plan").execute(&db).await.unwrap();
     sqlx::query("DELETE FROM merchant_rules").execute(&db).await.unwrap();
     authed_post(&app, &t, "/api/account/create", json!({"name": "Junk", "kind": "cash", "balance_paise": 1})).await;
 
@@ -1120,6 +1139,9 @@ async fn an_export_can_be_loaded_back_and_exports_the_same_again() {
     assert_eq!(after["data"], before["data"], "export -> wipe -> import -> export is the same file");
     let restored: String = sqlx::query_scalar("SELECT category FROM merchant_rules WHERE pattern = 'corner cafe'").fetch_one(&db).await.unwrap();
     assert_eq!(restored, "dates", "import restores the merchant rule");
+    assert_eq!(before["data"]["education_plan"].as_array().map(Vec::len), Some(1), "the education plan is in the export");
+    let corpus: i64 = sqlx::query_scalar("SELECT corpus_paise FROM education_plan").fetch_one(&db).await.unwrap();
+    assert_eq!(corpus, 2_500_000, "import restores the education plan");
 
     // Someone else's backup is not loadable into your account: ids are theirs.
     let other = new_user(&app, "10.0.1.1", "intruder").await;
@@ -1469,4 +1491,39 @@ async fn people_can_turn_notifications_on_and_off_and_a_scheduled_job_can_trigge
     let (s, _, body) = round(Some("round-token"), "morning").await;
     assert_eq!(s, StatusCode::OK, "{body}");
     assert_eq!(serde_json::from_str::<Value>(&body).unwrap()["sent"], 0);
+}
+
+#[tokio::test]
+async fn the_education_plan_is_saved_summarised_and_private_over_http() {
+    let app = test_app().await;
+    let a = new_user(&app, "10.0.2.1", "eduparent").await;
+    let b = new_user(&app, "10.0.2.2", "edustranger").await;
+    let fresh = authed_get(&app, &a, "/api/plan/education").await;
+    assert_eq!(fresh["saved"], false);
+    assert!(fresh["summary"]["notes"][1].as_str().unwrap().contains("not investment advice"));
+
+    let year = joy::handlers::common::today_local().year() + 1;
+    let body = json!({
+        "child_birth_year": year, "inflation_bps": 1000, "return_bps": 1100, "corpus_paise": 0,
+        "stages": [{"name": "School", "start_age": 5, "today_cost_paise": 30_000_000},
+                   {"name": "College", "start_age": 18, "today_cost_paise": 150_000_000}],
+    });
+    let (s, text) = authed_put(&app, &a, "/api/plan/education", body.clone()).await;
+    assert_eq!(s, StatusCode::OK, "{text}");
+    let out: Value = serde_json::from_str(&text).unwrap();
+    assert_eq!(out["saved"], true);
+    let (lo, mid, hi) = (
+        out["summary"]["low"]["monthly_top_up_paise"].as_i64().unwrap(),
+        out["summary"]["base"]["monthly_top_up_paise"].as_i64().unwrap(),
+        out["summary"]["high"]["monthly_top_up_paise"].as_i64().unwrap(),
+    );
+    assert!(0 < lo && lo < mid && mid < hi, "{lo} {mid} {hi}");
+    assert!(out["lifeline"]["consequences"]["lines"].as_array().is_some_and(|l| !l.is_empty()));
+    assert_eq!(authed_get(&app, &b, "/api/plan/education").await["saved"], false, "a plan is private to its owner");
+
+    let mut bad = body;
+    bad["return_bps"] = json!(99_999);
+    let (s, _) = authed_put(&app, &a, "/api/plan/education", bad).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    assert_eq!(authed_get(&app, &a, "/api/plan/education").await["summary"]["base"]["monthly_top_up_paise"], mid);
 }

@@ -68,6 +68,7 @@ pub(crate) const USER_TABLES: &[(&str, &str)] = &[
         ("tax_entries", "SELECT * FROM tax_entries WHERE user_id = ?"),
         ("life_profiles", "SELECT * FROM life_profiles WHERE user_id = ?"),
         ("life_choices", "SELECT * FROM life_choices WHERE user_id = ?"),
+        ("education_plan", "SELECT * FROM education_plan WHERE user_id = ?"),
         // Everything, the original alert text (`raw_text`) included.
         ("transactions", "SELECT * FROM transactions WHERE user_id = ?"),
         ("merchant_rules", "SELECT * FROM merchant_rules WHERE user_id = ?"),
