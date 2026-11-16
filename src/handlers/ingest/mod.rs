@@ -502,17 +502,15 @@ pub async fn update(
     .execute(db)
     .await?;
 
+    // Every correction is remembered under the merchant's key, so the next text or statement line
+    // from the same merchant comes in categorised. A payee with no key, or "uncategorized", is not.
+    if let Some(m) = merchant.as_deref() {
+        crate::merchant_rules::remember(db, &user_id, m, &p.category).await?;
+    }
+
     let mut recategorized = 0;
     if let Some(pattern) = merchant.as_deref().map(normalize).filter(|m| p.remember && !m.is_empty()) {
-        sqlx::query!(
-            "INSERT INTO merchant_rules (user_id, pattern, category) VALUES (?, ?, ?)
-             ON CONFLICT(user_id, pattern) DO UPDATE SET category = excluded.category",
-            user_id,
-            pattern,
-            p.category
-        )
-        .execute(db)
-        .await?;
+        crate::merchant_rules::upsert_pattern(db, &user_id, &pattern, &p.category).await?;
         let rule = [(pattern, p.category.clone())];
         let others = sqlx::query!(
             r#"SELECT txn_id AS "txn_id!", merchant AS "merchant!" FROM transactions
@@ -1150,6 +1148,32 @@ mod statement_tests {
         sqlx::query("UPDATE transactions SET category = 'gifts', category_locked = 1 WHERE rrn = '612345678903'").execute(&state.db).await.unwrap();
         let _ = recategorize(State(state.clone()), user()).await.unwrap_or_else(|e| panic!("{}", e.1));
         assert_eq!(cat(state.db.clone()).await, "gifts");
+    }
+
+    #[tokio::test]
+    async fn correcting_a_category_is_remembered_and_applied_to_the_next_statement_import() {
+        let state = test_state().await;
+        sqlx::query("INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, merchant, category, source, dedupe_key) VALUES ('t1', 'u', '2026-11-01', 'debit', 1000, 'ACME', 'uncategorized', 'manual', 'k1')")
+            .execute(&state.db)
+            .await
+            .unwrap();
+        let body = UpdateTxn { txn_id: "t1".into(), category: "gifts".into(), merchant: None, remember: false };
+        // Unknown category: refused, nothing remembered.
+        let bad = UpdateTxn { category: "nope".into(), ..body_clone(&body) };
+        assert!(update(State(state.clone()), user(), Json(bad)).await.is_err());
+        assert!(crate::merchant_rules::lookup(&state.db, "u", "acme").await.unwrap().is_none());
+        let ok = UpdateTxn { category: "shopping".into(), ..body_clone(&body) };
+        let _ = update(State(state.clone()), user(), Json(ok)).await.unwrap_or_else(|e| panic!("{}", e.1));
+        assert_eq!(crate::merchant_rules::lookup(&state.db, "u", "acme").await.unwrap().as_deref(), Some("shopping"));
+
+        // The rule is read back for ingest, so ACME rows from now on come in categorised.
+        import(&state, &csv(ROWS), Some("acctB")).await;
+        let cat: String = sqlx::query_scalar("SELECT category FROM transactions WHERE rrn = '612345678903'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(cat, "shopping");
+    }
+
+    fn body_clone(b: &UpdateTxn) -> UpdateTxn {
+        UpdateTxn { txn_id: b.txn_id.clone(), category: b.category.clone(), merchant: b.merchant.clone(), remember: b.remember }
     }
 
     #[tokio::test]

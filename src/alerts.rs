@@ -325,7 +325,9 @@ fn truncated_match(norm: &str, pat: &str) -> bool {
 /// shorter, and it keeps categorising cheap however long a pasted or uploaded line is.
 const MAX_MATCHED_CHARS: usize = 200;
 
-/// The category for a transaction: the user's longest matching rule, then the built-in list.
+/// The category for a transaction, in this order: the user's own rule (an exact merchant key
+/// first, then their longest matching pattern), the built-in merchant seed, then the keyword lists.
+/// An explicit category on a row is never passed through here, so it always wins over all three.
 pub fn categorize(merchant: Option<&str>, direction: Direction, card_payment: bool, user_rules: &[(String, String)]) -> String {
     if card_payment {
         return "transfer".into();
@@ -335,10 +337,17 @@ pub fn categorize(merchant: Option<&str>, direction: Direction, card_payment: bo
         let norm = normalize(&m);
         let padded = format!(" {norm} ");
         let contains = |pat: &str| padded.contains(&format!(" {pat} ")) || (pat.len() >= 5 && norm.contains(pat));
+        let key = crate::planner::merchant::merchant_key(&m);
+        if let Some((_, cat)) = user_rules.iter().find(|(p, _)| !key.is_empty() && *p == key) {
+            return cat.clone();
+        }
         if let Some((_, cat)) = user_rules.iter().filter(|(p, _)| contains(p)).max_by_key(|(p, _)| p.len()) {
             return cat.clone();
         }
         if direction == Direction::Debit {
+            if let Some(cat) = crate::planner::merchant_seed::category_for_key(&key) {
+                return cat.into();
+            }
             for (cat, pats) in DEFAULT_RULES {
                 if pats.iter().any(|p| contains(p)) {
                     return (*cat).into();

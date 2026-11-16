@@ -1,0 +1,33 @@
+# id | sender | expected | text
+# expected: D:<paise> debit, C:<paise> credit, - = not a transaction (must not parse).
+# Every name, account tail, reference and VPA below is invented.
+hdfc_card_spend|VM-HDFCBK|D:45000|Spent Rs.450.00 On HDFC Bank Card 1234 At SWIGGY On 2026-11-01:13:45:12 Not You? Call 18002586161/SMS BLOCK CC 1234 to 7308080808
+hdfc_upi_sent|VM-HDFCBK|D:25000|Sent Rs.250.00 From HDFC Bank A/C *1234 To RAJU STORE On 01/11/26 Ref 430512345678 Not You? Call 18002586161/SMS BLOCK UPI to 7308080808
+hdfc_vpa_debit|AX-HDFCBK-S|D:500000|Rs.5000.00 debited from a/c **1234 on 01-11-26 to VPA swiggy.in@axisbank (UPI Ref No 430512345678). Not you? Call 18002586161
+hdfc_salary|JD-HDFCBK-T|C:10000000|Update! INR 1,00,000.00 deposited in HDFC Bank A/c XX1234 on 30-OCT-26 for NEFT Cr-ACME CORP PVT LTD. Avl bal INR 1,25,000.50. Cheque deposits in A/C are subject to clearing
+hdfc_upi_received|VM-HDFCBK|C:150000|Credit Alert! Rs.1,500.00 credited to HDFC Bank A/c XX1234 on 03-11-26 from VPA friend@okaxis (UPI 430512345680)
+hdfc_atm|VM-HDFCBK|D:1000000|Rs.10,000.00 withdrawn from HDFC Bank ATM XXXX1234 on 04-11-26. Avl bal Rs 40,000.50
+hdfc_failed|VM-HDFCBK|-|Txn of Rs 2000 on HDFC Bank Card 1234 declined due to insufficient limit.
+hdfc_otp|VM-HDFCBK|-|123456 is your OTP for txn of Rs 500.00 at DEMO SHOP on HDFC Bank Card 1234. Valid for 10 mins.
+hdfc_card_bill|VM-HDFCBK|C:1500000|Payment of Rs 15,000.00 received towards your HDFC Bank Credit Card ending 1234 on 05-11-2026. Thank you.
+hdfc_paise_small|VM-HDFCBK|D:10|Rs.0.10 debited from HDFC Bank A/c XX1234 on 10-11-26 to VPA test.shop@upi UPI Ref 430512345684
+hdfc_paise_large|VM-HDFCBK|C:10000005|Rs.1,00,000.05 credited to HDFC Bank A/c XX1234 on 11-11-26 NEFT Cr-DEMO CORP
+icici_card_spend|AX-ICICIB-S|D:129900|INR 1,299.00 spent using ICICI Bank Card XX1234 on 01-Nov-26 on AMAZON. Avl Limit: INR 98,701.00. If not you, call 1800 2662/SMS BLOCK 1234 to 9215676766
+icici_acct_debit|VM-ICICIB|D:50000|ICICI Bank Acct XX234 debited for Rs 500.00 on 01-Nov-26; ZOMATO credited. UPI:430512345678. Call 18002662 for dispute. SMS BLOCK 234 to 9215676766.
+icici_credit|VM-ICICIB|C:2500000|ICICI Bank Acct XX234 credited with Rs 25,000.00 on 05-Nov-26 from SAMPLE PERSON. UPI:430512345681
+icici_imps|VM-ICICIB|D:320000|Dear Customer, Rs 3,200.00 debited from ICICI Bank A/c XX234 on 06-Nov-26 for IMPS-430512345682-ASHA TEST. Avl bal INR 10,000.00
+icici_refund|VM-ICICIB|C:45000|INR 450.00 credited to ICICI Bank A/c XX234 on 12-Nov-26 refund from MYNTRA. UPI Ref 430512345685
+icici_rupee_sign|AX-ICICIB-S|D:9900|₹99.00 spent on ICICI Bank Card XX1234 at SPOTIFY on 13-Nov-26. Avl Limit: INR 50,000.00
+sbi_upi_debit|JD-SBIINB|D:25000|Dear UPI user A/C X1234 debited by 250.0 on date 01Nov26 trf to SWIGGY Refno 430512345678. If not u? call 1800111109. -SBI
+sbi_credit|JD-SBIINB|C:500000|Dear SBI User, your A/c X1234-credited by Rs.5000 on 01Nov26 transfer from JOHN DOE Ref No 430512345678 -SBI
+sbi_neft|VK-SBIINB|C:7500000|Dear SBI User, your A/c X1234-credited by Rs.75000 on 07Nov26 by NEFT from ACME TEST LTD Ref No 430512345683 -SBI
+sbi_atm|JD-SBIINB|D:200000|Dear Customer, Rs.2000 withdrawn from SBI ATM using A/c X1234 on 08Nov26. Avl Bal Rs.8,500.25 -SBI
+sbi_promo|JD-SBIINB|-|Dear Customer, pre-approved personal loan of Rs 5,00,000 is waiting for you. Apply now at the SBI branch.
+axis_card_spend|AD-AXISBK|D:75000|INR 750.00 spent on Axis Bank Card no. XX1234 at UBER INDIA on 01-11-26 10:22:11 IST. Avl Limit: INR 49,250.00. Not you? SMS BLOCK 1234 to 919951860002
+axis_salary|AD-AXISBK|C:5200000|INR 52,000.00 credited to A/c no. XX1234 on 01-11-26 05:00:00 SALARY Cr from DEMO CORP. Avl Bal INR 60,000.00 - Axis Bank
+axis_upi_inr|AD-AXISBK|D:50000|INR 500 debited from Axis Bank A/c XX1234 on 14-11-26 to VPA shop.demo@okhdfc UPI Ref 430512345686
+axis_failed|AD-AXISBK|-|Payment of INR 300.00 failed on Axis Bank Card XX1234. If any amount is debited it will be reversed in 3 days.
+kotak_sent|VM-KOTAKB|D:12000|Sent Rs.120.00 from Kotak Bank AC X1234 to merchant.zepto@ybl on 01-11-26.UPI Ref 430512345678. Not you, https://kotak.com/KBANKT/Fraud
+kotak_received|VM-KOTAKB|C:50000|Received Rs.500.00 in your Kotak Bank AC X1234 from friend@okaxis on 01-11-26.UPI Ref:430512345679.
+kotak_card_spend|VM-KOTAKB|D:89900|Rs.899.00 spent on Kotak Bank Credit Card XX1234 at NETFLIX on 09-11-26. Avl limit Rs 41,101.00
+kotak_otp|VM-KOTAKB|-|Your OTP for Kotak Bank transaction is 654321. Do not share it with anyone.
