@@ -1374,6 +1374,93 @@ async fn a_couple_agrees_on_a_goal_and_both_pay_into_it() {
 }
 
 #[tokio::test]
+async fn a_wedding_budget_tracks_items_payments_and_a_verdict_that_follows_the_numbers() {
+    let app = test_app().await;
+    let (a, b) = (new_user(&app, "10.0.5.1", "wedda").await, new_user(&app, "10.0.5.2", "weddb").await);
+    make_couple(&app, &a, &b).await;
+    let today = joy::handlers::common::today_local().to_string();
+    let (_, body) = authed_post(&app, &a, "/api/couple-goals", json!({"name": "Wedding", "target_paise": 5_000_000})).await;
+    let id = serde_json::from_str::<Value>(&body).unwrap()["goal_id"].as_str().unwrap().to_string();
+    let base = format!("/api/couple-goals/{id}");
+
+    // Items: rupees typed as text go through paise_from_text; a quote replaces the estimate.
+    let (s, body) = authed_post(&app, &a, &format!("{base}/items"), json!({"name": "Hall", "category": "venue", "estimate": "10,000", "quote_paise": 800_000})).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    let item = serde_json::from_str::<Value>(&body).unwrap()["item_id"].as_str().unwrap().to_string();
+    for bad in [json!({"name": "", "category": "venue"}), json!({"name": "x", "category": "yacht"}), json!({"name": "x", "estimate": "ten"}), json!({"name": "x", "estimate_paise": -1})] {
+        let (s, _) = authed_post(&app, &a, &format!("{base}/items"), bad).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST);
+    }
+    let (s, _) = authed_post(&app, &b, &format!("{base}/items"), json!({"name": "Caterer", "category": "catering", "estimate_paise": 300_000})).await;
+    assert_eq!(s, StatusCode::OK, "either partner can add");
+
+    // A payment due today of 7,000 with 6,000 put aside: short by 1,000.
+    authed_post(&app, &a, &format!("{base}/contribute"), json!({"amount_paise": 600_000})).await;
+    let (s, body) = authed_post(&app, &a, &format!("{base}/items/{item}/milestones"), json!({"due_on": today, "amount_paise": 700_000})).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    let ms = serde_json::from_str::<Value>(&body).unwrap()["milestone_id"].as_str().unwrap().to_string();
+    let v = authed_get(&app, &b, &format!("{base}/budget")).await;
+    assert_eq!(v["summary"]["planned_paise"], 1_100_000, "800k quote (not the 1,000k estimate) + 300k");
+    assert_eq!(v["items"][0]["estimate_input"], "10000");
+    assert_eq!(v["items"][0]["quote_input"], "8000");
+    assert_eq!(v["verdict"]["status"], "short", "{v}");
+    assert_eq!(v["verdict"]["gap_paise"], 100_000);
+    assert_eq!(v["next_due"]["milestone_id"], ms.as_str());
+
+    // Coming up carries it, linking to the goal's page.
+    let coming = authed_get(&app, &b, "/api/coming-up?days=14").await;
+    let m = coming["items"].as_array().unwrap().iter().find(|i| i["kind"] == "milestone").expect("milestone listed");
+    assert_eq!(m["link"], format!("/wedding/{id}").as_str());
+
+    // Lower the amount and the verdict follows.
+    let (s, _) = authed_post(&app, &a, &format!("{base}/milestones/{ms}"), json!({"due_on": today, "amount": "5000"})).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(authed_get(&app, &a, &format!("{base}/budget")).await["verdict"]["status"], "on_track");
+
+    // Paying records a contribution in the payer's name; paying again records nothing more.
+    let (s, b1) = authed_post(&app, &a, &format!("{base}/milestones/{ms}/pay"), json!({"idempotency_key": "k1"})).await;
+    assert_eq!(s, StatusCode::OK, "{b1}");
+    assert_eq!(serde_json::from_str::<Value>(&b1).unwrap()["already"], false);
+    let (_, b2) = authed_post(&app, &b, &format!("{base}/milestones/{ms}/pay"), json!({})).await;
+    assert_eq!(serde_json::from_str::<Value>(&b2).unwrap()["already"], true);
+    let v = authed_get(&app, &a, &format!("{base}/budget")).await;
+    assert_eq!((v["saved_paise"].as_i64(), v["on_hand_paise"].as_i64(), v["summary"]["paid_paise"].as_i64()), (Some(1_100_000), Some(600_000), Some(500_000)));
+    assert_eq!(authed_get(&app, &a, "/api/couple-goals").await["goals"][0]["saved_paise"], 1_100_000);
+    let (s, _) = authed_post(&app, &a, &format!("{base}/milestones/{ms}"), json!({"amount": "1"})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "a paid payment can't be edited");
+    let (s, _) = authed_post(&app, &a, &format!("{base}/items/{item}/delete"), json!({})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "an item with a payment stands");
+    let coming = authed_get(&app, &a, "/api/coming-up?days=14").await;
+    assert!(coming["items"].as_array().unwrap().iter().all(|i| i["kind"] != "milestone"), "paid payments leave the list");
+
+    // Only whoever marked it paid can take it back; that removes the contribution too.
+    let (s, _) = authed_post(&app, &b, &format!("{base}/milestones/{ms}/unpay"), json!({})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+    let (s, _) = authed_post(&app, &a, &format!("{base}/milestones/{ms}/unpay"), json!({})).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(authed_get(&app, &a, &format!("{base}/budget")).await["saved_paise"], 600_000);
+
+    // The export carries both tables (under the couple's Dates data).
+    let export = authed_get(&app, &a, "/api/export").await;
+    assert_eq!(export["data"]["dates"]["goal_items"].as_array().unwrap().len(), 2);
+    assert_eq!(export["data"]["dates"]["goal_milestones"].as_array().unwrap().len(), 1);
+    assert_eq!(export["data"]["dates"]["goal_milestones"][0]["amount_paise"], 500_000);
+
+    // Deleting an unpaid milestone and then the item works; strangers and other couples get nothing.
+    let (s, _) = authed_post(&app, &a, &format!("{base}/milestones/{ms}/delete"), json!({})).await;
+    assert_eq!(s, StatusCode::OK);
+    let (s, _) = authed_post(&app, &a, &format!("{base}/items/{item}/delete"), json!({})).await;
+    assert_eq!(s, StatusCode::OK);
+    let stranger = new_user(&app, "10.0.5.3", "weddnosy").await;
+    let (s, _) = authed_post(&app, &stranger, &format!("{base}/items"), json!({"name": "x"})).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    let (c, d) = (new_user(&app, "10.0.5.4", "weddc").await, new_user(&app, "10.0.5.5", "weddd").await);
+    make_couple(&app, &c, &d).await;
+    let (s, _) = authed_post(&app, &c, &format!("{base}/items"), json!({"name": "x"})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND, "another couple's goal is not found");
+}
+
+#[tokio::test]
 async fn a_post_sent_twice_with_the_same_idempotency_key_happens_once() {
     let (app, db) = test_app_with_db().await;
     let a = new_user(&app, "10.0.4.1", "idema").await;

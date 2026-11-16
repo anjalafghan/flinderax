@@ -21,7 +21,7 @@ use crate::{
 
 type User = Extension<(String, String)>;
 
-fn parse_date(s: &str) -> Option<Date> {
+pub(crate) fn parse_date(s: &str) -> Option<Date> {
     Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
 }
 
@@ -146,13 +146,34 @@ pub async fn create(State(state): State<AppState>, Extension((user_id, _)): User
 }
 
 /// A goal of this couple, or a 404.
-async fn mine(db: &sqlx::SqlitePool, couple: &str, goal_id: &str) -> Result<(), AppError> {
+pub(crate) async fn mine(db: &sqlx::SqlitePool, couple: &str, goal_id: &str) -> Result<(), AppError> {
     let found: Option<String> = sqlx::query_scalar("SELECT goal_id FROM couple_goals WHERE goal_id = ? AND couple_id = ? AND archived = 0")
         .bind(goal_id)
         .bind(couple)
         .fetch_optional(db)
         .await?;
     found.map(|_| ()).ok_or_else(|| not_found("Goal not found"))
+}
+
+/// Put `amount_paise` into a goal in `user_id`'s name; returns the contribution's id. The one place a
+/// contribution row is written (the wedding budget's "pay" uses it too).
+pub(crate) async fn record_contribution<'e, E>(db: E, goal_id: &str, user_id: &str, amount_paise: i64, on_day: &str, note: &str) -> Result<i64, AppError>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+{
+    let id: i64 = sqlx::query_scalar(
+        "INSERT INTO couple_goal_contributions (goal_id, user_id, name, amount_paise, on_day, note) \
+         VALUES (?, ?, COALESCE((SELECT user_name FROM users WHERE user_id = ?), ''), ?, ?, ?) RETURNING id",
+    )
+    .bind(goal_id)
+    .bind(user_id)
+    .bind(user_id)
+    .bind(amount_paise)
+    .bind(on_day)
+    .bind(note)
+    .fetch_one(db)
+    .await?;
+    Ok(id)
 }
 
 #[derive(Deserialize)]
@@ -176,16 +197,7 @@ pub async fn contribute(
     if note.chars().count() > 200 {
         return Err(bad_request("Keep the note under 200 characters"));
     }
-    let name: String = sqlx::query_scalar("SELECT user_name FROM users WHERE user_id = ?").bind(&user_id).fetch_one(&state.db).await?;
-    sqlx::query("INSERT INTO couple_goal_contributions (goal_id, user_id, name, amount_paise, on_day, note) VALUES (?, ?, ?, ?, ?, ?)")
-        .bind(&goal_id)
-        .bind(&user_id)
-        .bind(name)
-        .bind(p.amount_paise)
-        .bind(today_local().to_string())
-        .bind(note)
-        .execute(&state.db)
-        .await?;
+    record_contribution(&state.db, &goal_id, &user_id, p.amount_paise, &today_local().to_string(), note).await?;
     Ok(Json(Done { status: true }))
 }
 
