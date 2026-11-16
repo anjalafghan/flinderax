@@ -95,7 +95,7 @@ pub async fn run_round(State(state): State<AppState>, headers: HeaderMap, Query(
     if !same(given.as_bytes(), token.as_bytes()) {
         return Err(AppError(StatusCode::UNAUTHORIZED, "Not allowed".into()));
     }
-    let slot = Slot::parse(&q.slot).ok_or_else(|| bad_request("slot must be morning or evening"))?;
+    let slot = Slot::parse(&q.slot).ok_or_else(|| bad_request("slot must be morning, evening or weekly"))?;
     let Some(sender) = WebPushSender::from_env() else {
         return Err(AppError(StatusCode::SERVICE_UNAVAILABLE, "Notifications are not set up on this server".into()));
     };

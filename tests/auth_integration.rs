@@ -1513,3 +1513,24 @@ async fn the_year_ahead_shows_planned_outflows_and_keeps_them_private() {
     assert_eq!(s, StatusCode::OK);
     assert_eq!(authed_get(&app, &a, "/api/year").await["total_lumpy_out_paise"], 0);
 }
+
+#[tokio::test]
+async fn decisions_count_what_needs_attention_and_nothing_else() {
+    let app = test_app().await;
+    let a = new_user(&app, "10.0.4.5", "decider").await;
+    assert_eq!(authed_get(&app, &a, "/api/decisions").await["items"].as_array().unwrap().len(), 0);
+
+    let today = time::OffsetDateTime::now_utc().date().to_string();
+    authed_post(&app, &a, "/api/ingest/transactions/create",
+        json!({"occurred_on": today, "direction": "debit", "amount_paise": 25_000, "merchant": "Mystery shop", "category": "uncategorized"})).await;
+    let soon = (time::OffsetDateTime::now_utc().date() + time::Duration::days(5)).to_string();
+    authed_post(&app, &a, "/api/year/outflows", json!({"label": "Premium", "on_day": soon, "amount_paise": 100_000, "kind": "premium"})).await;
+
+    let items = authed_get(&app, &a, "/api/decisions").await["items"].clone();
+    let kinds: Vec<&str> = items.as_array().unwrap().iter().map(|d| d["kind"].as_str().unwrap()).collect();
+    assert_eq!(kinds, vec!["large_amount_soon", "uncategorized"], "{items}");
+    for d in items.as_array().unwrap() {
+        let text = d["text"].as_str().unwrap();
+        assert!(!text.contains("Mystery") && !text.contains("Premium"), "counts only, no names: {text}");
+    }
+}

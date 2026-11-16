@@ -40,6 +40,7 @@ pub mod review;
 pub mod rewards;
 pub mod streaks;
 pub mod tax;
+pub mod week_digest;
 pub mod work;
 pub mod year_ahead;
 

@@ -13,6 +13,8 @@ use crate::planner::coming::{Entry, Kind};
 pub enum Slot {
     Morning,
     Evening,
+    /// Once a week: how many things need a decision (see `planner::week_digest`).
+    Weekly,
 }
 
 impl Slot {
@@ -20,6 +22,7 @@ impl Slot {
         match s {
             "morning" => Some(Slot::Morning),
             "evening" => Some(Slot::Evening),
+            "weekly" => Some(Slot::Weekly),
             _ => None,
         }
     }
@@ -42,6 +45,8 @@ pub fn digest(items: &[Entry], slot: Slot) -> Option<Message> {
     let (picked, lead): (Vec<&Entry>, &str) = match slot {
         Slot::Morning => (items.iter().filter(|e| e.days_away <= 0).collect(), "Today"),
         Slot::Evening => (items.iter().filter(|e| e.days_away == 1).collect(), "Tomorrow"),
+        // The weekly nudge is built from decisions, not the coming-up list.
+        Slot::Weekly => return None,
     };
     if picked.is_empty() {
         return None;
@@ -101,8 +106,14 @@ pub async fn run(db: &SqlitePool, sender: &impl Sender, slot: Slot, today: Date)
         let message = match &current {
             Some((u, m)) if *u == sub.user_id => m.clone(),
             _ => {
-                let items = crate::handlers::coming::gather(db, &sub.user_id, today, 2).await?;
-                let m = digest(&items, slot);
+                let m = if slot == Slot::Weekly {
+                    let c = crate::handlers::decisions::counts(db, &sub.user_id, today).await?;
+                    crate::planner::week_digest::weekly_body(&crate::planner::week_digest::decisions(&c))
+                        .map(|body| Message { title: "joy".into(), body, url: "/".into() })
+                } else {
+                    let items = crate::handlers::coming::gather(db, &sub.user_id, today, 2).await?;
+                    digest(&items, slot)
+                };
                 if m.is_some() {
                     report.users += 1;
                 }

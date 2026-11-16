@@ -5,6 +5,7 @@ import { WeekCard } from "@/components/feature/health/WeekCard";
 import { CatchUpSection } from "@/components/feature/people/CatchUpSection";
 import { useSummary } from "@/hooks/usePlanner";
 import { useDiet } from "@/services/diet";
+import { useDecisions } from "@/services/decisions";
 import { usePeople } from "@/services/people";
 import { daysUntil, stepsThisWeek, useWork } from "@/services/work";
 import { formatDay } from "@/utils/dates";
@@ -56,6 +57,32 @@ function WorkSteps() {
   );
 }
 
+function Decisions() {
+  const { data } = useDecisions();
+  // Nothing needs a decision: nothing to show, and no nagging.
+  if (!data || data.length === 0) return null;
+  return (
+    <section aria-labelledby="week-decisions-title" className={PANEL}>
+      <header className="flex flex-col gap-2">
+        <h2 id="week-decisions-title" className={TITLE}>
+          Needs a decision
+        </h2>
+        <p className={NOTE}>Things that will not sort themselves out.</p>
+      </header>
+      <ul className="ledger">
+        {data.map((d) => (
+          <li key={d.kind} className="ledger-row">
+            <Link to={d.link} className="flex w-full items-center justify-between gap-4 no-underline">
+              <span className="text-[15px] font-medium">{d.text}</span>
+              <span className="text-sm text-primary">Open</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function MoneyLine() {
   const { data } = useSummary();
   if (!data) return null;
@@ -91,6 +118,7 @@ export default function WeekPage() {
         {diet.isError && !diet.data && <p className="empty-note m-0">Couldn't load your habits. The rest of the week is below.</p>}
 
         {people.data && people.data.catch_up.length > 0 && <CatchUpSection people={people.data.catch_up} />}
+        <Decisions />
         <WorkSteps />
         <MoneyLine />
       </main>

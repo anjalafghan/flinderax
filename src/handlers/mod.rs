@@ -37,3 +37,4 @@ pub mod rewards;
 pub mod streaks;
 pub mod work;
 pub mod year;
+pub mod decisions;

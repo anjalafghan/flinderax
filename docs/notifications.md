@@ -3,7 +3,8 @@
 joy sends two nudges a day to browsers that turned them on (Settings → Notifications):
 
 - **morning, 07:30 IST:** what is due today (bills, dates, birthdays, follow-ups, overdue follow-ups);
-- **evening, 19:00 IST:** what is on tomorrow.
+- **evening, 19:00 IST:** what is on tomorrow;
+- **weekly (`?slot=weekly`, schedule it for Sunday morning):** how many things need a decision ("This week: 3 things need a decision."), a count only. Not scheduled yet: add a weekly cron to `.github/workflows/notify.yml`.
 
 A nudge only counts things by kind ("Today: 2 bills, 1 date."). It never shows names or amounts, so a
 lock screen reveals nothing. Nothing is sent when there is nothing to say.
@@ -11,7 +12,7 @@ lock screen reveals nothing. Nothing is sent when there is nothing to say.
 ## How it runs
 
 The Fly machine sleeps when idle, so something outside has to wake it. A GitHub Actions schedule
-(`.github/workflows/notify.yml`) calls `POST /api/internal/push/run?slot=morning|evening` with a secret.
+(`.github/workflows/notify.yml`) calls `POST /api/internal/push/run?slot=morning|evening|weekly` with a secret.
 That request wakes the machine, which sends the nudges and sleeps again.
 
 ## One-time setup
