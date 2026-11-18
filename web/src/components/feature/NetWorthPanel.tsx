@@ -25,7 +25,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "ba
 /** Net worth this month, how it moved since last month, and the trend over time. */
 export function NetWorthPanel({ months }: { months: HistoryMonth[] }) {
   return (
-    <section aria-label="Net worth" className="space-y-6 glass rounded-3xl p-4 md:p-6">
+    <section aria-label="Net worth" className="space-y-6 glass rounded-[28px] p-4 md:p-6">
       <h2 className="font-display text-[32px] leading-none tracking-tight">Net worth</h2>
       {months.length === 0 ? (
         <p className="empty-note">

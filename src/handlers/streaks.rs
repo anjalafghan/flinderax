@@ -35,6 +35,8 @@ pub struct StreaksOut {
     pub saved: Streak,
     /// Months in a row with a date. Null when you are not in a couple.
     pub dates: Option<Streak>,
+    /// Days in a row you put data in (a statement, a bank text, an entry, a check-in).
+    pub activity: Streak,
 }
 
 fn parse(s: &str) -> Option<Date> {
@@ -112,5 +114,6 @@ pub async fn compute(state: &AppState, user_id: &str, today: Date) -> Result<Str
         }
     };
 
-    Ok(StreaksOut { logging: day_streak(&days, today), saved, dates })
+    let activity = crate::handlers::activity::compute(state, &user_id, today).await?.streak;
+    Ok(StreaksOut { logging: day_streak(&days, today), saved, dates, activity })
 }

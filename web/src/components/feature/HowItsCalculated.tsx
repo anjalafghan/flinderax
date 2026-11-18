@@ -7,7 +7,7 @@ export function HowItsCalculated({ lines }: { lines: DashboardSummary["breakdown
   return (
     <section aria-label="How this is calculated" className="space-y-4">
       <h2 className="font-display text-[32px] leading-none tracking-tight">How this is calculated</h2>
-      <ul className="glass rounded-3xl px-5 py-2 md:px-6">
+      <ul className="glass rounded-[28px] px-5 py-2 md:px-6">
         {lines.map((l) => (
           <li
             key={l.label}

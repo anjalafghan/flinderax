@@ -27,6 +27,7 @@ import {
 import { formatDay } from "@/utils/dates";
 import { DietReportSection } from "@/components/feature/health/DietReportSection";
 import { PeopleReportSection } from "@/components/feature/people/PeopleReportSection";
+import { Retry } from "@/components/ui/retry";
 
 const SECTION = "flex flex-col gap-6 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10";
 const PILL = "inline-flex min-h-7 shrink-0 items-center whitespace-nowrap rounded-full px-3 text-[13px] font-semibold";
@@ -63,17 +64,6 @@ function StepHead({ n, step, id }: { n: number; step: Step; id: string }) {
         <p className="m-0 text-sm text-muted-foreground">{step.detail}</p>
       </div>
     </header>
-  );
-}
-
-function Retry({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="rounded-[28px] border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
-      {message}{" "}
-      <Button variant="link" className="h-auto p-0" onClick={onRetry}>
-        Try again
-      </Button>
-    </div>
   );
 }
 
@@ -408,7 +398,7 @@ export default function CheckInPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl stack">
+      <main className="page page-narrow stack">
         <div>
           <h1 className="page-title">Quarterly check-in</h1>
           {sub && <p className="page-sub">{sub}</p>}

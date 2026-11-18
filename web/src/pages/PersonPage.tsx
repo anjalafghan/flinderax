@@ -8,7 +8,7 @@ import { PersonFacts } from "@/components/feature/people/PersonFacts";
 import { PersonFollowUps } from "@/components/feature/people/PersonFollowUps";
 import { PersonGifts } from "@/components/feature/people/PersonGifts";
 import { PersonTouches } from "@/components/feature/people/PersonTouches";
-import { Retry } from "@/components/feature/people/Retry";
+import { Retry } from "@/components/ui/retry";
 import { NOTE, PANEL, TEXT_LINK } from "@/components/feature/people/ui";
 import { StatusPill } from "@/components/feature/people/StatusPill";
 import {
@@ -27,7 +27,7 @@ export default function PersonPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="page max-w-3xl stack">
+      <main className="page page-narrow stack">
         <Link to="/people" className={`${TEXT_LINK} inline-flex min-h-11 items-center`}>
           Back to Circle
         </Link>

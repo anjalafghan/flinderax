@@ -67,7 +67,7 @@ export function IngestSetup() {
   const lastUsed = status?.last_used_at ? formatDay(status.last_used_at.slice(0, 10)) : null;
 
   return (
-    <details className="group glass rounded-3xl p-4 md:p-6">
+    <details className="group glass rounded-[28px] p-4 md:p-6">
       <summary className="cursor-pointer list-none">
         <div className="flex items-center justify-between gap-3">
           <div>

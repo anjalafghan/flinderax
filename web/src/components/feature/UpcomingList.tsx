@@ -10,7 +10,7 @@ export function UpcomingList({ items, limit = 5 }: { items: DashboardSummary["up
       {shown.length === 0 ? (
         <p className="empty-note">No payments before your next income.</p>
       ) : (
-        <ul className="ledger glass rounded-3xl px-5 py-2 md:px-6">
+        <ul className="ledger glass rounded-[28px] px-5 py-2 md:px-6">
           {shown.map((u, i) => (
             <li key={`${u.date}-${u.label}-${i}`} className="ledger-row text-sm">
               <div className="min-w-0">

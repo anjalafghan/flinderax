@@ -26,7 +26,7 @@ export function ComingUpCard() {
   if (items.length === 0) return null;
   return (
     <section aria-labelledby="coming-up-title" className="rounded-[28px] border border-border bg-card px-5 py-5 sm:px-8">
-      <h2 id="coming-up-title" className="m-0 mb-3 text-[15px] font-medium text-muted-foreground">
+      <h2 id="coming-up-title" className="m-0 mb-4 font-display text-[32px] leading-none">
         Coming up
       </h2>
       <ul className="m-0 grid list-none gap-2 p-0">

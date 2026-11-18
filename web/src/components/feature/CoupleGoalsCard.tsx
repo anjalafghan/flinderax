@@ -56,7 +56,7 @@ export function CoupleGoalsCard() {
 
   return (
     <section aria-labelledby="our-goals-title" className="rounded-[28px] border border-border bg-card px-5 py-5 sm:px-8">
-      <h2 id="our-goals-title" className="m-0 mb-3 text-[15px] font-medium text-muted-foreground">
+      <h2 id="our-goals-title" className="m-0 mb-4 font-display text-[32px] leading-none">
         Our goals
       </h2>
       <ul className="m-0 grid list-none gap-4 p-0">

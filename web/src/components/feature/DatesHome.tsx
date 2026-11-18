@@ -13,7 +13,7 @@ export function DatesHome({ partnerName }: { partnerName: string | null }) {
     <div className="flex min-h-[100dvh] w-full flex-col overflow-x-clip text-foreground">
       <Header />
       <main className="page flex-1">
-        <section aria-label="Dates" className="glass mb-6 w-full rounded-3xl p-6 md:p-8">
+        <section aria-label="Dates" className="glass mb-6 w-full rounded-[28px] p-6 md:p-8">
           <p className="eyebrow">Dates</p>
           <h1 className="font-display text-[40px] leading-none tracking-tight">
             {partnerName ? `You and ${partnerName}` : "Your dates"}
@@ -33,7 +33,7 @@ export function DatesHome({ partnerName }: { partnerName: string | null }) {
           <DatesPanel />
         </div>
 
-        <section aria-label="Money" className="w-full rounded-3xl border border-dashed border-border p-6">
+        <section aria-label="Money" className="w-full rounded-[28px] border border-dashed border-border p-6">
           <div className="flex items-start gap-3">
             <Wallet className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
             <div>

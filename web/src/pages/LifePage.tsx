@@ -28,6 +28,7 @@ import { formatINR as formatExact, formatPercent, paiseToInput, toPaise } from "
 /** Planning figures in whole rupees: paise are noise on a 20-year horizon. */
 const formatINR = (paise: number) => formatExact(Math.round(paise / 100) * 100);
 import { cn } from "@/utils/cn";
+import { Retry } from "@/components/ui/retry";
 
 // ---------- data ----------
 
@@ -618,7 +619,7 @@ export default function LifePage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl stack">
+      <main className="page page-narrow stack">
         <div>
           <h1 className="page-title">Life line</h1>
           <p className="page-sub">Your money from now to 90, and what each choice does to it.</p>
@@ -627,12 +628,7 @@ export default function LifePage() {
         {isLoading && <div className="h-64 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading your life plan" />}
 
         {isError && !data && (
-          <div className="rounded-[28px] border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
-            Couldn't load your life plan.{" "}
-            <Button variant="link" className="h-auto p-0" onClick={() => refetch()}>
-              Try again
-            </Button>
-          </div>
+          <Retry message="Couldn't load your life plan." onRetry={() => void refetch()} />
         )}
 
         <LifeLine />

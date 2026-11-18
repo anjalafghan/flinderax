@@ -10,7 +10,7 @@ export default function WeddingPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="page max-w-3xl stack">
+      <main className="page page-narrow stack">
         <header>
           <h1 className="page-title">Wedding budget</h1>
           <p className="page-sub">What each part costs, what is paid, and whether you can make the next payment.</p>

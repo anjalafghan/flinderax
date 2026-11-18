@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from "react";
-import type { CardData } from "./DashboardPage";
+import type { CardData } from "@/hooks/useCards";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -80,7 +80,7 @@ export default function CardDetailsPage() {
     onSuccess: () => {
       toast.success("Card deleted");
       queryClient.invalidateQueries({ queryKey: ["cards"] });
-      navigate("/");
+      navigate("/cards");
     },
     onError: () => {
       toast.error("Failed to delete card");
@@ -140,11 +140,11 @@ export default function CardDetailsPage() {
     <div className="min-h-screen text-foreground transition-colors duration-300">
       <Header />
 
-      <div className="page stack max-w-4xl">
+      <div className="page stack">
         {/* Header Actions */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button variant="ghost" className="pl-0" onClick={() => navigate(-1)}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          <Button variant="ghost" className="pl-0" onClick={() => navigate("/cards")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Cards
           </Button>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -152,7 +152,7 @@ export default function CardDetailsPage() {
               size="sm"
               onClick={() => setIsEditCardOpen(true)}
             >
-              <Settings className="mr-2 h-4 w-4" /> Edit Card
+              <Settings className="mr-2 h-4 w-4" /> Edit card
             </Button>
             <Button
               variant="outline"
@@ -166,7 +166,7 @@ export default function CardDetailsPage() {
                   resetMutation.isPending && "animate-spin",
                 )}
               />{" "}
-              Reset History
+              Reset history
             </Button>
             <Button
               variant="destructive"
@@ -174,7 +174,7 @@ export default function CardDetailsPage() {
               onClick={() => setIsDeleteConfirmOpen(true)}
               disabled={deleteMutation.isPending}
             >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete Card
+              <Trash2 className="mr-2 h-4 w-4" /> Delete card
             </Button>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function CardDetailsPage() {
           {/* Right Column: History */}
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-[24px]">Transaction History</CardTitle>
+              <CardTitle className="text-[24px]">Transaction history</CardTitle>
             </CardHeader>
             <CardContent>
               {historyQuery.isLoading ? (
@@ -312,9 +312,9 @@ export default function CardDetailsPage() {
             isOpen={isResetConfirmOpen}
             onClose={() => setIsResetConfirmOpen(false)}
             onConfirm={() => resetMutation.mutate()}
-            title="Reset Transaction History"
+            title="Reset Transaction history"
             description="Are you sure you want to reset all transactions for this card? This will set the balance to zero and cannot be undone."
-            confirmText="Reset History"
+            confirmText="Reset history"
             variant="destructive"
             isPending={resetMutation.isPending}
           />

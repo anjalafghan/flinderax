@@ -155,7 +155,7 @@ export function SwipeSorter({ queue, all, onCategorise, onClose }: Props) {
 
   if (!current) {
     return (
-      <section aria-label="Sort transactions" className="glass space-y-3 rounded-3xl p-6 text-center">
+      <section aria-label="Sort transactions" className="glass space-y-3 rounded-[28px] p-6 text-center">
         <div className="sorter-pop mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--good-tint))] text-good">
           <Check className="h-7 w-7" aria-hidden />
         </div>
@@ -171,7 +171,7 @@ export function SwipeSorter({ queue, all, onCategorise, onClose }: Props) {
   }
 
   return (
-    <section aria-label="Sort transactions" className="glass space-y-4 rounded-3xl p-4 md:p-6">
+    <section aria-label="Sort transactions" className="glass space-y-4 rounded-[28px] p-4 md:p-6">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="font-display text-[26px] leading-none">Sort one by one</h3>

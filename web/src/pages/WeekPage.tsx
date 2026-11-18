@@ -102,7 +102,7 @@ export default function WeekPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="page max-w-3xl stack">
+      <main className="page page-narrow stack">
         <header>
           <h1 className="page-title">This week</h1>
           <p className="page-sub">Five minutes, once a week: your habits, the people to call, your job search, your money.</p>

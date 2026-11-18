@@ -3,7 +3,9 @@ import { Lock, LockOpen, Trash2 } from "lucide-react";
 
 import { accountApi } from "@/services/api";
 import type { Account, AccountKind, AccountRole, Renewal } from "@/services/types";
-import { keys, useAccounts, usePlannerMutation } from "@/hooks/usePlanner";
+import { keys, useAccounts, useDashboardHistory, usePlannerMutation } from "@/hooks/usePlanner";
+import { MaturityList } from "@/components/feature/MaturityList";
+import { AutoPostings } from "@/components/feature/AutoPostings";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { ResetButton } from "@/components/ui/reset-button";
@@ -438,13 +440,14 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
 
 export default function AccountsPage() {
   const { data: accounts, isLoading, isError } = useAccounts();
+  const { data: history } = useDashboardHistory(12);
   const spendable = accounts?.filter((a) => a.kind === "bank" || a.kind === "cash") ?? [];
   const savings = accounts?.filter((a) => a.kind === "fd" || a.kind === "rd") ?? [];
 
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page stack max-w-3xl">
+      <main className="page stack page-narrow">
         <div>
           <h1 className="page-title">Accounts</h1>
           <p className="page-sub">
@@ -488,6 +491,9 @@ export default function AccountsPage() {
             </Card>
           </>
         )}
+
+        {history && <MaturityList items={history.maturities} />}
+        {history && <AutoPostings items={history.auto_postings} enabled={history.auto_post} />}
 
         <AddAccountForm accounts={accounts ?? []} />
       </main>

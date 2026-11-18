@@ -60,7 +60,7 @@ export const CardCarousel = memo(function CardCarousel({
         return (
             <div className="text-center px-4">
                 <p className="mb-4 text-muted-foreground">You haven't added any cards yet.</p>
-                <Button onClick={() => navigate('/cards/new')}>Add Your First Card</Button>
+                <Button onClick={() => navigate('/cards/new')}>Add your first card</Button>
             </div>
         )
     }

@@ -114,6 +114,6 @@ describe("SortPayeesPage", () => {
   it("shows the empty state when nothing is uncategorised", () => {
     renderPage({ total_uncategorized_paise: 0, covered_paise: 0, payees: [] });
     expect(screen.getByText("Everything is tagged. Nice.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Back to Money" })).toHaveAttribute("href", "/money");
+    expect(screen.getByRole("link", { name: "Back to Spending" })).toHaveAttribute("href", "/spending");
   });
 });

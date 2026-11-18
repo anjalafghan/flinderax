@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
-import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import "./styles/index.css";
 import "./styles/app.css";
 import { Gate } from "./components/Gate";
-import { navFor, pageKey } from "./paths";
+import { pageKey } from "./paths";
 
 const JarPage = lazy(() => import("./jar/JarPage"));
 const SlipsPage = lazy(() => import("./pages/SlipsPage"));
@@ -21,50 +21,6 @@ function JarIndex() {
   const { hash } = useLocation();
   if (hash === "#middle") return <Navigate to="/joy/middle" replace />;
   return <JarPage />;
-}
-
-function Nav({ page }: { page: ReturnType<typeof pageKey> }) {
-  const here = navFor(page);
-  const cur = (k: string) => (here === k ? ({ "aria-current": "page" } as const) : {});
-  return (
-    <>
-      <header className="top">
-        <nav aria-label="Dates">
-          <Link to="/joy" data-nav="jar" {...cur("jar")}>
-            Jar
-          </Link>
-          <Link to="/joy/slips" data-nav="slips" {...cur("slips")}>
-            Slips
-          </Link>
-          <Link to="/joy/kept" data-nav="kept" {...cur("kept")}>
-            Kept
-          </Link>
-          <Link to="/joy/year" data-nav="year" {...cur("year")}>
-            Year
-          </Link>
-          <Link to="/joy/regulars" data-nav="regulars" {...(page === "regulars" ? ({ "aria-current": "page" } as const) : {})}>
-            Regulars
-          </Link>
-          <Link
-            to="/joy/middle"
-            data-nav="middle"
-            className="nav-middle-link"
-            title="Meet in the middle: somewhere fair for both of you"
-            {...(page === "middle" ? ({ "aria-current": "page" } as const) : {})}
-          >
-            <svg viewBox="0 0 64 28" aria-hidden="true" focusable="false">
-              <circle cx="22" cy="14" r="11" />
-              <circle cx="42" cy="14" r="11" />
-            </svg>
-            Middle
-          </Link>
-          <Link to="/people" data-nav="circle">
-            Circle
-          </Link>
-        </nav>
-      </header>
-    </>
-  );
 }
 
 export default function DatesApp() {
@@ -89,7 +45,6 @@ export default function DatesApp() {
         <a className="visually-hidden" href="#main">
           Skip to content
         </a>
-        <Nav page={page} />
         <Gate>
           <main id="main" tabIndex={-1}>
             <Suspense fallback={<p className="loading" role="status">Loading…</p>}>

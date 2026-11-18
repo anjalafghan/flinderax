@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import api from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { ResetButton } from "@/components/ui/reset-button";
+import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,7 +72,7 @@ export default function CreateCardPage() {
     },
     onSuccess: () => {
       toast.success("Card added successfully");
-      navigate("/");
+      navigate("/cards");
     },
     onError: (error: unknown) => {
       toast.error(error instanceof Error && error.message.startsWith("Statement") ? error.message : "Failed to create card");
@@ -80,17 +81,18 @@ export default function CreateCardPage() {
   });
 
   return (
-    <div className="min-h-screen">
-      <div className="page stack max-w-2xl">
+    <div className="min-h-screen text-foreground">
+      <Header />
+      <div className="page stack page-narrow">
         <div>
           <Button
             variant="ghost"
             className="mb-4 pl-0"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/cards")}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+            <ArrowLeft className="mr-2 h-4 w-4" /> Cards
           </Button>
-          <h1 className="page-title">Add New Card</h1>
+          <h1 className="page-title">Add a card</h1>
           <p className="page-sub">
             Enter card details and customize its look.
           </p>

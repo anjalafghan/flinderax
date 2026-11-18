@@ -13,6 +13,7 @@ import { ResetButton } from "@/components/ui/reset-button";
 import { STAGES, stageLabel, useAddLead, useClearLeads, useRemoveLead, useSaveLead, useWork, type Lead, type LeadInput, type Stage } from "@/services/work";
 import { formatDay } from "@/utils/dates";
 import { formatINR, paiseToInput, toPaise } from "@/utils/money";
+import { Retry } from "@/components/ui/retry";
 
 const PANEL = "flex flex-col gap-6 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10";
 
@@ -235,7 +236,7 @@ export default function WorkPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="page max-w-3xl stack">
+      <main className="page page-narrow stack">
         <header>
           <h1 className="page-title">Work</h1>
           <p className="page-sub">Your job search: a few leads, one next step each, and what an offer would do to your life line.</p>
@@ -243,12 +244,7 @@ export default function WorkPage() {
 
         {work.isLoading && <div className="h-48 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading your leads" />}
         {work.isError && !work.data && (
-          <div className="rounded-[28px] border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
-            Couldn't load your leads.{" "}
-            <Button variant="link" className="h-auto p-0" onClick={() => void work.refetch()}>
-              Try again
-            </Button>
-          </div>
+          <Retry message="Couldn't load your leads." onRetry={() => void work.refetch()} />
         )}
 
         {work.data && leads.length > 0 && (

@@ -10,6 +10,7 @@ import { useAuth } from './context/AuthContext'
 const AccountPage = lazy(() => import('./pages/AccountPage'))
 const AuthPage = lazy(() => import('./pages/AuthPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const CardsPage = lazy(() => import('./pages/CardsPage'))
 const CreateCardPage = lazy(() => import('./pages/CreateCardPage'))
 const CardDetailsPage = lazy(() => import('./pages/CardDetailsPage'))
 const AccountsPage = lazy(() => import('./pages/AccountsPage'))
@@ -71,6 +72,7 @@ function App() {
           >
             <Route path="/" element={<DashboardPage />} />
             <Route path="/account" element={<AccountPage />} />
+            <Route path="/cards" element={<CardsPage />} />
             <Route path="/cards/new" element={<CreateCardPage />} />
             <Route path="/cards/:id" element={<CardDetailsPage />} />
             <Route path="/accounts" element={<AccountsPage />} />

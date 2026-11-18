@@ -111,6 +111,7 @@ fn reached(r: &RewardRow, goals: &HashMap<String, (i64, i64)>, streaks: Option<&
             let run = match kind {
                 "logging" => Some(s.logging),
                 "saved" => Some(s.saved),
+                "activity" => Some(s.activity),
                 _ => s.dates,
             };
             run.is_some_and(|run| streak_reached(run.best, target))
@@ -242,7 +243,7 @@ pub struct CreatePayload {
     pub goal_id: Option<String>,
     /// 25, 50, 75 or 100 (done).
     pub goal_pct: Option<i64>,
-    /// logging | saved | dates
+    /// logging | saved | dates | activity
     pub streak_kind: Option<String>,
     pub streak_target: Option<i64>,
 }
@@ -277,7 +278,7 @@ pub async fn create(State(state): State<AppState>, Extension((user_id, _)): User
             (Some(goal_id), Some(pct), None, None)
         }
         "streak" => {
-            let kind = p.streak_kind.clone().filter(|k| matches!(k.as_str(), "logging" | "saved" | "dates")).ok_or_else(|| bad_request("streak_kind must be logging, saved or dates"))?;
+            let kind = p.streak_kind.clone().filter(|k| matches!(k.as_str(), "logging" | "saved" | "dates" | "activity")).ok_or_else(|| bad_request("streak_kind must be logging, saved, dates or activity"))?;
             let target = p.streak_target.filter(|t| (1..=MAX_STREAK_TARGET).contains(t)).ok_or_else(|| bad_request(format!("The streak must be between 1 and {MAX_STREAK_TARGET}")))?;
             (None, None, Some(kind), Some(target))
         }
@@ -528,6 +529,21 @@ mod tests {
         let later = day(2026, 11, 20);
         assert_eq!(state_of(&state, &three, later).await, RewardState::Earned);
         assert_eq!(state_of(&state, &seven, later).await, RewardState::Locked);
+        ok(claim_on(&state, "u", &three, later).await);
+    }
+
+    #[tokio::test]
+    async fn an_activity_reward_unlocks_from_days_you_put_data_in_not_from_the_data_dates() {
+        use crate::planner::activity::Kind;
+        let state = test_state().await;
+        let three = ok(make(&state, "u", CreatePayload { name: "Film".into(), cost_paise: None, trigger_kind: "streak".into(), goal_id: None, goal_pct: None, streak_kind: Some("activity".into()), streak_target: Some(3) }).await);
+        // A big old statement imported in one day is one active day, however many days it covers.
+        ok(crate::handlers::activity::record(&state.db, "u", Kind::Statement, "imp", 400, day(2026, 11, 1)).await);
+        let later = day(2026, 11, 20);
+        assert_eq!(state_of(&state, &three, later).await, RewardState::Locked);
+        ok(crate::handlers::activity::record(&state.db, "u", Kind::Txn, "a", 1, day(2026, 11, 2)).await);
+        ok(crate::handlers::activity::record(&state.db, "u", Kind::Checkin, "2026-11-03", 1, day(2026, 11, 3)).await);
+        assert_eq!(state_of(&state, &three, later).await, RewardState::Earned);
         ok(claim_on(&state, "u", &three, later).await);
     }
 

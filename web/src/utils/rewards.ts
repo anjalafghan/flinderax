@@ -14,7 +14,7 @@ export function triggerLabel(r: Reward, goalName?: string): string {
     const goal = goalName ?? "a goal";
     return pct === 100 ? `Finish ${goal}` : `Reach ${pct}% of ${goal}`;
   }
-  const what = { logging: "keeping up", saved: "saving", dates: "dates" }[r.streak_kind ?? "logging"];
+  const what = { logging: "keeping up", saved: "saving", dates: "dates", activity: "adding your data" }[r.streak_kind ?? "logging"];
   return `${unitLabel(r.streak_kind ?? "logging", r.streak_target ?? 0)} in a row of ${what}`;
 }
 

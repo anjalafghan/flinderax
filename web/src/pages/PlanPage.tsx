@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LineChart, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { planApi } from "@/services/api";
 import type { Account, Bucket, Commitment, Income } from "@/services/types";
@@ -10,7 +10,6 @@ import { Header } from "@/components/layout/Header";
 import { AffordPanel } from "@/components/feature/AffordPanel";
 import { BillsPanel } from "@/components/feature/BillsPanel";
 import { GoalsPanel } from "@/components/feature/GoalsPanel";
-import { RewardsPanel } from "@/components/feature/RewardsPanel";
 import { AccountSelect } from "@/components/feature/AccountSelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +22,7 @@ import { formatINR, formatPercent, paiseToInput, parseAmountOrPercent, toPaise }
 import { ordinal } from "@/utils/dates";
 import { BUCKET_HELP, BUCKET_LABEL, defaultBucket } from "@/utils/buckets";
 import { cn } from "@/utils/cn";
+import { GuidanceCard } from "@/components/feature/GuidanceCard";
 
 const CATEGORIES = ["bills", "gym", "house", "sip", "rd", "subscription", "donation", "entertainment", "other"];
 const BUCKETS: Bucket[] = ["needs", "savings", "wants"];
@@ -512,38 +512,22 @@ export default function PlanPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3 md:mb-8">
-          <div>
-            <h1 className="page-title">Plan</h1>
-            <p className="page-sub">What's coming, what you're saving for, and what you can afford.</p>
-          </div>
-          <Link
-            to="/what-if"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium"
-          >
-            <LineChart className="h-4 w-4" aria-hidden />
-            What if...
-          </Link>
+      <main className="page page-narrow">
+        <div className="mb-6 md:mb-8">
+          <h1 className="page-title">Budget</h1>
+          <p className="page-sub">This month's plan: what to set aside, what's due, and what you can afford.</p>
         </div>
         <div className="stack">
-          <Link
-            to="/life"
-            className="glass flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] px-6 py-5 text-foreground no-underline sm:px-8"
-          >
-            <span className="flex min-w-0 flex-col gap-1">
-              <span className="font-display text-[26px] leading-none">Life plan</span>
-              <span className="text-[13px] text-muted-foreground">Your wedding, your child, and retirement, and what each needs a month.</span>
-            </span>
-            <span className="text-sm font-medium">Open →</span>
-          </Link>
+          <GuidanceCard />
           <AffordPanel />
           <BillsPanel />
           <GoalsPanel />
-          <RewardsPanel />
           <IncomeSection accounts={accounts} />
           <CommitmentsSection accounts={accounts} />
-          <SettingsSection />
+          <p className="text-sm text-muted-foreground">
+            Pay day, buffers and how the pots split are in{" "}
+            <Link to="/account" className="underline underline-offset-4">Settings › Budget settings</Link>.
+          </p>
         </div>
       </main>
     </div>

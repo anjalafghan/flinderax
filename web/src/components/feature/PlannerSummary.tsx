@@ -8,11 +8,11 @@ export function PlannerSummary() {
   const { data, isLoading, isError, refetch } = useSummary();
 
   if (isLoading) {
-    return <div className="h-48 animate-pulse rounded-3xl bg-muted/40" aria-label="Loading safe to spend" />;
+    return <div className="h-48 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading safe to spend" />;
   }
   if (isError || !data) {
     return (
-      <div className="rounded-3xl border border-dashed border-primary/25 bg-card/30 p-6 text-center text-sm text-muted-foreground">
+      <div className="rounded-[28px] border border-dashed border-primary/25 bg-card/30 p-6 text-center text-sm text-muted-foreground">
         Couldn't load your plan.{" "}
         <Button variant="link" className="h-auto p-0" onClick={() => refetch()}>
           Try again

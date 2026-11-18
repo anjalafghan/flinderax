@@ -143,7 +143,7 @@ export default function SortPayeesPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl">
+      <main className="page page-narrow">
         <div className="mb-6 md:mb-8">
           <h1 className="page-title">Sort your payees</h1>
           <p className="page-sub">Tag each payee once. joy remembers it for past and future payments.</p>
@@ -176,8 +176,8 @@ export default function SortPayeesPage() {
             {rows.length === 0 ? (
               <div className="empty-note space-y-2">
                 <p>Everything is tagged. Nice.</p>
-                <Link to="/money" className="font-medium text-foreground underline underline-offset-4">
-                  Back to Money
+                <Link to="/spending" className="font-medium text-foreground underline underline-offset-4">
+                  Back to Spending
                 </Link>
               </div>
             ) : (

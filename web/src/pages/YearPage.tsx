@@ -193,7 +193,7 @@ export default function YearPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="page max-w-3xl stack">
+      <main className="page page-narrow stack">
         <header>
           <h1 className="page-title">Year ahead</h1>
         </header>
