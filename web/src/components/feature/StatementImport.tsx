@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { formatDay } from "@/utils/dates";
 import { formatINR } from "@/utils/money";
+import { pdfToCsv, PdfStatementError } from "@/utils/pdfStatement";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_NAMES = 5;
@@ -19,12 +20,26 @@ const CARDS_KEY = ["statement-cards"];
 
 /** A reason the file can't be sent, or null when it can. */
 function fileProblem(file: File): string | null {
-  if (/\.(xlsx?|pdf)$/i.test(file.name)) {
+  if (/\.xlsx?$/i.test(file.name)) {
     return "Excel files can't be read. Download the Delimited (.txt) format from your bank, or save the sheet as CSV.";
   }
-  if (!/\.(txt|csv)$/i.test(file.name)) return "Upload the statement as a .txt or .csv file.";
+  if (!/\.(txt|csv|pdf)$/i.test(file.name)) return "Upload the statement as a .pdf, .txt or .csv file.";
   if (file.size > MAX_BYTES) return "That file is over 5 MB. Export one period at a time.";
   return null;
+}
+
+/**
+ * The file to send. A PDF is read here, on this device, and becomes the CSV the importer already
+ * understands (named after the PDF); any other file is sent as it is. Throws a readable message.
+ */
+async function readable(file: File): Promise<File> {
+  if (!/\.pdf$/i.test(file.name)) return file;
+  try {
+    const csv = await pdfToCsv(file);
+    return new File([csv], file.name.replace(/\.pdf$/i, ".csv"), { type: "text/csv" });
+  } catch (e) {
+    throw e instanceof PdfStatementError ? e : new PdfStatementError("Couldn't read that PDF.");
+  }
 }
 
 /** A reason the name can't be saved, or null when it can. */
@@ -398,7 +413,7 @@ function ColumnMapper({
   );
 }
 
-/** Upload a bank statement (.txt or .csv); the server reads and stores every row, then forgets the file. */
+/** Upload a bank statement (.pdf, .txt or .csv); the server reads and stores every row, then forgets the file. */
 export function StatementImport() {
   const { data: accounts } = useAccounts();
   const names = useQuery({ queryKey: HOLDER_NAMES_KEY, queryFn: ingestApi.holderNames, retry: 1 });
@@ -460,14 +475,24 @@ export function StatementImport() {
     { success: "Saved. Transfers to your own accounts won't count as spending." },
   );
 
-  const pick = (file: File | undefined) => {
-    if (!file) return;
+  const pick = async (picked: File | undefined) => {
+    if (!picked) return;
     setResult(null);
     setError(null);
     setMapper(null);
     setMapError(null);
-    const problem = fileProblem(file);
+    const problem = fileProblem(picked);
+    if (input.current) input.current.value = "";
     if (problem) return setError(problem);
+    let file: File;
+    setPreviewing(true);
+    try {
+      file = await readable(picked);
+    } catch (e) {
+      return setError(e instanceof Error ? e.message : "Couldn't read that file.");
+    } finally {
+      setPreviewing(false);
+    }
     upload.mutate(
       { file, target: targetOf(target) },
       {
@@ -478,20 +503,20 @@ export function StatementImport() {
         onError: (e) => setError(e instanceof Error ? e.message : "Couldn't import that file."),
       },
     );
-    if (input.current) input.current.value = "";
   };
 
   // Mapping first: the file is previewed, not imported, until the user presses Import in the mapper.
-  const openMapper = async (file: File | undefined) => {
-    if (!file) return;
+  const openMapper = async (picked: File | undefined) => {
+    if (!picked) return;
     setResult(null);
     setError(null);
     setMapper(null);
     setMapError(null);
-    const problem = fileProblem(file);
+    const problem = fileProblem(picked);
     if (problem) return setError(problem);
     setPreviewing(true);
     try {
+      const file = await readable(picked);
       const { preview } = await ingestApi.previewStatement(file, { card_id: targetOf(target).card_id });
       showMapper({ file, preview });
     } catch (e) {
@@ -587,7 +612,7 @@ export function StatementImport() {
         tabIndex={0}
         aria-label="Choose a statement file, or drop it here"
         aria-disabled={upload.isPending}
-        onClick={() => !upload.isPending && input.current?.click()}
+        onClick={() => !upload.isPending && !previewing && input.current?.click()}
         onKeyDown={onZoneKey}
         onDragOver={(e) => {
           e.preventDefault();
@@ -597,15 +622,15 @@ export function StatementImport() {
         onDrop={onDrop}
         className={`flex flex-col items-center gap-1 rounded-[18px] border border-dashed px-5 py-8 text-center transition-colors ${
           dragging ? "border-primary bg-accent" : "border-border"
-        } ${upload.isPending ? "pointer-events-none opacity-60" : "cursor-pointer hover:bg-accent/40"}`}
+        } ${upload.isPending || previewing ? "pointer-events-none opacity-60" : "cursor-pointer hover:bg-accent/40"}`}
       >
-        <p className="font-display text-xl">{upload.isPending ? "Importing..." : "Drop your statement here"}</p>
-        <p className="text-sm text-muted-foreground">or click to choose a .txt or .csv file, up to 5 MB</p>
+        <p className="font-display text-xl">{upload.isPending ? "Importing..." : previewing ? "Reading..." : "Drop your statement here"}</p>
+        <p className="text-sm text-muted-foreground">or click to choose a PDF, .txt or .csv file, up to 5 MB</p>
       </div>
       <input
         ref={input}
         type="file"
-        accept=".txt,.csv,text/plain,text/csv"
+        accept=".pdf,.txt,.csv,application/pdf,text/plain,text/csv"
         aria-label="Statement file"
         className="hidden"
         disabled={upload.isPending}
@@ -614,7 +639,7 @@ export function StatementImport() {
       <input
         ref={mapInput}
         type="file"
-        accept=".txt,.csv,text/plain,text/csv"
+        accept=".pdf,.txt,.csv,application/pdf,text/plain,text/csv"
         aria-label="Statement file to map"
         className="hidden"
         disabled={previewing}

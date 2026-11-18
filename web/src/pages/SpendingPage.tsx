@@ -72,7 +72,7 @@ export default function SpendingPage() {
               {addMode === "upload" && (
                 <>
                   <p className="max-w-prose text-sm leading-snug text-muted-foreground">
-                    For HDFC, download the statement from NetBanking as <span className="font-medium text-foreground">Delimited (.txt)</span>. Nothing is added twice, so overlapping periods are fine.
+                    Upload the statement PDF from your bank (Kotak, for one) and it is read on this device. For HDFC, download it from NetBanking as <span className="font-medium text-foreground">Delimited (.txt)</span>. Nothing is added twice, so overlapping periods are fine.
                   </p>
                   <StatementImport />
                 </>

@@ -171,6 +171,9 @@ async function build(): Promise<boolean> {
     return false;
   }
   await cp(path.join(root, "public"), outdir, { recursive: true });
+  // pdf.js reads statement PDFs in a worker. The CSP only allows workers from our own origin, so the
+  // worker file is served from the app, not a CDN. It is only fetched when someone uploads a PDF.
+  await copyFile(Bun.resolveSync("pdfjs-dist/build/pdf.worker.min.mjs", root), path.join(outdir, "pdf-worker.mjs"));
   await copyReferencedFonts(outdir);
   const indexPath = path.join(outdir, "index.html");
   // The install tags are added here, not written in index.html: the bundler would try to resolve
