@@ -14,6 +14,8 @@ export interface StreaksOut {
   saved: Streak;
   /** Months in a row with a date; null outside a couple. */
   dates: Streak | null;
+  /** Days in a row you put data in: a statement, a bank text, an entry or a check-in. */
+  activity: Streak;
 }
 
 export const getStreaks = () => api.get<StreaksOut>("/api/dashboard/streaks").then((r) => r.data);

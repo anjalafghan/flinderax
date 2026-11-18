@@ -389,7 +389,13 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
     if let Some(acct) = &account_id {
         let newest = parsed.rows.iter().enumerate().filter(|(_, r)| r.balance_paise.is_some()).max_by_key(|(i, r)| (r.date, *i));
         if let Some((_, r)) = newest {
-            let bal = r.balance_paise.expect("filtered");
+            // When every balance follows from the one before, the chain's closing balance is the
+            // real last one. Taking "the last row of the latest day" in file order is wrong for a
+            // newest-first export with several lines on its last day (it picks the day's first).
+            let bal = match (chain_ok, closing_paise) {
+                (true, Some(c)) => c,
+                _ => r.balance_paise.expect("filtered"),
+            };
             let on = r.date.to_string();
             let done = sqlx::query(
                 "UPDATE accounts SET balance_paise = ?, balance_set_on = ?, updated_at = CURRENT_TIMESTAMP
@@ -445,11 +451,12 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
         res.holder_name_suggestion = holder_suggestion(&parsed.rows);
     }
 
+    let import_id = nanoid!();
     sqlx::query(
         "INSERT INTO statement_imports (import_id, user_id, account_id, card_id, first_date, last_date, rows, opening_paise, closing_paise, chain_ok)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    .bind(nanoid!())
+    .bind(&import_id)
     .bind(user_id)
     .bind(&account_id)
     .bind(&card_id)
@@ -462,6 +469,8 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
+    // Only rows that were really new earn anything: a re-upload of the same file earns nothing.
+    crate::handlers::activity::note(db, user_id, crate::planner::activity::Kind::Statement, &import_id, res.added).await;
     Ok(res)
 }
 

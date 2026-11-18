@@ -35,7 +35,7 @@ const ANSWER: Record<AffordAnswer, { label: string; box: string }> = {
 function Result({ r }: { r: AffordResult }) {
   const tone = ANSWER[r.answer];
   return (
-    <section aria-label="Answer" data-answer={r.answer} className={cn("space-y-3 glass rounded-3xl p-5 md:p-6", tone.box)}>
+    <section aria-label="Answer" data-answer={r.answer} className={cn("space-y-3 glass rounded-[28px] p-5 md:p-6", tone.box)}>
       <p className="text-sm font-semibold uppercase tracking-wide opacity-80">{tone.label}</p>
       <p className="text-xl font-bold leading-snug">{r.headline}</p>
       {r.reasons.length > 0 && (

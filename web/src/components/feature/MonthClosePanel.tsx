@@ -135,7 +135,7 @@ export function MonthClosePanel() {
   const { data: review, isLoading, isError, error } = useReviewMonth(month);
 
   return (
-    <section aria-label="Month close" className="stack glass rounded-[1.75rem] p-6 md:p-8">
+    <section aria-label="Month close" className="stack glass rounded-[28px] p-6 md:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <h2 className="font-display text-[32px] leading-none">Month close</h2>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { SeasonsEditor } from "@/components/feature/people/SeasonsEditor";
 import { toast } from "sonner";
 
-import { Retry } from "@/components/feature/people/Retry";
+import { Retry } from "@/components/ui/retry";
 import { MONTH_NAMES, NOTE, PANEL, SECTION_TITLE, TEXT_LINK, errorMessage } from "@/components/feature/people/ui";
 import { rupees } from "@/services/checkin";
 import { useGiftPlan, useMakeGiftsGoal } from "@/services/people";

@@ -31,6 +31,7 @@ const STREAK_LABEL: Record<StreakKind, string> = {
   logging: "Days in a row keeping up",
   saved: "Months in a row saving",
   dates: "Months in a row with a date",
+  activity: "Days in a row adding your data",
 };
 
 // ---------- add form ----------

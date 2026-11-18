@@ -13,3 +13,4 @@ web/dist/
 *.db-wal
 *.md
 fly.toml
+.claude/

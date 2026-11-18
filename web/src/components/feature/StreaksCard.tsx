@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { CalendarCheck, Flame, Heart, PiggyBank, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Flame, Heart, PiggyBank, Upload, type LucideIcon } from "lucide-react";
 
 import { useStreaks, type Streak } from "@/services/streaks";
 import { celebrate } from "@/utils/motion";
@@ -13,6 +13,7 @@ const META: Record<StreakKind, { title: string; icon: LucideIcon }> = {
   logging: { title: "Keeping up", icon: Flame },
   saved: { title: "Saving", icon: PiggyBank },
   dates: { title: "Dates", icon: Heart },
+  activity: { title: "Showing up", icon: Upload },
 };
 
 function seen(key: string): boolean {
@@ -58,7 +59,7 @@ export function StreaksCard() {
   // The first time a run lands on a milestone, celebrate it once.
   useEffect(() => {
     if (!data) return;
-    const kinds: [StreakKind, Streak | null][] = [["logging", data.logging], ["saved", data.saved], ["dates", data.dates]];
+    const kinds: [StreakKind, Streak | null][] = [["logging", data.logging], ["saved", data.saved], ["dates", data.dates], ["activity", data.activity]];
     for (const [kind, s] of kinds) {
       const n = s ? milestoneFor(kind, s.current) : null;
       if (n === null) continue;
@@ -71,7 +72,7 @@ export function StreaksCard() {
   }, [data]);
 
   if (!data) return null;
-  const tiles: [StreakKind, Streak][] = [["logging", data.logging], ["saved", data.saved]];
+  const tiles: [StreakKind, Streak][] = [["logging", data.logging], ["saved", data.saved], ["activity", data.activity]];
   if (data.dates) tiles.push(["dates", data.dates]);
   if (tiles.every(([, s]) => s.current === 0 && s.best === 0)) return null;
 
@@ -79,7 +80,7 @@ export function StreaksCard() {
     <section aria-label="Your streaks" className="my-6 w-full">
       <div className="mb-3 flex items-center gap-2">
         <CalendarCheck className="h-5 w-5 text-muted-foreground" strokeWidth={1.6} aria-hidden />
-        <h2 className="m-0 font-display text-[26px] leading-none">Your streaks</h2>
+        <h2 className="m-0 font-display text-[32px] leading-none">Your streaks</h2>
       </div>
       <ul className="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3 p-0">
         {tiles.map(([kind, s]) => (

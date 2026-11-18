@@ -196,6 +196,10 @@ pub async fn complete_on(
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
+    // One check-in a day; finishing it again the same day is the same action.
+    if let Err(e) = crate::handlers::activity::record(db, user_id, crate::planner::activity::Kind::Checkin, &today.to_string(), 1, today).await {
+        tracing::warn!(error = %e.1, "activity not recorded");
+    }
 
     compute_status(state, user_id, today).await
 }

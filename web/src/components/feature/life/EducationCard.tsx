@@ -213,7 +213,7 @@ export function EducationCard() {
   return (
     <section className="rounded-[28px] border border-border bg-card px-6 py-6 sm:px-10" aria-labelledby="education-title">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 id="education-title" className="m-0 flex items-center gap-2 font-display text-[28px] leading-none">
+        <h2 id="education-title" className="m-0 flex items-center gap-2 font-display text-[32px] leading-none">
           <GraduationCap className="h-6 w-6" aria-hidden /> Education fund
         </h2>
         {data && !editing && (

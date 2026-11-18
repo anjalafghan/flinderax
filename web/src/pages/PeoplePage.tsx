@@ -6,7 +6,7 @@ import { FollowUpsCard } from "@/components/feature/people/FollowUpsCard";
 import { GiftPlanCard } from "@/components/feature/people/GiftPlanCard";
 import { PeopleSettingsCard } from "@/components/feature/people/PeopleSettingsCard";
 import { PeopleUpcoming } from "@/components/feature/people/PeopleUpcoming";
-import { Retry } from "@/components/feature/people/Retry";
+import { Retry } from "@/components/ui/retry";
 import { usePeople } from "@/services/people";
 
 /** Circle: the people who matter, their dates, and a nudge when it's been a while. */
@@ -17,7 +17,7 @@ export default function PeoplePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="page max-w-3xl stack">
+      <main className="page page-narrow stack">
         <header>
           <h1 className="page-title">Circle</h1>
           <p className="page-sub">The people who matter, their dates, and a nudge when it's been a while.</p>

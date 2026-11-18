@@ -324,6 +324,7 @@ pub async fn ingest_text(
         }
     }
 
+    crate::handlers::activity::note(db, user_id, crate::planner::activity::Kind::Txn, &txn_id, 1).await;
     Ok(IngestResult { status: "created", transaction: load_txn(db, user_id, &txn_id).await?, balance_updated })
 }
 
@@ -595,6 +596,7 @@ pub async fn create(
     )
     .execute(&state.db)
     .await?;
+    crate::handlers::activity::note(&state.db, &user_id, crate::planner::activity::Kind::Txn, &txn_id, 1).await;
     Ok(Json(Created { txn_id, status: true }))
 }
 
@@ -1033,6 +1035,20 @@ mod statement_tests {
 
     async fn count(db: &sqlx::SqlitePool, sql: &str) -> i64 {
         sqlx::query_scalar(sql).fetch_one(db).await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn newest_first_statement_sets_the_real_closing_balance() {
+        // Newest first, two lines on the last day: the day's first line (listed last) is not the closing one.
+        let rows = "06/11/26,UPI-STREAMCO-STREAMCO@YBL-YESB0YBLUPI-612345678905-SUBSCRIPTION DEBIT,06/11/26,499.00,,612345678905,500.00\r\n\
+06/11/26,UPI-ASHA RAO-98XXXXXX12@YESCRED-KKBK0001234-612345678904-PAID VIA CRED,06/11/26,3000.00,,612345678904,999.00\r\n\
+05/11/26,SALARYFORTHEMONTHOFOCT2026,05/11/26,,5000.00,,3999.00\r\n";
+        let state = test_state().await;
+        let res = import(&state, &csv(rows), Some("acctB")).await;
+        assert!(res.chain_ok);
+        assert_eq!(res.balance_updated.map(|b| b.balance_paise), Some(50_000));
+        let bal: i64 = sqlx::query_scalar("SELECT balance_paise FROM accounts WHERE account_id = 'acctB'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(bal, 50_000);
     }
 
     #[tokio::test]

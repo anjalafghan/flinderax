@@ -3,19 +3,8 @@ import { BodyCard } from "@/components/feature/health/BodyCard";
 import { FoodMoneyCard } from "@/components/feature/health/FoodMoneyCard";
 import { HabitPicker } from "@/components/feature/health/HabitPicker";
 import { WeekCard } from "@/components/feature/health/WeekCard";
-import { Button } from "@/components/ui/button";
 import { useDiet } from "@/services/diet";
-
-function Retry({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="rounded-[28px] border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
-      {message}{" "}
-      <Button variant="link" className="h-auto p-0" onClick={onRetry}>
-        Try again
-      </Button>
-    </div>
-  );
-}
+import { Retry } from "@/components/ui/retry";
 
 /** Food, a few habits and a yearly check-up. Each card loads from the one diet overview. */
 export default function HealthPage() {
@@ -25,7 +14,7 @@ export default function HealthPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-3xl stack">
+      <main className="page page-narrow stack">
         <div>
           <h1 className="page-title">Health</h1>
           <p className="page-sub">Food, a few habits and a yearly check-up. Nothing you have to log every day.</p>

@@ -160,7 +160,7 @@ export default function WhatIfPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page max-w-4xl">
+      <main className="page">
         <div className="mb-6 md:mb-8">
           <h1 className="page-title">What if...</h1>
           <p className="page-sub max-w-prose">
@@ -223,7 +223,7 @@ export default function WhatIfPage() {
               ))}
             </div>
 
-            <div className={cn("glass rounded-3xl p-3 transition-opacity", isFetching && "opacity-70")}>
+            <div className={cn("glass rounded-[28px] p-3 transition-opacity", isFetching && "opacity-70")}>
               {isError && <p className="text-sm text-destructive">Couldn't compute the projection.</p>}
               {chart && <LineChart labels={chart.labels} series={chart.series} markers={markers} />}
               {!chart && !isError && <div className="h-64 animate-pulse rounded-lg bg-muted/40" />}

@@ -14,7 +14,7 @@ export function AutoPostings({ items, enabled }: { items: HistoryAutoPosting[]; 
           Salary and fixed payments are added to your balances on their dates. Turn this off in Plan settings.
         </p>
       </div>
-      <ul className="ledger glass rounded-3xl px-5 md:px-6">
+      <ul className="ledger glass rounded-[28px] px-5 md:px-6">
         {items.map((p, i) => (
           <li key={`${p.occurs_on}-${p.label}-${i}`} className="ledger-row text-sm">
             <div className="min-w-0">

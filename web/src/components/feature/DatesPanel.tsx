@@ -15,7 +15,7 @@ export function DatesPanel() {
   const recent = data.recent.slice(0, 4);
 
   return (
-    <section aria-label="Dates this month" className="space-y-6 glass rounded-3xl p-4 md:p-6">
+    <section aria-label="Dates this month" className="space-y-6 glass rounded-[28px] p-4 md:p-6">
       <div>
         <h2 className="font-display text-[32px] leading-none tracking-tight">Dates</h2>
         <DatesNudge budget_paise={m.budget_paise} spent_paise={m.spent_paise} />

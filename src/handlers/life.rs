@@ -145,7 +145,7 @@ fn validate_profile(p: &LifeProfile, today: Date) -> Result<(), AppError> {
         money("Wedding budget", b, validate::positive_amount)?;
     }
     money("Wedding saved", p.wedding_saved_paise, validate::non_negative_amount)?;
-    money("Child education cost", p.child_education_today_paise, validate::positive_amount)?;
+    money("Child education cost", p.child_education_today_paise, validate::non_negative_amount)?;
     money("Child savings", p.child_saved_paise, validate::non_negative_amount)?;
     money("Retirement savings", p.retirement_saved_paise, validate::non_negative_amount)?;
     money("Emergency savings", p.emergency_saved_paise, validate::non_negative_amount)?;
@@ -229,6 +229,18 @@ mod tests {
         assert_eq!(read.profile, profile);
         let keys: Vec<&str> = read.plan.goals.iter().map(|g| g.key).collect();
         assert_eq!(keys, vec!["emergency", "wedding", "child_birth", "child_education", "retirement"]);
+    }
+
+    #[tokio::test]
+    async fn a_child_education_cost_can_be_cleared_to_zero() {
+        let st = state().await;
+        let with = LifeProfile { child_birth_year: Some(2030), child_education_today_paise: 5_000_000, ..Default::default() };
+        let out = ok(save(State(st.clone()), user(), Json(with.clone())).await);
+        assert!(out.plan.goals.iter().any(|g| g.key == "child_education"));
+        let cleared = LifeProfile { child_education_today_paise: 0, ..with };
+        let out = ok(save(State(st.clone()), user(), Json(cleared)).await);
+        assert!(!out.plan.goals.iter().any(|g| g.key == "child_education"));
+        assert_eq!(ok(get(State(st), user()).await).profile.child_education_today_paise, 0);
     }
 
     #[tokio::test]

@@ -163,6 +163,8 @@
 
 @layer components {
   .page { @apply mx-auto w-full max-w-[1040px] px-4 py-8 md:px-6 md:py-12; }
+  /* Reading-width pages: same left edge as the wordmark and tabs, content capped at 48rem. */
+  .page-narrow > * { @apply max-w-3xl; }
   /* Newsreader, upright: section heads and numbers. The italic is kept for the wordmark. */
   .font-display { font-family: var(--font-display); font-style: normal; font-weight: 400; letter-spacing: -0.02em; }
   .wordmark { font-family: var(--font-display); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }

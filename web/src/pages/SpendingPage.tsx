@@ -31,7 +31,7 @@ export default function SpendingPage() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <main className="page stack max-w-3xl">
+      <main className="page stack page-narrow">
         <div>
           <h1 className="page-title">Spending</h1>
           <p className="page-sub">Upload your bank statement to bring everything in; bank alerts fill the gaps in between. Fix a category and the app learns it.</p>
@@ -72,7 +72,7 @@ export default function SpendingPage() {
               {addMode === "upload" && (
                 <>
                   <p className="max-w-prose text-sm leading-snug text-muted-foreground">
-                    For HDFC, download the statement from NetBanking as <span className="font-medium text-foreground">Delimited (.txt)</span>. Nothing is added twice, so overlapping periods are fine.
+                    Upload the statement PDF from your bank (Kotak, for one) and it is read on this device. For HDFC, download it from NetBanking as <span className="font-medium text-foreground">Delimited (.txt)</span>. Nothing is added twice, so overlapping periods are fine.
                   </p>
                   <StatementImport />
                 </>
@@ -87,7 +87,7 @@ export default function SpendingPage() {
         <TransactionList uncategorizedOnly={uncategorizedOnly} onUncategorizedOnlyChange={setUncategorizedOnly} />
 
 
-        <details className="group glass rounded-[1.75rem]">
+        <details className="group glass rounded-[28px]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 md:px-8">
             <span>
               <span className="block font-semibold">Rules</span>

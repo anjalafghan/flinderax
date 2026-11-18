@@ -34,6 +34,11 @@ strip = true
 # unwind (not abort) so CatchPanicLayer turns a stray panic into a 500 instead of killing the server.
 panic = "unwind"
 
+# Faster deploy build: same as release but thin LTO and parallel codegen. Used by the Dockerfile.
+[profile.deploy]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

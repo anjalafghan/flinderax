@@ -431,25 +431,27 @@ pub fn plan(profile: &LifeProfile, expenses_paise: i64, today: Date) -> LifePlan
             }),
         ));
 
-        // Education: June of the child's 18th year.
-        let when = on(birth_year + 18, Month::June, 1, today);
-        let months = months_until(today, when);
-        let mix = mix_for(months);
-        let education_today = cap(profile.child_education_today_paise);
-        goals.push((
-            months,
-            build(Spec {
-                key: "child_education",
-                label: "Child's education",
-                when: Some(when),
+        // Education: June of the child's 18th year. A cost of zero means no education goal.
+        if profile.child_education_today_paise > 0 {
+            let when = on(birth_year + 18, Month::June, 1, today);
+            let months = months_until(today, when);
+            let mix = mix_for(months);
+            let education_today = cap(profile.child_education_today_paise);
+            goals.push((
                 months,
-                today_cost: education_today,
-                future_cost: future_value(education_today, EDUCATION_INFLATION_BPS, months),
-                saved: profile.child_saved_paise,
-                mix,
-                mix_note: mix.note(),
-            }),
-        ));
+                build(Spec {
+                    key: "child_education",
+                    label: "Child's education",
+                    when: Some(when),
+                    months,
+                    today_cost: education_today,
+                    future_cost: future_value(education_today, EDUCATION_INFLATION_BPS, months),
+                    saved: profile.child_saved_paise,
+                    mix,
+                    mix_note: mix.note(),
+                }),
+            ));
+        }
     }
 
     // Retirement: the corpus that pays annual expenses at the safe withdrawal rate.

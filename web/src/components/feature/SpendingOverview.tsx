@@ -61,7 +61,7 @@ export function SpendingOverview({
   const uncategorized = summary.uncategorized_count;
 
   return (
-    <section aria-label="This month" className="space-y-6 glass rounded-3xl p-4 md:p-6">
+    <section aria-label="This month" className="space-y-6 glass rounded-[28px] p-4 md:p-6">
       <div>
         <p className="text-sm text-muted-foreground">Spent this month</p>
         <p className="font-serif-num text-5xl md:text-6xl">{formatINR(spent)}</p>

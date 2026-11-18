@@ -289,7 +289,7 @@ export function TaxPanel() {
   const reminder = tax ? nextReminder(tax.reminders) : null;
 
   return (
-    <section aria-label="Tax" className="stack glass rounded-[1.75rem] p-6 md:p-8">
+    <section aria-label="Tax" className="stack glass rounded-[28px] p-6 md:p-8">
       <div className="space-y-2">
         <h2 className="font-display text-[32px] leading-none">Tax (India)</h2>
         <p className="text-sm text-muted-foreground">
