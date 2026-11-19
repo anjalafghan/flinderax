@@ -49,8 +49,8 @@ REGISTRY = {
     'RageRoom.dc.html': ('rage', 'rage room', 1, 'b2', 'A hazard-striped Mad Rage Room waiver and a plate'),
     'SnowWorld.dc.html': ('snow', 'snow world', 1, 'b2', 'A frosty Snow World token and one red mitten'),
 }
-# warnings looked at and accepted: a chopstick sleeve and a book really are rectangles; the HA's float in the spotlight; the dare card is pulled out over the book; the kart printout starts inside the printer
-ACCEPTED = {'koko': ['plain rectangle'], 'comedy': ['“ha”', '“HA!”'], 'carterroad': ['“7”'], 'bookstore': ['plain rectangle', 'is covered (open)'], 'karting': ['runs off its object (closed)']}
+# warnings looked at and accepted: a chopstick sleeve and a book really are rectangles; the HA's float in the spotlight; the dare card is pulled out over the book; the kart printout starts inside the printer; the arcade shine and tickets repeat their own placement in CSS
+ACCEPTED = {'koko': ['plain rectangle'], 'comedy': ['“ha”', '“HA!”'], 'carterroad': ['“7”'], 'bookstore': ['plain rectangle', 'is covered (open)'], 'karting': ['runs off its object (closed)'], 'arcade': ['.shine is placed', '.tickets is placed']}
 
 MODULES = ['b_noplan', 'b_cat', 'b_tokai', 'b_draw', 'b2a', 'b2b', 'b2c', 'b2d']
 
@@ -194,6 +194,21 @@ figcaption{{padding:4px 6px;color:#fff;font-weight:600}}.tile.bad{{outline:4px s
     # 5. what to send to the canvas
     json.dump({f'project/{b}': os.path.join(OUT, 'boards', b) for b in picked}, open(os.path.join(OUT, 'publish.json'), 'w'), indent=1)
 
+    # an element placed with an SVG transform that CSS also moves jumps to the corner when it plays
+    for b in picked:
+        sid = REGISTRY[b][0]
+        css_ = got[b]['css']
+        for cls in set(re.findall(r'<[a-z]+ class="([\w-]+)"[^>]*\btransform="', got[b]['svg'])):
+            moves = False
+            for body in re.findall(r'\.' + re.escape(cls) + r'(?![\w-])[^{}]*\{([^}]*)\}', css_):
+                if re.search(r'(?<![\w-])transform\s*:\s*(?!none)', body):
+                    moves = True
+                for name in re.findall(r'(?<![\w-])animation\s*:\s*([\w-]+)', body):
+                    kf = re.search(r'@keyframes\s+' + re.escape(name) + r'\s*\{((?:[^{}]*\{[^}]*\})*)', css_)
+                    if name != 'none' and kf and 'transform' in kf.group(1):
+                        moves = True
+            if moves:
+                report.setdefault(sid, {'crop': [0, 0, 600, 600], 'issues': []})['issues'].append(f'.{cls} is placed with transform="…" and moved by CSS: it will jump')
     for sid, rep in report.items():
         rep['issues'] = [i for i in rep['issues'] if not any(a in i for a in ACCEPTED.get(sid, []))]
     bad = {sid: rep['issues'] for sid, rep in report.items() if rep['issues']}

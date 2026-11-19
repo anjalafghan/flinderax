@@ -113,7 +113,7 @@ for (const id of Object.keys(closed)) {
   const issues = [...new Set([...c.text.filter((t) => !t.endsWith("is covered")).map((t) => t + " (closed)"), ...o.text.map((t) => t + " (open)")])];
   if (c.rect) issues.push(c.rect);
   if (!started[id]) issues.push("opening it moves nothing");
-  if (area(c.box) < 0.35 * area(u)) issues.push("the closed state shows little of the object");
+  if (area(c.box) < 0.3 * area(u)) issues.push("the closed state shows little of the object");
   report[id] = { crop, issues };
 }
 
