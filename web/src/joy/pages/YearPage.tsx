@@ -12,8 +12,6 @@ import { ApiError } from "../api";
 import { mapGoTo } from "../paths";
 import { errText } from "../components/useBusy";
 import { Keepsake, KeepsakeDefs } from "../keepsakes/Keepsake";
-import { ExhibitFigure } from "../keepsakes/Exhibit";
-import { specFor } from "../keepsakes/find";
 import { SceneArt } from "../keepsakes/Scene";
 import { sceneFor } from "../keepsakes/scene-find";
 
@@ -453,8 +451,7 @@ function museum(all: YearKeep[]): { d: YearKeep; times: number }[] {
 function MuseumPiece({ d, i, times }: { d: YearKeep; i: number; times: number }) {
   const [live, setLive] = useState(false);
   const scene = sceneFor(d.slip_key, d.visit);
-  const spec = scene ? null : specFor(d.slip_key, d.visit);
-  const name = scene?.name ?? spec?.label;
+  const name = scene?.name;
   return (
     <li className={scene ? "y-has-scene" : times > 1 ? "y-stack" : undefined} style={{ "--r": i % 5, "--n": Math.min(times, 4) } as React.CSSProperties}>
       <Link
@@ -467,7 +464,7 @@ function MuseumPiece({ d, i, times }: { d: YearKeep; i: number; times: number })
       >
         <span className="y-vitrine">
           {times > 1 && <span className="y-times" aria-hidden="true">×{times}</span>}
-          {scene ? <SceneArt scene={scene} open={live} /> : spec ? <ExhibitFigure spec={spec} d={d} /> : <Keepsake d={d} no={i + 1} />}
+          {scene ? <SceneArt scene={scene} open={live} /> : <Keepsake d={d} no={i + 1} />}
         </span>
         <span className="y-placard" aria-hidden="true">
           {name && <span className="y-placard-name">{name}</span>}
