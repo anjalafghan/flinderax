@@ -7,6 +7,7 @@ import { apiMessage, newRegularBody, nightsWord } from "../regulars/days";
 import { mapGoTo } from "../paths";
 import { ErrorState } from "../components/ErrorState";
 import { errText, useBusy } from "../components/useBusy";
+import { PunchCard } from "../regulars/PunchCard";
 import "../regulars/regulars.css";
 
 export default function RegularsPage() {
@@ -25,20 +26,18 @@ export default function RegularsPage() {
       </nav>
       <header className="rs-head">
         <h1 className="rs-title">Our regular nights</h1>
+        <p className="rs-hand" aria-hidden="true">a hole punched for every night we went</p>
         <p className="rs-sub">Places we go on the same days. On those evenings the jar asks if we went.</p>
       </header>
 
       {items.length === 0 ? (
         <p className="rs-empty">No regulars yet. Add the first one below.</p>
       ) : (
-        <ul className="rl-list">
+        <ul className="rl-wallet">
           {items.map((i) => (
             <li key={i.id}>
-              <Link className="rl-item" to={`/joy/regulars/${i.id}`}>
-                <strong>{i.title}</strong>
-                <span>
-                  {i.days} · {i.usual} a night · {i.count} {nightsWord(i.count)} so far{i.place && ` · ${i.place}`}
-                </span>
+              <Link className="rl-card" to={`/joy/regulars/${i.id}`} aria-label={`${i.title}: ${i.days}, ${i.usual} a night, ${i.count} ${nightsWord(i.count)} so far${i.place ? `, ${i.place}` : ""}`}>
+                <PunchCard id={i.id} title={i.title} line={`${i.days}${i.usual ? `, about ${i.usual}` : ""}`} count={i.count} />
               </Link>
             </li>
           ))}

@@ -26,6 +26,9 @@ type User = Extension<(String, String)>;
 #[derive(Debug, Serialize)]
 pub struct Entry {
     pub title: String,
+    /// Finds this slip's own keepsake (see `YearRow::slip_key`).
+    pub slip_key: String,
+    pub visit: i64,
     pub place: String,
     /// "home", "local", … for the ticket's colour.
     pub kind: String,
@@ -160,6 +163,8 @@ pub async fn page(
             };
             Entry {
                 title: ctx.personalize(&r.title),
+                slip_key: r.slip_key.clone(),
+                visit: r.visit,
                 place: ctx.personalize(&r.place),
                 kind: r.setting.clone(),
                 kind_label: picker::setting_label(&r.setting).to_string(),

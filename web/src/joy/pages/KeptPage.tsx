@@ -12,9 +12,13 @@ import { Defs } from "../kept/Defs";
 import { dateWord, flatIds, moveFor, sinceLabel, splitTo, stepIndex } from "../kept/helpers";
 import { behavior, nextFrame, useDealIn } from "../kept/motion";
 import { SealedSlip, Slip } from "../kept/Slip";
+import { sceneFor, visitsOf } from "../keepsakes/scene-find";
 import "../kept/kept.css";
 
 const KEPT_PATH = "/joy/kept";
+
+/** Today in India, as "YYYY-MM-DD" (kept days are IST dates). */
+const isoToday = () => new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
 
 /** The id-or-selector a hash points at; the savings anchor lands on its heading. */
 function hashSelector(hash: string): string {
@@ -87,6 +91,12 @@ export default function KeptPage() {
 
   const months = q.data?.months;
   const dealt = useDealIn(book, months);
+  // Each date that has happened gets its own illustrated keepsake, when one was drawn for that slip.
+  const scenes = useMemo(() => {
+    const done = (months ?? []).flatMap((m) => m.items).filter((h) => !h.sealed && h.day && h.day <= isoToday());
+    const visits = visitsOf(done);
+    return new Map(done.map((h) => [h.id, sceneFor(h.title, visits.get(h.id))] as const));
+  }, [months]);
 
   // Landing on #k12 / #k-savings brings that into view once, after the data is there.
   useEffect(() => {
@@ -216,7 +226,7 @@ export default function KeptPage() {
                     </Link>
                   </h2>
                   <ol className="k-spread" role="list">
-                    {m.items.map((h, i) => (h.sealed ? <SealedSlip key={h.id} h={h} index={i} /> : <Slip key={h.id} h={h} index={i} />))}
+                    {m.items.map((h, i) => (h.sealed ? <SealedSlip key={h.id} h={h} index={i} /> : <Slip key={h.id} h={h} index={i} scene={scenes.get(h.id) ?? null} />))}
                   </ol>
                 </section>
               ))}

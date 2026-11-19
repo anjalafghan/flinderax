@@ -4,7 +4,7 @@
 .joy {
 /* One month: an open travel journal. A kraft-board spread with a sheet of gift-wrap on the left
    page and dot-grid paper on the right; polaroids, ticket stubs, till receipts (marked up in pen
-   and stamped), a die-cut sticker, a handwritten list and a few pressed petals stuck on at angles.
+   and stamped), a die-cut sticker, a handwritten list and an enamel pin, stuck on at angles.
    Page chrome uses tokens (see DESIGN.md); everything on the board is a physical thing and keeps
    its own colours in light and dark. */
 
@@ -210,9 +210,8 @@
 .m-list li { overflow-wrap: anywhere; }
 .m-list .is-blank { opacity: .45; }
 
-/* keepsakes: pressed petals and an enamel pin, lying flat on the kraft */
-.m-keepsakes { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0; filter: var(--m-sh-flat); }
-.m-petals { width: min(320px, 70%); height: auto; }
+/* keepsakes: an enamel pin, lying flat on the kraft */
+.m-keepsakes { display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 0; filter: var(--m-sh-flat); }
 .m-pin { width: 72px; height: 72px; flex: none; }
 
 /* nights (a run of the same thing) on a paper card */

@@ -10,6 +10,8 @@ import { NightPhoto } from "../regulars/NightPhoto";
 import { ApiError } from "../api";
 import { ErrorState } from "../components/ErrorState";
 import { errText, useBusy } from "../components/useBusy";
+import { PunchCard } from "../regulars/PunchCard";
+import { NightStamp, NightStampDefs } from "../regulars/NightStamp";
 import "../regulars/regulars.css";
 
 export default function RegularPage() {
@@ -64,7 +66,9 @@ export default function RegularPage() {
       <nav className="m-top" aria-label="Back">
         <Link className="m-back" to="/joy/regulars"><span aria-hidden="true">←</span> Our regular nights</Link>
       </nav>
-      <header className="rs-head">
+      <NightStampDefs />
+      <header className="rs-head rs-head-card">
+        <div className="rs-head-text">
         <h1 className="rs-title">{v.title}</h1>
         <p className="rs-sub">
           {v.days}
@@ -82,6 +86,10 @@ export default function RegularPage() {
             {v.elsewhere > 0 && ` · ${v.elsewhere} somewhere else`}
           </p>
         )}
+        </div>
+        <div className="rs-head-pc" aria-hidden="true">
+          <PunchCard id={v.regular_id} title={v.title} line={v.days} count={v.count} big />
+        </div>
       </header>
 
       {!editing && <PastNight regularId={v.regular_id} usualRaw={v.usual_raw} />}
@@ -105,7 +113,7 @@ export default function RegularPage() {
       {v.stamps.length === 0 ? (
         <p className="rs-empty">Nothing stamped yet. On {v.days} the jar page asks if we went.</p>
       ) : (
-        <ul className="rs-grid">
+        <ul className="rs-grid rs-passport" aria-label={`${v.count} ${nightsWord(v.count)} at ${v.title}`}>
           {v.stamps.map((n) => (
             <li className="rs-night" id={`n${n.id}`} key={n.id} style={{ "--t": n.tilt } as React.CSSProperties}>
               {n.photo ? (
@@ -114,10 +122,7 @@ export default function RegularPage() {
                   <figcaption>{n.day} {n.year}</figcaption>
                 </figure>
               ) : (
-                <div className="rs-stamp">
-                  <span className="rs-stamp-d">{n.day}</span>
-                  <span className="rs-stamp-y">{n.year}</span>
-                </div>
+                <NightStamp id={n.id} place={n.elsewhere || v.place || v.title} day={n.day} year={n.year} />
               )}
               <p className="rs-meta">
                 {n.amount}

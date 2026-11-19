@@ -61,6 +61,8 @@ export interface YearPhoto {
 /** One kept date on the Year page's keepsake shelf. */
 export interface YearDate {
   title: string;
+  slip_key: string;
+  visit: number;
   place: string;
   kind: string;
   kind_label: string;
@@ -107,6 +109,10 @@ export interface YearView {
 
 export interface Entry {
   title: string;
+  /** The slip's own title, lower-cased: finds its keepsake in the catalogue. */
+  slip_key: string;
+  /** Which time we kept a slip with this title (1, 2, …). */
+  visit: number;
   place: string;
   kind: string;
   kind_label: string;
