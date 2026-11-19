@@ -942,7 +942,7 @@ def specimen(sid, title, *, batch, palette, name, verbs=('Lift the tissue', 'Cov
             + text(30, h - 78, head, 'serif', 20, ink, w - 60, 'start') + ''.join(text(30, h - 52 + i * 20, r, 'hand', 15, ink, w - 60, 'start') for i, r in enumerate(rows[:2]))
             + f'<g class="tis"><path d="M0 0 H{w} V{h - 120} H0 Z" fill="#ffffff" opacity=".72"></path></g>')
     board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
-          svg=g(body, at=(130, 110), rot=-4), motion=[slide('.tis', -24, -150, -10, 0, .7)])
+          svg=g(body, at=(130, 110), rot=-4), motion=[slide('.tis', -16, -60, -6, 0, .6), hide('.tis', .3, .4)])
 
 
 def sticker(sid, title, *, batch, palette, name, verbs=('Peel it', 'Stick it back'), head, sub='', shape='circle', col='#e0245e', ink='#fff', art=(), key=None, visit=1):
