@@ -6,8 +6,6 @@ import { pressStickers, turnIn, turnOut, type Turn } from "../year/motion";
 import { ApiError } from "../api";
 import { errText } from "../components/useBusy";
 import { Keepsake, KeepsakeDefs } from "../keepsakes/Keepsake";
-import { ExhibitButton } from "../keepsakes/Exhibit";
-import { specFor } from "../keepsakes/find";
 import { SceneButton, TuckedPrint } from "../keepsakes/Scene";
 import { sceneFor } from "../keepsakes/scene-find";
 import { keepsakeFor } from "../keepsakes/pick";
@@ -183,10 +181,7 @@ function Month({ v }: { v: MonthView }) {
                 )}
                 <div className="m-keep">
                   {!e.photo && <span className="m-tape m-tape-corner" data-roll={roll(i + 1)} aria-hidden="true"></span>}
-                  {(() => {
-                    const spec = specFor(e.slip_key, e.visit);
-                    return spec ? <ExhibitButton spec={spec} d={e} /> : <Keepsake d={e} no={i + 1} kind={keepsakeFor(e.kind, e.tags)} />;
-                  })()}
+                  <Keepsake d={e} no={i + 1} kind={keepsakeFor(e.kind, e.tags)} />
                 </div>
 
                 {e.actual && (
