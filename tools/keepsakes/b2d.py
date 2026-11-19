@@ -83,7 +83,7 @@ write('HorseRiding.dc.html', title='Horse riding keepsake', fonts='family=Young+
 rings = ''.join(f'<circle r="{r}" fill="{"#16161a" if i >= 3 else "#f4efe2"}" stroke="{"#f4efe2" if i >= 3 else "#16161a"}" stroke-width="1.6"></circle>' for i, r in enumerate([150, 125, 100, 75, 50, 25]))
 nums = ''.join(f'<text x="{r - 12}" y="5" font-family="\'Space Mono\', monospace" font-size="10" fill="{"#f4efe2" if i >= 3 else "#16161a"}" text-anchor="middle">{i+5}</text>' for i, r in enumerate([150, 125, 100, 75, 50]))
 shots = [(-8, 6), (14, -10), (4, 18), (-20, -16), (26, 22)]
-holes = ''.join(f'<g class="hole" style="--d:{.3 + i*.3}s" transform="translate({x} {y})"><circle r="8.5" fill="#f4efe2" opacity=".9"></circle><circle r="6" fill="#3a2a14"></circle><circle r="6" fill="none" stroke="#a89878" stroke-width="1.2"></circle></g>' for i, (x, y) in enumerate(shots))
+holes = ''.join(f'<g transform="translate({x} {y})"><g class="hole" style="--d:{.3 + i*.3}s"><circle r="8.5" fill="#f4efe2" opacity=".9"></circle><circle r="6" fill="#3a2a14"></circle><circle r="6" fill="none" stroke="#a89878" stroke-width="1.2"></circle></g></g>' for i, (x, y) in enumerate(shots))
 svg = f'''<defs>{grain('sr-g', .2, .2, .15, .12)}</defs>
 <path d="M60 70 H540" stroke="#555" stroke-width="3"></path>
 <g class="tgt"><g transform="translate(300 300)">

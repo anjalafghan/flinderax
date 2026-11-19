@@ -446,10 +446,10 @@ STEAM = rise('.steam', 30, 1.8, 3)
 
 
 def stub(sid, title, *, batch, palette, name, verbs=('Tear the stub', 'Keep it whole'), head, sub='', rows=(), stub_text='ADMIT 2',
-         paper_='#fbf8f1', band='#a84a3a', ink='#24303a', art=(), note='', key=None, visit=1):
+         paper_='#fbf8f1', band='#a84a3a', ink='#24303a', art=(), note='', shape='plain', key=None, visit=1):
     """A ticket with a tear-off stub; touching it tears the stub away and a punch goes through."""
     w, h = 400, 210
-    d = stub_path(w, h, 12, 300)
+    d = stub_path(w, h, 12, 300) if shape == 'plain' else (f'M18 0 H{w - 18} A18 18 0 0 0 {w} 18 V{h - 18} A18 18 0 0 0 {w - 18} {h} H18 A18 18 0 0 0 0 {h - 18} V18 A18 18 0 0 0 18 0 Z' if shape == 'scallop' else torn([(0, 0), (w, 0), (w, h), (0, h)], seed=len(head), amp=2.2, step=8))
     body = (paper(d, paper_, edge='#00000018') + f'<path d="M0 0 H288 V44 H0 Z" fill="{band}"></path>'
             + text(150, 30, sub or ' ', 'mono', 12, '#fff', 260, weight=700)
             + text(150, 92, head, 'display', 30, ink, 260, weight=700)
@@ -457,7 +457,7 @@ def stub(sid, title, *, batch, palette, name, verbs=('Tear the stub', 'Keep it w
             + place(art) + '<path d="M300 14 V196" stroke="#5a4a3a" stroke-opacity=".45" stroke-width="2.5" stroke-dasharray="3 5"></path>')
     tear = (f'<g class="tear"><path d="M312 0 H{w} V{h} H312 A12 12 0 0 0 312 {h} Z" fill="{paper_}"></path><path d="M312 0 H{w} V44 H312 Z" fill="{band}"></path>'
             f'<g transform="translate(356 120) rotate(-90)">{text(0, 6, stub_text, "mono", 16, ink, 150, weight=700)}</g>'
-            f'<circle class="punch" cx="356" cy="64" r="9" fill="#1d1a16"></circle></g>')
+            f'<path class="punch" d="M356 54 l3 7 l8 1 l-6 5 l2 8 l-7 -4 l-7 4 l2 -8 l-6 -5 l8 -1 Z" fill="#1d1a16"></path></g>')
     extra = text(200, 268, note, 'hand', 22, '#fff8ea', 380, rot=-3, cls='note') if note else ''
     board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
           svg=g(body + tear + extra, cls='tk', at=(100, 190), rot=-5),
@@ -504,10 +504,15 @@ def coin(sid, title, *, batch, palette, name, verbs=('Flip it', 'Pocket it'), to
     """A token or coin: touching it tosses it and it lands on its other face."""
     fa = text(0, -40, top, 'mono', 13, ink, 150) + text(0, 16, big, 'display', 40, ink, 160, weight=700) + text(0, 46, bottom, 'mono', 11, ink, 150) + place(art)
     fb = text(0, 8, back_big or big, 'display', 34, ink, 160, weight=700) + text(0, 36, back_small, 'hand', 18, ink, 160)
-    body = f'<g class="cf">{token(110, face, rim)}<g class="fa">{fa}</g><g class="fb" transform="scale(1 -1)">{fb}</g></g>'
+    body = f'<g class="cf">{token(110, face, rim)}<g class="fa">{fa}</g><g class="fb">{fb}</g></g>'
     board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
           svg=f'<ellipse cx="300" cy="440" rx="100" ry="14" fill="#000" opacity=".22"></ellipse><g class="toss">{g(body, at=(300, 300))}</g>',
-          motion=[flip('.cf', '.fa', '.fb', 4), (f'.open .toss{{animation:tossup 1.1s cubic-bezier(.3,0,.7,1)}}@keyframes tossup{{50%{{transform:translateY(-150px)}}}}', '.toss')])
+          motion=[('.cf{transform-box:fill-box;transform-origin:50% 50%}.fb{opacity:0}.open .cf{animation:cfs .275s linear 5}'
+                  '.open .fa{animation:cfa 1.375s step-end both}.open .fb{animation:cfb 1.375s step-end both}'
+                  '@keyframes cfs{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}'
+                  '@keyframes cfa{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}'
+                  '@keyframes cfb{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}', '.cf,.fa,.fb'),
+                 (f'.open .toss{{animation:tossup 1.375s cubic-bezier(.3,0,.7,1)}}@keyframes tossup{{50%{{transform:translateY(-150px)}}}}', '.toss')])
 
 
 def postcard(sid, title, *, batch, palette, name, verbs=('Turn it over', 'Turn it back'), scene, sky=('#f6c27a', '#f29a6b'), ground='#3f5d7d',
@@ -525,13 +530,16 @@ def postcard(sid, title, *, batch, palette, name, verbs=('Turn it over', 'Turn i
             + f'<g transform="translate({w - 44} 49) scale(.5)">{MOTIFS[stamp_art[0]](*stamp_art[1:])}</g>'
             + ''.join(f'<path d="M{w / 2 + 24} {120 + i * 30} H{w - 24}" stroke="#c9b48a"></path>' for i in range(3))
             + text(w / 2 + 28, 114, to, 'hand', 18, '#2a3f7a', w / 2 - 50, 'start'))
-    body = f'<g class="pf">{front}</g><g class="pb" transform="translate({w} 0) scale(-1 1)">{back}</g>'
+    frank = (f'<g transform="translate({w - 70} 40) rotate(-12)"><g class="frank"><circle r="26" fill="none" stroke="#2a2a2a" stroke-width="2.4"></circle>'
+             + ''.join(f'<path d="M30 {-12 + k * 8} q8 -5 16 0 t16 0 t16 0" fill="none" stroke="#2a2a2a" stroke-width="2"></path>' for k in range(4)) + '</g></g>')
+    body = f'<g class="pf">{front}{frank}</g><g class="pb" transform="translate({w} 0) scale(-1 1)">{back}</g>'
     sky_grad = f'<linearGradient id="pc-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{sky[0]}"></stop><stop offset="1" stop-color="{sky[1]}"></stop></linearGradient>'
     css = ('.card{transform-box:fill-box;transform-origin:50% 50%;transition:transform .7s cubic-bezier(.4,0,.2,1)}.pb{opacity:0;transition:opacity 0s .35s}.pf{transition:opacity 0s .35s}'
-           '.open .card{transform:scaleX(-1) rotate(-3deg)}.open .pb{opacity:1}.open .pf{opacity:0}')
+           '.open .card{transform:scaleX(-1) rotate(-3deg);transition:transform .7s cubic-bezier(.4,0,.2,1) .7s}.open .pb{opacity:1;transition:opacity 0s 1.05s}.open .pf{opacity:0;transition:opacity 0s 1.05s}'
+           '.frank{opacity:0;transform-box:fill-box;transform-origin:50% 50%}.open .frank{animation:frk .25s ease-out .15s both}@keyframes frk{0%{opacity:0;transform:scale(1.7)}100%{opacity:.85;transform:none}}')
     board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, defs=clip + sky_grad, css=css,
           svg=g(f'<g class="card">{body}</g>', at=(120, 186), rot=-4),
-          motion=[('', '.card,.pb,.pf')])
+          motion=[('', '.card,.pb,.pf,.frank')])
 
 
 def scorecard(sid, title, *, batch, palette, name, verbs=('Fill it in', 'Rub it out'), head, sub='', rows=(), cols=('',), marks=(), circle=None,
@@ -587,7 +595,7 @@ def label(sid, title, *, batch, palette, name, verbs=('Open it', 'Close it'), ki
     fxsvg, fxmotion = {
         'bubbles': (scatter(14, (-60, -330, 60, -180), (3, 7), '#ffffff', 'fx'), rise('.fx', 120, 1.6, 2)),
         'steam': (''.join(f'<path class="fx" style="--d:{i * .4}s" d="M{x} -200 c-12 -16 12 -24 0 -42 c-8 -12 8 -18 0 -30" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"></path>' for i, x in enumerate((-30, 0, 30))), rise('.fx', 60, 1.8, 3)),
-        'sparkle': (''.join(f'<g class="fx" style="--d:{i * .2:.1f}s" transform="translate({x} {y})">{MOTIFS["star"]("#fff3b0")}</g>' for i, (x, y) in enumerate([(-110, -150), (120, -120), (-130, 40), (130, 70), (0, -240)])), pop('.fx', .2)),
+        'sparkle': (''.join(f'<g transform="translate({x} {y})"><g class="fx" style="--d:{i * .2:.1f}s">{MOTIFS["star"]("#fff3b0")}</g></g>' for i, (x, y) in enumerate([(-110, -150), (120, -120), (-130, 40), (130, 70), (0, -240)])), pop('.fx', .2)),
         'petals': (scatter(16, (-160, -320, 160, -200), (4, 7), '#f29ab8', 'fx'), fall('.fx', 480, 2.4, 1)),
     }[fx]
     board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
@@ -655,7 +663,8 @@ def strip(sid, title, *, batch, palette, name, verbs=('Develop it', 'Fade it'), 
     fw, fh = (150, 120) if film else (150, 112)
     body = ''
     if film:
-        body += f'<rect x="-20" y="-10" width="{n * (fw + 16) + 24}" height="{fh + 44}" fill="#1b1b1e"></rect>' + ''.join(f'<rect x="{-12 + i * 22}" y="-4" width="12" height="9" rx="2" fill="#f6f3ec"></rect><rect x="{-12 + i * 22}" y="{fh + 20}" width="12" height="9" rx="2" fill="#f6f3ec"></rect>' for i in range((n * (fw + 16)) // 22 + 1))
+        fwid = n * (fw + 16) + 24
+        body += paper(torn([(-20, -10), (fwid - 20, -10), (fwid - 20, fh + 34), (-20, fh + 34)], seed=n + 7, amp=5, step=8), '#1b1b1e') + ''.join(f'<rect x="{-12 + i * 22}" y="-4" width="12" height="9" rx="2" fill="#f6f3ec"></rect><rect x="{-12 + i * 22}" y="{fh + 20}" width="12" height="9" rx="2" fill="#f6f3ec"></rect>' for i in range((n * (fw + 16)) // 22 + 1))
     else:
         sh = n * (fw * .8 + 14) + 70
         body += paper(torn([(-14, -14), (fw + 14, -14), (fw + 14, sh - 14), (-14, sh - 14)], seed=n, amp=3, step=9), '#fbfaf6')
@@ -674,7 +683,7 @@ def strip(sid, title, *, batch, palette, name, verbs=('Develop it', 'Fade it'), 
 def media(sid, title, *, batch, palette, name, verbs=('Press play', 'Stop'), kind='cassette', head, rows=(), shell='#2b2d33', paper_='#f6efe0', ink='#2b2b30',
           accent='#e0245e', key=None, visit=1):
     """A cassette with its J-card, a record in its sleeve, or a game cartridge: touching it plays (reels and records spin, notes rise)."""
-    notes = ''.join(f'<g class="nt" style="--d:{i * .4:.1f}s" transform="translate({420 + i * 30} {150 - (i % 2) * 30}) scale(.7)">{MOTIFS["note"]("#fff")}</g>' for i in range(3))
+    notes = ''.join(f'<g transform="translate({420 + i * 30} {150 - (i % 2) * 30}) scale(.7)"><g class="nt" style="--d:{i * .4:.1f}s">{MOTIFS["note"]("#fff")}</g></g>' for i in range(3))
     if kind == 'cassette':
         body = (f'<rect x="-170" y="-110" width="340" height="220" rx="14" fill="{shell}"></rect><rect x="-150" y="-92" width="300" height="110" rx="6" fill="{paper_}"></rect>'
                 + text(0, -60, head, 'marker', 24, ink, 270) + text(0, -36, rows[0] if rows else '', 'hand', 16, ink, 270)
@@ -683,9 +692,9 @@ def media(sid, title, *, batch, palette, name, verbs=('Press play', 'Stop'), kin
                 + f'<path d="M-110 110 L-90 60 H90 L110 110 Z" fill="#00000033"></path>' + f'<rect x="-150" y="40" width="300" height="10" fill="{accent}"></rect>')
         spinner = spin('.reel', 4, 2.4)
     elif kind == 'record':
-        body = (f'<g class="disc" transform="translate(70 0)"><circle r="150" fill="#141416"></circle>' + ''.join(f'<circle r="{r}" fill="none" stroke="#2a2a2e" stroke-width="1.4"></circle>' for r in range(60, 148, 10))
-                + f'<circle r="54" fill="{accent}"></circle>' + text(0, -6, head, 'serif', 14, '#fff', 90) + text(0, 14, rows[0] if rows else '', 'mono', 8, '#fff', 90) + '<circle r="5" fill="#141416"></circle></g>'
-                + f'<rect x="-190" y="-160" width="320" height="320" fill="{paper_}"></rect>' + text(-30, -100, head, 'display', 34, ink, 280, weight=700)
+        body = (f'<g transform="translate(70 0)"><g class="disc"><circle r="150" fill="#141416"></circle>' + ''.join(f'<circle r="{r}" fill="none" stroke="#2a2a2e" stroke-width="1.4"></circle>' for r in range(60, 148, 10))
+                + f'<circle r="54" fill="{accent}"></circle>' + text(0, -6, head, 'serif', 14, '#fff', 90) + text(0, 14, rows[0] if rows else '', 'mono', 8, '#fff', 90) + '<circle r="5" fill="#141416"></circle></g></g>'
+                + f'<path d="M-182 -160 H-50 A20 20 0 0 0 -10 -160 H122 Q130 -160 130 -152 V152 Q130 160 122 160 H-182 Q-190 160 -190 152 V-152 Q-190 -160 -182 -160 Z" fill="{paper_}"></path>' + text(-30, -100, head, 'display', 34, ink, 280, weight=700)
                 + ''.join(text(-170, -50 + i * 26, r, 'hand', 18, ink, 280, 'start') for i, r in enumerate(rows[1:7])))
         spinner = slide('.disc', 90, 0, 0, 0, .8)
         spinner = (spinner[0] + spin('.disc', 3, 2.2, .6)[0].replace('.open .disc{', '.open .disc{transform:translateX(90px);'), '.disc')
@@ -712,8 +721,8 @@ def mapcard(sid, title, *, batch, palette, name, verbs=('Follow the route', 'Fol
             + ''.join(f'<path d="M{x} {y} q14 -10 28 0" fill="none" stroke="#7d9c57" stroke-width="8" stroke-linecap="round"></path>' for x, y in [(20, 60), (300, 40), (40, 300), (370, 310)])
             + place(art) + ''.join(words(x, y, s, 'mono', 9, '#8f8268', 'middle', r) for x, y, s, r in labels) + '</g>'
             + f'<path class="rt" pathLength="1" d="{route}" fill="none" stroke="#c23a2b" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path>'
-            + ''.join(f'<g class="pin" style="--d:{.5 + i * .35:.2f}s" transform="translate({x} {y})"><path d="M0 0 C-12 -16 -12 -30 0 -30 C12 -30 12 -16 0 0 Z" fill="#c23a2b"></path><circle cy="-21" r="4" fill="#fff"></circle>'
-                      + words(14, -16, s, 'hand', 16, '#c23a2b') + '</g>' for i, (x, y, s) in enumerate(pins))
+            + ''.join(f'<g transform="translate({x} {y})"><g class="pin" style="--d:{.5 + i * .35:.2f}s"><path d="M0 0 C-12 -16 -12 -30 0 -30 C12 -30 12 -16 0 0 Z" fill="#c23a2b"></path><circle cy="-21" r="4" fill="#fff"></circle>'
+                      + words(14, -16, s, 'hand', 16, '#c23a2b') + '</g></g>' for i, (x, y, s) in enumerate(pins))
             + text(20, 34, head, 'serif', 22, '#3a3328', w - 40, 'start'))
     board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
           svg=g(body, at=(80, 130), rot=-3), motion=[drawon('.rt', .1, 1.6), pop('.pin', 0)])
@@ -729,3 +738,219 @@ def lanyard(sid, title, *, batch, palette, name, verbs=('Wear it', 'Hang it up')
             + place(art) + f'<path class="glow" d="{d}" fill="#fff"></path>')
     board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
           svg=g(body, cls='ly', at=(300, 160), rot=-3), motion=[swing('.ly', '50% 0%', 6), (f'.glow{{opacity:0}}.open .glow{{animation:gl 1.2s ease-out .3s}}@keyframes gl{{30%{{opacity:.35}}100%{{opacity:0}}}}', '.glow')])
+
+
+# ── more objects (variety pass) ───────────────────────────────────────────────────────────────
+def matchbook(sid, title, *, batch, palette, name, verbs=('Strike one', 'Close it'), head, sub='', cover='#1b1b1e', ink='#f2c230', inside='',
+              art=(), key=None, visit=1):
+    """A bar's matchbook: touching it flips the cover up, one match lifts and lights."""
+    w, h = 220, 300
+    matches = ''.join(f'<g transform="translate({30 + i * 20} 70)"><rect x="-6" y="0" width="12" height="90" rx="3" fill="#efe1c0"></rect><circle r="8" fill="#b5452c"></circle></g>' for i in range(9) if i != 4)
+    one = (f'<g class="mt"><g transform="translate(110 70)"><rect x="-6" y="0" width="12" height="90" rx="3" fill="#efe1c0"></rect><circle r="8" fill="#b5452c"></circle>'
+           f'<g class="fl"><path d="M0 -6 C-14 -22 -6 -40 0 -52 C8 -38 14 -22 0 -6 Z" fill="#ffb347"></path><path d="M0 -8 C-6 -18 -2 -28 0 -34 C4 -26 6 -18 0 -8 Z" fill="#fff1b8"></path></g></g></g>')
+    body = (f'<rect width="{w}" height="{h}" rx="10" fill="{cover}"></rect><rect y="{h - 70}" width="{w}" height="18" fill="#6b5a4a"></rect>'
+            + f'<rect x="10" y="40" width="{w - 20}" height="{h - 120}" rx="4" fill="#3a2a20"></rect>{matches}{one}'
+            + text(w / 2, h - 18, inside, 'hand', 15, ink, w - 30)
+            + f'<g class="cv"><rect width="{w}" height="{h - 70}" rx="10" fill="{cover}"></rect>'
+            + text(w / 2, 80, head, 'display', 34, ink, w - 30, weight=800) + text(w / 2, 108, sub, 'mono', 11, ink, w - 30) + place(art) + '</g>')
+    css = ('.cv{transform-box:fill-box;transform-origin:50% 0%;transition:transform .45s .2s}.open .cv{transform:scaleY(-.35) translateY(40px);transition:transform .45s}'
+           '.mt{transform-box:fill-box;transition:transform .3s}.open .mt{transform:translateY(-60px) rotate(8deg);transition:transform .5s cubic-bezier(.3,1.3,.5,1) .4s}'
+           '.fl{opacity:0;transform-box:fill-box;transform-origin:50% 100%}.open .fl{opacity:1;animation:flk .5s ease-in-out .9s infinite alternate;transition:opacity .2s .9s}@keyframes flk{to{transform:scale(.88,1.12)}}')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
+          svg=g(body, at=(190, 170), rot=-6), motion=[('', '.cv,.mt,.fl')])
+
+
+def coaster(sid, title, *, batch, palette, name, verbs=('Put a glass down', 'Pick it up'), head, sub='', shape='round', board_='#e9d6b3', ink='#3a2414',
+            drink='glass', drink_col=('#f2b33d', '#ffffff'), art=(), key=None, visit=1):
+    """A coaster (round cardboard, square cork, or scalloped): touching it sets a glass down, leaves a ring, and the coaster spins a little."""
+    shp = {'round': '<circle r="140" fill="{c}"></circle><circle r="124" fill="none" stroke="{i}" stroke-opacity=".35" stroke-width="2"></circle>',
+           'square': '<rect x="-130" y="-130" width="260" height="260" rx="22" fill="{c}"></rect><rect x="-116" y="-116" width="232" height="232" rx="14" fill="none" stroke="{i}" stroke-opacity=".35" stroke-width="2"></rect>',
+           'scallop': ''.join(f'<circle cx="{132 * math.cos(math.radians(a)):.1f}" cy="{132 * math.sin(math.radians(a)):.1f}" r="16" fill="{{c}}"></circle>' for a in range(0, 360, 20)) + '<circle r="134" fill="{c}"></circle>'}[shape]
+    body = (shp.replace('{c}', board_).replace('{i}', ink) + text(0, -30, head, 'display', 36, ink, 220, weight=800) + text(0, 0, sub, 'mono', 12, ink, 210) + place(art)
+            + f'<circle class="ring" r="48" cx="56" cy="74" fill="none" stroke="#6b4a2a" stroke-opacity=".45" stroke-width="7"></circle>')
+    glass_ = f'<g class="gl"><g transform="translate(340 320) scale(2.4)">{MOTIFS[drink](*drink_col)}</g></g>'
+    css = ('.ring{opacity:0}.open .ring{opacity:1;transition:opacity .4s 1.1s}.gl{transform-box:fill-box;opacity:0}'
+           '.open .gl{animation:gld 1.6s ease-in-out both}@keyframes gld{0%{opacity:0;transform:translate(60px,-160px)}35%{opacity:1;transform:translate(0,0)}70%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(80px,-140px)}}'
+           '.cs{transform-box:fill-box;transform-origin:50% 50%}.open .cs{animation:csp .7s ease-out .9s}@keyframes csp{40%{transform:rotate(9deg)}100%{transform:rotate(0)}}')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
+          svg=g(body, cls='cs', at=(290, 300), rot=-8) + glass_, motion=[('', '.ring,.gl,.cs')])
+
+
+def menu(sid, title, *, batch, palette, name, verbs=('Open the menu', 'Fold it'), head, sub='', panels=(), card='#f6efe0', ink='#2b2b30', accent='#7a1a16',
+         ticks=(), art=(), key=None, visit=1):
+    """A folded menu: touching it opens the side flaps and ticks what we ordered.
+    panels: (left lines, middle lines, right lines); ticks: (panel, line) pairs."""
+    pw, h = 150, 300
+    def panel(lines, x):
+        return ''.join(text(x + pw / 2, 70 + i * 30, l, 'serif', 15, ink, pw - 20) for i, l in enumerate(lines))
+    left, mid, right = (list(panels) + [[], [], []])[:3]
+    inner = (f'<path d="M0 8 L{pw} 0 L{pw * 2} 8 L{pw * 3} 0 V{h} L{pw * 2} {h - 8} L{pw} {h} L0 {h - 8} Z" fill="{card}"></path>' + ''.join(f'<path d="M{pw * k} 10 V{h - 10}" stroke="{ink}" stroke-opacity=".2"></path>' for k in (1, 2))
+             + panel(left, 0) + panel(mid, pw) + panel(right, pw * 2)
+             + ''.join(f'<path class="mk" style="--d:{.7 + i * .25:.2f}s" pathLength="1" d="M{p * pw + 10} {62 + l * 30} l6 7 l12 -16" fill="none" stroke="{accent}" stroke-width="2.6" stroke-linecap="round"></path>' for i, (p, l) in enumerate(ticks)))
+    cover = lambda x, cls, org: (f'<g class="{cls}" style="transform-origin:{org}"><rect x="{x}" width="{pw}" height="{h}" fill="{accent}"></rect>'
+                                 f'<rect x="{x + 8}" y="8" width="{pw - 16}" height="{h - 16}" fill="none" stroke="#fff" stroke-opacity=".5"></rect></g>')
+    front = (f'<g>' + text(pw * 1.5, 120, head, 'display', 30, '#fff', pw - 16, weight=700) + text(pw * 1.5, 150, sub, 'mono', 10, '#fff', pw - 16) + place(art) + '</g>')
+    flap = lambda x, org: (f'<rect x="{x}" width="{pw}" height="{h}" fill="{accent}"></rect><rect x="{x + 8}" y="8" width="{pw - 16}" height="{h - 16}" fill="none" stroke="#fff" stroke-opacity=".5"></rect>')
+    body = (inner + f'<g class="fl1">{flap(0, 0)}</g><g class="fl2">{flap(pw * 2, 0)}</g>'
+            + f'<g class="mid"><rect x="{pw}" width="{pw}" height="{h}" fill="{accent}"></rect><rect x="{pw + 8}" y="8" width="{pw - 16}" height="{h - 16}" fill="none" stroke="#fff" stroke-opacity=".5"></rect>{front}</g>')
+    css = ('.fl1,.fl2{transform-box:fill-box;transition:transform .45s .15s}.fl1{transform-origin:0% 50%}.fl2{transform-origin:100% 50%}'
+           '.open .fl1,.open .fl2{transform:scaleX(0);transition:transform .5s cubic-bezier(.4,0,.2,1) .25s}'
+           '.mid{transition:opacity .25s .5s}.open .mid{opacity:0;transition:opacity .3s}')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
+          svg=g(body, at=(75, 150), rot=-3), motion=[('', '.fl1,.fl2,.mid'), drawon('.mk', 0, .3)])
+
+
+def cuppa(sid, title, *, batch, palette, name, verbs=('Lift the lid', 'Put it back'), kind='takeaway', head='', sub='', cup_col='#f6f3ec', band='#c99d69',
+          ink='#2b2b30', drink='#6b3a1f', marker='', art=(), key=None, visit=1):
+    """Something to drink: a takeaway cup with a sleeve, a cutting-chai glass, a teacup on its saucer, or a mug.
+    Touching it lifts the lid (or tips it a little) and the steam rises."""
+    if kind == 'takeaway':
+        body = (f'<path d="M-90 -120 H90 L74 160 H-74 Z" fill="{cup_col}"></path><path d="M-84 -10 H84 L78 80 H-78 Z" fill="{band}"></path>'
+                + text(0, 30, head, 'serif', 26, ink, 150) + text(0, 56, sub, 'mono', 10, ink, 150) + text(0, -60, marker, 'marker', 26, '#2b2b30', 160, rot=-4)
+                + f'<g class="lid"><path d="M-100 -122 H100 L94 -146 H-94 Z" fill="#e2ded3"></path><path d="M-80 -146 C-80 -170 80 -170 80 -146 Z" fill="#efebe2"></path><ellipse cx="36" cy="-160" rx="14" ry="5" fill="#333"></ellipse></g>'
+                + f'<ellipse cy="-122" rx="88" ry="10" fill="{drink}"></ellipse>')
+        mv = slide('.lid', 70, -90, 24, 0, .6)
+        top = -150
+    elif kind == 'cutting':
+        body = (f'<path d="M-50 -90 H50 L40 90 H-40 Z" fill="#ffffff" fill-opacity=".25" stroke="#fff" stroke-width="2"></path><path d="M-46 -40 H46 L40 88 H-40 Z" fill="{drink}"></path>'
+                + ''.join(f'<path d="M{x} -86 L{x * .8:.0f} 86" stroke="#fff" stroke-opacity=".35" stroke-width="3"></path>' for x in (-30, -10, 10, 30))
+                + f'<ellipse cy="-40" rx="46" ry="6" fill="#c98a4a"></ellipse>' + f'<g transform="translate(0 150)">' + text(0, 0, head, 'hand', 26, '#fff', 220) + text(0, 26, sub, 'mono', 10, '#fff', 220) + '</g>')
+        mv = shake('.cu', 6, .1)
+        top = -96
+    elif kind == 'teacup':
+        body = (f'<ellipse cy="76" rx="150" ry="30" fill="{cup_col}" stroke="{band}" stroke-width="3"></ellipse><path d="M-100 -40 H100 C100 50 60 76 0 76 C-60 76 -100 50 -100 -40 Z" fill="{cup_col}"></path>'
+                + f'<path d="M100 -20 C150 -20 150 40 90 40" fill="none" stroke="{cup_col}" stroke-width="14"></path><ellipse cy="-40" rx="100" ry="16" fill="{drink}"></ellipse>'
+                + f'<path d="M-96 -10 C-60 10 60 10 96 -10" fill="none" stroke="{band}" stroke-width="5"></path>' + place(art)
+                + f'<g transform="translate(0 140)">' + text(0, 0, head, 'script', 30, '#fff', 260, weight=700) + text(0, 24, sub, 'mono', 10, '#fff', 260) + '</g>')
+        mv = shake('.cu', 4, .1)
+        top = -60
+    else:  # mug
+        body = (f'<rect x="-90" y="-100" width="180" height="200" rx="24" fill="{cup_col}"></rect><path d="M90 -50 C150 -50 150 50 90 50" fill="none" stroke="{cup_col}" stroke-width="22"></path>'
+                + f'<ellipse cy="-100" rx="90" ry="14" fill="{drink}"></ellipse>' + text(0, 0, head, 'display', 30, ink, 160, weight=800) + text(0, 30, sub, 'mono', 10, ink, 160) + place(art))
+        mv = shake('.cu', 4, .1)
+        top = -110
+    steam = ''.join(f'<path class="sm" style="--d:{i * .45:.2f}s" d="M{x} {top} c-12 -16 12 -24 0 -42 c-8 -12 8 -18 0 -30" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"></path>' for i, x in enumerate((-30, 0, 30)))
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
+          svg=g(body + steam, cls='cu', at=(300, 320), rot=-3), motion=[mv, rise('.sm', 70, 1.8, 3)])
+
+
+def cakebox(sid, title, *, batch, palette, name, verbs=('Untie the ribbon', 'Box it up'), head, sub='', box='#f7c9d4', ribbon='#c2185b', ink='#3a1a28',
+            treat=('cake',), art=(), key=None, visit=1):
+    """A bakery box tied with ribbon: touching it slips the bow, lifts the lid and shows what's inside."""
+    inside = f'<g class="tr"><g transform="translate(0 -70) scale(2)">{MOTIFS[treat[0]](*treat[1:])}</g></g>'
+    body = (f'<path d="M-150 -60 H150 L138 120 Q136 128 128 128 H-128 Q-136 128 -138 120 Z" fill="{box}" stroke="#00000022"></path><path d="M-150 -60 L-138 120 M150 -60 L138 120" stroke="#00000018" stroke-width="6"></path>{inside}'
+            + f'<path d="M-150 -60 H150 V-20 H-150 Z" fill="{box}" opacity=".0"></path>'
+            + f'<g class="lid"><path d="M-160 -96 Q-160 -104 -152 -104 H152 Q160 -104 160 -96 L156 -50 H-156 Z" fill="{box}" stroke="#00000022"></path>' + text(16, -70, head, 'script', 32, ink, 230, weight=700) + '</g>'
+            + f'<g class="rb"><path d="M-160 -56 H160" stroke="{ribbon}" stroke-width="8"></path><path d="M-112 -104 V126" stroke="{ribbon}" stroke-width="10"></path>'
+            + f'<path d="M-112 -104 C-152 -154 -182 -114 -112 -104 C-42 -114 -72 -154 -112 -104 Z" fill="{ribbon}"></path></g>'
+            + f'<g transform="translate(20 96)">' + text(0, 0, sub, 'mono', 11, ink, 220) + place(art) + '</g>')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
+          svg=g(body, at=(300, 330), rot=-4), motion=[slide('.rb', 0, -40, 0, 0, .3), hide('.rb', .15, .2), slide('.lid', 40, -150, -12, .35, .6), appear('.tr', .5, .3)])
+
+
+def polaroid(sid, title, *, batch, palette, name, verbs=('Shake it', 'Fade it'), scene, sky=('#9fc7e0', '#e9d6b3'), ground='#5d7d4f', caption='', key=None, visit=1):
+    """An instant photo: touching it gives it a shake and the picture develops."""
+    w, h = 300, 360
+    pic = (f'<clipPath id="pl-c"><rect x="20" y="20" width="{w - 40}" height="{w - 40}"></rect></clipPath>'
+           f'<linearGradient id="pl-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{sky[0]}"></stop><stop offset="1" stop-color="{sky[1]}"></stop></linearGradient>'
+           f'<g clip-path="url(#pl-c)"><rect x="20" y="20" width="{w - 40}" height="{w - 40}" fill="url(#pl-s)"></rect><path d="M20 210 C100 196 200 220 {w - 20} 204 V{w - 20} H20 Z" fill="{ground}"></path>'
+           f'<g transform="translate(20 20)">{place(scene)}</g></g>')
+    body = (f'<path d="M0 0 H{w} V{h - 34} Q{w - 8} {h - 6} {w - 40} {h} H0 Z" fill="#fbfaf6"></path><path d="M{w} {h - 34} Q{w - 8} {h - 6} {w - 40} {h} Q{w - 22} {h - 22} {w} {h - 34} Z" fill="#d9d4c6"></path>{pic}<rect class="dev" x="20" y="20" width="{w - 40}" height="{w - 40}" fill="#2b2a2e"></rect>'
+            + text(w / 2, h - 30, caption, 'script', 30, '#2b2b30', w - 30, weight=700))
+    css = '.dev{transition:opacity .3s}.open .dev{opacity:0;transition:opacity 1.6s ease-in .5s}'
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
+          svg=g(body, cls='pol', at=(150, 120), rot=-5), motion=[('', '.dev'), shake('.pol', 5)])
+
+
+def bookmark(sid, title, *, batch, palette, name, verbs=('Mark the page', 'Close the book'), head, rows=(), strip_col='#2f6d57', ink='#f6efe0',
+             tassel='#c9a14a', book_col=('#7a1a16', '#f6efe0'), art=(), key=None, visit=1):
+    """A bookmark sitting in a closed book: touching it opens the book and the tassel swings."""
+    bk = (f'<g class="bk"><path d="M-170 -96 Q-90 -124 0 -108 V150 Q-90 136 -170 160 Z" fill="{book_col[1]}"></path><path d="M0 -108 Q90 -124 170 -96 V160 Q90 136 0 150 Z" fill="{book_col[1]}"></path>'
+          + ''.join(f'<path d="M{s * 20} {-80 + i * 22} H{s * 150}" stroke="#c9c2b0" stroke-width="2"></path>' for s in (-1, 1) for i in range(10)) + '</g>'
+          + f'<g class="cov"><path d="M-6 -114 Q90 -130 176 -102 V166 Q90 142 -6 156 Z" fill="{book_col[0]}"></path></g>')
+    mark = (f'<g class="bm"><path d="M-40 -170 H40 V120 L0 96 L-40 120 Z" fill="{strip_col}"></path>'
+            + f'<g transform="translate(-12 -40) rotate(-90)">{text(0, 8, head, "serif", 22, ink, 240)}</g>'
+            + ''.join(f'<g transform="translate({10 + i * 18} -40) rotate(-90)">{text(0, 6, r, "hand", 13, ink, 240)}</g>' for i, r in enumerate(rows[:2]))
+            + place(art) + f'<path d="M0 -170 C10 -200 -10 -220 0 -240" fill="none" stroke="{tassel}" stroke-width="3"></path><path class="ts" d="M-8 -240 H8 L4 -270 H-4 Z" fill="{tassel}"></path></g>')
+    css = ('.cov{transform-box:view-box;transform-origin:300px 0;transition:transform .5s}.open .cov{transform:scaleX(-.0);transition:transform .6s}'
+           '.ts{transform-box:fill-box;transform-origin:50% 100%}.open .ts{animation:tsw .6s ease-in-out .5s 3 alternate}@keyframes tsw{to{transform:rotate(20deg)}}')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
+          svg=g(bk + mark, at=(300, 330), rot=-3), motion=[('', '.cov,.ts'), slide('.bm', 0, -30, -4, .3, .6)])
+
+
+def handstamp(sid, title, *, batch, palette, name, verbs=('Lights down', 'Lights up'), stamp_text, sub='', skin='#c98a64', ink='#7dffb2', art=(), key=None, visit=1):
+    """The stamp on the back of a hand at the door: touching it drops the lights and the UV ink glows."""
+    hand = ('M-90 160 C-100 80 -110 20 -100 -40 C-96 -70 -70 -70 -66 -40 L-60 0 L-56 -110 C-54 -140 -24 -140 -22 -110 L-18 -10 L-14 -130 C-12 -160 18 -160 20 -130 L24 -10 '
+            'L30 -110 C32 -140 62 -140 64 -110 L66 10 L78 -40 C86 -66 116 -60 112 -30 L96 60 C86 120 60 150 40 170 Z')
+    body = (f'<path d="{hand}" fill="{skin}"></path><path d="{hand}" fill="#000" class="dark" opacity="0"></path>'
+            + f'<g class="uv" transform="translate(0 70) rotate(-10)" filter="url(#hs-g)">' + text(0, 0, stamp_text, 'marker', 30, ink, 150) + text(0, 22, sub, 'mono', 10, ink, 150) + '</g>'
+            + f'<g transform="translate(0 70) rotate(-10)" opacity=".35">' + text(0, 0, stamp_text, 'marker', 30, '#6b4a3a', 150) + '</g>' + place(art))
+    css = ('.uv{opacity:0;transition:opacity .2s}.open .uv{opacity:1;transition:opacity .5s .5s}.dark{transition:opacity .3s}.open .dark{opacity:.55;transition:opacity .4s}'
+           '.open .uv{animation:uvp 1.2s ease-in-out .9s 3 alternate}@keyframes uvp{to{opacity:.6}}')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
+          defs='<filter id="hs-g" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2" result="b"></feGaussianBlur><feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter>',
+          svg=g(body, at=(300, 300), rot=-6), motion=[('', '.uv,.dark')])
+
+
+def keytag(sid, title, *, batch, palette, name, verbs=('Jingle the keys', 'Hang them up'), head, number='', tag_col='#c0392b', ink='#fff', art=(), key=None, visit=1):
+    """A key on a plastic fob (a locker, a room, a rental): touching it jingles on its ring."""
+    keyd = 'M0 0 a26 26 0 1 1 0.1 0 Z M-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0 M20 10 H110 V24 H100 V34 H90 V24 H78 V34 H68 V24 H20 Z'
+    body = (f'<circle r="40" fill="none" stroke="#9aa0a6" stroke-width="7"></circle>'
+            + f'<g transform="translate(30 30) rotate(30)"><path d="{keyd}" fill="#c9a14a" fill-rule="evenodd" transform="translate(30 0)"></path></g>'
+            + f'<g transform="translate(-20 30) rotate(70)"><path d="M0 0 C-30 0 -60 20 -70 60 L-40 230 Q-36 250 -16 250 H50 Q70 250 74 230 L104 60 C94 20 64 0 34 0 Z" fill="{tag_col}" transform="translate(-17 0)"></path>'
+            + f'<circle cx="0" cy="30" r="10" fill="#000" opacity=".35"></circle>' + f'<g transform="translate(0 140) rotate(-90)">' + text(0, 0, head, 'display', 26, ink, 170, weight=800) + text(0, 26, number, 'mono', 14, ink, 170, weight=700) + '</g>' + place(art) + '</g>')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
+          svg=f'<path d="M300 60 V130" stroke="#555" stroke-width="3"></path>' + g(body, cls='kt', at=(300, 170)), motion=[swing('.kt', '50% 0%', 14, 0, 1), shake('.kt', 6, .1)])
+
+
+def seedpacket(sid, title, *, batch, palette, name, verbs=('Shake out the seeds', 'Fold it shut'), head, rows=(), packet='#f2e3b3', ink='#3a2a1a',
+               art=(('plant', 0, -40, 1.6),), seed_col='#6b4a2a', key=None, visit=1):
+    """A seed or spice packet: touching it tips the packet and seeds pour out."""
+    body = (f'<path d="M-120 -170 H120 V150 ' + ''.join(f'L{120 - i * 12} {170 if i % 2 else 150} ' for i in range(1, 21)) + f'Z" fill="{packet}"></path><path d="M-120 -170 H120 V-140 H-120 Z" fill="#00000018"></path>'
+            + ''.join(f'<path d="M{-120 + i * 12} -170 l6 -8 l6 8" fill="{packet}"></path>' for i in range(20))
+            + f'<rect x="-100" y="-120" width="200" height="150" rx="6" fill="#ffffff66"></rect>' + place(art)
+            + text(0, 70, head, 'serif', 26, ink, 220) + ''.join(text(0, 98 + i * 22, r, 'hand', 16, ink, 220) for i, r in enumerate(rows[:3])))
+    seeds = ''.join(f'<ellipse class="sd" style="--d:{i * .08:.2f}s" cx="{-100 + (i * 37) % 60}" cy="-180" rx="4" ry="6" fill="{seed_col}"></ellipse>' for i in range(14))
+    css = ('.pk{transform-box:fill-box;transform-origin:30% 100%;transition:transform .4s}.open .pk{transform:rotate(-35deg);transition:transform .5s}'
+           '.sd{opacity:0}.open .sd{animation:sdp 1s ease-in calc(.5s + var(--d)) both}@keyframes sdp{0%{opacity:1;transform:translate(0,0)}100%{opacity:1;transform:translate(-80px,260px)}}')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
+          svg=g(f'<g class="pk">{body}</g>{seeds}', at=(320, 320)), motion=[('', '.pk,.sd')])
+
+
+def clapper(sid, title, *, batch, palette, name, verbs=('Action!', 'Cut'), head, rows=(), slate='#1b1b1e', ink='#f6f3ec', key=None, visit=1):
+    """A clapperboard: touching it snaps the sticks shut."""
+    stripes = ''.join(f'<path d="M{x} 0 l30 0 l-20 40 l-30 0 Z" fill="{ink}"></path>' for x in range(0, 360, 60))
+    body = (f'<rect y="40" width="340" height="230" rx="16" fill="{slate}"></rect>' + ''.join(f'<path d="M14 {120 + i * 46} H326" stroke="{ink}" stroke-opacity=".4"></path>' for i in range(3))
+            + text(20, 100, head, 'marker', 34, ink, 300, 'start') + ''.join(text(20, 150 + i * 46, r, 'hand', 22, ink, 300, 'start') for i, r in enumerate(rows[:3]))
+            + f'<g><rect y="20" width="340" height="24" fill="{slate}"></rect><g transform="translate(0 20)" clip-path="url(#cl-c)">{stripes}</g></g>'
+            + f'<g class="stick"><rect y="-24" width="340" height="30" fill="{slate}"></rect><g transform="translate(0 -24)" clip-path="url(#cl-c2)">{stripes}</g></g>')
+    css = ('.stick{transform-box:fill-box;transform-origin:0% 100%;transform:rotate(-24deg);transition:transform .3s}'
+           '.open .stick{animation:clap .5s cubic-bezier(.5,0,.8,.4) both}@keyframes clap{0%{transform:rotate(-24deg)}70%{transform:rotate(0)}85%{transform:rotate(-4deg)}100%{transform:rotate(0)}}')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
+          defs='<clipPath id="cl-c"><rect width="340" height="24"></rect></clipPath><clipPath id="cl-c2"><rect width="340" height="30"></rect></clipPath>',
+          svg=g(body, at=(120, 170), rot=-4), motion=[('', '.stick')])
+
+
+def specimen(sid, title, *, batch, palette, name, verbs=('Lift the tissue', 'Cover it'), head, rows=(), item=('leaf',), card='#f3ecdc', ink='#3a3328', key=None, visit=1):
+    """A pressed specimen card under tracing tissue: touching it lifts the tissue to show the flower or leaf, taped down."""
+    w, h = 320, 400
+    edge = torn([(0, 0), (w, 0), (w, h), (0, h)], seed=len(head), amp=3, step=7)
+    body = (f'<path d="{edge}" fill="{card}"></path><path d="M10 10 H{w - 10} V{h - 10} H10 Z" fill="none" stroke="{ink}" stroke-opacity=".3"></path>'
+            + f'<g transform="translate({w / 2} 160) scale(2.4) rotate(-12)">{MOTIFS[item[0]](*item[1:])}</g>'
+            + ''.join(f'<rect x="{x}" y="{y}" width="50" height="16" fill="#fff8d8" opacity=".8" transform="rotate({r} {x + 25} {y + 8})"></rect>' for x, y, r in [(80, 70, -20), (190, 230, 15)])
+            + f'<rect x="20" y="{h - 110}" width="{w - 40}" height="90" fill="#fffdf5" stroke="{ink}" stroke-opacity=".3"></rect>'
+            + text(30, h - 78, head, 'serif', 20, ink, w - 60, 'start') + ''.join(text(30, h - 52 + i * 20, r, 'hand', 15, ink, w - 60, 'start') for i, r in enumerate(rows[:2]))
+            + f'<g class="tis"><path d="M0 0 H{w} V{h - 120} H0 Z" fill="#ffffff" opacity=".72"></path></g>')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
+          svg=g(body, at=(130, 110), rot=-4), motion=[slide('.tis', -16, -60, -6, 0, .6), hide('.tis', .3, .4)])
+
+
+def sticker(sid, title, *, batch, palette, name, verbs=('Peel it', 'Stick it back'), head, sub='', shape='circle', col='#e0245e', ink='#fff', art=(), key=None, visit=1):
+    """A die-cut sticker on its backing sheet: touching it peels it up at the corner."""
+    shp = {'circle': '<circle r="130" fill="{c}"></circle>', 'star': f'<path d="{" ".join(("M" if i == 0 else "L") + f"{(150 if i % 2 == 0 else 80) * math.cos(math.radians(-90 + i * 36)):.0f} {(150 if i % 2 == 0 else 80) * math.sin(math.radians(-90 + i * 36)):.0f}" for i in range(10))} Z" fill="{{c}}"></path>',
+           'blob': '<path d="M-120 -40 C-130 -110 -30 -140 30 -120 C120 -100 150 -20 120 50 C90 130 -20 140 -80 110 C-130 80 -110 20 -120 -40 Z" fill="{c}"></path>'}[shape]
+    body = (f'<rect x="-170" y="-170" width="340" height="340" rx="12" fill="#f3efe6"></rect><path d="M-150 -150 H150 V150 H-150 Z" fill="none" stroke="#d6cfc0" stroke-dasharray="4 5"></path>'
+            + f'<g class="stk">{shp.replace("{c}", "#ffffff")}<g transform="scale(.94)">{shp.replace("{c}", col)}</g>' + text(0, 0, head, 'display', 36, ink, 200, weight=800) + text(0, 32, sub, 'mono', 11, ink, 190) + place(art) + '</g>')
+    css = ('.stk{transform-box:fill-box;transform-origin:0% 0%;transition:transform .4s}.open .stk{transform:translate(30px,-30px) rotate(-8deg) skewX(-6deg);transition:transform .6s cubic-bezier(.3,1.3,.5,1)}')
+    board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
+          svg=g(body, at=(300, 300), rot=-6), motion=[('', '.stk')])
