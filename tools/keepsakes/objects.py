@@ -789,12 +789,15 @@ def menu(sid, title, *, batch, palette, name, verbs=('Open the menu', 'Fold it')
              + ''.join(f'<path class="mk" style="--d:{.7 + i * .25:.2f}s" pathLength="1" d="M{p * pw + 10} {62 + l * 30} l6 7 l12 -16" fill="none" stroke="{accent}" stroke-width="2.6" stroke-linecap="round"></path>' for i, (p, l) in enumerate(ticks)))
     cover = lambda x, cls, org: (f'<g class="{cls}" style="transform-origin:{org}"><rect x="{x}" width="{pw}" height="{h}" fill="{accent}"></rect>'
                                  f'<rect x="{x + 8}" y="8" width="{pw - 16}" height="{h - 16}" fill="none" stroke="#fff" stroke-opacity=".5"></rect></g>')
-    front = (f'<g class="frontface">' + text(pw * 1.5, 120, head, 'display', 30, '#fff', pw - 16, weight=700) + text(pw * 1.5, 150, sub, 'mono', 10, '#fff', pw - 16) + place(art) + '</g>')
-    css = ('.fl1,.fl2,.mid,.frontface{transition:opacity .3s .1s}.open .fl1,.open .fl2,.open .mid,.open .frontface{opacity:0;transition:opacity .35s}'
-           '.inner{transform-box:fill-box;transform-origin:50% 50%;transform:scaleX(.34);transition:transform .45s}.open .inner{transform:none;transition:transform .55s cubic-bezier(.3,1.1,.4,1)}')
-    body = f'<g class="inner">{inner}<g class="fl1">{cover(0, "", "0 0")}</g><g class="fl2">{cover(pw * 2, "", "0 0")}</g><rect x="{pw}" width="{pw}" height="{h}" fill="{accent}" class="mid"></rect>{front}</g>'
+    front = (f'<g>' + text(pw * 1.5, 120, head, 'display', 30, '#fff', pw - 16, weight=700) + text(pw * 1.5, 150, sub, 'mono', 10, '#fff', pw - 16) + place(art) + '</g>')
+    flap = lambda x, org: (f'<rect x="{x}" width="{pw}" height="{h}" fill="{accent}"></rect><rect x="{x + 8}" y="8" width="{pw - 16}" height="{h - 16}" fill="none" stroke="#fff" stroke-opacity=".5"></rect>')
+    body = (inner + f'<g class="fl1">{flap(0, 0)}</g><g class="fl2">{flap(pw * 2, 0)}</g>'
+            + f'<g class="mid"><rect x="{pw}" width="{pw}" height="{h}" fill="{accent}"></rect><rect x="{pw + 8}" y="8" width="{pw - 16}" height="{h - 16}" fill="none" stroke="#fff" stroke-opacity=".5"></rect>{front}</g>')
+    css = ('.fl1,.fl2{transform-box:fill-box;transition:transform .45s .15s}.fl1{transform-origin:0% 50%}.fl2{transform-origin:100% 50%}'
+           '.open .fl1,.open .fl2{transform:scaleX(0);transition:transform .5s cubic-bezier(.4,0,.2,1) .25s}'
+           '.mid{transition:opacity .25s .5s}.open .mid{opacity:0;transition:opacity .3s}')
     board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit, css=css,
-          svg=g(body, at=(75, 150), rot=-3), motion=[('', '.fl1,.fl2,.mid,.frontface,.inner'), drawon('.mk', 0, .3)])
+          svg=g(body, at=(75, 150), rot=-3), motion=[('', '.fl1,.fl2,.mid'), drawon('.mk', 0, .3)])
 
 
 def cuppa(sid, title, *, batch, palette, name, verbs=('Lift the lid', 'Put it back'), kind='takeaway', head='', sub='', cup_col='#f6f3ec', band='#c99d69',
