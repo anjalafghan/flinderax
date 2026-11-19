@@ -837,15 +837,15 @@ def cuppa(sid, title, *, batch, palette, name, verbs=('Lift the lid', 'Put it ba
 def cakebox(sid, title, *, batch, palette, name, verbs=('Untie the ribbon', 'Box it up'), head, sub='', box='#f7c9d4', ribbon='#c2185b', ink='#3a1a28',
             treat=('cake',), art=(), key=None, visit=1):
     """A bakery box tied with ribbon: touching it slips the bow, lifts the lid and shows what's inside."""
-    inside = f'<g transform="translate(0 -40) scale(2.6)">{MOTIFS[treat[0]](*treat[1:])}</g>'
+    inside = f'<g class="tr"><g transform="translate(0 -70) scale(2)">{MOTIFS[treat[0]](*treat[1:])}</g></g>'
     body = (f'<path d="M-150 -60 H150 L138 120 Q136 128 128 128 H-128 Q-136 128 -138 120 Z" fill="{box}" stroke="#00000022"></path><path d="M-150 -60 L-138 120 M150 -60 L138 120" stroke="#00000018" stroke-width="6"></path>{inside}'
             + f'<path d="M-150 -60 H150 V-20 H-150 Z" fill="{box}" opacity=".0"></path>'
-            + f'<g class="lid"><path d="M-160 -96 Q-160 -104 -152 -104 H152 Q160 -104 160 -96 L156 -50 H-156 Z" fill="{box}" stroke="#00000022"></path>' + text(0, -68, head, 'script', 34, ink, 280, weight=700) + '</g>'
-            + f'<g class="rb"><path d="M-160 -76 H160" stroke="{ribbon}" stroke-width="10"></path><path d="M0 -100 V120" stroke="{ribbon}" stroke-width="10"></path>'
-            + f'<path d="M0 -100 C-40 -150 -70 -110 0 -100 C70 -110 40 -150 0 -100 Z" fill="{ribbon}"></path></g>'
-            + f'<g transform="translate(0 70)">' + text(0, 0, sub, 'mono', 11, ink, 260) + place(art) + '</g>')
+            + f'<g class="lid"><path d="M-160 -96 Q-160 -104 -152 -104 H152 Q160 -104 160 -96 L156 -50 H-156 Z" fill="{box}" stroke="#00000022"></path>' + text(16, -70, head, 'script', 32, ink, 230, weight=700) + '</g>'
+            + f'<g class="rb"><path d="M-160 -56 H160" stroke="{ribbon}" stroke-width="8"></path><path d="M-112 -104 V126" stroke="{ribbon}" stroke-width="10"></path>'
+            + f'<path d="M-112 -104 C-152 -154 -182 -114 -112 -104 C-42 -114 -72 -154 -112 -104 Z" fill="{ribbon}"></path></g>'
+            + f'<g transform="translate(20 96)">' + text(0, 0, sub, 'mono', 11, ink, 220) + place(art) + '</g>')
     board(sid, title, batch=batch, palette=palette, name=name, verbs=verbs, key=key, visit=visit,
-          svg=g(body, at=(300, 330), rot=-4), motion=[slide('.rb', 0, -40, 0, 0, .3), hide('.rb', .15, .2), slide('.lid', 40, -150, -12, .35, .6)])
+          svg=g(body, at=(300, 330), rot=-4), motion=[slide('.rb', 0, -40, 0, 0, .3), hide('.rb', .15, .2), slide('.lid', 40, -150, -12, .35, .6), appear('.tr', .5, .3)])
 
 
 def polaroid(sid, title, *, batch, palette, name, verbs=('Shake it', 'Fade it'), scene, sky=('#9fc7e0', '#e9d6b3'), ground='#5d7d4f', caption='', key=None, visit=1):

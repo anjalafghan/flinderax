@@ -977,7 +977,9 @@
 .joy .ksc-houseofcroissant.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
 .joy .ksc-houseofcroissant .lid{transform-box:fill-box;transition:transform .35s ease-in}
 .joy .ksc-houseofcroissant.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
-@media (prefers-reduced-motion:reduce){.joy .ksc-houseofcroissant .rb,.joy .ksc-houseofcroissant .rb,.joy .ksc-houseofcroissant .lid{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+.joy .ksc-houseofcroissant .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-houseofcroissant.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-houseofcroissant .rb,.joy .ksc-houseofcroissant .rb,.joy .ksc-houseofcroissant .lid,.joy .ksc-houseofcroissant .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
 /* subko */
 .joy .ksc-subko .lid{transform-box:fill-box;transition:transform .35s ease-in}
 .joy .ksc-subko.open .lid{transform:translate(70px,-90px) rotate(24deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0s}
@@ -1000,7 +1002,9 @@
 .joy .ksc-pardonourfrench.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
 .joy .ksc-pardonourfrench .lid{transform-box:fill-box;transition:transform .35s ease-in}
 .joy .ksc-pardonourfrench.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
-@media (prefers-reduced-motion:reduce){.joy .ksc-pardonourfrench .rb,.joy .ksc-pardonourfrench .rb,.joy .ksc-pardonourfrench .lid{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+.joy .ksc-pardonourfrench .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-pardonourfrench.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-pardonourfrench .rb,.joy .ksc-pardonourfrench .rb,.joy .ksc-pardonourfrench .lid,.joy .ksc-pardonourfrench .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
 /* kgcafe */
 .joy .ksc-kgcafe .ring{opacity:0}
 .joy .ksc-kgcafe.open .ring{opacity:1;transition:opacity .4s 1.1s}
@@ -1028,7 +1032,9 @@
 .joy .ksc-concu.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
 .joy .ksc-concu .lid{transform-box:fill-box;transition:transform .35s ease-in}
 .joy .ksc-concu.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
-@media (prefers-reduced-motion:reduce){.joy .ksc-concu .rb,.joy .ksc-concu .rb,.joy .ksc-concu .lid{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+.joy .ksc-concu .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-concu.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-concu .rb,.joy .ksc-concu .rb,.joy .ksc-concu .lid,.joy .ksc-concu .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
 /* prithvicafe */
 .joy .ksc-prithvicafe .cu{transform-box:fill-box}
 .joy .ksc-prithvicafe.open .cu{animation:k78_prithvicafe .09s linear 0.1s 6}
@@ -1108,7 +1114,9 @@
 .joy .ksc-notfar.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
 .joy .ksc-notfar .lid{transform-box:fill-box;transition:transform .35s ease-in}
 .joy .ksc-notfar.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
-@media (prefers-reduced-motion:reduce){.joy .ksc-notfar .rb,.joy .ksc-notfar .rb,.joy .ksc-notfar .lid{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+.joy .ksc-notfar .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-notfar.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-notfar .rb,.joy .ksc-notfar .rb,.joy .ksc-notfar .lid,.joy .ksc-notfar .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
 /* magari */
 .joy .ksc-magari .cu{transform-box:fill-box}
 .joy .ksc-magari.open .cu{animation:k88_magari .09s linear 0.1s 4}
@@ -1950,7 +1958,9 @@
 .joy .ksc-pomodoro.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
 .joy .ksc-pomodoro .lid{transform-box:fill-box;transition:transform .35s ease-in}
 .joy .ksc-pomodoro.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
-@media (prefers-reduced-motion:reduce){.joy .ksc-pomodoro .rb,.joy .ksc-pomodoro .rb,.joy .ksc-pomodoro .lid{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+.joy .ksc-pomodoro .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-pomodoro.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-pomodoro .rb,.joy .ksc-pomodoro .rb,.joy .ksc-pomodoro .lid,.joy .ksc-pomodoro .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
 /* humguess */
 .joy .ksc-humguess .disc{transform-box:fill-box;transition:transform .35s ease-in}
 .joy .ksc-humguess.open .disc{transform:translate(90px,0px) rotate(0deg);transition:transform 0.8s cubic-bezier(.3,1.2,.5,1) 0s}
@@ -2439,3 +2449,631 @@
 .joy .ksc-kalaghodafest.open .uv{animation:uvp_kalaghodafest 1.2s ease-in-out .9s 3 alternate}
 @keyframes uvp_kalaghodafest{to{opacity:.6}}
 @media (prefers-reduced-motion:reduce){.joy .ksc-kalaghodafest .uv,.joy .ksc-kalaghodafest .dark{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* visarjan */
+.joy .ksc-visarjan .shine{opacity:0}
+.joy .ksc-visarjan.open .shine{animation:shn_visarjan .9s ease-out .2s}
+@keyframes shn_visarjan{0%{opacity:0;transform:translateX(0)}30%{opacity:.6}100%{opacity:0;transform:translateX(160px)}}
+.joy .ksc-visarjan .bd{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-visarjan.open .bd{animation:k228_visarjan 2.2s ease-in-out 0s 1}
+@keyframes k228_visarjan{0%,100%{transform:rotate(0)}20%{transform:rotate(5deg)}45%{transform:rotate(-4.0deg)}70%{transform:rotate(2.25deg)}88%{transform:rotate(-1.0deg)}}
+.joy .ksc-visarjan .tails{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-visarjan.open .tails{animation:flut_visarjan .3s ease-in-out 5 alternate}
+@keyframes flut_visarjan{to{transform:skewX(5deg)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-visarjan .tails,.joy .ksc-visarjan .shine,.joy .ksc-visarjan .bd{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* bandraxmas */
+.joy .ksc-bandraxmas .stk{transform-box:fill-box;transform-origin:0% 0%;transition:transform .4s}
+.joy .ksc-bandraxmas.open .stk{transform:translate(30px,-30px) rotate(-8deg) skewX(-6deg);transition:transform .6s cubic-bezier(.3,1.3,.5,1)}
+@media (prefers-reduced-motion:reduce){.joy .ksc-bandraxmas .stk{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* alphonso */
+.joy .ksc-alphonso .fx{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-alphonso.open .fx{animation:k231_alphonso .5s cubic-bezier(.3,1.6,.5,1) calc(0.2s + var(--d, 0s)) both}
+@keyframes k231_alphonso{0%{opacity:0;transform:scale(.2) rotate(-14deg)}100%{opacity:1;transform:none}}
+.joy .ksc-alphonso .lb{transform-box:fill-box}
+.joy .ksc-alphonso.open .lb{animation:k233_alphonso .09s linear 0s 4}
+@keyframes k233_alphonso{25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-alphonso .fx,.joy .ksc-alphonso .lb{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* vadapav */
+.joy .ksc-vadapav .mk{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-vadapav.open .mk{stroke-dashoffset:0;transition:stroke-dashoffset 0.3s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-vadapav .mw{opacity:0;transition:opacity .15s}
+.joy .ksc-vadapav.open .mw{opacity:1;transition:opacity 0.15s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-vadapav .ring{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-vadapav.open .ring{stroke-dashoffset:0;transition:stroke-dashoffset 0.6s ease-out calc(1.1s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-vadapav .mk,.joy .ksc-vadapav .mw,.joy .ksc-vadapav .ring{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* prabalgad */
+.joy .ksc-prabalgad .shine{opacity:0}
+.joy .ksc-prabalgad.open .shine{animation:shn_prabalgad .9s ease-out .2s}
+@keyframes shn_prabalgad{0%{opacity:0;transform:translateX(0)}30%{opacity:.6}100%{opacity:0;transform:translateX(160px)}}
+.joy .ksc-prabalgad .bd{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-prabalgad.open .bd{animation:k234_prabalgad 2.2s ease-in-out 0s 1}
+@keyframes k234_prabalgad{0%,100%{transform:rotate(0)}20%{transform:rotate(5deg)}45%{transform:rotate(-4.0deg)}70%{transform:rotate(2.25deg)}88%{transform:rotate(-1.0deg)}}
+.joy .ksc-prabalgad .tails{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-prabalgad.open .tails{animation:flut_prabalgad .3s ease-in-out 5 alternate}
+@keyframes flut_prabalgad{to{transform:skewX(5deg)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-prabalgad .tails,.joy .ksc-prabalgad .shine,.joy .ksc-prabalgad .bd{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* kalavantin */
+.joy .ksc-kalavantin .tis{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-kalavantin.open .tis{transform:translate(-16px,-60px) rotate(-6deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-kalavantin .tis{transition:opacity .2s}
+.joy .ksc-kalavantin.open .tis{opacity:0;transition:opacity 0.4s calc(0.3s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-kalavantin .tis,.joy .ksc-kalavantin .tis{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* bhivpuri */
+.joy .ksc-bhivpuri .card{transform-box:fill-box;transform-origin:50% 50%;transition:transform .7s cubic-bezier(.4,0,.2,1)}
+.joy .ksc-bhivpuri .pb{opacity:0;transition:opacity 0s .35s}
+.joy .ksc-bhivpuri .pf{transition:opacity 0s .35s}
+.joy .ksc-bhivpuri.open .card{transform:scaleX(-1) rotate(-3deg);transition:transform .7s cubic-bezier(.4,0,.2,1) .7s}
+.joy .ksc-bhivpuri.open .pb{opacity:1;transition:opacity 0s 1.05s}
+.joy .ksc-bhivpuri.open .pf{opacity:0;transition:opacity 0s 1.05s}
+.joy .ksc-bhivpuri .frank{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-bhivpuri.open .frank{animation:frk_bhivpuri .25s ease-out .15s both}
+@keyframes frk_bhivpuri{0%{opacity:0;transform:scale(1.7)}100%{opacity:.85;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-bhivpuri .card,.joy .ksc-bhivpuri .pb,.joy .ksc-bhivpuri .pf,.joy .ksc-bhivpuri .frank{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* dhakbahiri */
+.joy .ksc-dhakbahiri .tg{transform-box:fill-box;transform-origin:100% 50%}
+.joy .ksc-dhakbahiri.open .tg{animation:k235_dhakbahiri 2.2s ease-in-out 0s 1}
+@keyframes k235_dhakbahiri{0%,100%{transform:rotate(0)}20%{transform:rotate(7deg)}45%{transform:rotate(-5.6000000000000005deg)}70%{transform:rotate(3.15deg)}88%{transform:rotate(-1.4000000000000001deg)}}
+.joy .ksc-dhakbahiri .stp{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-dhakbahiri.open .stp{animation:k236_dhakbahiri .25s ease-out calc(0.6s + var(--d, 0s)) both}
+@keyframes k236_dhakbahiri{0%{opacity:0;transform:scale(1.8)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-dhakbahiri .tg,.joy .ksc-dhakbahiri .stp{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* sudhagad */
+.joy .ksc-sudhagad .tear{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-sudhagad.open .tear{transform:translate(46px,22px) rotate(9deg);transition:transform 0.7s cubic-bezier(.3,1.2,.5,1) 0.2s}
+.joy .ksc-sudhagad .punch{opacity:0;transition:opacity .15s}
+.joy .ksc-sudhagad.open .punch{opacity:1;transition:opacity 0.3s ease-out calc(0.1s + var(--d, 0s))}
+.joy .ksc-sudhagad .tk{transform-box:fill-box;transform-origin:0% 50%}
+.joy .ksc-sudhagad.open .tk{animation:k237_sudhagad 2.2s ease-in-out 0.2s 1}
+@keyframes k237_sudhagad{0%,100%{transform:rotate(0)}20%{transform:rotate(3deg)}45%{transform:rotate(-2.4000000000000004deg)}70%{transform:rotate(1.35deg)}88%{transform:rotate(-0.6000000000000001deg)}}
+.joy .ksc-sudhagad .note{opacity:0;transition:opacity .15s}
+.joy .ksc-sudhagad.open .note{opacity:1;transition:opacity 0.3s ease-out calc(0.7s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-sudhagad .tear,.joy .ksc-sudhagad .punch,.joy .ksc-sudhagad .tk,.joy .ksc-sudhagad .note{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* revdanda */
+.joy .ksc-revdanda .card{transform-box:fill-box;transform-origin:50% 50%;transition:transform .7s cubic-bezier(.4,0,.2,1)}
+.joy .ksc-revdanda .pb{opacity:0;transition:opacity 0s .35s}
+.joy .ksc-revdanda .pf{transition:opacity 0s .35s}
+.joy .ksc-revdanda.open .card{transform:scaleX(-1) rotate(-3deg);transition:transform .7s cubic-bezier(.4,0,.2,1) .7s}
+.joy .ksc-revdanda.open .pb{opacity:1;transition:opacity 0s 1.05s}
+.joy .ksc-revdanda.open .pf{opacity:0;transition:opacity 0s 1.05s}
+.joy .ksc-revdanda .frank{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-revdanda.open .frank{animation:frk_revdanda .25s ease-out .15s both}
+@keyframes frk_revdanda{0%{opacity:0;transform:scale(1.7)}100%{opacity:.85;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-revdanda .card,.joy .ksc-revdanda .pb,.joy .ksc-revdanda .pf,.joy .ksc-revdanda .frank{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* janjira */
+.joy .ksc-janjira .cf{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-janjira .fb{opacity:0}
+.joy .ksc-janjira.open .cf{animation:cfs_janjira .275s linear 5}
+.joy .ksc-janjira.open .fa{animation:cfa_janjira 1.375s step-end both}
+.joy .ksc-janjira.open .fb{animation:cfb_janjira 1.375s step-end both}
+@keyframes cfs_janjira{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes cfa_janjira{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}
+@keyframes cfb_janjira{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}
+.joy .ksc-janjira.open .toss{animation:tossup_janjira 1.375s cubic-bezier(.3,0,.7,1)}
+@keyframes tossup_janjira{50%{transform:translateY(-150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-janjira .cf,.joy .ksc-janjira .fa,.joy .ksc-janjira .fb,.joy .ksc-janjira .toss{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* kashid */
+.joy .ksc-kashid .card{transform-box:fill-box;transform-origin:50% 50%;transition:transform .7s cubic-bezier(.4,0,.2,1)}
+.joy .ksc-kashid .pb{opacity:0;transition:opacity 0s .35s}
+.joy .ksc-kashid .pf{transition:opacity 0s .35s}
+.joy .ksc-kashid.open .card{transform:scaleX(-1) rotate(-3deg);transition:transform .7s cubic-bezier(.4,0,.2,1) .7s}
+.joy .ksc-kashid.open .pb{opacity:1;transition:opacity 0s 1.05s}
+.joy .ksc-kashid.open .pf{opacity:0;transition:opacity 0s 1.05s}
+.joy .ksc-kashid .frank{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-kashid.open .frank{animation:frk_kashid .25s ease-out .15s both}
+@keyframes frk_kashid{0%{opacity:0;transform:scale(1.7)}100%{opacity:.85;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-kashid .card,.joy .ksc-kashid .pb,.joy .ksc-kashid .pf,.joy .ksc-kashid .frank{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* malanggad */
+.joy .ksc-malanggad .tg{transform-box:fill-box;transform-origin:100% 50%}
+.joy .ksc-malanggad.open .tg{animation:k238_malanggad 2.2s ease-in-out 0s 1}
+@keyframes k238_malanggad{0%,100%{transform:rotate(0)}20%{transform:rotate(7deg)}45%{transform:rotate(-5.6000000000000005deg)}70%{transform:rotate(3.15deg)}88%{transform:rotate(-1.4000000000000001deg)}}
+.joy .ksc-malanggad .stp{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-malanggad.open .stp{animation:k239_malanggad .25s ease-out calc(0.6s + var(--d, 0s)) both}
+@keyframes k239_malanggad{0%{opacity:0;transform:scale(1.8)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-malanggad .tg,.joy .ksc-malanggad .stp{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* rajmachi */
+.joy .ksc-rajmachi .kt{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-rajmachi.open .kt{animation:k240_rajmachi 2.2s ease-in-out 0s 1}
+@keyframes k240_rajmachi{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}45%{transform:rotate(-11.200000000000001deg)}70%{transform:rotate(6.3deg)}88%{transform:rotate(-2.8000000000000003deg)}}
+.joy .ksc-rajmachi .kt{transform-box:fill-box}
+.joy .ksc-rajmachi.open .kt{animation:k241_rajmachi .09s linear 0.1s 6}
+@keyframes k241_rajmachi{25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-rajmachi .kt,.joy .ksc-rajmachi .kt{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* vajreshwari */
+.joy .ksc-vajreshwari .fx{opacity:0;transform-box:fill-box}
+.joy .ksc-vajreshwari.open .fx{animation:k243_vajreshwari 1.8s ease-out var(--d, 0s) 3}
+@keyframes k243_vajreshwari{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-60px)}}
+.joy .ksc-vajreshwari .lb{transform-box:fill-box}
+.joy .ksc-vajreshwari.open .lb{animation:k246_vajreshwari .09s linear 0s 4}
+@keyframes k246_vajreshwari{25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-vajreshwari .fx,.joy .ksc-vajreshwari .lb{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* malshej */
+.joy .ksc-malshej .sm{opacity:0;transform-box:fill-box}
+.joy .ksc-malshej.open .sm{animation:k247_malshej 1.8s ease-out var(--d, 0s) 3}
+@keyframes k247_malshej{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-60px)}}
+.joy .ksc-malshej .gn{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-malshej.open .gn{animation:k248_malshej .5s cubic-bezier(.3,1.6,.5,1) calc(0.3s + var(--d, 0s)) both}
+@keyframes k248_malshej{0%{opacity:0;transform:scale(.2) rotate(-14deg)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-malshej .sm,.joy .ksc-malshej .gn{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* goascooter */
+.joy .ksc-goascooter .kt{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-goascooter.open .kt{animation:k249_goascooter 2.2s ease-in-out 0s 1}
+@keyframes k249_goascooter{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}45%{transform:rotate(-11.200000000000001deg)}70%{transform:rotate(6.3deg)}88%{transform:rotate(-2.8000000000000003deg)}}
+.joy .ksc-goascooter .kt{transform-box:fill-box}
+.joy .ksc-goascooter.open .kt{animation:k250_goascooter .09s linear 0.1s 6}
+@keyframes k250_goascooter{25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-goascooter .kt,.joy .ksc-goascooter .kt{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* mahabaleshwar */
+.joy .ksc-mahabaleshwar .rb{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-mahabaleshwar.open .rb{transform:translate(0px,-40px) rotate(0deg);transition:transform 0.3s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-mahabaleshwar .rb{transition:opacity .2s}
+.joy .ksc-mahabaleshwar.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
+.joy .ksc-mahabaleshwar .lid{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-mahabaleshwar.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
+.joy .ksc-mahabaleshwar .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-mahabaleshwar.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-mahabaleshwar .rb,.joy .ksc-mahabaleshwar .rb,.joy .ksc-mahabaleshwar .lid,.joy .ksc-mahabaleshwar .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* igatpuri */
+.joy .ksc-igatpuri .pol{transform-box:fill-box}
+.joy .ksc-igatpuri.open .pol{animation:k251_igatpuri .09s linear 0s 5}
+@keyframes k251_igatpuri{25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+.joy .ksc-igatpuri .dev{transition:opacity .3s}
+.joy .ksc-igatpuri.open .dev{opacity:0;transition:opacity 1.6s ease-in .5s}
+@media (prefers-reduced-motion:reduce){.joy .ksc-igatpuri .dev,.joy .ksc-igatpuri .pol{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* dapoli */
+.joy .ksc-dapoli .card{transform-box:fill-box;transform-origin:50% 50%;transition:transform .7s cubic-bezier(.4,0,.2,1)}
+.joy .ksc-dapoli .pb{opacity:0;transition:opacity 0s .35s}
+.joy .ksc-dapoli .pf{transition:opacity 0s .35s}
+.joy .ksc-dapoli.open .card{transform:scaleX(-1) rotate(-3deg);transition:transform .7s cubic-bezier(.4,0,.2,1) .7s}
+.joy .ksc-dapoli.open .pb{opacity:1;transition:opacity 0s 1.05s}
+.joy .ksc-dapoli.open .pf{opacity:0;transition:opacity 0s 1.05s}
+.joy .ksc-dapoli .frank{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-dapoli.open .frank{animation:frk_dapoli .25s ease-out .15s both}
+@keyframes frk_dapoli{0%{opacity:0;transform:scale(1.7)}100%{opacity:.85;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-dapoli .card,.joy .ksc-dapoli .pb,.joy .ksc-dapoli .pf,.joy .ksc-dapoli .frank{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* tarkarli */
+.joy .ksc-tarkarli .mk{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-tarkarli.open .mk{stroke-dashoffset:0;transition:stroke-dashoffset 0.3s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-tarkarli .mw{opacity:0;transition:opacity .15s}
+.joy .ksc-tarkarli.open .mw{opacity:1;transition:opacity 0.15s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-tarkarli .ring{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-tarkarli.open .ring{stroke-dashoffset:0;transition:stroke-dashoffset 0.6s ease-out calc(1.1s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-tarkarli .mk,.joy .ksc-tarkarli .mw,.joy .ksc-tarkarli .ring{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* hampi */
+.joy .ksc-hampi .ly{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-hampi.open .ly{animation:k252_hampi 2.2s ease-in-out 0s 1}
+@keyframes k252_hampi{0%,100%{transform:rotate(0)}20%{transform:rotate(6deg)}45%{transform:rotate(-4.800000000000001deg)}70%{transform:rotate(2.7deg)}88%{transform:rotate(-1.2000000000000002deg)}}
+.joy .ksc-hampi .glow{opacity:0}
+.joy .ksc-hampi.open .glow{animation:gl_hampi 1.2s ease-out .3s}
+@keyframes gl_hampi{30%{opacity:.35}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-hampi .ly,.joy .ksc-hampi .glow{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* pichola */
+.joy .ksc-pichola .cf{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-pichola .fb{opacity:0}
+.joy .ksc-pichola.open .cf{animation:cfs_pichola .275s linear 5}
+.joy .ksc-pichola.open .fa{animation:cfa_pichola 1.375s step-end both}
+.joy .ksc-pichola.open .fb{animation:cfb_pichola 1.375s step-end both}
+@keyframes cfs_pichola{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes cfa_pichola{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}
+@keyframes cfb_pichola{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}
+.joy .ksc-pichola.open .toss{animation:tossup_pichola 1.375s cubic-bezier(.3,0,.7,1)}
+@keyframes tossup_pichola{50%{transform:translateY(-150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-pichola .cf,.joy .ksc-pichola .fa,.joy .ksc-pichola .fb,.joy .ksc-pichola .toss{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* kaas */
+.joy .ksc-kaas .tis{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-kaas.open .tis{transform:translate(-16px,-60px) rotate(-6deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-kaas .tis{transition:opacity .2s}
+.joy .ksc-kaas.open .tis{opacity:0;transition:opacity 0.4s calc(0.3s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-kaas .tis,.joy .ksc-kaas .tis{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* coorg */
+.joy .ksc-coorg .fx{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-coorg.open .fx{animation:k255_coorg .5s cubic-bezier(.3,1.6,.5,1) calc(0.2s + var(--d, 0s)) both}
+@keyframes k255_coorg{0%{opacity:0;transform:scale(.2) rotate(-14deg)}100%{opacity:1;transform:none}}
+.joy .ksc-coorg .lb{transform-box:fill-box}
+.joy .ksc-coorg.open .lb{animation:k257_coorg .09s linear 0s 4}
+@keyframes k257_coorg{25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-coorg .fx,.joy .ksc-coorg .lb{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* pondicherry */
+.joy .ksc-pondicherry .tg{transform-box:fill-box;transform-origin:100% 50%}
+.joy .ksc-pondicherry.open .tg{animation:k258_pondicherry 2.2s ease-in-out 0s 1}
+@keyframes k258_pondicherry{0%,100%{transform:rotate(0)}20%{transform:rotate(7deg)}45%{transform:rotate(-5.6000000000000005deg)}70%{transform:rotate(3.15deg)}88%{transform:rotate(-1.4000000000000001deg)}}
+.joy .ksc-pondicherry .stp{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-pondicherry.open .stp{animation:k259_pondicherry .25s ease-out calc(0.6s + var(--d, 0s)) both}
+@keyframes k259_pondicherry{0%{opacity:0;transform:scale(1.8)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-pondicherry .tg,.joy .ksc-pondicherry .stp{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* kangan */
+.joy .ksc-kangan .mk{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-kangan.open .mk{stroke-dashoffset:0;transition:stroke-dashoffset 0.3s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-kangan .fl1,.joy .ksc-kangan .fl2{transform-box:fill-box;transition:transform .45s .15s}
+.joy .ksc-kangan .fl1{transform-origin:0% 50%}
+.joy .ksc-kangan .fl2{transform-origin:100% 50%}
+.joy .ksc-kangan.open .fl1,.joy .ksc-kangan.open .fl2{transform:scaleX(0);transition:transform .5s cubic-bezier(.4,0,.2,1) .25s}
+.joy .ksc-kangan .mid{transition:opacity .25s .5s}
+.joy .ksc-kangan.open .mid{opacity:0;transition:opacity .3s}
+@media (prefers-reduced-motion:reduce){.joy .ksc-kangan .fl1,.joy .ksc-kangan .fl2,.joy .ksc-kangan .mid,.joy .ksc-kangan .mk{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* prego */
+.joy .ksc-prego .seal{transition:opacity .2s}
+.joy .ksc-prego.open .seal{opacity:0;transition:opacity 0.15s calc(0s + var(--d, 0s))}
+.joy .ksc-prego .lt{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-prego.open .lt{transform:translate(0px,-250px) rotate(0deg);transition:transform 0.8s cubic-bezier(.3,1.2,.5,1) 0.4s}
+.joy .ksc-prego .flap{transform-box:fill-box;transform-origin:50% 0%;transition:transform .4s .3s,opacity 0s .3s}
+.joy .ksc-prego.open .flap{transform:scaleY(-1);opacity:0;transition:transform .4s,opacity .25s .4s}
+@media (prefers-reduced-motion:reduce){.joy .ksc-prego .flap,.joy .ksc-prego .seal,.joy .ksc-prego .lt{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* seasonaltastes */
+.joy .ksc-seasonaltastes .card{transform-box:fill-box;transform-origin:50% 50%;transition:transform .7s cubic-bezier(.4,0,.2,1)}
+.joy .ksc-seasonaltastes .pb{opacity:0;transition:opacity 0s .35s}
+.joy .ksc-seasonaltastes .pf{transition:opacity 0s .35s}
+.joy .ksc-seasonaltastes.open .card{transform:scaleX(-1) rotate(-3deg);transition:transform .7s cubic-bezier(.4,0,.2,1) .7s}
+.joy .ksc-seasonaltastes.open .pb{opacity:1;transition:opacity 0s 1.05s}
+.joy .ksc-seasonaltastes.open .pf{opacity:0;transition:opacity 0s 1.05s}
+.joy .ksc-seasonaltastes .frank{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-seasonaltastes.open .frank{animation:frk_seasonaltastes .25s ease-out .15s both}
+@keyframes frk_seasonaltastes{0%{opacity:0;transform:scale(1.7)}100%{opacity:.85;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-seasonaltastes .card,.joy .ksc-seasonaltastes .pb,.joy .ksc-seasonaltastes .pf,.joy .ksc-seasonaltastes .frank{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* eighteen */
+.joy .ksc-eighteen .ring{opacity:0}
+.joy .ksc-eighteen.open .ring{opacity:1;transition:opacity .4s 1.1s}
+.joy .ksc-eighteen .gl{transform-box:fill-box;opacity:0}
+.joy .ksc-eighteen.open .gl{animation:gld_eighteen 1.6s ease-in-out both}
+@keyframes gld_eighteen{0%{opacity:0;transform:translate(60px,-160px)}35%{opacity:1;transform:translate(0,0)}70%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(80px,-140px)}}
+.joy .ksc-eighteen .cs{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-eighteen.open .cs{animation:csp_eighteen .7s ease-out .9s}
+@keyframes csp_eighteen{40%{transform:rotate(9deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-eighteen .ring,.joy .ksc-eighteen .gl,.joy .ksc-eighteen .cs{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* musaafer */
+.joy .ksc-musaafer .tg{transform-box:fill-box;transform-origin:100% 50%}
+.joy .ksc-musaafer.open .tg{animation:k260_musaafer 2.2s ease-in-out 0s 1}
+@keyframes k260_musaafer{0%,100%{transform:rotate(0)}20%{transform:rotate(7deg)}45%{transform:rotate(-5.6000000000000005deg)}70%{transform:rotate(3.15deg)}88%{transform:rotate(-1.4000000000000001deg)}}
+.joy .ksc-musaafer .stp{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-musaafer.open .stp{animation:k261_musaafer .25s ease-out calc(0.6s + var(--d, 0s)) both}
+@keyframes k261_musaafer{0%{opacity:0;transform:scale(1.8)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-musaafer .tg,.joy .ksc-musaafer .stp{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* goma */
+.joy .ksc-goma .mk{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-goma.open .mk{stroke-dashoffset:0;transition:stroke-dashoffset 0.3s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-goma .fl1,.joy .ksc-goma .fl2{transform-box:fill-box;transition:transform .45s .15s}
+.joy .ksc-goma .fl1{transform-origin:0% 50%}
+.joy .ksc-goma .fl2{transform-origin:100% 50%}
+.joy .ksc-goma.open .fl1,.joy .ksc-goma.open .fl2{transform:scaleX(0);transition:transform .5s cubic-bezier(.4,0,.2,1) .25s}
+.joy .ksc-goma .mid{transition:opacity .25s .5s}
+.joy .ksc-goma.open .mid{opacity:0;transition:opacity .3s}
+@media (prefers-reduced-motion:reduce){.joy .ksc-goma .fl1,.joy .ksc-goma .fl2,.joy .ksc-goma .mid,.joy .ksc-goma .mk{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* beiruna */
+.joy .ksc-beiruna .mk{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-beiruna.open .mk{stroke-dashoffset:0;transition:stroke-dashoffset 0.3s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-beiruna .fl1,.joy .ksc-beiruna .fl2{transform-box:fill-box;transition:transform .45s .15s}
+.joy .ksc-beiruna .fl1{transform-origin:0% 50%}
+.joy .ksc-beiruna .fl2{transform-origin:100% 50%}
+.joy .ksc-beiruna.open .fl1,.joy .ksc-beiruna.open .fl2{transform:scaleX(0);transition:transform .5s cubic-bezier(.4,0,.2,1) .25s}
+.joy .ksc-beiruna .mid{transition:opacity .25s .5s}
+.joy .ksc-beiruna.open .mid{opacity:0;transition:opacity .3s}
+@media (prefers-reduced-motion:reduce){.joy .ksc-beiruna .fl1,.joy .ksc-beiruna .fl2,.joy .ksc-beiruna .mid,.joy .ksc-beiruna .mk{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* fleur */
+.joy .ksc-fleur .cf{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-fleur .fb{opacity:0}
+.joy .ksc-fleur.open .cf{animation:cfs_fleur .275s linear 5}
+.joy .ksc-fleur.open .fa{animation:cfa_fleur 1.375s step-end both}
+.joy .ksc-fleur.open .fb{animation:cfb_fleur 1.375s step-end both}
+@keyframes cfs_fleur{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes cfa_fleur{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}
+@keyframes cfb_fleur{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}
+.joy .ksc-fleur.open .toss{animation:tossup_fleur 1.375s cubic-bezier(.3,0,.7,1)}
+@keyframes tossup_fleur{50%{transform:translateY(-150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-fleur .cf,.joy .ksc-fleur .fa,.joy .ksc-fleur .fb,.joy .ksc-fleur .toss{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* otium */
+.joy .ksc-otium .cv{transform-box:fill-box;transform-origin:50% 0%;transition:transform .45s .2s}
+.joy .ksc-otium.open .cv{transform:scaleY(-.35) translateY(40px);transition:transform .45s}
+.joy .ksc-otium .mt{transform-box:fill-box;transition:transform .3s}
+.joy .ksc-otium.open .mt{transform:translateY(-60px) rotate(8deg);transition:transform .5s cubic-bezier(.3,1.3,.5,1) .4s}
+.joy .ksc-otium .fl{opacity:0;transform-box:fill-box;transform-origin:50% 100%}
+.joy .ksc-otium.open .fl{opacity:1;animation:flk_otium .5s ease-in-out .9s infinite alternate;transition:opacity .2s .9s}
+@keyframes flk_otium{to{transform:scale(.88,1.12)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-otium .cv,.joy .ksc-otium .mt,.joy .ksc-otium .fl{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* terrace */
+.joy .ksc-terrace .ring{opacity:0}
+.joy .ksc-terrace.open .ring{opacity:1;transition:opacity .4s 1.1s}
+.joy .ksc-terrace .gl{transform-box:fill-box;opacity:0}
+.joy .ksc-terrace.open .gl{animation:gld_terrace 1.6s ease-in-out both}
+@keyframes gld_terrace{0%{opacity:0;transform:translate(60px,-160px)}35%{opacity:1;transform:translate(0,0)}70%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(80px,-140px)}}
+.joy .ksc-terrace .cs{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-terrace.open .cs{animation:csp_terrace .7s ease-out .9s}
+@keyframes csp_terrace{40%{transform:rotate(9deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-terrace .ring,.joy .ksc-terrace .gl,.joy .ksc-terrace .cs{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* patchofsky */
+.joy .ksc-patchofsky .tg{transform-box:fill-box;transform-origin:100% 50%}
+.joy .ksc-patchofsky.open .tg{animation:k262_patchofsky 2.2s ease-in-out 0s 1}
+@keyframes k262_patchofsky{0%,100%{transform:rotate(0)}20%{transform:rotate(7deg)}45%{transform:rotate(-5.6000000000000005deg)}70%{transform:rotate(3.15deg)}88%{transform:rotate(-1.4000000000000001deg)}}
+.joy .ksc-patchofsky .stp{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-patchofsky.open .stp{animation:k263_patchofsky .25s ease-out calc(0.6s + var(--d, 0s)) both}
+@keyframes k263_patchofsky{0%{opacity:0;transform:scale(1.8)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-patchofsky .tg,.joy .ksc-patchofsky .stp{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* gardenalfresco */
+.joy .ksc-gardenalfresco .ly{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-gardenalfresco.open .ly{animation:k264_gardenalfresco 2.2s ease-in-out 0s 1}
+@keyframes k264_gardenalfresco{0%,100%{transform:rotate(0)}20%{transform:rotate(6deg)}45%{transform:rotate(-4.800000000000001deg)}70%{transform:rotate(2.7deg)}88%{transform:rotate(-1.2000000000000002deg)}}
+.joy .ksc-gardenalfresco .glow{opacity:0}
+.joy .ksc-gardenalfresco.open .glow{animation:gl_gardenalfresco 1.2s ease-out .3s}
+@keyframes gl_gardenalfresco{30%{opacity:.35}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-gardenalfresco .ly,.joy .ksc-gardenalfresco .glow{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* trento */
+.joy .ksc-trento .cf{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-trento .fb{opacity:0}
+.joy .ksc-trento.open .cf{animation:cfs_trento .275s linear 5}
+.joy .ksc-trento.open .fa{animation:cfa_trento 1.375s step-end both}
+.joy .ksc-trento.open .fb{animation:cfb_trento 1.375s step-end both}
+@keyframes cfs_trento{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes cfa_trento{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}
+@keyframes cfb_trento{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}
+.joy .ksc-trento.open .toss{animation:tossup_trento 1.375s cubic-bezier(.3,0,.7,1)}
+@keyframes tossup_trento{50%{transform:translateY(-150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-trento .cf,.joy .ksc-trento .fa,.joy .ksc-trento .fb,.joy .ksc-trento .toss{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* bombay63 */
+.joy .ksc-bombay63 .stk{transform-box:fill-box;transform-origin:0% 0%;transition:transform .4s}
+.joy .ksc-bombay63.open .stk{transform:translate(30px,-30px) rotate(-8deg) skewX(-6deg);transition:transform .6s cubic-bezier(.3,1.3,.5,1)}
+@media (prefers-reduced-motion:reduce){.joy .ksc-bombay63 .stk{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* bombar */
+.joy .ksc-bombar .cv{transform-box:fill-box;transform-origin:50% 0%;transition:transform .45s .2s}
+.joy .ksc-bombar.open .cv{transform:scaleY(-.35) translateY(40px);transition:transform .45s}
+.joy .ksc-bombar .mt{transform-box:fill-box;transition:transform .3s}
+.joy .ksc-bombar.open .mt{transform:translateY(-60px) rotate(8deg);transition:transform .5s cubic-bezier(.3,1.3,.5,1) .4s}
+.joy .ksc-bombar .fl{opacity:0;transform-box:fill-box;transform-origin:50% 100%}
+.joy .ksc-bombar.open .fl{opacity:1;animation:flk_bombar .5s ease-in-out .9s infinite alternate;transition:opacity .2s .9s}
+@keyframes flk_bombar{to{transform:scale(.88,1.12)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-bombar .cv,.joy .ksc-bombar .mt,.joy .ksc-bombar .fl{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* asiakitchen */
+.joy .ksc-asiakitchen .sm{opacity:0;transform-box:fill-box}
+.joy .ksc-asiakitchen.open .sm{animation:k265_asiakitchen 1.8s ease-out var(--d, 0s) 3}
+@keyframes k265_asiakitchen{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-60px)}}
+.joy .ksc-asiakitchen .gn{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-asiakitchen.open .gn{animation:k266_asiakitchen .5s cubic-bezier(.3,1.6,.5,1) calc(0.3s + var(--d, 0s)) both}
+@keyframes k266_asiakitchen{0%{opacity:0;transform:scale(.2) rotate(-14deg)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-asiakitchen .sm,.joy .ksc-asiakitchen .gn{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* copperchimney */
+.joy .ksc-copperchimney .tg{transform-box:fill-box;transform-origin:100% 50%}
+.joy .ksc-copperchimney.open .tg{animation:k267_copperchimney 2.2s ease-in-out 0s 1}
+@keyframes k267_copperchimney{0%,100%{transform:rotate(0)}20%{transform:rotate(7deg)}45%{transform:rotate(-5.6000000000000005deg)}70%{transform:rotate(3.15deg)}88%{transform:rotate(-1.4000000000000001deg)}}
+.joy .ksc-copperchimney .stp{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-copperchimney.open .stp{animation:k268_copperchimney .25s ease-out calc(0.6s + var(--d, 0s)) both}
+@keyframes k268_copperchimney{0%{opacity:0;transform:scale(1.8)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-copperchimney .tg,.joy .ksc-copperchimney .stp{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* pizzaexpress */
+.joy .ksc-pizzaexpress .tear{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-pizzaexpress.open .tear{transform:translate(46px,22px) rotate(9deg);transition:transform 0.7s cubic-bezier(.3,1.2,.5,1) 0.2s}
+.joy .ksc-pizzaexpress .punch{opacity:0;transition:opacity .15s}
+.joy .ksc-pizzaexpress.open .punch{opacity:1;transition:opacity 0.3s ease-out calc(0.1s + var(--d, 0s))}
+.joy .ksc-pizzaexpress .tk{transform-box:fill-box;transform-origin:0% 50%}
+.joy .ksc-pizzaexpress.open .tk{animation:k269_pizzaexpress 2.2s ease-in-out 0.2s 1}
+@keyframes k269_pizzaexpress{0%,100%{transform:rotate(0)}20%{transform:rotate(3deg)}45%{transform:rotate(-2.4000000000000004deg)}70%{transform:rotate(1.35deg)}88%{transform:rotate(-0.6000000000000001deg)}}
+.joy .ksc-pizzaexpress .note{opacity:0;transition:opacity .15s}
+.joy .ksc-pizzaexpress.open .note{opacity:1;transition:opacity 0.3s ease-out calc(0.7s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-pizzaexpress .tear,.joy .ksc-pizzaexpress .punch,.joy .ksc-pizzaexpress .tk,.joy .ksc-pizzaexpress .note{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* farzi */
+.joy .ksc-farzi .fx{opacity:0;transform-box:fill-box}
+.joy .ksc-farzi.open .fx{animation:k271_farzi 1.8s ease-out var(--d, 0s) 3}
+@keyframes k271_farzi{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-60px)}}
+.joy .ksc-farzi .lb{transform-box:fill-box}
+.joy .ksc-farzi.open .lb{animation:k274_farzi .09s linear 0s 4}
+@keyframes k274_farzi{25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-farzi .fx,.joy .ksc-farzi .lb{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* olivebistro */
+.joy .ksc-olivebistro .mk{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-olivebistro.open .mk{stroke-dashoffset:0;transition:stroke-dashoffset 0.3s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-olivebistro .fl1,.joy .ksc-olivebistro .fl2{transform-box:fill-box;transition:transform .45s .15s}
+.joy .ksc-olivebistro .fl1{transform-origin:0% 50%}
+.joy .ksc-olivebistro .fl2{transform-origin:100% 50%}
+.joy .ksc-olivebistro.open .fl1,.joy .ksc-olivebistro.open .fl2{transform:scaleX(0);transition:transform .5s cubic-bezier(.4,0,.2,1) .25s}
+.joy .ksc-olivebistro .mid{transition:opacity .25s .5s}
+.joy .ksc-olivebistro.open .mid{opacity:0;transition:opacity .3s}
+@media (prefers-reduced-motion:reduce){.joy .ksc-olivebistro .fl1,.joy .ksc-olivebistro .fl2,.joy .ksc-olivebistro .mid,.joy .ksc-olivebistro .mk{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* dimsumwu */
+.joy .ksc-dimsumwu .sm{opacity:0;transform-box:fill-box}
+.joy .ksc-dimsumwu.open .sm{animation:k275_dimsumwu 1.8s ease-out var(--d, 0s) 3}
+@keyframes k275_dimsumwu{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-60px)}}
+.joy .ksc-dimsumwu .gn{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-dimsumwu.open .gn{animation:k276_dimsumwu .5s cubic-bezier(.3,1.6,.5,1) calc(0.3s + var(--d, 0s)) both}
+@keyframes k276_dimsumwu{0%{opacity:0;transform:scale(.2) rotate(-14deg)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-dimsumwu .sm,.joy .ksc-dimsumwu .gn{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* canto */
+.joy .ksc-canto .cf{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-canto .fb{opacity:0}
+.joy .ksc-canto.open .cf{animation:cfs_canto .275s linear 5}
+.joy .ksc-canto.open .fa{animation:cfa_canto 1.375s step-end both}
+.joy .ksc-canto.open .fb{animation:cfb_canto 1.375s step-end both}
+@keyframes cfs_canto{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes cfa_canto{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}
+@keyframes cfb_canto{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}
+.joy .ksc-canto.open .toss{animation:tossup_canto 1.375s cubic-bezier(.3,0,.7,1)}
+@keyframes tossup_canto{50%{transform:translateY(-150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-canto .cf,.joy .ksc-canto .fa,.joy .ksc-canto .fb,.joy .ksc-canto .toss{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* saltinorbit */
+.joy .ksc-saltinorbit .cf{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-saltinorbit .fb{opacity:0}
+.joy .ksc-saltinorbit.open .cf{animation:cfs_saltinorbit .275s linear 5}
+.joy .ksc-saltinorbit.open .fa{animation:cfa_saltinorbit 1.375s step-end both}
+.joy .ksc-saltinorbit.open .fb{animation:cfb_saltinorbit 1.375s step-end both}
+@keyframes cfs_saltinorbit{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes cfa_saltinorbit{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}
+@keyframes cfb_saltinorbit{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}
+.joy .ksc-saltinorbit.open .toss{animation:tossup_saltinorbit 1.375s cubic-bezier(.3,0,.7,1)}
+@keyframes tossup_saltinorbit{50%{transform:translateY(-150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-saltinorbit .cf,.joy .ksc-saltinorbit .fa,.joy .ksc-saltinorbit .fb,.joy .ksc-saltinorbit .toss{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* bbqnation */
+.joy .ksc-bbqnation .ly{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-bbqnation.open .ly{animation:k277_bbqnation 2.2s ease-in-out 0s 1}
+@keyframes k277_bbqnation{0%,100%{transform:rotate(0)}20%{transform:rotate(6deg)}45%{transform:rotate(-4.800000000000001deg)}70%{transform:rotate(2.7deg)}88%{transform:rotate(-1.2000000000000002deg)}}
+.joy .ksc-bbqnation .glow{opacity:0}
+.joy .ksc-bbqnation.open .glow{animation:gl_bbqnation 1.2s ease-out .3s}
+@keyframes gl_bbqnation{30%{opacity:.35}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-bbqnation .ly,.joy .ksc-bbqnation .glow{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* goregaonsocial */
+.joy .ksc-goregaonsocial .uv{opacity:0;transition:opacity .2s}
+.joy .ksc-goregaonsocial.open .uv{opacity:1;transition:opacity .5s .5s}
+.joy .ksc-goregaonsocial .dark{transition:opacity .3s}
+.joy .ksc-goregaonsocial.open .dark{opacity:.55;transition:opacity .4s}
+.joy .ksc-goregaonsocial.open .uv{animation:uvp_goregaonsocial 1.2s ease-in-out .9s 3 alternate}
+@keyframes uvp_goregaonsocial{to{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-goregaonsocial .uv,.joy .ksc-goregaonsocial .dark{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* fisherman */
+.joy .ksc-fisherman .ring{opacity:0}
+.joy .ksc-fisherman.open .ring{opacity:1;transition:opacity .4s 1.1s}
+.joy .ksc-fisherman .gl{transform-box:fill-box;opacity:0}
+.joy .ksc-fisherman.open .gl{animation:gld_fisherman 1.6s ease-in-out both}
+@keyframes gld_fisherman{0%{opacity:0;transform:translate(60px,-160px)}35%{opacity:1;transform:translate(0,0)}70%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(80px,-140px)}}
+.joy .ksc-fisherman .cs{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-fisherman.open .cs{animation:csp_fisherman .7s ease-out .9s}
+@keyframes csp_fisherman{40%{transform:rotate(9deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-fisherman .ring,.joy .ksc-fisherman .gl,.joy .ksc-fisherman .cs{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* sthamba */
+.joy .ksc-sthamba .mk{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-sthamba.open .mk{stroke-dashoffset:0;transition:stroke-dashoffset 0.3s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-sthamba .mw{opacity:0;transition:opacity .15s}
+.joy .ksc-sthamba.open .mw{opacity:1;transition:opacity 0.15s ease-out calc(0s + var(--d, 0s))}
+.joy .ksc-sthamba .ring{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-sthamba.open .ring{stroke-dashoffset:0;transition:stroke-dashoffset 0.6s ease-out calc(1.1s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-sthamba .mk,.joy .ksc-sthamba .mw,.joy .ksc-sthamba .ring{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* foo */
+.joy .ksc-foo .tear{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-foo.open .tear{transform:translate(46px,22px) rotate(9deg);transition:transform 0.7s cubic-bezier(.3,1.2,.5,1) 0.2s}
+.joy .ksc-foo .punch{opacity:0;transition:opacity .15s}
+.joy .ksc-foo.open .punch{opacity:1;transition:opacity 0.3s ease-out calc(0.1s + var(--d, 0s))}
+.joy .ksc-foo .tk{transform-box:fill-box;transform-origin:0% 50%}
+.joy .ksc-foo.open .tk{animation:k278_foo 2.2s ease-in-out 0.2s 1}
+@keyframes k278_foo{0%,100%{transform:rotate(0)}20%{transform:rotate(3deg)}45%{transform:rotate(-2.4000000000000004deg)}70%{transform:rotate(1.35deg)}88%{transform:rotate(-0.6000000000000001deg)}}
+.joy .ksc-foo .note{opacity:0;transition:opacity .15s}
+.joy .ksc-foo.open .note{opacity:1;transition:opacity 0.3s ease-out calc(0.7s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-foo .tear,.joy .ksc-foo .punch,.joy .ksc-foo .tk,.joy .ksc-foo .note{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* jayprakash */
+.joy .ksc-jayprakash .circ{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-jayprakash.open .circ{stroke-dashoffset:0;transition:stroke-dashoffset 0.7s ease-out calc(0.2s + var(--d, 0s))}
+.joy .ksc-jayprakash .doodle{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-jayprakash.open .doodle{animation:k279_jayprakash .5s cubic-bezier(.3,1.6,.5,1) calc(0.5s + var(--d, 0s)) both}
+@keyframes k279_jayprakash{0%{opacity:0;transform:scale(.2) rotate(-14deg)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-jayprakash .circ,.joy .ksc-jayprakash .doodle{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* cococafe */
+.joy .ksc-cococafe .rb{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-cococafe.open .rb{transform:translate(0px,-40px) rotate(0deg);transition:transform 0.3s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-cococafe .rb{transition:opacity .2s}
+.joy .ksc-cococafe.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
+.joy .ksc-cococafe .lid{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-cococafe.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
+.joy .ksc-cococafe .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-cococafe.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-cococafe .rb,.joy .ksc-cococafe .rb,.joy .ksc-cococafe .lid,.joy .ksc-cococafe .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* kitchengarden */
+.joy .ksc-kitchengarden .pk{transform-box:fill-box;transform-origin:30% 100%;transition:transform .4s}
+.joy .ksc-kitchengarden.open .pk{transform:rotate(-35deg);transition:transform .5s}
+.joy .ksc-kitchengarden .sd{opacity:0}
+.joy .ksc-kitchengarden.open .sd{animation:sdp_kitchengarden 1s ease-in calc(.5s + var(--d)) both}
+@keyframes sdp_kitchengarden{0%{opacity:1;transform:translate(0,0)}100%{opacity:1;transform:translate(-80px,260px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-kitchengarden .pk,.joy .ksc-kitchengarden .sd{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* entisi */
+.joy .ksc-entisi .rb{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-entisi.open .rb{transform:translate(0px,-40px) rotate(0deg);transition:transform 0.3s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-entisi .rb{transition:opacity .2s}
+.joy .ksc-entisi.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
+.joy .ksc-entisi .lid{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-entisi.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
+.joy .ksc-entisi .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-entisi.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-entisi .rb,.joy .ksc-entisi .rb,.joy .ksc-entisi .lid,.joy .ksc-entisi .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* bluetokaicalm */
+.joy .ksc-bluetokaicalm .lid{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-bluetokaicalm.open .lid{transform:translate(70px,-90px) rotate(24deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-bluetokaicalm .sm{opacity:0;transform-box:fill-box}
+.joy .ksc-bluetokaicalm.open .sm{animation:k280_bluetokaicalm 1.8s ease-out var(--d, 0s) 3}
+@keyframes k280_bluetokaicalm{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-70px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-bluetokaicalm .lid,.joy .ksc-bluetokaicalm .sm{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* bostoncafe */
+.joy .ksc-bostoncafe .rb{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-bostoncafe.open .rb{transform:translate(0px,-40px) rotate(0deg);transition:transform 0.3s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-bostoncafe .rb{transition:opacity .2s}
+.joy .ksc-bostoncafe.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
+.joy .ksc-bostoncafe .lid{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-bostoncafe.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
+.joy .ksc-bostoncafe .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-bostoncafe.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-bostoncafe .rb,.joy .ksc-bostoncafe .rb,.joy .ksc-bostoncafe .lid,.joy .ksc-bostoncafe .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* lovelatte */
+.joy .ksc-lovelatte .cu{transform-box:fill-box}
+.joy .ksc-lovelatte.open .cu{animation:k281_lovelatte .09s linear 0.1s 4}
+@keyframes k281_lovelatte{25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+.joy .ksc-lovelatte .sm{opacity:0;transform-box:fill-box}
+.joy .ksc-lovelatte.open .sm{animation:k282_lovelatte 1.8s ease-out var(--d, 0s) 3}
+@keyframes k282_lovelatte{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-70px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-lovelatte .cu,.joy .ksc-lovelatte .sm{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* whitelama */
+.joy .ksc-whitelama .tg{transform-box:fill-box;transform-origin:100% 50%}
+.joy .ksc-whitelama.open .tg{animation:k283_whitelama 2.2s ease-in-out 0s 1}
+@keyframes k283_whitelama{0%,100%{transform:rotate(0)}20%{transform:rotate(7deg)}45%{transform:rotate(-5.6000000000000005deg)}70%{transform:rotate(3.15deg)}88%{transform:rotate(-1.4000000000000001deg)}}
+.joy .ksc-whitelama .stp{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-whitelama.open .stp{animation:k284_whitelama .25s ease-out calc(0.6s + var(--d, 0s)) both}
+@keyframes k284_whitelama{0%{opacity:0;transform:scale(1.8)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-whitelama .tg,.joy .ksc-whitelama .stp{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* silkroad */
+.joy .ksc-silkroad .tis{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-silkroad.open .tis{transform:translate(-16px,-60px) rotate(-6deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-silkroad .tis{transition:opacity .2s}
+.joy .ksc-silkroad.open .tis{opacity:0;transition:opacity 0.4s calc(0.3s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-silkroad .tis,.joy .ksc-silkroad .tis{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* thirdwave */
+.joy .ksc-thirdwave .lid{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-thirdwave.open .lid{transform:translate(70px,-90px) rotate(24deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-thirdwave .sm{opacity:0;transform-box:fill-box}
+.joy .ksc-thirdwave.open .sm{animation:k285_thirdwave 1.8s ease-out var(--d, 0s) 3}
+@keyframes k285_thirdwave{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-70px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-thirdwave .lid,.joy .ksc-thirdwave .sm{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* persiandarbar */
+.joy .ksc-persiandarbar .sm{opacity:0;transform-box:fill-box}
+.joy .ksc-persiandarbar.open .sm{animation:k286_persiandarbar 1.8s ease-out var(--d, 0s) 3}
+@keyframes k286_persiandarbar{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-60px)}}
+.joy .ksc-persiandarbar .gn{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-persiandarbar.open .gn{animation:k287_persiandarbar .5s cubic-bezier(.3,1.6,.5,1) calc(0.3s + var(--d, 0s)) both}
+@keyframes k287_persiandarbar{0%{opacity:0;transform:scale(.2) rotate(-14deg)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-persiandarbar .sm,.joy .ksc-persiandarbar .gn{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* tewari */
+.joy .ksc-tewari .cf{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-tewari .fb{opacity:0}
+.joy .ksc-tewari.open .cf{animation:cfs_tewari .275s linear 5}
+.joy .ksc-tewari.open .fa{animation:cfa_tewari 1.375s step-end both}
+.joy .ksc-tewari.open .fb{animation:cfb_tewari 1.375s step-end both}
+@keyframes cfs_tewari{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes cfa_tewari{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}
+@keyframes cfb_tewari{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}
+.joy .ksc-tewari.open .toss{animation:tossup_tewari 1.375s cubic-bezier(.3,0,.7,1)}
+@keyframes tossup_tewari{50%{transform:translateY(-150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-tewari .cf,.joy .ksc-tewari .fa,.joy .ksc-tewari .fb,.joy .ksc-tewari .toss{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* jpslunch */
+.joy .ksc-jpslunch .sm{opacity:0;transform-box:fill-box}
+.joy .ksc-jpslunch.open .sm{animation:k288_jpslunch 1.8s ease-out var(--d, 0s) 3}
+@keyframes k288_jpslunch{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-60px)}}
+.joy .ksc-jpslunch .gn{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-jpslunch.open .gn{animation:k289_jpslunch .5s cubic-bezier(.3,1.6,.5,1) calc(0.3s + var(--d, 0s)) both}
+@keyframes k289_jpslunch{0%{opacity:0;transform:scale(.2) rotate(-14deg)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-jpslunch .sm,.joy .ksc-jpslunch .gn{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* j3pizza */
+.joy .ksc-j3pizza .rb{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-j3pizza.open .rb{transform:translate(0px,-40px) rotate(0deg);transition:transform 0.3s cubic-bezier(.3,1.2,.5,1) 0s}
+.joy .ksc-j3pizza .rb{transition:opacity .2s}
+.joy .ksc-j3pizza.open .rb{opacity:0;transition:opacity 0.2s calc(0.15s + var(--d, 0s))}
+.joy .ksc-j3pizza .lid{transform-box:fill-box;transition:transform .35s ease-in}
+.joy .ksc-j3pizza.open .lid{transform:translate(40px,-150px) rotate(-12deg);transition:transform 0.6s cubic-bezier(.3,1.2,.5,1) 0.35s}
+.joy .ksc-j3pizza .tr{opacity:0;transition:opacity .15s}
+.joy .ksc-j3pizza.open .tr{opacity:1;transition:opacity 0.3s ease-out calc(0.5s + var(--d, 0s))}
+@media (prefers-reduced-motion:reduce){.joy .ksc-j3pizza .rb,.joy .ksc-j3pizza .rb,.joy .ksc-j3pizza .lid,.joy .ksc-j3pizza .tr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* maroosh */
+.joy .ksc-maroosh .circ{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .2s}
+.joy .ksc-maroosh.open .circ{stroke-dashoffset:0;transition:stroke-dashoffset 0.7s ease-out calc(0.2s + var(--d, 0s))}
+.joy .ksc-maroosh .doodle{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-maroosh.open .doodle{animation:k290_maroosh .5s cubic-bezier(.3,1.6,.5,1) calc(0.5s + var(--d, 0s)) both}
+@keyframes k290_maroosh{0%{opacity:0;transform:scale(.2) rotate(-14deg)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-maroosh .circ,.joy .ksc-maroosh .doodle{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
+/* ratna */
+.joy .ksc-ratna .cf{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-ratna .fb{opacity:0}
+.joy .ksc-ratna.open .cf{animation:cfs_ratna .275s linear 5}
+.joy .ksc-ratna.open .fa{animation:cfa_ratna 1.375s step-end both}
+.joy .ksc-ratna.open .fb{animation:cfb_ratna 1.375s step-end both}
+@keyframes cfs_ratna{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes cfa_ratna{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}
+@keyframes cfb_ratna{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}
+.joy .ksc-ratna.open .toss{animation:tossup_ratna 1.375s cubic-bezier(.3,0,.7,1)}
+@keyframes tossup_ratna{50%{transform:translateY(-150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-ratna .cf,.joy .ksc-ratna .fa,.joy .ksc-ratna .fb,.joy .ksc-ratna .toss{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}
