@@ -694,7 +694,7 @@ def media(sid, title, *, batch, palette, name, verbs=('Press play', 'Stop'), kin
     elif kind == 'record':
         body = (f'<g transform="translate(70 0)"><g class="disc"><circle r="150" fill="#141416"></circle>' + ''.join(f'<circle r="{r}" fill="none" stroke="#2a2a2e" stroke-width="1.4"></circle>' for r in range(60, 148, 10))
                 + f'<circle r="54" fill="{accent}"></circle>' + text(0, -6, head, 'serif', 14, '#fff', 90) + text(0, 14, rows[0] if rows else '', 'mono', 8, '#fff', 90) + '<circle r="5" fill="#141416"></circle></g></g>'
-                + f'<rect x="-190" y="-160" width="320" height="320" fill="{paper_}"></rect>' + text(-30, -100, head, 'display', 34, ink, 280, weight=700)
+                + f'<path d="M-182 -160 H-50 A20 20 0 0 0 -10 -160 H122 Q130 -160 130 -152 V152 Q130 160 122 160 H-182 Q-190 160 -190 152 V-152 Q-190 -160 -182 -160 Z" fill="{paper_}"></path>' + text(-30, -100, head, 'display', 34, ink, 280, weight=700)
                 + ''.join(text(-170, -50 + i * 26, r, 'hand', 18, ink, 280, 'start') for i, r in enumerate(rows[1:7])))
         spinner = slide('.disc', 90, 0, 0, 0, .8)
         spinner = (spinner[0] + spin('.disc', 3, 2.2, .6)[0].replace('.open .disc{', '.open .disc{transform:translateX(90px);'), '.disc')
@@ -903,7 +903,7 @@ def keytag(sid, title, *, batch, palette, name, verbs=('Jingle the keys', 'Hang 
 def seedpacket(sid, title, *, batch, palette, name, verbs=('Shake out the seeds', 'Fold it shut'), head, rows=(), packet='#f2e3b3', ink='#3a2a1a',
                art=(('plant', 0, -40, 1.6),), seed_col='#6b4a2a', key=None, visit=1):
     """A seed or spice packet: touching it tips the packet and seeds pour out."""
-    body = (f'<path d="M-120 -170 H120 V170 H-120 Z" fill="{packet}"></path><path d="M-120 -170 H120 V-140 H-120 Z" fill="#00000018"></path>'
+    body = (f'<path d="M-120 -170 H120 V150 ' + ''.join(f'L{120 - i * 12} {170 if i % 2 else 150} ' for i in range(1, 21)) + f'Z" fill="{packet}"></path><path d="M-120 -170 H120 V-140 H-120 Z" fill="#00000018"></path>'
             + ''.join(f'<path d="M{-120 + i * 12} -170 l6 -8 l6 8" fill="{packet}"></path>' for i in range(20))
             + f'<rect x="-100" y="-120" width="200" height="150" rx="6" fill="#ffffff66"></rect>' + place(art)
             + text(0, 70, head, 'serif', 26, ink, 220) + ''.join(text(0, 98 + i * 22, r, 'hand', 16, ink, 220) for i, r in enumerate(rows[:3])))
