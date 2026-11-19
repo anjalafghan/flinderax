@@ -1,0 +1,453 @@
+/* Exhibits: every kept date drawn as its own physical keepsake (keepsakes/catalog.ts says which).
+   One renderer, forty forms, twenty-eight small animations. Sized in em: --ks-size sets the scale.
+   Colours come from the spec (--p paper, --i ink, --a accent) and never follow light or dark.
+   Shapes cut with clip-path or mask lose their own shadow, so .ex (the wrapper) casts it.
+   Decor hooks: .ex-d1/.ex-d2 sit outside the paper (strings, ribbons), .ex-d3/.ex-d4 inside it. */
+
+.joy {
+.ex {
+  --g: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .36 0 0 0 0 .28 0 0 0 0 .18 0 0 0 -1.7 1.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='.2'/%3E%3C/svg%3E");
+  --soft: color-mix(in srgb, var(--i) 76%, var(--p));
+  --ah: color-mix(in srgb, var(--a) 62%, var(--i));
+  --w: 17em;
+  position: relative; display: inline-block; vertical-align: top; max-width: 100%;
+  margin: 0; padding: 0; border: 0; background: none; color: var(--i); text-align: left; line-height: 1.25;
+  font: 400 var(--ks-size, 16px)/1.25 var(--font-ui);
+  filter: drop-shadow(0 1px 1px rgba(40, 24, 10, .28)) drop-shadow(0 .45em .55em rgba(40, 24, 10, .16)) drop-shadow(0 1.2em 1.5em rgba(40, 24, 10, .1));
+  transition: translate var(--t-small, 220ms) var(--ease-out, ease);
+  -webkit-tap-highlight-color: transparent;
+}
+button.ex { cursor: pointer; }
+.ex:focus-visible { outline: 2px solid var(--stamp); outline-offset: 4px; border-radius: 4px; }
+.ex[data-playing] { translate: 0 -3px; }
+.ex span { display: block; }
+.ex-d1, .ex-d2, .ex-d3, .ex-d4 { position: absolute; pointer-events: none; }
+.ex-d1:empty, .ex-d2:empty, .ex-d3:empty, .ex-d4:empty { display: none; }
+.ex-body {
+  position: relative; display: grid; align-content: start; gap: .28em;
+  width: var(--w); max-width: 100%; box-sizing: border-box; padding: 1em 1.1em 1.1em;
+  background: var(--g), var(--p); background-blend-mode: multiply;
+}
+.ex-body > * { position: relative; z-index: 1; min-width: 0; }
+/* the decor inside the paper floats over or under it, never in the text's flow */
+.ex-body > .ex-d3, .ex-body > .ex-d4 { position: absolute; z-index: 0; }
+.ex-m { position: relative; width: var(--ms, 2.4em); height: var(--ms, 2.4em); color: var(--a); }
+.ex-m > svg { display: block; width: 100%; height: 100%; overflow: visible; stroke-width: 1.6; }
+.ex-head { font: 700 .6em/1.25 var(--font-ui); letter-spacing: .2em; text-transform: uppercase; color: var(--ah); overflow-wrap: anywhere; }
+.ex-title { font: 600 1.32em/1.08 var(--font-display); overflow-wrap: anywhere; text-wrap: balance; }
+.ex-place { font: 400 .76em/1.3 var(--font-ui); color: var(--soft); overflow-wrap: anywhere; }
+.ex-line { font: italic 400 .9em/1.25 var(--font-hand); overflow-wrap: anywhere; }
+.ex-day { font: 400 .7em/1.3 "Courier New", ui-monospace, monospace; color: var(--soft); letter-spacing: .04em; }
+.ex-stars { color: var(--ah); font-size: .82em; letter-spacing: .08em; line-height: 1; }
+/* centred objects */
+.ex-label .ex-body, .ex-sticker .ex-body, .ex-coaster .ex-body, .ex-token .ex-body, .ex-plate .ex-body, .ex-badge .ex-body,
+.ex-bookmark .ex-body, .ex-certificate .ex-body, .ex-matchbook .ex-body, .ex-record .ex-body, .ex-cup .ex-body, .ex-packet .ex-body,
+.ex-sleeve .ex-body, .ex-tag .ex-body, .ex-pass .ex-body, .ex-specimen .ex-body, .ex-playbill .ex-body, .ex-menu .ex-body,
+.ex-bag .ex-body, .ex-crate .ex-body, .ex-envelope .ex-body, .ex-paw .ex-body { justify-items: center; text-align: center; }
+/* round things carry fewer words */
+.ex-coaster .ex-line + .ex-line, .ex-token .ex-line, .ex-plate .ex-line + .ex-line, .ex-record .ex-line, .ex-record .ex-place,
+.ex-token .ex-place, .ex-wristband .ex-place, .ex-wristband .ex-line + .ex-line, .ex-badge .ex-line + .ex-line, .ex-cup .ex-line + .ex-line { display: none; }
+
+/* ── the forms ─────────────────────────────────────────── */
+
+/* card: a loyalty or business card */
+.ex-card { --w: 18em; }
+.ex-card .ex-body { grid-template-columns: auto minmax(0, 1fr); column-gap: .9em; border-radius: .7em; }
+.ex-card .ex-body > * { grid-column: 2; }
+.ex-card .ex-m { grid-column: 1; grid-row: 1 / span 3; --ms: 2.8em; }
+.ex-card .ex-line, .ex-card .ex-day, .ex-card .ex-stars { grid-column: 1 / -1; }
+.ex-card .ex-d3 { display: block; inset: .35em; border: 1px solid color-mix(in srgb, var(--a) 40%, transparent); border-radius: .5em; }
+
+/* paw: a big pad and four toes arched over it; the first toe carries a visit stamp */
+.ex-paw { --w: 14em; padding-top: 3.6em; }
+.ex-paw .ex-body { border-radius: 50% 50% 46% 46% / 56% 56% 44% 44%; padding: 1.7em 1.7em 2em; min-height: 11.5em; }
+.ex-paw .ex-d1 { display: block; top: .1em; left: 3.6em; width: 3em; height: 3.3em; border-radius: 50%; background: var(--p);
+  box-shadow: 3.8em 0 0 var(--p), -3.1em 1.5em 0 var(--p), 6.9em 1.5em 0 var(--p); }
+.ex-paw .ex-d2 { display: block; top: .75em; left: 4.25em; width: 1.7em; height: 1.7em; border-radius: 50%; border: .14em solid var(--a); opacity: .85; z-index: 2; }
+.ex-paw .ex-m { --ms: 2.6em; }
+
+/* stub: a ticket with a tear-off stub */
+.ex-stub { --w: 22em; }
+.ex-stub .ex-body {
+  --cut: calc(100% - 5.2em);
+  grid-template-columns: minmax(0, 1fr) 5.2em; column-gap: 1.2em; padding-right: .6em;
+  -webkit-mask: radial-gradient(circle .65em at var(--cut) 0, #0000 98%, #000) top / 100% 51% no-repeat, radial-gradient(circle .65em at var(--cut) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
+  mask: radial-gradient(circle .65em at var(--cut) 0, #0000 98%, #000) top / 100% 51% no-repeat, radial-gradient(circle .65em at var(--cut) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
+  border-top: .55em solid var(--a);
+}
+.ex-stub .ex-body > * { grid-column: 1; }
+.ex-stub .ex-m { grid-column: 2; grid-row: 1 / span 5; align-self: center; justify-self: center; --ms: 3em; }
+.ex-stub .ex-d3 { display: block; left: var(--cut); top: .8em; bottom: .8em; width: 4px; translate: -50% 0;
+  background: radial-gradient(circle 1.5px, color-mix(in srgb, var(--i) 45%, transparent) 98%, transparent) 50% 0 / 4px 8px repeat-y; }
+
+/* wristband: a long band with a snap */
+.ex-wristband { --w: 23em; }
+.ex-wristband .ex-body { grid-template-columns: auto auto minmax(0, 1fr) auto; grid-auto-flow: column; align-items: center; column-gap: .7em;
+  padding: .7em 3em .7em 1em; border-radius: .45em; min-height: 4.4em;
+  background: repeating-linear-gradient(90deg, transparent 0 .5em, rgba(255, 255, 255, .06) .5em .55em), var(--g), var(--p); }
+.ex-wristband .ex-m { grid-row: 1 / span 2; --ms: 2.2em; }
+.ex-wristband .ex-head { grid-row: 1 / span 2; writing-mode: vertical-rl; rotate: 180deg; font-size: .5em; max-height: 6em; }
+.ex-wristband .ex-title { grid-row: 1; font-size: 1.1em; }
+.ex-wristband .ex-line, .ex-wristband .ex-day { grid-row: 2; }
+.ex-wristband .ex-stars { grid-row: 1 / span 2; }
+.ex-wristband .ex-d3 { display: block; right: .8em; top: 50%; width: 1.3em; height: 1.3em; translate: 0 -50%; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--i) 60%, var(--p)) 30%, var(--a) 34% 60%, color-mix(in srgb, var(--a) 60%, #000) 64%); }
+
+/* tag: a portrait swing tag on a string */
+.ex-tag { --w: 11.5em; padding-top: 2.4em; }
+.ex-tag .ex-body { padding: 2.6em 1em 1.3em; clip-path: polygon(22% 0, 78% 0, 100% 13%, 100% 100%, 0 100%, 0 13%);
+  -webkit-mask: radial-gradient(circle .42em at 50% 1.35em, #0000 98%, #000); mask: radial-gradient(circle .42em at 50% 1.35em, #0000 98%, #000);
+  outline: 1px dashed color-mix(in srgb, var(--a) 50%, transparent); outline-offset: -.55em; }
+.ex-tag .ex-d1 { display: block; top: 0; left: 50%; width: 3.4em; height: 3.8em; translate: -50% 0;
+  background: radial-gradient(ellipse 1.7em 3.2em at 50% 100%, transparent 96%, #9a7a55 97% 100%, transparent 101%) 0 0 / 100% 100% no-repeat; }
+
+/* luggage: a landscape tag with cut corners and a string loop */
+.ex-luggage { --w: 20em; padding-left: 2em; }
+.ex-luggage .ex-body { padding: 1em 1.1em 1.1em 2.6em; clip-path: polygon(1.6em 0, 100% 0, 100% 100%, 1.6em 100%, 0 72%, 0 28%);
+  -webkit-mask: radial-gradient(circle .42em at 1.25em 50%, #0000 98%, #000); mask: radial-gradient(circle .42em at 1.25em 50%, #0000 98%, #000);
+  border-top: .5em solid var(--a); }
+.ex-luggage .ex-d1 { display: block; left: 0; top: 50%; width: 3.4em; height: 2em; translate: 0 -50%; border-radius: 50%;
+  border: 1.5px solid #8a6a45; border-right-color: transparent; }
+
+/* label: a bottle or jar label with a double rule */
+.ex-label { --w: 15em; }
+.ex-label .ex-body { border-radius: 1.4em / 1em; padding: 1.3em 1.2em;
+  box-shadow: inset 0 0 0 .35em var(--p), inset 0 0 0 .45em var(--a), inset 0 0 0 .6em var(--p), inset 0 0 0 .66em var(--a); }
+
+/* sticker: die-cut, with its white edge */
+.ex-sticker { --w: 13em; }
+.ex-sticker .ex-body { border-radius: 2.2em; border: .45em solid #fbfaf6; padding: 1.1em .9em; }
+.ex-sticker .ex-d3 { display: block; inset: -.45em; border-radius: 2.4em; background: linear-gradient(125deg, transparent 40%, rgba(255, 255, 255, .45) 48%, transparent 56%); z-index: 2; }
+
+/* coaster: round, with a dashed ring */
+.ex-coaster { --w: 13em; }
+.ex-coaster .ex-body { aspect-ratio: 1; border-radius: 50%; place-content: center; padding: 2em 1.6em; gap: .2em; }
+.ex-coaster .ex-d3 { display: block; inset: .6em; border-radius: 50%; border: .1em dashed color-mix(in srgb, var(--i) 40%, transparent); }
+.ex-coaster .ex-title { font-size: 1.15em; }
+
+/* napkin: a square with a folded corner */
+.ex-napkin { --w: 15em; }
+.ex-napkin .ex-body { aspect-ratio: 1; padding: 1.3em; align-content: center;
+  background: repeating-linear-gradient(0deg, transparent 0 .9em, rgba(0, 0, 0, .025) .9em 1em), var(--g), var(--p);
+  clip-path: polygon(0 0, 100% 0, 100% 78%, 78% 100%, 0 100%); }
+.ex-napkin .ex-d3 { display: block; right: 0; bottom: 0; width: 22%; height: 22%; background: linear-gradient(135deg, color-mix(in srgb, var(--p) 80%, #000) 50%, transparent 50%); }
+
+/* slip: a request or order pad slip, carbon-tinted and ruled, torn along the top */
+.ex-slip { --w: 15em; }
+.ex-slip .ex-body { padding-top: 1.4em;
+  background: repeating-linear-gradient(180deg, transparent 0 1.35em, color-mix(in srgb, var(--a) 35%, transparent) 1.35em calc(1.35em + 1px)), var(--g), var(--p);
+  clip-path: polygon(0 4%, 6% 0, 12% 3%, 18% 0, 25% 3%, 32% 0, 39% 3%, 46% 0, 53% 3%, 60% 0, 67% 3%, 74% 0, 81% 3%, 88% 0, 94% 3%, 100% 0, 100% 100%, 0 100%); }
+.ex-slip .ex-m { --ms: 1.9em; position: absolute; right: .9em; top: 1.4em; }
+.ex-slip .ex-line { font-family: var(--font-hand); color: var(--ah); }
+
+/* sleeve: long and narrow, the thing it holds peeking out of the top */
+.ex-sleeve { --w: 8.4em; padding-top: 2.6em; }
+.ex-sleeve .ex-body { min-height: 18em; padding: 2.2em .8em 1.4em; align-content: center;
+  box-shadow: inset 0 0 0 .3em var(--p), inset 0 0 0 .38em var(--a); }
+.ex-sleeve .ex-m { --ms: 4.4em; position: absolute; top: -3em; left: 50%; translate: -50% 0; z-index: 0; }
+.ex-sleeve .ex-title { font-size: 1.1em; }
+.ex-sleeve .ex-d3 { display: block; left: 50%; top: 0; width: 60%; height: .5em; translate: -50% 0; background: color-mix(in srgb, var(--p) 70%, #000); border-radius: 0 0 .3em .3em; }
+
+/* token: a metal coin with an embossed rim */
+.ex-token { --w: 11em; }
+.ex-token .ex-body { aspect-ratio: 1; border-radius: 50%; place-content: center; padding: 1.6em 1.2em; gap: .15em;
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--p) 70%, #fff) 0, var(--p) 45%, color-mix(in srgb, var(--p) 75%, #000) 100%);
+  box-shadow: inset 0 0 0 .3em color-mix(in srgb, var(--p) 75%, #000), inset 0 0 0 .4em color-mix(in srgb, var(--p) 60%, #fff), inset 0 0 0 .75em var(--p), inset 0 0 0 .82em color-mix(in srgb, var(--i) 30%, transparent); }
+.ex-token .ex-title { font-size: 1em; }
+.ex-token .ex-m { --ms: 2em; }
+
+/* plate: a paper plate with a crimped rim */
+.ex-plate { --w: 13.5em; }
+.ex-plate .ex-body { aspect-ratio: 1; border-radius: 50%; place-content: center; padding: 2.2em 1.8em; gap: .2em;
+  background: radial-gradient(circle, transparent 60%, color-mix(in srgb, var(--p) 85%, #000) 61% 62%, transparent 63%),
+    repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--p) 88%, #000) 0 3deg, var(--p) 3deg 6deg), var(--p); }
+.ex-plate .ex-title { font-size: 1.1em; }
+
+/* map: folded, with creases and a dotted route */
+.ex-map { --w: 19em; }
+.ex-map .ex-body { padding: 1.2em 1.3em;
+  background: linear-gradient(90deg, transparent 33%, rgba(0, 0, 0, .08) 33.3%, rgba(255, 255, 255, .25) 33.8%, transparent 34.3%, transparent 66%, rgba(0, 0, 0, .08) 66.3%, rgba(255, 255, 255, .25) 66.8%, transparent 67.3%),
+    linear-gradient(180deg, transparent 49.6%, rgba(0, 0, 0, .08) 50%, transparent 50.6%), var(--g), var(--p); }
+.ex-map .ex-m { position: absolute; right: 1.2em; bottom: 1em; --ms: 2.4em; }
+.ex-map .ex-d3 { display: block; right: 2.4em; bottom: 2.2em; width: 9em; height: 5em; border: 2px dashed var(--a); border-color: var(--a) transparent transparent var(--a); border-radius: 60% 40% 0 0; opacity: .7; }
+
+/* postcard: the back, message on the left and a stamp on the right */
+.ex-postcard { --w: 20em; }
+.ex-postcard .ex-body { grid-template-columns: minmax(0, 1fr) 6em; column-gap: 1.2em; padding: 1em 1.1em 1.2em; }
+.ex-postcard .ex-body > * { grid-column: 1; }
+.ex-postcard .ex-m { grid-column: 2; grid-row: 1 / span 3; justify-self: end; --ms: 3em; padding: .3em; background: color-mix(in srgb, var(--a) 18%, var(--p));
+  outline: .22em dotted var(--p); outline-offset: -.08em; box-shadow: 0 0 0 .3em color-mix(in srgb, var(--a) 18%, var(--p)); }
+.ex-postcard .ex-day { grid-column: 2; grid-row: 4; justify-self: end; }
+.ex-postcard .ex-d3 { display: block; top: .9em; bottom: .9em; right: 7.4em; width: 1px; background: color-mix(in srgb, var(--i) 30%, transparent); }
+.ex-postcard .ex-d4 { display: block; right: 1em; bottom: 1em; width: 5.4em; height: 2.6em; background: repeating-linear-gradient(180deg, transparent 0 .8em, color-mix(in srgb, var(--i) 30%, transparent) .8em calc(.8em + 1px)); }
+.ex-postcard .ex-line { font-family: var(--font-hand); }
+
+/* envelope: a flap and a seal */
+.ex-envelope { --w: 19em; }
+.ex-envelope .ex-body { padding: 4.4em 1.2em 1.2em; }
+.ex-envelope .ex-d3 { display: block; inset: 0 0 auto; height: 4.6em; background: color-mix(in srgb, var(--p) 88%, #000); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.ex-envelope .ex-m { position: absolute; top: 3em; left: 50%; translate: -50% 0; --ms: 2.4em; padding: .35em; border-radius: 50%; background: var(--a); color: var(--p); z-index: 2; }
+
+/* letter: a folded sheet sealed with wax */
+.ex-letter { --w: 15em; }
+.ex-letter .ex-body { padding: 1.2em 1.2em 2.4em;
+  background: linear-gradient(180deg, transparent 49.5%, rgba(0, 0, 0, .07) 50%, rgba(255, 255, 255, .3) 50.4%, transparent 51%), repeating-linear-gradient(180deg, transparent 0 1.3em, color-mix(in srgb, var(--i) 12%, transparent) 1.3em calc(1.3em + 1px)), var(--g), var(--p); }
+.ex-letter .ex-m { position: absolute; right: .8em; bottom: .7em; --ms: 2.6em; padding: .45em; border-radius: 46% 54% 50% 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--a) 70%, #fff), var(--a) 55%, color-mix(in srgb, var(--a) 70%, #000)); color: var(--p); z-index: 2; }
+.ex-letter .ex-line { font-family: var(--font-hand); }
+
+/* badge: an embroidered hexagon patch */
+.ex-badge { --w: 12.5em; }
+.ex-badge .ex-body { aspect-ratio: 1 / 1.08; place-content: center; padding: 2em 1.6em; background: var(--a); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.ex-badge .ex-d3 { display: block; inset: .5em; background: var(--g), var(--p); background-blend-mode: multiply; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); z-index: 0; }
+.ex-badge .ex-d4 { display: block; inset: .75em; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: repeating-conic-gradient(from 0deg, transparent 0 2deg, color-mix(in srgb, var(--a) 30%, transparent) 2deg 3deg); opacity: .4; z-index: 0; }
+.ex-badge .ex-title { font-size: 1.1em; }
+
+/* bookmark: tall, a ribbon on top, a notch at the foot */
+.ex-bookmark { --w: 8em; padding-top: 1.6em; }
+.ex-bookmark .ex-body { min-height: 19em; padding: 1.4em .8em 3em; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 93%, 0 100%); }
+.ex-bookmark .ex-d1 { display: block; top: 0; left: 50%; width: .5em; height: 2.6em; translate: -50% 0; background: var(--a); border-radius: .2em; }
+.ex-bookmark .ex-title { font-size: 1.1em; }
+
+/* index: a lined index card with a red margin */
+.ex-index { --w: 18em; }
+.ex-index .ex-body { padding: 1em 1.2em 1.2em 2.4em;
+  background: linear-gradient(90deg, transparent 1.7em, rgba(200, 60, 60, .5) 1.7em 1.8em, transparent 1.8em),
+    repeating-linear-gradient(180deg, transparent 0 1.45em, rgba(80, 120, 190, .32) 1.45em calc(1.45em + 1px)) 0 2.6em / 100% 100% no-repeat, var(--g), var(--p); }
+.ex-index .ex-m { position: absolute; right: .9em; top: .8em; --ms: 2em; }
+.ex-index .ex-title { font: italic 500 1.4em/1.1 var(--font-hand); }
+.ex-index .ex-line { color: #2b3f6b; }
+
+/* certificate: an ornate border and corner flourishes */
+.ex-certificate { --w: 19em; }
+.ex-certificate .ex-body { padding: 1.6em 1.8em 1.7em;
+  box-shadow: inset 0 0 0 .4em var(--p), inset 0 0 0 .5em var(--a), inset 0 0 0 .75em var(--p), inset 0 0 0 .8em var(--a); }
+.ex-certificate .ex-d3, .ex-certificate .ex-d4 { display: block; width: .8em; height: .8em; background: var(--a); rotate: 45deg; }
+.ex-certificate .ex-d3 { top: .35em; left: .35em; box-shadow: 16.85em 0 0 var(--a); }
+.ex-certificate .ex-d4 { bottom: .35em; left: .35em; box-shadow: 16.85em 0 0 var(--a); }
+.ex-certificate .ex-title { font-size: 1.45em; font-style: italic; }
+
+/* stamp: a passport page with an inked stamp */
+.ex-stamp { --w: 17em; }
+.ex-stamp .ex-body { padding: 1.2em 1.3em; background: repeating-radial-gradient(circle at 80% 30%, transparent 0 .5em, color-mix(in srgb, var(--a) 10%, transparent) .5em .56em), var(--g), var(--p); }
+.ex-stamp .ex-m { position: absolute; right: 1em; top: .9em; --ms: 3.4em; padding: .6em; border-radius: 50%; border: .18em double var(--a); rotate: -14deg; opacity: .85; }
+.ex-stamp .ex-title { padding-right: 4.2em; }
+
+/* playbill: a folded programme */
+.ex-playbill { --w: 13em; }
+.ex-playbill .ex-body { padding: 0 1em 1.3em; background: linear-gradient(90deg, rgba(0, 0, 0, .1), transparent 1.2em), var(--g), var(--p); }
+.ex-playbill .ex-head { align-self: stretch; margin: 0 -1em .5em; padding: .9em .6em; background: var(--a); color: var(--p); font-size: .62em; }
+.ex-playbill .ex-title { font-size: 1.45em; }
+
+/* matchbook: a cover with a strike strip */
+.ex-matchbook { --w: 10.5em; }
+.ex-matchbook .ex-body { min-height: 14em; padding: 1.2em .9em 3em; align-content: center; border-radius: .2em; }
+.ex-matchbook .ex-d3 { display: block; inset: auto 0 0; height: 1.6em; background: repeating-linear-gradient(90deg, #3a2a20 0 2px, #5a4232 2px 4px); }
+.ex-matchbook .ex-d4 { display: block; inset: auto 0 1.6em; height: .5em; background: color-mix(in srgb, var(--p) 80%, #000); }
+
+/* jcard: a cassette insert, spine on the left */
+.ex-jcard { --w: 19em; }
+.ex-jcard .ex-body { padding: 1em 1.1em 1.1em 3.4em; background: repeating-linear-gradient(180deg, transparent 0 1.25em, color-mix(in srgb, var(--i) 14%, transparent) 1.25em calc(1.25em + 1px)) 0 3em / 100% 100% no-repeat, var(--g), var(--p); }
+.ex-jcard .ex-d3 { display: block; inset: 0 auto 0 0; width: 2.4em; background: var(--a); }
+.ex-jcard .ex-head { position: absolute; left: .55em; top: 1em; writing-mode: vertical-rl; rotate: 180deg; color: var(--p); font-size: .58em; max-height: 20em; }
+.ex-jcard .ex-m { position: absolute; right: .9em; top: .8em; --ms: 2.2em; }
+
+/* cartridge: plastic shell, ridged top, the label inset */
+.ex-cartridge { --w: 15em; }
+.ex-cartridge .ex-body { padding: 3em 1.6em 1.8em; background: var(--a); clip-path: polygon(0 0, 100% 0, 100% 92%, 94% 100%, 6% 100%, 0 92%); border-radius: .5em .5em 0 0; }
+.ex-cartridge .ex-d3 { display: block; inset: .5em .5em auto; height: 1.6em; background: repeating-linear-gradient(90deg, rgba(0, 0, 0, .25) 0 2px, transparent 2px 7px); }
+.ex-cartridge .ex-d4 { display: block; inset: 2.5em .9em 1.1em; background: var(--g), var(--p); background-blend-mode: multiply; border-radius: .3em; z-index: 0; }
+.ex-cartridge .ex-head { margin-top: .3em; }
+
+/* record: a vinyl label in its grooves */
+.ex-record { --w: 13em; }
+.ex-record .ex-body { aspect-ratio: 1; border-radius: 50%; place-content: center; padding: 3.1em; gap: .12em;
+  background: radial-gradient(circle, var(--p) 0 36%, #151515 36.5% 100%); }
+.ex-record .ex-d3 { display: block; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0 .22em, rgba(255, 255, 255, .06) .22em .26em); -webkit-mask: radial-gradient(circle, transparent 37%, #000 37.5%); mask: radial-gradient(circle, transparent 37%, #000 37.5%); }
+.ex-record .ex-d4 { display: block; left: 50%; top: 50%; width: .5em; height: .5em; translate: -50% -50%; border-radius: 50%; background: #151515; z-index: 2; }
+.ex-record .ex-m { --ms: 1.2em; }
+.ex-record .ex-head { font-size: .42em; }
+.ex-record .ex-title { font-size: .78em; }
+.ex-record .ex-day, .ex-record .ex-stars { font-size: .55em; }
+
+/* film: a strip with sprocket holes */
+.ex-film { --w: 20em; }
+.ex-film .ex-body { padding: 1.9em 1.3em; grid-template-columns: auto minmax(0, 1fr); column-gap: 1em;
+  background: radial-gradient(circle, transparent 0, transparent 0), var(--p); }
+.ex-film .ex-body > * { grid-column: 2; }
+.ex-film .ex-m { grid-column: 1; grid-row: 1 / span 4; --ms: 3em; align-self: center; }
+.ex-film .ex-d3, .ex-film .ex-d4 { display: block; left: 0; right: 0; height: .7em; background: repeating-linear-gradient(90deg, transparent 0 .5em, color-mix(in srgb, var(--i) 85%, #fff) .5em 1.1em, transparent 1.1em 1.6em); }
+.ex-film .ex-d3 { top: .5em; } .ex-film .ex-d4 { bottom: .5em; }
+
+/* scorecard: a ruled sheet with columns */
+.ex-scorecard { --w: 17em; }
+.ex-scorecard .ex-body { padding: 0 1.1em 1.2em;
+  background: repeating-linear-gradient(90deg, transparent 0 2.4em, color-mix(in srgb, var(--a) 30%, transparent) 2.4em calc(2.4em + 1px)) 0 3em / 100% 100% no-repeat,
+    repeating-linear-gradient(180deg, transparent 0 1.3em, color-mix(in srgb, var(--a) 30%, transparent) 1.3em calc(1.3em + 1px)) 0 3em / 100% 100% no-repeat, var(--g), var(--p); }
+.ex-scorecard .ex-head { margin: 0 -1.1em .4em; padding: .8em 1.1em; background: var(--a); color: var(--p); }
+.ex-scorecard .ex-m { position: absolute; right: .8em; top: 2.6em; --ms: 2em; }
+
+/* menu: tall, a header band, rules */
+.ex-menu { --w: 13em; }
+.ex-menu .ex-body { padding: 0 1em 1.4em; gap: .35em; box-shadow: inset 0 0 0 .3em var(--p), inset 0 0 0 .36em color-mix(in srgb, var(--a) 70%, transparent); }
+.ex-menu .ex-head { align-self: stretch; margin: 0 -1em .6em; padding: .9em .6em; background: var(--a); color: var(--p); }
+.ex-menu .ex-line::before, .ex-menu .ex-line::after { content: "·"; margin: 0 .4em; color: var(--a); }
+
+/* bag: kraft with a folded, zig-zag top */
+.ex-bag { --w: 14em; }
+.ex-bag .ex-body { padding: 2.6em 1.1em 1.4em; min-height: 14em;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--p) 85%, #000) 0 1.6em, transparent 1.6em), var(--g), var(--p);
+  clip-path: polygon(0 3%, 5% 0, 10% 3%, 15% 0, 20% 3%, 25% 0, 30% 3%, 35% 0, 40% 3%, 45% 0, 50% 3%, 55% 0, 60% 3%, 65% 0, 70% 3%, 75% 0, 80% 3%, 85% 0, 90% 3%, 95% 0, 100% 3%, 100% 100%, 0 100%); }
+.ex-bag .ex-d3 { display: block; inset: 4.2em 1em auto; height: 8.6em; border-radius: .4em; background: rgba(255, 255, 255, .55); z-index: 0; }
+
+/* cup: a paper cup with a lid band */
+.ex-cup { --w: 12.5em; }
+.ex-cup .ex-body { min-height: 15em; padding: 2.6em 1.6em 1.6em; align-content: center; clip-path: polygon(4% 0, 96% 0, 86% 100%, 14% 100%); }
+.ex-cup .ex-d3 { display: block; inset: 0 0 auto; height: 1.4em; background: var(--a); }
+.ex-cup .ex-d4 { display: block; inset: 40% 0 auto; height: 4.6em; background: color-mix(in srgb, var(--a) 18%, transparent); z-index: 0; }
+
+/* packet: a seed or spice packet, crimped at the top */
+.ex-packet { --w: 13em; }
+.ex-packet .ex-body { padding: 2em 1.1em 1.3em;
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--p) 80%, #000) 0 2px, transparent 2px 5px) 0 0 / 100% 1em no-repeat, var(--g), var(--p);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); border-radius: 0 0 .4em .4em; }
+.ex-packet .ex-m { --ms: 3.6em; }
+
+/* chart: a dark chart with fine light lines */
+.ex-chart { --w: 18em; }
+.ex-chart .ex-body { padding: 1.2em 1.3em;
+  background: repeating-radial-gradient(circle at 78% 40%, transparent 0 1.6em, color-mix(in srgb, var(--i) 14%, transparent) 1.6em calc(1.6em + 1px)),
+    linear-gradient(color-mix(in srgb, var(--i) 8%, transparent) 1px, transparent 1px) 0 0 / 1.6em 1.6em,
+    linear-gradient(90deg, color-mix(in srgb, var(--i) 8%, transparent) 1px, transparent 1px) 0 0 / 1.6em 1.6em, var(--p); }
+.ex-chart .ex-m { position: absolute; right: 1.2em; top: 1em; --ms: 3em; filter: drop-shadow(0 0 .4em color-mix(in srgb, var(--a) 70%, transparent)); }
+.ex-chart .ex-title { padding-right: 3.6em; }
+
+/* pass: a lanyard pass with a slot */
+.ex-pass { --w: 12.5em; padding-top: 2.2em; }
+.ex-pass .ex-body { padding: 2.4em 1em 1.3em; border-radius: .6em; border-top: 2.2em solid var(--a); padding-top: 1em;
+  -webkit-mask: radial-gradient(ellipse 1.4em .32em at 50% 1.1em, #0000 98%, #000); mask: radial-gradient(ellipse 1.4em .32em at 50% 1.1em, #0000 98%, #000); }
+.ex-pass .ex-d1 { display: block; top: 0; left: 50%; width: 2.2em; height: 3.4em; translate: -50% 0; border: .35em solid var(--a); border-bottom: 0; border-radius: .4em .4em 0 0; }
+
+/* slate: a chalk slate in a wooden frame */
+.ex-slate { --w: 17em; }
+.ex-slate .ex-body { padding: 1.3em 1.4em; border: .65em solid #8a5a33; border-radius: .3em; box-shadow: inset 0 0 1.2em rgba(0, 0, 0, .4);
+  background: radial-gradient(ellipse at 30% 30%, rgba(255, 255, 255, .06), transparent 60%), var(--p); }
+.ex-slate .ex-title, .ex-slate .ex-line { font-family: var(--font-hand); font-style: italic; }
+.ex-slate .ex-m { position: absolute; right: 1em; bottom: 1em; --ms: 2.2em; opacity: .9; }
+
+/* specimen: something pressed under film, with its label */
+.ex-specimen { --w: 15em; }
+.ex-specimen .ex-body { padding: 1.4em 1.2em 1.2em; gap: .35em; }
+.ex-specimen .ex-m { --ms: 5.4em; margin: .2em 0 .6em; }
+.ex-specimen .ex-d3 { display: block; inset: .8em .8em 6.8em; background: linear-gradient(120deg, rgba(255, 255, 255, .35), transparent 40%, rgba(255, 255, 255, .15) 70%, transparent); border: 1px solid rgba(255, 255, 255, .5); z-index: 2; }
+.ex-specimen .ex-title { padding: .35em .6em; border: 1px solid color-mix(in srgb, var(--i) 40%, transparent); font-size: 1.05em; }
+
+/* crate: a vintage fruit-crate label, a banner and a bold border */
+.ex-crate { --w: 20em; }
+.ex-crate .ex-body { padding: 1.2em 1.4em 1.4em; border: .5em solid var(--a); outline: .15em solid var(--a); outline-offset: -.95em; }
+.ex-crate .ex-head { position: relative; padding: .45em 1.6em; background: var(--a); color: var(--p); clip-path: polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%); }
+.ex-crate .ex-m { --ms: 3.6em; }
+.ex-crate .ex-title { font-size: 1.6em; font-weight: 800; }
+
+/* chit: a small handwritten bill, torn at the bottom */
+.ex-chit { --w: 11.5em; }
+.ex-chit .ex-body { padding: 1em .9em 1.6em;
+  clip-path: polygon(0 0, 100% 0, 100% 96%, 92% 100%, 84% 96%, 76% 100%, 68% 96%, 60% 100%, 52% 96%, 44% 100%, 36% 96%, 28% 100%, 20% 96%, 12% 100%, 4% 96%, 0 100%); }
+.ex-chit .ex-title, .ex-chit .ex-line { font-family: var(--font-hand); font-style: italic; }
+.ex-chit .ex-m { --ms: 1.8em; position: absolute; right: .7em; top: .7em; }
+
+/* ── the animations ─────────────────────────────────────── */
+.ex-fx { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.ex-fx i { position: absolute; left: 0; top: 0; width: .32em; height: .32em; margin: -.16em; border-radius: 50%; background: var(--a); opacity: 0; }
+.ex-fx i:nth-child(1) { --dx: -1.3em; --dy: -1.8em; --k: 0; }
+.ex-fx i:nth-child(2) { --dx: .2em; --dy: -2.5em; --k: 1; }
+.ex-fx i:nth-child(3) { --dx: 1.5em; --dy: -1.7em; --k: 2; }
+.ex-fx i:nth-child(4) { --dx: -1.9em; --dy: -.5em; --k: 3; }
+.ex-fx i:nth-child(5) { --dx: 2em; --dy: -.4em; --k: 4; }
+.ex-fx i:nth-child(6) { --dx: -.7em; --dy: -3em; --k: 5; }
+.ex-fx i:nth-child(7) { --dx: 1em; --dy: -3.1em; --k: 6; }
+
+@media (prefers-reduced-motion: no-preference) {
+/* motion of the drawing itself */
+.ex[data-playing][data-anim="jingle"] .ex-m > svg { animation: ex-jingle .9s ease-out; transform-origin: 50% 85%; }
+.ex[data-playing][data-anim="sway"] .ex-m > svg, .ex[data-playing][data-anim="ring"] .ex-m > svg { transform-origin: 50% 0; }
+.ex[data-playing][data-anim="sway"] .ex-m > svg { animation: ex-sway 1.7s ease-out; }
+.ex[data-playing][data-anim="ring"] .ex-m > svg { animation: ex-ring .9s ease-out; }
+.ex[data-playing][data-anim="flip"] .ex-m > svg { animation: ex-flip 1s ease-in-out; }
+.ex[data-playing][data-anim="pour"] .ex-m > svg { animation: ex-pour 1.5s ease-in-out; transform-origin: 70% 80%; }
+.ex[data-playing][data-anim="flutter"] .ex-m > svg { animation: ex-flutter 1.2s ease-in-out; }
+.ex[data-playing][data-anim="bounce"] .ex-m > svg { animation: ex-bounce 1s cubic-bezier(.3, .6, .3, 1); }
+.ex[data-playing][data-anim="flicker"] .ex-m > svg { animation: ex-flicker 1.4s steps(1, end); transform-origin: 50% 100%; }
+.ex[data-playing][data-anim="thump"] .ex-m > svg { animation: ex-thump .55s cubic-bezier(.3, .6, .3, 1.4); }
+.ex[data-playing][data-anim="thump"] .ex-body { animation: ex-jolt .55s ease-out; }
+.ex[data-playing][data-anim="float"] .ex-m > svg { animation: ex-float 1.8s ease-in-out; }
+.ex[data-playing][data-anim="tick"] .ex-m > svg { animation: ex-tick 1.6s steps(4, end); }
+.ex[data-playing][data-anim="spin"] .ex-m > svg { animation: ex-spin 1.4s cubic-bezier(.2, .7, .3, 1); }
+.ex-record[data-playing][data-anim="spin"] .ex-body { animation: ex-spin 1.8s cubic-bezier(.2, .7, .3, 1); }
+.ex[data-playing][data-anim="zoom"] .ex-m > svg { animation: ex-zoom 1s cubic-bezier(.5, 0, .3, 1); }
+.ex[data-playing][data-anim="shake"] .ex-m > svg, .ex[data-playing][data-anim="shake"] .ex-body { animation: ex-shake .6s linear; }
+.ex[data-playing][data-anim="wave"] .ex-m > svg { animation: ex-wave 1.4s ease-in-out; transform-origin: 0 50%; }
+.ex[data-playing][data-anim="glow"] .ex-m > svg { animation: ex-glow 1.8s ease-in-out; }
+.ex[data-playing][data-anim="beat"] .ex-m > svg { animation: ex-beat 1s ease-out; }
+.ex[data-playing][data-anim="spray"] .ex-m > svg { animation: ex-press .5s ease-out; }
+.ex[data-playing][data-anim="sparkle"] .ex-m > svg, .ex[data-playing][data-anim="confetti"] .ex-m > svg { animation: ex-pop .6s cubic-bezier(.3, .6, .3, 1.5); }
+.ex[data-playing][data-anim="ripple"] .ex-m > svg { animation: ex-bob 1.6s ease-in-out; }
+
+/* particles */
+.ex[data-playing] .ex-fx i { animation: ex-burst 1.1s ease-out both; animation-delay: calc(var(--k) * 40ms); }
+.ex[data-anim="spray"] .ex-fx { left: 85%; top: 25%; }
+.ex[data-playing][data-anim="spray"] .ex-fx i { width: .22em; height: .22em; background: color-mix(in srgb, var(--a) 50%, #fff); filter: blur(.5px); animation-name: ex-spray; }
+.ex[data-playing][data-anim="steam"] .ex-fx i:nth-child(-n+4) { width: .26em; height: 1em; border-radius: 1em; background: color-mix(in srgb, var(--i) 25%, transparent); filter: blur(1.5px); animation: ex-steam 1.8s ease-out both; animation-delay: calc(var(--k) * 220ms); }
+.ex[data-anim="steam"] .ex-fx i:nth-child(n+5), .ex[data-anim="ripple"] .ex-fx i:nth-child(n+4), .ex[data-anim="walk"] .ex-fx i:nth-child(n+6) { display: none; }
+.ex[data-playing][data-anim="sparkle"] .ex-fx i { width: .45em; height: .45em; border-radius: 0; rotate: 45deg; background: color-mix(in srgb, var(--a) 70%, #fff3c4); animation-name: ex-sparkle; }
+.ex[data-playing][data-anim="bubbles"] .ex-fx i { background: transparent; border: 1.5px solid color-mix(in srgb, var(--a) 70%, #fff); width: .5em; height: .5em; animation: ex-rise 1.6s ease-out both; animation-delay: calc(var(--k) * 90ms); }
+.ex[data-playing][data-anim="snow"] .ex-fx i { background: #fff; box-shadow: 0 0 2px rgba(0, 0, 0, .25); animation: ex-snow 1.8s linear both; animation-delay: calc(var(--k) * 110ms); }
+.ex[data-playing][data-anim="fireflies"] .ex-fx i { background: #ffd36e; box-shadow: 0 0 .5em .15em rgba(255, 200, 90, .8); animation: ex-firefly 1.8s ease-in-out both; animation-delay: calc(var(--k) * 120ms); }
+.ex[data-playing][data-anim="confetti"] .ex-fx i { width: .3em; height: .55em; border-radius: 1px; animation-name: ex-confetti; }
+.ex[data-anim="confetti"] .ex-fx i:nth-child(3n) { background: #e9b928; }
+.ex[data-anim="confetti"] .ex-fx i:nth-child(3n+1) { background: #2b59a6; }
+.ex[data-playing][data-anim="twinkle"] .ex-fx i { width: .5em; height: .5em; background: #fff3c4; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: ex-twinkle 1.6s ease-in-out both; animation-delay: calc(var(--k) * 150ms); }
+.ex[data-playing][data-anim="drip"] .ex-fx i { width: .3em; height: .42em; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; animation: ex-drip 1.4s ease-in both; animation-delay: calc(var(--k) * 120ms); }
+.ex[data-playing][data-anim="ripple"] .ex-fx i { width: 1em; height: 1em; margin: -.5em; background: transparent; border: 1.5px solid var(--a); animation: ex-ripple 1.5s ease-out both; animation-delay: calc(var(--k) * 300ms); }
+.ex[data-playing][data-anim="walk"] .ex-fx i { width: .38em; height: .46em; animation: ex-step 1.6s ease-out both; animation-delay: calc(var(--k) * 180ms); }
+.ex[data-playing][data-anim="zoom"] .ex-fx i { width: 1.2em; height: 2px; border-radius: 2px; background: color-mix(in srgb, var(--i) 40%, transparent); animation: ex-streak .8s ease-out both; animation-delay: calc(var(--k) * 50ms); }
+.ex[data-playing][data-anim="glow"] .ex-fx i, .ex[data-playing][data-anim="beat"] .ex-fx i { width: .3em; height: .3em; background: color-mix(in srgb, var(--a) 60%, #fff); box-shadow: 0 0 .4em var(--a); }
+/* the motion-only ones need no particles */
+.ex:is([data-anim="jingle"], [data-anim="sway"], [data-anim="ring"], [data-anim="flip"], [data-anim="pour"], [data-anim="flutter"], [data-anim="bounce"], [data-anim="flicker"], [data-anim="thump"], [data-anim="float"], [data-anim="tick"], [data-anim="spin"], [data-anim="shake"], [data-anim="wave"]) .ex-fx { display: none; }
+.ex[data-anim="flicker"] .ex-m > svg { filter: drop-shadow(0 0 .2em color-mix(in srgb, var(--a) 50%, transparent)); }
+}
+}
+
+@keyframes ex-jingle { 0%, 100% { rotate: 0deg; } 10% { rotate: -14deg; } 22% { rotate: 12deg; } 34% { rotate: -10deg; } 46% { rotate: 8deg; } 58% { rotate: -5deg; } 70% { rotate: 3deg; } }
+@keyframes ex-sway { 0%, 100% { rotate: 0deg; } 15% { rotate: 12deg; } 35% { rotate: -9deg; } 55% { rotate: 6deg; } 75% { rotate: -3deg; } }
+@keyframes ex-ring { 0%, 100% { rotate: 0deg; } 8%, 24%, 40%, 56% { rotate: 16deg; } 16%, 32%, 48%, 64% { rotate: -16deg; } 72% { rotate: 4deg; } }
+@keyframes ex-flip { from { transform: perspective(20em) rotateY(0); } to { transform: perspective(20em) rotateY(360deg); } }
+@keyframes ex-pour { 0%, 100% { rotate: 0deg; } 30%, 65% { rotate: -38deg; } }
+@keyframes ex-flutter { 0%, 100% { transform: none; } 20%, 60% { transform: translateY(-.35em) scaleY(.6); } 40%, 80% { transform: translateY(-.5em) scaleY(1); } }
+@keyframes ex-bounce { 0%, 100% { translate: 0 0; } 25% { translate: 0 -.7em; } 50% { translate: 0 0; } 70% { translate: 0 -.3em; } 85% { translate: 0 0; } }
+@keyframes ex-flicker { 0% { scale: 1; opacity: 1; } 10% { scale: 1.08 .94; } 20% { scale: .95 1.08; opacity: .8; } 35% { scale: 1.05 .97; opacity: 1; } 50% { scale: .97 1.06; } 65% { scale: 1.04; opacity: .85; } 80% { scale: .98 1.03; opacity: 1; } 100% { scale: 1; } }
+@keyframes ex-thump { 0% { scale: 1; } 40% { scale: 1.4; } 70% { scale: .88; } 100% { scale: 1; } }
+@keyframes ex-jolt { 0%, 100% { translate: 0 0; } 70% { translate: 0 2px; } }
+@keyframes ex-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -.55em; } }
+@keyframes ex-tick { from { rotate: 0deg; } to { rotate: 360deg; } }
+@keyframes ex-spin { from { rotate: 0deg; } to { rotate: 720deg; } }
+@keyframes ex-zoom { 0% { translate: 0 0; } 45% { translate: 1em 0; skew: -12deg 0; } 70% { translate: -.2em 0; skew: 4deg 0; } 100% { translate: 0 0; skew: 0deg 0; } }
+@keyframes ex-shake { 0%, 100% { translate: 0 0; } 10%, 50%, 90% { translate: -3px 1px; } 30%, 70% { translate: 3px -1px; } }
+@keyframes ex-wave { 0%, 100% { transform: none; } 25% { transform: skewY(8deg) scaleX(.94); } 50% { transform: skewY(-6deg); } 75% { transform: skewY(4deg) scaleX(.97); } }
+@keyframes ex-glow { 0%, 100% { filter: none; } 40%, 70% { filter: drop-shadow(0 0 .5em var(--a)) brightness(1.3); } }
+@keyframes ex-beat { 0%, 100% { scale: 1; } 14% { scale: 1.25; } 28% { scale: 1; } 42% { scale: 1.18; } 60% { scale: 1; } }
+@keyframes ex-press { 0%, 100% { scale: 1; } 30% { scale: .9 .95; } }
+@keyframes ex-pop { 0% { scale: 1; } 40% { scale: 1.25; } 100% { scale: 1; } }
+@keyframes ex-bob { 0%, 100% { translate: 0 0; } 30% { translate: 0 .2em; } 60% { translate: 0 -.15em; } }
+@keyframes ex-burst { 0% { opacity: 0; transform: translate(0, 0) scale(.4); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); } }
+@keyframes ex-spray { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 15% { opacity: .9; } 100% { opacity: 0; transform: translate(calc(2.2em + var(--dx) * .4), calc(var(--dy) * .35)) scale(2.2); } }
+@keyframes ex-steam { 0% { opacity: 0; transform: translate(calc(var(--dx) * .3), 0) scaleY(.6); } 25% { opacity: .8; } 60% { transform: translate(calc(var(--dx) * .3 + .3em), -1.6em) scaleY(1); } 100% { opacity: 0; transform: translate(calc(var(--dx) * .3 - .2em), -3em) scaleY(1.3); } }
+@keyframes ex-sparkle { 0% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); } 40% { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1.2); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); } }
+@keyframes ex-rise { 0% { opacity: 0; transform: translate(calc(var(--dx) * .4), .5em) scale(.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(var(--dx) * .6), calc(var(--dy) - 1em)) scale(1.1); } }
+@keyframes ex-snow { 0% { opacity: 0; transform: translate(var(--dx), -2.6em); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(var(--dx) + .5em), 1.8em); } }
+@keyframes ex-firefly { 0% { opacity: 0; transform: translate(calc(var(--dx) * .5), calc(var(--dy) * .3)); } 30% { opacity: 1; } 55% { opacity: .3; } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)); } }
+@keyframes ex-confetti { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.3), calc(var(--dy) * .8 + 1.4em)) rotate(540deg); } }
+@keyframes ex-twinkle { 0%, 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.4), calc(var(--dy) * .9)) scale(.3); } 50% { opacity: 1; transform: translate(calc(var(--dx) * 1.4), calc(var(--dy) * .9)) scale(1.2); } }
+@keyframes ex-drip { 0% { opacity: 0; transform: translate(calc(var(--dx) * .4), .6em) scale(.5); } 20% { opacity: 1; transform: translate(calc(var(--dx) * .4), .9em) scale(1); } 100% { opacity: 0; transform: translate(calc(var(--dx) * .4), 3em) scale(.8); } }
+@keyframes ex-ripple { 0% { opacity: .9; transform: scale(.2); } 100% { opacity: 0; transform: scale(3.2); } }
+@keyframes ex-step { 0% { opacity: 0; transform: translate(calc(-2.6em + var(--k) * 1.1em), calc(1.6em + (var(--k) - 2) * (var(--k) - 2) * -.08em)) scale(.5); } 25% { opacity: .9; transform: translate(calc(-2.6em + var(--k) * 1.1em), calc(1.6em + (var(--k) - 2) * (var(--k) - 2) * -.08em)) scale(1); } 100% { opacity: 0; transform: translate(calc(-2.6em + var(--k) * 1.1em), calc(1.6em + (var(--k) - 2) * (var(--k) - 2) * -.08em)) scale(1); } }
+@keyframes ex-streak { 0% { opacity: 0; transform: translate(-.5em, calc(var(--dy) * .35)); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(-3em, calc(var(--dy) * .35)); } }

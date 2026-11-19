@@ -25,6 +25,11 @@ type User = Extension<(String, String)>;
 pub struct YearRow {
     pub id: i64,
     pub title: String,
+    /// The slip's own title, lower-cased and before names are filled in: the keepsake catalogue's key.
+    pub slip_key: String,
+    /// 1 for the first time we kept a slip with this title, 2 the second time, … (repeat visits
+    /// to the same place each get their own keepsake).
+    pub visit: i64,
     pub setting: String,
     pub tags: String,
     pub place: String,
@@ -49,7 +54,12 @@ pub struct YearRow {
 
 pub(crate) async fn rows(db: &sqlx::SqlitePool, couple: &str, year: i32) -> sqlx::Result<Vec<YearRow>> {
     sqlx::query_as(
-        "SELECT h.id, a.title, a.setting, a.tags,
+        "SELECT h.id, a.title, lower(trim(a.title)) AS slip_key,
+                (SELECT count(*) FROM joy_history h2 JOIN joy_activities a2 ON a2.id = h2.activity_id
+                  WHERE h2.couple_id = h.couple_id AND h2.outcome = 'did_it' AND (h2.surprise = 0 OR h2.revealed = 1)
+                    AND lower(trim(a2.title)) = lower(trim(a.title))
+                    AND (COALESCE(h2.planned_at, h2.picked_at), h2.id) <= (COALESCE(h.planned_at, h.picked_at), h.id)) AS visit,
+                a.setting, a.tags,
                 CASE WHEN a.venue != '' THEN a.venue ELSE a.area END AS place,
                 h.rating, h.note, h.has_photo,
                 COALESCE((SELECT group_concat(id) FROM (SELECT p.id, COALESCE(p.id = h.hero_photo_id, 0) AS hero FROM joy_history_photos p WHERE p.history_id = h.id ORDER BY hero DESC, p.id)), '') AS photo_ids,
@@ -216,6 +226,9 @@ pub struct ShareData {
 #[derive(Debug, Serialize)]
 pub struct YearDate {
     pub title: String,
+    /// Finds this slip's own keepsake (see `YearRow::slip_key`).
+    pub slip_key: String,
+    pub visit: i64,
     pub place: String,
     /// The slip's setting ("home", "local", …).
     pub kind: String,
@@ -333,6 +346,8 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
         .iter()
         .map(|x| YearDate {
             title: ctx.personalize(&x.title),
+            slip_key: x.slip_key.clone(),
+            visit: x.visit,
             place: ctx.personalize(&x.place),
             kind: x.setting.clone(),
             kind_label: picker::setting_label(&x.setting).to_string(),
@@ -667,6 +682,8 @@ mod tests {
         YearRow {
             id: jd,
             title: format!("t{jd}"),
+            slip_key: String::new(),
+            visit: 1,
             setting: setting.into(),
             tags: tags.into(),
             place: String::new(),

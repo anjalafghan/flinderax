@@ -1,0 +1,81 @@
+/* Illustrated keepsakes (keepsakes/Scene.tsx) and where they sit: a Month spread, Our museum on the
+   Year page, and the top of each slip in Kept. The objects keep their own fixed colours in dark mode,
+   like any real thing on a table. Their motion lives in scenes.css (generated). */
+
+.joy .ksc {
+  display: block;
+  aspect-ratio: var(--ar, 1);
+  width: 100%;
+  filter: drop-shadow(0 1px 1px rgba(40, 22, 8, .32)) drop-shadow(0 12px 16px rgba(40, 22, 8, .24));
+  -webkit-tap-highlight-color: transparent;
+}
+.joy .ksc svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.joy .ksc-btn { padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.joy .ksc-btn:focus-visible { outline: 2.5px solid var(--focus, #1f4b57); outline-offset: 6px; border-radius: 12px; }
+.joy .ksc-btn.open { position: relative; z-index: 6; }
+
+/* the instant print behind a keepsake */
+.joy .ksc-print {
+  --r: 8deg;
+  display: block;
+  box-sizing: border-box;
+  padding: 7% 7% 26%;
+  border: 0;
+  background: #fdfcf8;
+  cursor: pointer;
+  rotate: var(--r);
+  box-shadow: 0 0 0 .5px rgba(0, 0, 0, .08), 0 1px 2px rgba(52, 32, 14, .3), 0 8px 14px rgba(52, 32, 14, .2);
+  transition: translate .45s cubic-bezier(.2, .8, .25, 1), scale .45s cubic-bezier(.2, .8, .25, 1), rotate .45s cubic-bezier(.2, .8, .25, 1), box-shadow .45s;
+}
+.joy .ksc-print img { display: block; width: 100%; aspect-ratio: 4 / 5; height: auto; object-fit: cover; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1); background: linear-gradient(160deg, #6f8d8a, #e2c9a2); }
+.joy .ksc-print:hover { translate: 0 -6px; }
+.joy .ksc-print.up { z-index: 10; rotate: calc(var(--r) * .2); translate: var(--pull-x, 0) -12%; scale: var(--pull-s, 1.7); box-shadow: 0 0 0 .5px rgba(0, 0, 0, .08), 0 2px 3px rgba(52, 32, 14, .3), 0 24px 40px rgba(52, 32, 14, .32); }
+.joy .ksc-print:focus-visible { outline: 2.5px solid var(--focus, #1f4b57); outline-offset: 4px; }
+
+/* ── Month: the keepsake is the entry, its photo tucked in behind ───────────── */
+.joy .m-exhibit { display: block; }
+.joy .m-ex { position: relative; z-index: 1; width: min(100%, 440px); margin: 0 auto; padding: 0 0 48px; rotate: calc(var(--t, 0) * .8deg); }
+.joy .m-ex-obj { position: relative; z-index: 2; width: min(82%, calc(440px * var(--arn, 1))); margin: 0 auto 0 4%; }
+.joy .m-exhibit:nth-child(even) .m-ex-obj { margin: 0 4% 0 auto; }
+.joy .m-ex-print { position: absolute; z-index: 1; right: 0; bottom: 64px; width: 42%; --r: 8deg; --pull-x: -30%; --pull-s: 1.55; }
+.joy .m-ex:has(.ksc-print.up) { z-index: 20; }
+.joy .m-exhibit:nth-child(even) .m-ex-print { right: auto; left: 0; --r: -7deg; --pull-x: 30%; }
+.joy .m-ex-print.up { z-index: 12; }
+.joy .m-ex-tag {
+  position: absolute;
+  z-index: 8;
+  left: 4%;
+  bottom: 6px;
+  margin: 0;
+  padding: 6px 14px 7px;
+  white-space: nowrap;
+  background: #fdfaf2;
+  color: #24303a;
+  font: 700 1.55rem/1 "Caveat", var(--font-hand), cursive;
+  rotate: -3deg;
+  pointer-events: none;
+  box-shadow: 0 1px 1px rgba(52, 32, 14, .25), 0 3px 6px rgba(52, 32, 14, .14);
+  clip-path: polygon(0 4%, 8% 0, 30% 5%, 55% 0, 78% 4%, 100% 0, 98% 50%, 100% 100%, 70% 96%, 45% 100%, 20% 95%, 0 100%, 2% 50%);
+}
+.joy .m-ex-tag span { font-weight: 600; color: #a8321f; }
+.joy .m-exhibit:nth-child(even) .m-ex-tag { left: auto; right: 4%; rotate: 2deg; }
+.joy .m-exhibit > .m-receipt-wrap { width: fit-content; margin: -8px 0 0 auto; }
+.joy .m-exhibit:nth-child(even) > .m-receipt-wrap { margin: -8px auto 0 0; }
+
+/* ── Year: Our museum, each piece in its own case with a placard ───────────── */
+.joy .y-has-scene .y-vitrine { display: grid; place-items: center; padding: 18px 14px 10px; }
+.joy .y-has-scene .ksc { width: auto; height: 220px; max-width: 100%; }
+.joy .y-has-scene a:hover .ksc, .joy .y-has-scene a:focus-visible .ksc { filter: drop-shadow(0 2px 2px rgba(40, 22, 8, .32)) drop-shadow(0 20px 22px rgba(40, 22, 8, .3)); }
+
+/* ── Kept: the slip carries its keepsake ────────────────────────────────────── */
+.joy .k-keepsake { width: min(100%, 300px, calc(320px * var(--arn, 1))); margin: 6px auto 14px; }
+.joy .k-slip.has-scene .k-keepsake.open { z-index: 6; }
+
+@media (prefers-reduced-motion: reduce) {
+  .joy .ksc-print { transition: none; }
+}
+
+/* a piece kept again and again: a little stack, with how many times */
+.joy .y-stack .y-vitrine { position: relative; }
+.joy .y-stack .y-vitrine > :not(.y-times) { box-shadow: 4px 4px 0 -1px #f3ecdf, 4px 4px 0 0 rgba(60, 40, 15, .18), 8px 8px 0 -1px #efe6d5, 8px 8px 0 0 rgba(60, 40, 15, .14); }
+.joy .y-times { position: absolute; z-index: 3; top: -6px; right: 4px; display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 6px; box-sizing: border-box; border-radius: 50%; background: #a8321f; color: #fff6ea; font: 700 1.35rem/1 "Caveat", var(--font-hand), cursive; rotate: 8deg; box-shadow: 0 2px 4px rgba(40, 22, 8, .35); }

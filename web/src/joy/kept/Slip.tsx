@@ -13,6 +13,7 @@ import { useStateFrom } from "../components/useStateFrom";
 import { shrinkImage } from "./photo";
 import { PhotoViewer } from "../components/PhotoViewer";
 import type { KeptView, PlannedView } from "./types";
+import { SceneButton, type SceneDef } from "../keepsakes/Scene";
 import { useAction } from "./useAction";
 import { LinkPayment } from "./LinkPayment";
 import { useFold } from "./useFold";
@@ -140,7 +141,7 @@ function Tada() {
 type Phase = { k: "idle" } | { k: "shrink" } | { k: "upload"; label: string } | { k: "dev" };
 
 // ── a kept date ─────────────────────────────────────────────────────────────
-export function Slip({ h, index }: { h: KeptView; index: number }) {
+export function Slip({ h, index, scene = null }: { h: KeptView; index: number; scene?: SceneDef | null }) {
   const { currency, finish, refresh, revealed } = useKept();
 
   // rating + note: saves itself, newest wins (htmx's `hx-sync="this:queue last"`)
@@ -347,7 +348,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
   };
   return (
     <li
-      className={`k-slip grain${hasPhoto ? " has-photo" : ""}`}
+      className={`k-slip grain${hasPhoto ? " has-photo" : ""}${scene ? " has-scene" : ""}`}
       id={`k${h.id}`}
       tabIndex={-1}
       data-setting={h.setting}
@@ -362,6 +363,7 @@ export function Slip({ h, index }: { h: KeptView; index: number }) {
         <h3 className="k-slip-title" id={`k-t${h.id}`}>
           {h.title}
         </h3>
+        {scene && <SceneButton className="k-keepsake" scene={scene} what={`${h.title}, ${h.day_label}`} />}
         <p className="k-meta">
           <time className="visually-hidden" dateTime={h.day}>
             Stamped {h.day_label}

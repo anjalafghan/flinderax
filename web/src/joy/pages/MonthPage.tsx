@@ -6,6 +6,10 @@ import { pressStickers, turnIn, turnOut, type Turn } from "../year/motion";
 import { ApiError } from "../api";
 import { errText } from "../components/useBusy";
 import { Keepsake, KeepsakeDefs } from "../keepsakes/Keepsake";
+import { ExhibitButton } from "../keepsakes/Exhibit";
+import { specFor } from "../keepsakes/find";
+import { SceneButton, TuckedPrint } from "../keepsakes/Scene";
+import { sceneFor } from "../keepsakes/scene-find";
 import { keepsakeFor } from "../keepsakes/pick";
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
@@ -132,7 +136,36 @@ function Month({ v }: { v: MonthView }) {
               </div>
             )}
 
-            {entries.map((e, i) => (
+            {entries.map((e, i) => {
+              const scene = sceneFor(e.slip_key, e.visit);
+              return scene ? (
+              <article
+                className="m-piece m-entry m-exhibit"
+                key={i}
+                data-photo={e.photo ? "" : undefined}
+                style={{ "--t": e.tilt, ...at(i) } as React.CSSProperties}
+                aria-label={`${e.title}, ${e.day}`}
+              >
+                <div className="m-ex">
+                  {e.photo && <TuckedPrint className="m-ex-print" src={e.photo} alt={`Our photo from ${e.title}, ${e.day}`} />}
+                  <SceneButton className="m-ex-obj" scene={scene} what={`${e.title}, ${e.day}`} />
+                  <p className="m-ex-tag" aria-hidden="true">{e.title} <span>{e.day}</span></p>
+                </div>
+                {e.actual && (
+                  <div className="m-shadow m-receipt-wrap">
+                    <div className="m-receipt">
+                      <p className="m-r-head">{e.place || e.title}</p>
+                      <p className="m-r-sub">{e.day} {year} · no. {i + 1}</p>
+                      <p className="m-r-line"><span>Our guess</span><span>{e.est}</span></p>
+                      {e.cabs && <p className="m-r-line"><span>Cabs</span><span>{e.cabs}</span></p>}
+                      <p className="m-r-total"><span>Amount</span><span>{e.actual}</span></p>
+                      {e.diff && <p className={`m-r-foot${e.over ? " is-over" : ""}`}>{e.diff}</p>}
+                      <Stamp day={e.day} />
+                    </div>
+                  </div>
+                )}
+              </article>
+              ) : (
               <article
                 className="m-piece m-entry"
                 key={i}
@@ -150,7 +183,10 @@ function Month({ v }: { v: MonthView }) {
                 )}
                 <div className="m-keep">
                   {!e.photo && <span className="m-tape m-tape-corner" data-roll={roll(i + 1)} aria-hidden="true"></span>}
-                  <Keepsake d={e} no={i + 1} kind={keepsakeFor(e.kind, e.tags)} />
+                  {(() => {
+                    const spec = specFor(e.slip_key, e.visit);
+                    return spec ? <ExhibitButton spec={spec} d={e} /> : <Keepsake d={e} no={i + 1} kind={keepsakeFor(e.kind, e.tags)} />;
+                  })()}
                 </div>
 
                 {e.actual && (
@@ -178,7 +214,8 @@ function Month({ v }: { v: MonthView }) {
                   </p>
                 )}
               </article>
-            ))}
+              );
+            })}
 
             {entries.length > 0 && (
               <div className="m-piece m-list-wrap" style={at(entries.length)}>
@@ -221,7 +258,6 @@ function Month({ v }: { v: MonthView }) {
             ))}
 
             <div className="m-piece m-keepsakes" aria-hidden="true" style={at(afterEntries + nights.length + others.length)}>
-              <svg className="m-petals" viewBox="0 0 340 290"><use href="#m-petals" /></svg>
               <svg className="m-pin" viewBox="0 0 78 78"><use href="#m-pin" /></svg>
             </div>
           </div>
@@ -264,12 +300,8 @@ const WAVE = [
   "M288 386q-5.5 3.5-11 0" + "t-11 0".repeat(24),
   "M12 386q-3.5-5.5 0-11" + "t0-11".repeat(33),
 ].join("");
-const PETALS: [number, number, number, number, 1 | 2][] = [
-  [40, 30, 12, 1.15, 1], [126, 10, -28, 1.05, 2], [196, 52, 44, 1.2, 1], [64, 128, -62, 1.1, 2], [146, 116, 16, 1.3, 1],
-  [256, 120, 86, 1.05, 2], [96, 196, -12, 1.15, 1], [206, 196, 124, 1, 2], [28, 214, -96, 0.9, 1],
-];
 
-/** Shared drawings for the page: stars, the pen arrow, the stub's code, the stamp's ink, the list card and keepsakes. */
+/** Shared drawings for the page: stars, the pen arrow, the stub's code, the stamp's ink, the list card and the pin. */
 function MonthDefs() {
   return (
     <svg className="m-defs" width="0" height="0" aria-hidden="true" focusable="false">
@@ -298,15 +330,6 @@ function MonthDefs() {
           <feColorMatrix in="n" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -1.9 0 0 0 1.6" result="m" />
           <feComposite in="SourceGraphic" in2="m" operator="in" />
         </filter>
-        <radialGradient id="m-pet1" cx="35%" cy="30%" r="75%"><stop offset="0" stopColor="#ecccd9" /><stop offset=".55" stopColor="#cf9fbb" /><stop offset="1" stopColor="#94617f" /></radialGradient>
-        <radialGradient id="m-pet2" cx="40%" cy="35%" r="75%"><stop offset="0" stopColor="#e2bccd" /><stop offset=".6" stopColor="#bd88a6" /><stop offset="1" stopColor="#7f4f6c" /></radialGradient>
-        <g id="m-petal">
-          <path d="M0 0C22-8 52 6 56 34C60 58 36 72 18 66C0 60-10 34-6 16C-5 8-3 3 0 0Z" />
-          <path d="M3 6C14 22 22 40 22 62M8 14C20 22 32 30 44 30M6 30C12 40 18 50 30 58" fill="none" stroke="rgba(110,60,90,.22)" strokeWidth="1" />
-        </g>
-        <symbol id="m-petals" viewBox="0 0 340 290">
-          {PETALS.map(([x, y, r, s, g], i) => <use key={i} href="#m-petal" fill={`url(#m-pet${g})`} transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`} />)}
-        </symbol>
         <linearGradient id="m-rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#f4efe6" /><stop offset="1" stopColor="#a9a194" /></linearGradient>
         <radialGradient id="m-enamel" cx="40%" cy="35%" r="70%"><stop offset="0" stopColor="#4f8fd0" /><stop offset="1" stopColor="#245a95" /></radialGradient>
         <symbol id="m-pin" viewBox="0 0 78 78">

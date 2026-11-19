@@ -299,17 +299,29 @@
 .y-gave-row { display: flex; align-items: center; gap: 10px; margin: 0; font: 600 1.5rem/1 var(--font-hand); }
 .y-stars-small { display: inline-flex; gap: 1px; }
 .y-stars-small svg { width: 16px; height: 16px; fill: var(--ink-pen); }
-/* ── everything we kept: a shelf of small keepsakes, one per date, each opening its month ── */
+/* ── our museum: every date of the year as its keepsake, on a lit shelf with a brass placard,
+   each opening its month ── */
 .y-keepsakes {
   --ks-size: min(11px, 2.9vw);
   list-style: none; margin: 0; padding: 0;
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 22px 18px;
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 34px 22px;
 }
-.y-keepsakes li { max-width: 100%; rotate: calc((var(--r, 0) - 2) * 1.4deg); }
-.y-keepsakes a { display: block; max-width: 100%; color: inherit; text-decoration: none; border-radius: 6px; transition: translate var(--t-small) var(--ease-out); }
-.y-keepsakes a:hover { translate: 0 -3px; }
-.y-keepsakes a:focus-visible { outline: 2px solid var(--stamp); outline-offset: 4px; }
-@media (min-width: 700px) { .y-keepsakes { --ks-size: 12px; gap: 28px 24px; } }
+.y-keepsakes li { max-width: 100%; }
+.y-keepsakes a { display: grid; justify-items: center; gap: 10px; max-width: 100%; color: inherit; text-decoration: none; border-radius: 6px; }
+.y-keepsakes a:focus-visible { outline: 2px solid var(--stamp); outline-offset: 6px; }
+/* the vitrine: a pool of light on the shelf the piece stands on */
+.y-vitrine { display: block; position: relative; max-width: 100%; padding: 14px 12px 12px; rotate: calc((var(--r, 0) - 2) * 1.2deg);
+  background: radial-gradient(ellipse 70% 55% at 50% 12%, rgba(255, 244, 214, .5), transparent 70%);
+  border-bottom: 3px solid color-mix(in srgb, var(--ink-pen, #2b1d12) 18%, transparent); }
+.y-placard { display: grid; gap: 2px; max-width: 15rem; padding: 6px 10px 7px; text-align: center; border-radius: 2px;
+  background: linear-gradient(160deg, #e6cf94, #b8944e 55%, #d9bd7c); color: #2a1d0a; box-shadow: 0 1px 2px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .45); }
+.y-placard-name { font: 600 .8125rem/1.2 var(--font-display); }
+.y-placard-what { font: 400 .6875rem/1.3 var(--font-ui); letter-spacing: .02em; }
+@media (prefers-reduced-motion: no-preference) {
+.y-keepsakes a .y-vitrine { transition: translate var(--t-small) var(--ease-out); }
+.y-keepsakes a:hover .y-vitrine { translate: 0 -4px; }
+}
+@media (min-width: 700px) { .y-keepsakes { --ks-size: 12px; gap: 40px 30px; } }
 /* ── the photo wall ──────────────────────────────────────── */
 .y-page-wall { margin: 48px 0 0; gap: 28px; animation: none; }
 .y-photos {

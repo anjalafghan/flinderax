@@ -12,6 +12,10 @@ import { ApiError } from "../api";
 import { mapGoTo } from "../paths";
 import { errText } from "../components/useBusy";
 import { Keepsake, KeepsakeDefs } from "../keepsakes/Keepsake";
+import { ExhibitFigure } from "../keepsakes/Exhibit";
+import { specFor } from "../keepsakes/find";
+import { SceneArt } from "../keepsakes/Scene";
+import { sceneFor } from "../keepsakes/scene-find";
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
@@ -372,17 +376,11 @@ function Year({ v }: { v: YearView }) {
             <section className="y-shelf y-page y-page-wall" id="kept" aria-labelledby="y-shelf-h">
               <KeepsakeDefs />
               <div className="y-sec-head">
-                <h2 id="y-shelf-h" className="y-hand-h">Everything we kept</h2>
-                <p className="y-hand-label">a keepsake for every date ♡</p>
+                <h2 id="y-shelf-h" className="y-hand-h">Our museum</h2>
+                <p className="y-hand-label">everything we kept in {year}, one keepsake for every date ♡</p>
               </div>
               <ol className="y-keepsakes">
-                {v.keepsakes.map((d, i) => (
-                  <li key={i} style={{ "--r": i % 5 } as React.CSSProperties}>
-                    <Link to={d.href} aria-label={`${d.title}, ${d.day}: open that month`}>
-                      <Keepsake d={d} no={i + 1} />
-                    </Link>
-                  </li>
-                ))}
+                {museum(v.keepsakes).map(({ d, times }, i) => <MuseumPiece key={i} d={d} i={i} times={times} />)}
               </ol>
             </section>
           )}
@@ -423,5 +421,59 @@ function Year({ v }: { v: YearView }) {
         onClose={() => setViewing(null)}
       />
     </div>
+  );
+}
+
+/** One piece in Our museum: the keepsake in its case, and a placard. Hovering or focusing it plays its moment. */
+type YearKeep = YearView["keepsakes"][number];
+
+/** The museum's pieces: every drawn keepsake on its own, and anything kept again and again (a
+ *  regular night, the same café) once, with how many times, so twelve chai tickets don't bury the rest. */
+function museum(all: YearKeep[]): { d: YearKeep; times: number }[] {
+  const out: { d: YearKeep; times: number }[] = [];
+  const seen = new Map<string, { d: YearKeep; times: number }>();
+  for (const d of all) {
+    if (sceneFor(d.slip_key, d.visit)) {
+      out.push({ d, times: 1 });
+      continue;
+    }
+    const g = seen.get(d.slip_key);
+    if (g) {
+      g.times += 1;
+      g.d = d; // the latest visit opens its month
+    } else {
+      const n = { d, times: 1 };
+      seen.set(d.slip_key, n);
+      out.push(n);
+    }
+  }
+  return out;
+}
+
+function MuseumPiece({ d, i, times }: { d: YearKeep; i: number; times: number }) {
+  const [live, setLive] = useState(false);
+  const scene = sceneFor(d.slip_key, d.visit);
+  const spec = scene ? null : specFor(d.slip_key, d.visit);
+  const name = scene?.name ?? spec?.label;
+  return (
+    <li className={scene ? "y-has-scene" : times > 1 ? "y-stack" : undefined} style={{ "--r": i % 5, "--n": Math.min(times, 4) } as React.CSSProperties}>
+      <Link
+        to={d.href}
+        aria-label={`${name ? name + ": " : ""}${d.title}, ${times > 1 ? `${times} times, last on ` : ""}${d.day}. Open that month`}
+        onPointerEnter={(e) => e.pointerType === "mouse" && setLive(true)}
+        onPointerLeave={() => setLive(false)}
+        onFocus={() => setLive(true)}
+        onBlur={() => setLive(false)}
+      >
+        <span className="y-vitrine">
+          {times > 1 && <span className="y-times" aria-hidden="true">×{times}</span>}
+          {scene ? <SceneArt scene={scene} open={live} /> : spec ? <ExhibitFigure spec={spec} d={d} /> : <Keepsake d={d} no={i + 1} />}
+        </span>
+        <span className="y-placard" aria-hidden="true">
+          {name && <span className="y-placard-name">{name}</span>}
+          <span className="y-placard-what">{d.title}, {times > 1 ? `${times} times, last ${d.day}` : d.day}</span>
+        </span>
+      </Link>
+    </li>
   );
 }

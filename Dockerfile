@@ -21,14 +21,14 @@ FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
-    cargo chef cook --release --recipe-path recipe.json
+    cargo chef cook --profile deploy --recipe-path recipe.json
 
 COPY . .
 # Compile-time SQL checks use the committed .sqlx data (run `cargo sqlx prepare` after changing queries).
 ENV SQLX_OFFLINE=true
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
-    cargo build --release --bin joy
+    cargo build --profile deploy --bin joy
 
 # Final image
 FROM debian:bookworm-slim AS runtime
@@ -38,7 +38,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends tzdata ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /data
-COPY --from=builder /app/target/release/joy /usr/local/bin
+COPY --from=builder /app/target/deploy/joy /usr/local/bin
 COPY --from=frontend /app/web/dist ./dist
 ENV STATIC_DIR=/app/dist
 ENV TZ=Asia/Kolkata
