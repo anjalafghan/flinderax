@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { MonthClosePanel } from "@/components/feature/MonthClosePanel";
 import { TaxPanel } from "@/components/feature/TaxPanel";
+import { AnalysesPanel } from "@/components/feature/AnalysesPanel";
 
 export default function ReviewPage() {
   return (
@@ -14,6 +15,7 @@ export default function ReviewPage() {
         <div className="stack">
           <MonthClosePanel />
           <TaxPanel />
+          <AnalysesPanel />
         </div>
       </main>
     </div>

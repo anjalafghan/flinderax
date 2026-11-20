@@ -18,4 +18,5 @@ pub mod review;
 pub mod activity;
 pub mod rewards;
 pub mod work;
+pub mod analyses;
 pub mod year;

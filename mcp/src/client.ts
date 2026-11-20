@@ -1,5 +1,5 @@
-// A read-only client for the joy API. It can only issue GET requests, so a connector built on it
-// cannot change anything, whatever a tool asks for. Auth is a bearer token: either JOY_TOKEN, or a
+// A client for the joy API. It reads with GET, and its only write is saving an analysis
+// (POST /api/analyses); no other path can be written, whatever a tool asks for. Auth is a bearer token: either JOY_TOKEN, or a
 // sign-in with JOY_USERNAME / JOY_PASSWORD (renewed automatically when the server answers 401).
 // Nothing here logs a path, a token or a password.
 
@@ -68,4 +68,26 @@ export class JoyClient {
     if (!res.ok) throw new JoyError(`The joy server answered ${res.status}.`, res.status);
     return res.json();
   }
+
+  /** Save an analysis. The one write the connector can make. Sent with an Idempotency-Key so a retry is stored once. */
+  async saveAnalysis(title: string, body: string, key: string = crypto.randomUUID()): Promise<unknown> {
+    const send = async (token: string) =>
+      this.doFetch(`${this.cfg.baseUrl}${SAVE_PATH}`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "idempotency-key": key },
+        body: JSON.stringify({ title, body, source: "claude" }),
+      });
+    let res = await send(this.token ?? (await this.login()));
+    if (res.status === 401 && this.cfg.username) res = await send(await this.login());
+    if (!res.ok) {
+      let why = "";
+      try {
+        why = ((await res.json()) as { error?: string; message?: string }).error ?? "";
+      } catch {}
+      throw new JoyError(why || `The joy server answered ${res.status}.`, res.status);
+    }
+    return res.json();
+  }
 }
+
+const SAVE_PATH = "/api/analyses";

@@ -1,12 +1,13 @@
-# joy-mcp: read-only connector
+# joy-mcp: connector
 
-An MCP server that lets Claude read joy (money and Dates) over the existing API. It can only send
-GET requests, so it cannot change anything. The server's own privacy rules still apply: surprises
+An MCP server that lets Claude read joy (money and Dates) over the existing API. Its only write is `save_analysis`, which puts a written report on the Review page.
+Everything else is GET-only, so nothing else can change. The server's own privacy rules still apply: surprises
 sealed for you answer 404, and neither partner's quiet marks nor answers are returned.
 
 ## Tools
 `money_*`: summary, insights, analytics, forecast, commitments, income, bills, year outflows, goals,
-cards, transactions, month review, check-in. `dates_*`: coming up, jar, slips, packs, kept, regulars,
+cards, transactions, month review, check-in, `money_export_all` (the full export), `analyses_list`.
+`save_analysis` writes a report to the Review page; the prompt `analyse_money` drives a full run. `dates_*`: coming up, jar, slips, packs, kept, regulars,
 year, month, summary, settle. Money is integer paise.
 
 ## Use with Claude Code / Claude Desktop

@@ -41,5 +41,6 @@ pub mod activity;
 pub mod rewards;
 pub mod streaks;
 pub mod work;
+pub mod analyses;
 pub mod year;
 pub mod decisions;

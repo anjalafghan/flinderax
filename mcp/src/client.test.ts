@@ -43,3 +43,23 @@ test("tool names are unique and paths stay under /api/", () => {
   expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
   for (const t of tools) expect(t.path({ year: 2026, month: 1 }).startsWith("/api/")).toBe(true);
 });
+
+test("saveAnalysis posts once to /api/analyses with an idempotency key", async () => {
+  const calls: { m: string; p: string; k: string; b: any }[] = [];
+  const c = new JoyClient({
+    baseUrl: "http://x", token: "t",
+    fetch: (async (u: string, init: RequestInit) => {
+      const h = init.headers as Record<string, string>;
+      calls.push({ m: init.method!, p: new URL(u).pathname, k: h["idempotency-key"], b: JSON.parse(init.body as string) });
+      return json({ id: "a1" }, 201);
+    }) as any,
+  });
+  expect(await c.saveAnalysis("T", "B", "key-1")).toEqual({ id: "a1" });
+  expect(calls).toEqual([{ m: "POST", p: "/api/analyses", k: "key-1", b: { title: "T", body: "B", source: "claude" } }]);
+});
+
+test("the prompt names the tools it needs", async () => {
+  const { analysePrompt } = await import("./server.ts");
+  const p = analysePrompt("eating out");
+  for (const n of ["analyses_list", "money_export_all", "save_analysis", "eating out"]) expect(p).toContain(n);
+});

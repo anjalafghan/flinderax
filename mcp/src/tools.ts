@@ -30,6 +30,9 @@ export const tools: ToolDef[] = [
   { name: "money_month_review", description: "Month review.", path: () => "/api/review/month" },
   { name: "money_checkin", description: "Status of the money check-in.", path: () => "/api/checkin" },
 
+  { name: "money_export_all", description: "Everything you own as one JSON file: every table of money and people data, plus your couple's Dates data (sealed surprises and your partner's marks excluded). Large; use it for deep, multi-month analysis. Amounts are paise.", path: () => "/api/export" },
+  { name: "analyses_list", description: "Analyses already saved in the app, newest first. Read these before writing a new one so you build on them instead of repeating them.", path: () => "/api/analyses" },
+
   // Dates (Joy). Surprises sealed for the signed-in person are never returned.
   { name: "dates_coming_up", description: "What is coming up: planned dates, bills and occasions.", path: () => "/api/coming-up" },
   { name: "dates_jar", description: "The date jar: the current draw state.", path: () => "/api/dates/jar" },
