@@ -95,6 +95,7 @@ pub(crate) const USER_TABLES: &[(&str, &str)] = &[
         ("reward_settings", "SELECT * FROM reward_settings WHERE user_id = ?"),
         ("planned_outflows", "SELECT * FROM planned_outflows WHERE user_id = ?"),
         ("activity_log", "SELECT * FROM activity_log WHERE user_id = ?"),
+        ("analyses", "SELECT * FROM analyses WHERE user_id = ?"),
     ];
 
 pub async fn export(State(state): State<AppState>, Extension((user_id, _)): Extension<(String, String)>) -> Result<Response, AppError> {

@@ -105,6 +105,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/checkin", protected(&state, routes::checkin::routes(state.clone())))
         .nest("/api/diet", protected(&state, routes::diet::routes(state.clone())))
         .nest("/api/people", protected(&state, routes::people::routes(state.clone())))
+        .nest("/api/analyses", protected(&state, routes::analyses::routes(state.clone())))
         .nest("/api/work", protected(&state, routes::work::routes(state.clone())))
         .nest("/api/reminders", protected(&state, routes::reminders::routes(state.clone())))
         .nest("/api/public/reminders", routes::reminders::public_routes(state.clone()).layer(trace_layer()))
