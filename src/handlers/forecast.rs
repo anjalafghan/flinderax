@@ -121,20 +121,28 @@ fn months_between(from: Date, to: Date) -> i64 {
 fn basis_for(analytics: &AnalyticsOut, profile: &LifeProfile, expenses: i64, today: Date) -> Basis {
     let entered = profile.my_take_home_paise.max(0).saturating_add(profile.partner_take_home_paise.max(0));
     if let Some(f) = statement_figures(analytics, today).filter(|f| f.months >= MIN_MONTHS_USED) {
-        let note = (entered > 0 && (f.income - entered).abs() * 100 > entered * NOTE_TOLERANCE_PCT).then(|| {
-            format!(
-                "Your statements show {} a month coming in; your plan says {}.",
+        // Pay only, when the statements show it: credits filed as income can include transfers
+        // between your own accounts, card-bill round trips and FD proceeds.
+        let income = f.earned.unwrap_or(f.income);
+        let leaked = f.earned.is_some() && f.income * 100 > income * (100 + NOTE_TOLERANCE_PCT);
+        let note = if leaked {
+            Some(format!(
+                "Your statements show {} a month filed as income, but only {} looks like pay. The forecast uses the pay; sort the rest as transfers.",
                 inr(f.income),
-                inr(entered)
-            )
-        });
+                inr(income)
+            ))
+        } else {
+            (entered > 0 && (income - entered).abs() * 100 > entered * NOTE_TOLERANCE_PCT).then(|| {
+                format!("Your statements show {} a month coming in; your plan says {}.", inr(income), inr(entered))
+            })
+        };
         return Basis {
             source: "statements",
             months_used: f.months as i64,
-            income_paise: f.income,
+            income_paise: income,
             spend_paise: f.spend,
             invested_paise: f.invested,
-            surplus_paise: f.income - f.spend,
+            surplus_paise: income - f.spend,
             surplus_sd_paise: f.surplus_sd,
             entered_income_paise: entered,
             note,
@@ -162,6 +170,7 @@ fn basis_for(analytics: &AnalyticsOut, profile: &LifeProfile, expenses: i64, tod
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct MonthFigures {
     income: i64,
+    earned: i64,
     spend: i64,
     invested: i64,
 }
@@ -171,6 +180,8 @@ struct MonthFigures {
 struct Figures {
     months: usize,
     income: i64,
+    /// Average pay per month, when pay shows in at least `MIN_MONTHS_USED` months.
+    earned: Option<i64>,
     spend: i64,
     invested: i64,
     surplus_sd: i64,
@@ -179,11 +190,15 @@ struct Figures {
 fn figures(rows: &[MonthFigures]) -> Figures {
     let n = rows.len();
     if n == 0 {
-        return Figures { months: 0, income: 0, spend: 0, invested: 0, surplus_sd: 0 };
+        return Figures { months: 0, income: 0, earned: None, spend: 0, invested: 0, surplus_sd: 0 };
     }
     let count = n as i64;
     let avg = |f: fn(&MonthFigures) -> i64| rows.iter().map(f).sum::<i64>() / count;
-    let surplus: Vec<f64> = rows.iter().map(|r| (r.income - r.spend) as f64).collect();
+    // Pay can land a day or two into the next month, so one month shows none and the next two.
+    // Average it across the window and use that every month, so timing is not mistaken for risk.
+    let earned = (rows.iter().filter(|r| r.earned > 0).count() >= MIN_MONTHS_USED).then(|| avg(|r| r.earned));
+    let surplus: Vec<f64> =
+        rows.iter().map(|r| (earned.unwrap_or(r.income) - r.spend) as f64).collect();
     let surplus_sd = if n < 2 {
         0
     } else {
@@ -194,6 +209,7 @@ fn figures(rows: &[MonthFigures]) -> Figures {
     Figures {
         months: n,
         income: avg(|r| r.income),
+        earned,
         spend: avg(|r| r.spend),
         invested: avg(|r| r.invested),
         surplus_sd,
@@ -219,8 +235,13 @@ fn statement_figures(analytics: &AnalyticsOut, today: Date) -> Option<Figures> {
                 .months
                 .iter()
                 .find(|r| r.month == key)
-                .map(|r| MonthFigures { income: r.income_paise, spend: r.spend_paise, invested: r.invested_paise })
-                .unwrap_or(MonthFigures { income: 0, spend: 0, invested: 0 })
+                .map(|r| MonthFigures {
+                    income: r.income_paise,
+                    earned: r.earned_paise,
+                    spend: r.spend_paise,
+                    invested: r.invested_paise,
+                })
+                .unwrap_or(MonthFigures { income: 0, earned: 0, spend: 0, invested: 0 })
         })
         .collect();
     Some(figures(&rows))
@@ -349,9 +370,9 @@ mod tests {
     #[test]
     fn figures_average_the_months_and_take_the_sample_spread() {
         let flat = figures(&[
-            MonthFigures { income: 10_000_000, spend: 3_000_000, invested: 500_000 },
-            MonthFigures { income: 10_000_000, spend: 3_000_000, invested: 500_000 },
-            MonthFigures { income: 10_000_000, spend: 3_000_000, invested: 500_000 },
+            MonthFigures { income: 10_000_000, earned: 0, spend: 3_000_000, invested: 500_000 },
+            MonthFigures { income: 10_000_000, earned: 0, spend: 3_000_000, invested: 500_000 },
+            MonthFigures { income: 10_000_000, earned: 0, spend: 3_000_000, invested: 500_000 },
         ]);
         assert_eq!(flat.months, 3);
         assert_eq!((flat.income, flat.spend, flat.invested), (10_000_000, 3_000_000, 500_000));
@@ -359,8 +380,8 @@ mod tests {
 
         // Surpluses of 60,000 and 80,000 rupees: mean 70,000, sample sd about 14,142.
         let wobbly = figures(&[
-            MonthFigures { income: 9_000_000, spend: 3_000_000, invested: 0 },
-            MonthFigures { income: 11_000_000, spend: 3_000_000, invested: 0 },
+            MonthFigures { income: 9_000_000, earned: 0, spend: 3_000_000, invested: 0 },
+            MonthFigures { income: 11_000_000, earned: 0, spend: 3_000_000, invested: 0 },
         ]);
         assert!((wobbly.surplus_sd - 1_414_214).abs() <= 1, "{}", wobbly.surplus_sd);
         assert_eq!(figures(&[]).months, 0);
@@ -482,5 +503,63 @@ mod tests {
         let f = ok(compute(&st, "u", today()).await);
         let emergency = f.goals.iter().find(|g| g.key == "emergency").unwrap();
         assert_eq!(emergency.target_paise, 6 * 3_000_000);
+    }
+
+    #[test]
+    fn pay_timing_is_averaged_so_a_late_salary_is_not_mistaken_for_risk() {
+        // Pay of 70,000 rupees lands two days into the next month: none, then two in one month.
+        let rows: Vec<MonthFigures> = [0, 14_000_000, 7_000_000, 7_000_000]
+            .iter()
+            .map(|e| MonthFigures { income: 20_000_000, earned: *e, spend: 2_000_000, invested: 0 })
+            .collect();
+        let f = figures(&rows);
+        assert_eq!(f.earned, Some(7_000_000));
+        assert_eq!(f.income, 20_000_000);
+        assert_eq!(f.surplus_sd, 0);
+        // Fewer than three months with pay: no pay figure.
+        assert_eq!(figures(&rows[..2]).earned, None);
+    }
+
+    #[tokio::test]
+    async fn credits_filed_as_income_that_are_not_pay_do_not_inflate_the_basis() {
+        let st = state().await;
+        sqlx::query(
+            "INSERT INTO statement_imports (import_id, user_id, first_date, last_date, rows) VALUES ('imp1', 'u', '2026-07-01', '2026-10-31', 8)",
+        )
+        .execute(&st.db)
+        .await
+        .unwrap();
+        for (i, month) in ["07", "08", "09", "10"].iter().enumerate() {
+            let rows = [
+                ("pay", "credit", 7_500_000i64, "income", "ACME LTD", format!("SALARY FOR THE MONTH OF {month}")),
+                ("loop", "credit", 5_000_000, "income", "UPI/SOMEONE/BANK/123", "UPI/SOMEONE/BANK/123".to_string()),
+                ("fd", "credit", 4_000_000, "income", "TD PREMAT PROCEEDS", "TD PREMAT PROCEEDS OF 1".to_string()),
+                ("food", "debit", 3_000_000, "food", "Shop", "UPI payment".to_string()),
+            ];
+            for (k, (id, direction, amount, category, merchant, raw)) in rows.iter().enumerate() {
+                sqlx::query(
+                    "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, merchant, category, raw_text, source, dedupe_key)
+                     VALUES (?, 'u', ?, ?, ?, ?, ?, ?, 'manual', ?)",
+                )
+                .bind(format!("t{i}{k}"))
+                .bind(format!("2026-{month}-05"))
+                .bind(*direction)
+                .bind(*amount)
+                .bind(*merchant)
+                .bind(*category)
+                .bind(raw)
+                .bind(format!("{id}-{month}"))
+                .execute(&st.db)
+                .await
+                .unwrap();
+            }
+        }
+        let f = ok(compute(&st, "u", today()).await);
+        assert_eq!(f.basis.source, "statements");
+        assert_eq!(f.basis.income_paise, 7_500_000, "pay only");
+        assert_eq!(f.basis.surplus_paise, 4_500_000);
+        let note = f.basis.note.as_deref().expect("says why the basis is lower than the credits");
+        assert!(note.contains("looks like pay"), "{note}");
+        assert_well_formed(&f);
     }
 }

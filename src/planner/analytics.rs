@@ -82,6 +82,9 @@ pub struct CoverageOut {
 pub struct MonthOut {
     pub month: String,
     pub income_paise: i64,
+    /// The part of `income_paise` that looks like pay: salary narrations, or the payee that
+    /// credits in most months. Everything else filed as income may be a transfer that leaked.
+    pub earned_paise: i64,
     pub spend_paise: i64,
     pub invested_paise: i64,
     pub transfers_paise: i64,
@@ -226,6 +229,10 @@ pub fn build(txns: &[Txn], coverage: Option<CoverageIn>, today: Date) -> Analyti
     let top_payees = top_payees(&rows, recent_from);
     let small_ticket = small_ticket(&rows, recent_from);
     let salary = salary_out(&rows, coverage, first, now, today);
+    let mut earned: BTreeMap<i32, i64> = BTreeMap::new();
+    for r in salary_rows(&rows) {
+        *earned.entry(month_index(r.on)).or_default() += r.amount;
+    }
     let sips = sips(&rows);
     let autopay = autopay(&rows);
     let own_transfers = own_transfers(&rows, first);
@@ -245,6 +252,7 @@ pub fn build(txns: &[Txn], coverage: Option<CoverageIn>, today: Date) -> Analyti
             .map(|(i, a)| MonthOut {
                 month: month_label(*i),
                 income_paise: a.income,
+                earned_paise: earned.get(i).copied().unwrap_or(0),
                 spend_paise: a.spend,
                 invested_paise: a.invested,
                 transfers_paise: a.transfers,

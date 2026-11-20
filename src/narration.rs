@@ -38,12 +38,14 @@ pub fn parse(raw: &str) -> Narration {
         autopay: false,
     };
     match rail {
+        Rail::Upi if up.starts_with("UPI/") => parse_upi_slash(&up[4..], &mut n),
         Rail::Upi => parse_upi(&up[4..], &mut n),
         Rail::Internal => {
             let tail: Vec<&str> = split_segments(&up[15..]).into_iter().filter(|s| *s != "TPT").collect();
             parse_tail(&tail, &mut n);
         }
         Rail::Ach => parse_ach(&up, &mut n),
+        Rail::Imps if is_glued_imps(&up) => parse_glued_imps(&up, &mut n),
         Rail::Neft | Rail::Imps | Rail::Rtgs => parse_transfer(&up, &mut n),
         Rail::Other => n.payee = clean_name(&up),
         Rail::Salary | Rail::Interest | Rail::FdClosure | Rail::CardFee | Rail::Atm => {}
@@ -68,7 +70,13 @@ pub fn same_person(a: &str, b: &str) -> bool {
     }
     let (ca, cb) = (wa.concat(), wb.concat());
     let (short, long) = if ca.len() <= cb.len() { (ca, cb) } else { (cb, ca) };
-    short.len() >= 4 && long.starts_with(short.as_str())
+    if short.len() >= 4 && long.starts_with(short.as_str()) {
+        return true;
+    }
+    // A first name and a cut-off surname ("ANJAL AFGH" for "ANJAL IBRAHIM AFGHAN").
+    let (la, lb) = (wa.last().unwrap(), wb.last().unwrap());
+    let (ls, ll) = if la.len() <= lb.len() { (la, lb) } else { (lb, la) };
+    wa[0] == wb[0] && ls.len() >= 4 && ll.starts_with(ls.as_str())
 }
 
 pub struct Owner<'a> {
@@ -96,6 +104,10 @@ pub fn structural_category(n: &Narration, credit: bool, owner: &Owner) -> Option
         Rail::Salary | Rail::Interest => return Some("income"),
         _ => {}
     }
+    // Money coming back from CRED is a card-bill round trip or a refund of one, never pay.
+    if credit && n.payee.as_deref().is_some_and(|p| p == "CRED" || p.starts_with("CRED CLUB")) {
+        return Some("transfer");
+    }
     if credit && has_refund_word(n) {
         return Some("refund");
     }
@@ -111,21 +123,21 @@ pub fn structural_category(n: &Narration, credit: bool, owner: &Owner) -> Option
 fn detect_rail(up: &str) -> Rail {
     if is_internal(up) {
         Rail::Internal
-    } else if up.starts_with("UPI-") {
+    } else if up.starts_with("UPI-") || up.starts_with("UPI/") {
         Rail::Upi
     } else if word_start(up, "ACH") {
         Rail::Ach
     } else if word_start(up, "NEFT") {
         Rail::Neft
-    } else if word_start(up, "IMPS") {
+    } else if word_start(up, "IMPS") || is_glued_imps(up) {
         Rail::Imps
     } else if word_start(up, "RTGS") {
         Rail::Rtgs
     } else if up.starts_with("SALARY") {
         Rail::Salary
-    } else if up.starts_with("INTEREST PAID") {
+    } else if up.starts_with("INTEREST PAID") || up.starts_with("INT.PD") || up.starts_with("INT PD") {
         Rail::Interest
-    } else if up.starts_with("FD PREMAT") || up.starts_with("IB FD") {
+    } else if is_deposit_closure(up) {
         Rail::FdClosure
     } else if is_card_fee(up) {
         Rail::CardFee
@@ -134,6 +146,49 @@ fn detect_rail(up: &str) -> Rail {
     } else {
         Rail::Other
     }
+}
+
+/// A deposit paying out: HDFC "FD PREMAT" / "IB FD", Kotak "TD PREMAT PROCEEDS OF ...", and the
+/// usual closure, maturity and "TRF FROM FD" wordings.
+fn is_deposit_closure(up: &str) -> bool {
+    ["FD PREMAT", "IB FD", "TD PREMAT", "RD PREMAT", "TD CLOSURE", "FD CLOSURE", "RD CLOSURE", "FD MATURITY", "TRF FROM FD", "TRANSFER FROM FD"]
+        .iter()
+        .any(|p| up.starts_with(p))
+}
+
+/// Kotak IMPS with no separators: "SENTIMPS629422884087ANJAL AFGH" (also "RECDIMPS...").
+fn is_glued_imps(up: &str) -> bool {
+    ["SENTIMPS", "RECDIMPS", "RCVDIMPS"].iter().any(|p| up.starts_with(p))
+}
+
+fn parse_glued_imps(up: &str, n: &mut Narration) {
+    let rest = up.trim_start_matches(|c: char| c.is_ascii_alphabetic());
+    let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
+    if digits == 12 {
+        n.rrn = Some(rest[..12].to_string());
+    }
+    n.payee = clean_name(&rest[digits..]);
+}
+
+/// Kotak UPI: "UPI/NAME/BANK/RRN/REMARK" (the bank is a short code, the RRN may be cut short).
+fn parse_upi_slash(body: &str, n: &mut Narration) {
+    let segs: Vec<&str> = body.split('/').map(str::trim).filter(|s| !s.is_empty()).collect();
+    n.payee = segs.first().and_then(|s| clean_name(s));
+    let mut rest = Vec::new();
+    for &s in segs.iter().skip(1) {
+        if is_ifsc(s) {
+            n.bank.get_or_insert_with(|| s[..4].to_string());
+        } else if s.len() == 4 && s.bytes().all(|b| b.is_ascii_alphabetic()) {
+            n.bank.get_or_insert_with(|| s.to_string());
+        } else if is_rrn(s) {
+            n.rrn.get_or_insert_with(|| s.to_string());
+        } else if s.contains('@') {
+            n.vpa = Some(s.to_ascii_lowercase());
+        } else if !s.bytes().all(|b| b.is_ascii_digit()) {
+            rest.push(s);
+        }
+    }
+    apply_remark(&rest.join("-"), n);
 }
 
 /// A 14-digit account number, then "-" (usually "-TPT-").
@@ -527,6 +582,60 @@ mod tests {
         let n = parse("IB FD PREMAT CLOSURE 50012345678901");
         assert_eq!(n.rail, Rail::FdClosure);
         assert_eq!(structural_category(&n, true, &owner), Some("transfer"));
+    }
+
+    #[test]
+    fn kotak_upi_with_slashes_reads_the_payee_bank_and_rrn() {
+        let n = parse("UPI/RAVI KUMAR/HDFC/612345678901/PAY");
+        assert_eq!(n.rail, Rail::Upi);
+        assert_eq!(n.payee.as_deref(), Some("RAVI KUMAR"));
+        assert_eq!(n.bank.as_deref(), Some("HDFC"));
+        assert_eq!(n.rrn.as_deref(), Some("612345678901"));
+        // A reference cut short is not a remark.
+        let cut = parse("UPI/RAVI KUMAR A/5731242052");
+        assert_eq!((cut.payee.as_deref(), cut.remark.as_deref()), (Some("RAVI KUMAR A"), None));
+    }
+
+    #[test]
+    fn own_account_in_kotak_formats_is_a_transfer_once_the_holder_is_saved() {
+        let h = holders(&["RAVI KUMAR SHARMA"]);
+        let owner = Owner { holder_names: &h };
+        for text in [
+            "UPI/RAVI KUMAR /HDFC/666017111111",
+            "UPI/RAVI KUMAR S/5731242052",
+            "SENTIMPS629422884087RAVI SHAR",
+        ] {
+            let n = parse(text);
+            assert_eq!(structural_category(&n, true, &owner), Some("transfer"), "{text}");
+        }
+        let imps = parse("SENTIMPS629422884087RAVI SHAR");
+        assert_eq!((imps.rail, imps.rrn.as_deref()), (Rail::Imps, Some("629422884087")));
+        // Someone else with the same first name is not you.
+        let other = parse("UPI/RAVI VERMA/HDFC/666017111111");
+        assert_eq!(structural_category(&other, true, &owner), None);
+        // Nor is a family member with the same surname.
+        let family = parse("SENTIMPS629422884087ASHA SHARMA");
+        assert_eq!(structural_category(&family, true, &owner), None);
+    }
+
+    #[test]
+    fn kotak_deposit_wordings_are_closures_and_interest_is_income() {
+        let owner = Owner { holder_names: &[] };
+        for text in ["TD PREMAT PROCEEDS OF 37500000", "RD CLOSURE 123", "FD MATURITY CREDIT 1", "TRF FROM FD 99"] {
+            let n = parse(text);
+            assert_eq!(n.rail, Rail::FdClosure, "{text}");
+            assert_eq!(structural_category(&n, true, &owner), Some("transfer"), "{text}");
+        }
+        let int = parse("INT.PD:3745695470:01-04-2026 TO 30-06-2026");
+        assert_eq!(structural_category(&int, true, &owner), Some("income"));
+    }
+
+    #[test]
+    fn money_coming_back_from_cred_is_a_transfer_but_paying_cred_is_left_to_the_rules() {
+        let owner = Owner { holder_names: &[] };
+        let n = parse("UPI/CRED CLUB/648011099143/PAY");
+        assert_eq!(structural_category(&n, true, &owner), Some("transfer"));
+        assert_eq!(structural_category(&n, false, &owner), None);
     }
 
     #[test]
