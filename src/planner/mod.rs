@@ -115,6 +115,46 @@ impl Role {
 pub enum Freq {
     Monthly,
     Yearly,
+    /// Every `months` months (2-11), starting at month index `first` and never before it: a
+    /// perfume every four months, a service every six. Like a yearly bill it is set aside evenly
+    /// (a `months`th a month) and falls due only in its own months.
+    Every { months: u8, first: i32 },
+}
+
+impl Freq {
+    /// From the stored columns. A cadence that does not make sense (a yearly bill with a gap, a
+    /// gap without a readable first month) falls back to the plainer reading rather than failing:
+    /// monthly over-plans, which is the safe side.
+    pub fn from_columns(frequency: &str, every_months: i64, first_month: Option<&str>) -> Freq {
+        if frequency == "yearly" {
+            return Freq::Yearly;
+        }
+        match (u8::try_from(every_months), first_month.and_then(parse_year_month)) {
+            (Ok(months @ 2..=11), Some(first)) => Freq::Every { months, first },
+            _ => Freq::Monthly,
+        }
+    }
+
+    /// Whether a payment of this kind falls in `d`'s month.
+    fn due_in(self, d: Date, due_month: Option<u8>) -> bool {
+        match self {
+            Freq::Monthly => true,
+            Freq::Yearly => due_month.is_some_and(|m| m == d.month() as u8),
+            Freq::Every { months, first } => {
+                let mi = month_index(d);
+                mi >= first && (mi - first) % i32::from(months) == 0
+            }
+        }
+    }
+
+    /// Months between one payment and the next, for set-aside maths: 12 for a yearly bill.
+    pub fn period_months(self) -> i64 {
+        match self {
+            Freq::Monthly => 1,
+            Freq::Yearly => 12,
+            Freq::Every { months, .. } => i64::from(months),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -567,11 +607,7 @@ pub fn commitment_dates(c: &CommitmentIn, from: Date, to: Date) -> Vec<Date> {
         .filter(|d| {
             let mi = month_index(*d);
             let in_range = !(c.start_month.is_some_and(|s| mi < s) || c.end_month.is_some_and(|e| mi > e));
-            let due = match c.freq {
-                Freq::Monthly => true,
-                Freq::Yearly => c.due_month.is_some_and(|m| m == d.month() as u8),
-            };
-            in_range && due
+            in_range && c.freq.due_in(*d, c.due_month)
         })
         .collect()
 }
@@ -582,10 +618,7 @@ pub fn monthly_equivalent(c: &CommitmentIn, month_idx: i32) -> i64 {
     if !c.active || !in_range {
         return 0;
     }
-    match c.freq {
-        Freq::Monthly => c.amount,
-        Freq::Yearly => c.amount / 12,
-    }
+    c.amount / c.freq.period_months()
 }
 
 struct Event {

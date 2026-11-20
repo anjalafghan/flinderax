@@ -8,7 +8,7 @@ use crate::{
     planner::{default_bucket, Bucket},
     handlers::{
         account::ensure_account_owned,
-        common::{bad_request, not_found, validate_day, validate_year_month, AppError},
+        common::{bad_request, not_found, today_local, validate_day, validate_year_month, AppError},
     },
     models::AppState,
 };
@@ -42,6 +42,10 @@ pub struct CommitmentRow {
     pub frequency: String,
     /// 1-12, for yearly bills (None = month not known yet)
     pub due_month: Option<i64>,
+    /// 1 for a plain monthly bill; 2-11 for one due every that many months (monthly frequency only).
+    pub every_months: i64,
+    /// `2026-12`: the first month a bill every few months is due. None when every_months is 1.
+    pub first_month: Option<String>,
     /// Where the money ends up when it is a transfer to savings (an RD, an FD top-up...).
     pub to_account_id: Option<String>,
     pub active: bool,
@@ -62,6 +66,11 @@ pub struct CommitmentPayload {
     pub bucket: Option<String>,
     pub frequency: Option<String>,
     pub due_month: Option<i64>,
+    /// 1-11, with a monthly frequency: due every that many months. Left out on update, the stored
+    /// value stays.
+    pub every_months: Option<i64>,
+    /// `2026-12`. With every_months above 1 it defaults to the stored value, else this month.
+    pub first_month: Option<String>,
     pub to_account_id: Option<String>,
     pub active: Option<bool>,
     pub start_month: Option<String>,
@@ -105,8 +114,46 @@ fn validate_commitment(p: &CommitmentPayload) -> Result<(), AppError> {
     if p.due_month.is_some_and(|m| !(1..=12).contains(&m)) {
         return Err(bad_request("due_month must be between 1 and 12"));
     }
+    if p.every_months.is_some_and(|n| !(1..=11).contains(&n)) {
+        return Err(bad_request("every_months must be between 1 and 11 (use yearly for every 12)"));
+    }
+    validate_year_month(&p.first_month, "first_month")?;
     validate_year_month(&p.start_month, "start_month")?;
     validate_year_month(&p.end_month, "end_month")
+}
+
+/// The cadence to store: `(every_months, first_month)`. `current` is what is stored now (update).
+/// A bill every few months must be monthly-frequency; a plain monthly or a yearly one keeps 1 and
+/// no first month, so a stale value cannot come back if the cadence changes again later.
+fn resolve_cadence(
+    p: &CommitmentPayload,
+    frequency: &str,
+    current: Option<(i64, Option<String>)>,
+    this_month: &str,
+) -> Result<(i64, Option<String>), AppError> {
+    let every = p.every_months.or(current.as_ref().map(|c| c.0)).unwrap_or(1);
+    if frequency == "yearly" {
+        if p.every_months.is_some_and(|n| n > 1) {
+            return Err(bad_request("every_months only applies to a monthly bill; a yearly bill is every 12 months"));
+        }
+        return Ok((1, None));
+    }
+    if every <= 1 {
+        return Ok((1, None));
+    }
+    let first = p.first_month.clone().or(current.and_then(|c| c.1)).unwrap_or_else(|| this_month.to_string());
+    // Due only from its first month on, so an end before that month would never fall due.
+    let end = p.end_month.as_deref().and_then(crate::planner::parse_year_month);
+    if let (Some(f), Some(e)) = (crate::planner::parse_year_month(&first), end)
+        && f > e
+    {
+        return Err(bad_request("first_month is after end_month, so it would never fall due"));
+    }
+    Ok((every, Some(first)))
+}
+
+fn year_month(d: time::Date) -> String {
+    format!("{:04}-{:02}", d.year(), d.month() as u8)
 }
 
 pub async fn commitment_create(
@@ -119,12 +166,13 @@ pub async fn commitment_create(
     ensure_account_owned(&state.db, &p.to_account_id, &user_id).await?;
     let id = nanoid!();
     let frequency = p.frequency.clone().unwrap_or_else(|| "monthly".into());
+    let (every_months, first_month) = resolve_cadence(&p, &frequency, None, &year_month(today_local()))?;
     let category = p.category.unwrap_or_else(|| "other".into());
     let bucket = bucket_for(&p.bucket, &category);
     let active = p.active.unwrap_or(true);
     sqlx::query!(
-        "INSERT INTO commitments (commitment_id, user_id, label, amount_paise, day_of_month, account_id, category, bucket, frequency, due_month, to_account_id, active, start_month, end_month)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO commitments (commitment_id, user_id, label, amount_paise, day_of_month, account_id, category, bucket, frequency, due_month, every_months, first_month, to_account_id, active, start_month, end_month)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         id,
         user_id,
         p.label,
@@ -135,6 +183,8 @@ pub async fn commitment_create(
         bucket,
         frequency,
         p.due_month,
+        every_months,
+        first_month,
         p.to_account_id,
         active,
         p.start_month,
@@ -157,8 +207,8 @@ pub async fn commitment_update(
     // A partial update keeps what is stored for the fields it leaves out, rather than resetting them
     // (which would, say, resume a paused yearly bill as a monthly one).
     // (A runtime query, not `query!`: the committed `.sqlx` data would need regenerating.)
-    let (cur_frequency, cur_category, cur_active): (String, String, i64) = sqlx::query_as(
-        "SELECT frequency, category, active FROM commitments WHERE commitment_id = ? AND user_id = ?",
+    let (cur_frequency, cur_category, cur_active, cur_every, cur_first): (String, String, i64, i64, Option<String>) = sqlx::query_as(
+        "SELECT frequency, category, active, every_months, first_month FROM commitments WHERE commitment_id = ? AND user_id = ?",
     )
     .bind(&id)
     .bind(&user_id)
@@ -166,12 +216,14 @@ pub async fn commitment_update(
     .await?
     .ok_or_else(|| not_found("Commitment not found"))?;
     let frequency = p.frequency.clone().unwrap_or(cur_frequency);
+    let (every_months, first_month) =
+        resolve_cadence(&p, &frequency, Some((cur_every, cur_first)), &year_month(today_local()))?;
     let category = p.category.unwrap_or(cur_category);
     let bucket = bucket_for(&p.bucket, &category);
     let active = p.active.unwrap_or(cur_active != 0);
     let res = sqlx::query!(
         "UPDATE commitments SET label = ?, amount_paise = ?, day_of_month = ?, account_id = ?, category = ?,
-                bucket = ?, frequency = ?, due_month = ?, to_account_id = ?, active = ?, start_month = ?, end_month = ?
+                bucket = ?, frequency = ?, due_month = ?, every_months = ?, first_month = ?, to_account_id = ?, active = ?, start_month = ?, end_month = ?
          WHERE commitment_id = ? AND user_id = ?",
         p.label,
         p.amount_paise,
@@ -181,6 +233,8 @@ pub async fn commitment_update(
         bucket,
         frequency,
         p.due_month,
+        every_months,
+        first_month,
         p.to_account_id,
         active,
         p.start_month,
@@ -221,7 +275,7 @@ pub async fn commitment_list(
     let rows = sqlx::query_as!(
         CommitmentRow,
         r#"SELECT commitment_id AS "commitment_id!", label, amount_paise, day_of_month, account_id,
-                  category, bucket, frequency, due_month, to_account_id, active AS "active: bool", start_month, end_month
+                  category, bucket, frequency, due_month, every_months, first_month, to_account_id, active AS "active: bool", start_month, end_month
            FROM commitments WHERE user_id = ? ORDER BY day_of_month, rowid"#,
         user_id
     )

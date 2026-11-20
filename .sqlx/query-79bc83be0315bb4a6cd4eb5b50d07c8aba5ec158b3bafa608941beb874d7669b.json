@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id, bucket,\n                  frequency, due_month, to_account_id, active AS \"active: bool\", start_month, end_month\n           FROM commitments\n           WHERE user_id = ? AND active = 1 AND (account_id IS NOT NULL OR to_account_id IS NOT NULL)",
+  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id,\n                  category, bucket, frequency, due_month, every_months, first_month, to_account_id, active AS \"active: bool\", start_month, end_month\n           FROM commitments WHERE user_id = ? ORDER BY day_of_month, rowid",
   "describe": {
     "columns": [
       {
@@ -29,38 +29,53 @@
         "type_info": "Text"
       },
       {
-        "name": "bucket",
+        "name": "category",
         "ordinal": 5,
         "type_info": "Text"
       },
       {
-        "name": "frequency",
+        "name": "bucket",
         "ordinal": 6,
         "type_info": "Text"
       },
       {
-        "name": "due_month",
+        "name": "frequency",
         "ordinal": 7,
-        "type_info": "Integer"
-      },
-      {
-        "name": "to_account_id",
-        "ordinal": 8,
         "type_info": "Text"
       },
       {
-        "name": "active: bool",
+        "name": "due_month",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "every_months",
         "ordinal": 9,
         "type_info": "Integer"
       },
       {
-        "name": "start_month",
+        "name": "first_month",
         "ordinal": 10,
         "type_info": "Text"
       },
       {
-        "name": "end_month",
+        "name": "to_account_id",
         "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "active: bool",
+        "ordinal": 12,
+        "type_info": "Integer"
+      },
+      {
+        "name": "start_month",
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_month",
+        "ordinal": 14,
         "type_info": "Text"
       }
     ],
@@ -75,6 +90,9 @@
       true,
       false,
       false,
+      false,
+      true,
+      false,
       true,
       true,
       false,
@@ -82,5 +100,5 @@
       true
     ]
   },
-  "hash": "9c0ce4cc1671e5b12bf5df8668916a4797d6fedefeebc6edeff6d8180679ec3c"
+  "hash": "79bc83be0315bb4a6cd4eb5b50d07c8aba5ec158b3bafa608941beb874d7669b"
 }

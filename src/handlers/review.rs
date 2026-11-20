@@ -270,7 +270,7 @@ pub async fn tax(State(state): State<AppState>, Extension((user_id, _)): User, Q
 
     let commitments: Vec<TaggedOut> = sqlx::query!(
         r#"SELECT commitment_id AS "commitment_id!", label, amount_paise, day_of_month, frequency, due_month,
-                  start_month, end_month, tax_section
+                  every_months, first_month, start_month, end_month, tax_section
            FROM commitments WHERE user_id = ? AND active = 1 ORDER BY rowid"#,
         user_id
     )
@@ -282,6 +282,10 @@ pub async fn tax(State(state): State<AppState>, Extension((user_id, _)): User, Q
             amount: c.amount_paise,
             day: c.day_of_month as u8,
             yearly: c.frequency == "yearly",
+            every: match planner::Freq::from_columns(&c.frequency, c.every_months, c.first_month.as_deref()) {
+                planner::Freq::Every { months, first } => Some((months, first)),
+                _ => None,
+            },
             due_month: c.due_month.map(|m| m as u8),
             active: true,
             start_month: c.start_month.as_deref().and_then(planner::parse_year_month),

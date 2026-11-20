@@ -33,6 +33,7 @@ A private life-planning app for one household: money (Flinderax) plus the date j
 - A slip can be kept or planned only through `db::drawable_get` (not archived, not passed on, not sealed).
 - Envelope links expire (`share_expires_at`); `unshare` clears them.
 - Money-changing POSTs accept an `idempotency_key` (moves do now); add it to new ones.
+- A commitment every few months (a perfume every 4) is `frequency = 'monthly'` with `every_months` 2-11 and a `first_month`; the `frequency` CHECK is not widened. Read it through `Freq::from_columns`, never by comparing the strings, so the planner, bills, year view, auto-post and tax all agree.
 - Quiet marks (`joy_wants`): a person only ever sees their own, plus `both_want`. Never return or export the partner's level; the draw only turns them into weights.
 - `POST /api/import` loads an export back (money and people; Dates is left alone). New user tables join `export::USER_TABLES` in parent-before-child order, and the round-trip test in `tests/auth_integration.rs` should cover them.
 - Web sign-in is an HttpOnly `joy_session` cookie (SameSite=Strict). Unsafe requests authenticated by the cookie must carry `X-Joy: 1`. The page keeps only a harmless `s_…` id under `localStorage.token` (it names the offline cache; never the token). Bearer tokens still work for scripts and older logins.

@@ -67,7 +67,7 @@ pub async fn load_input(db: &sqlx::SqlitePool, user_id: &str, today: Date) -> Re
     .collect();
 
     let commitments: Vec<CommitmentIn> = sqlx::query!(
-        r#"SELECT label, amount_paise, day_of_month, account_id, bucket, frequency, due_month, to_account_id,
+        r#"SELECT label, amount_paise, day_of_month, account_id, bucket, frequency, due_month, every_months, first_month, to_account_id,
                   active AS "active: bool", start_month, end_month
            FROM commitments WHERE user_id = ?"#,
         user_id
@@ -82,7 +82,7 @@ pub async fn load_input(db: &sqlx::SqlitePool, user_id: &str, today: Date) -> Re
         account_id: c.account_id,
         active: c.active,
         bucket: Bucket::parse(&c.bucket).unwrap_or(Bucket::Needs),
-        freq: if c.frequency == "yearly" { Freq::Yearly } else { Freq::Monthly },
+        freq: Freq::from_columns(&c.frequency, c.every_months, c.first_month.as_deref()),
         due_month: c.due_month.map(|m| m as u8),
         to_account_id: c.to_account_id,
         start_month: c.start_month.as_deref().and_then(parse_year_month),

@@ -245,6 +245,14 @@ mod tests {
     }
 
     #[test]
+    fn a_bill_every_four_months_lands_three_times_in_the_year() {
+        let first = crate::planner::month_index(TODAY) + 1; // December
+        let v = year_view(TODAY, 0, &[], &[commitment(600_000, 10, Freq::Every { months: 4, first }, None)], &[]);
+        let hit: Vec<&str> = v.months.iter().filter(|m| m.fixed_paise > 0).map(|m| m.month.as_str()).collect();
+        assert_eq!(hit, vec!["2026-12", "2027-04", "2027-08"]);
+    }
+
+    #[test]
     fn a_yearly_lumpy_item_repeats_each_year_but_only_once_in_the_window() {
         let l = lumpy(date!(2025 - 12 - 20), 30_000, true);
         let v = year_view(TODAY, 0, &[], &[], &[l]);

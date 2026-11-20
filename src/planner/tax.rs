@@ -333,6 +333,8 @@ pub struct Payment {
     pub amount: i64,
     pub day: u8,
     pub yearly: bool,
+    /// `(every n months, first month index)` for a bill every few months; never before that month.
+    pub every: Option<(u8, i32)>,
     pub due_month: Option<u8>,
     pub active: bool,
     /// `year * 12 + month0` bounds, as in `planner::month_index`.
@@ -355,6 +357,9 @@ pub fn payments_in_fy(p: &Payment, fy_start: i32, today: Date) -> (i64, i64) {
             continue;
         }
         if p.yearly && p.due_month != Some(m as u8) {
+            continue;
+        }
+        if p.every.is_some_and(|(n, first)| idx < first || (idx - first) % i32::from(n) != 0) {
             continue;
         }
         if clamped(y, m, p.day) <= today {
@@ -482,7 +487,7 @@ mod tests {
     }
 
     fn sip(day: u8) -> Payment {
-        Payment { amount: 5_000_00, day, yearly: false, due_month: None, active: true, start_month: None, end_month: None }
+        Payment { amount: 5_000_00, day, yearly: false, every: None, due_month: None, active: true, start_month: None, end_month: None }
     }
 
     #[test]
@@ -510,6 +515,12 @@ mod tests {
         assert_eq!(payments_in_fy(&y, 2026, date!(2026 - 11 - 08)), (0, 24_000_00));
         assert_eq!(payments_in_fy(&y, 2026, date!(2027 - 02 - 10)), (24_000_00, 0));
         assert_eq!(payments_in_fy(&Payment { yearly: true, due_month: None, ..sip(10) }, 2026, date!(2026 - 11 - 08)), (0, 0));
+        // Every four months from June 2026: June, October, February. Today is 8 Nov, so two are paid.
+        let every = Payment { every: Some((4, 2026 * 12 + 5)), ..sip(10) };
+        assert_eq!(payments_in_fy(&every, 2026, date!(2026 - 11 - 08)), (2 * 5_000_00, 5_000_00));
+        // Not before its first month: from December 2026 only February falls in this year.
+        let later = Payment { every: Some((4, 2026 * 12 + 11)), ..sip(10) };
+        assert_eq!(payments_in_fy(&later, 2026, date!(2026 - 11 - 08)), (0, 5_000_00));
         assert_eq!(payments_in_fy(&Payment { active: false, ..sip(5) }, 2026, date!(2026 - 11 - 08)), (0, 0));
     }
 

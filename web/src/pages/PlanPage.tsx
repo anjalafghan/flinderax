@@ -129,10 +129,13 @@ function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) 
   const refresh = [keys.commitments];
   const update = usePlannerMutation(planApi.updateCommitment, refresh);
   const remove = usePlannerMutation(planApi.removeCommitment, refresh, { success: "Removed" });
+  const everyFew = c.frequency === "monthly" && c.every_months > 1;
   const when =
     c.frequency === "yearly"
       ? `yearly${c.due_month ? ` in ${MONTHS[c.due_month - 1]}` : ", month not set"} on the ${ordinal(c.day_of_month)}`
-      : `on the ${ordinal(c.day_of_month)}`;
+      : everyFew
+        ? `every ${c.every_months} months${c.first_month ? ` from ${c.first_month}` : ""} on the ${ordinal(c.day_of_month)}`
+        : `on the ${ordinal(c.day_of_month)}`;
   return (
     <li className={cn("ledger-row flex-wrap text-sm", !c.active && "opacity-60")}>
       <div className="min-w-0">
@@ -141,6 +144,7 @@ function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) 
           {formatINR(c.amount_paise)} {when} · {accountName(accounts, c.account_id)}
           {c.to_account_id && ` → ${accountName(accounts, c.to_account_id)}`} · {BUCKET_LABEL[c.bucket]}
           {c.frequency === "yearly" && ` · ${formatINR(Math.floor(c.amount_paise / 12))}/month set aside`}
+          {everyFew && ` · ${formatINR(Math.floor(c.amount_paise / c.every_months))}/month set aside`}
           {c.start_month && ` · from ${c.start_month}`}
           {c.end_month && ` · until ${c.end_month}`}
         </p>
@@ -175,7 +179,7 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
   const { data: commitments } = useCommitments();
   const blank = {
     label: "", amount: "", day: "", account: "", to: "", category: "bills", bucket: "needs" as Bucket,
-    yearly: false, dueMonth: "", start: "", end: "",
+    yearly: false, dueMonth: "", every: "1", nextDue: "", start: "", end: "",
   };
   const [f, setF] = useState(blank);
   const [error, setError] = useState<string | null>(null);
@@ -187,6 +191,10 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
     const day = parseDay(f.day);
     if (!f.label.trim() || amount === null || amount <= 0 || day === null) {
       return setError("Add a name, a positive amount and the day of the month (1-31).");
+    }
+    const every = f.yearly ? 1 : Number(f.every);
+    if (every > 1 && f.end && f.nextDue && f.nextDue > f.end) {
+      return setError("The next due month is after the last month, so it would never fall due.");
     }
     setError(null);
     create.mutate(
@@ -200,6 +208,9 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
         bucket: f.bucket,
         frequency: f.yearly ? "yearly" : "monthly",
         due_month: f.yearly && f.dueMonth ? Number(f.dueMonth) : null,
+        every_months: every,
+        // Blank means this month: the server fills it in.
+        first_month: every > 1 && f.nextDue ? f.nextDue : null,
         active: true,
         start_month: f.start || null,
         end_month: f.end || null,
@@ -228,7 +239,7 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
             <Input id="cm-label" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} placeholder="e.g. Phone bill" />
           </div>
           <div className="field">
-            <Label htmlFor="cm-amount">{f.yearly ? "Amount per year" : "Amount"}</Label>
+            <Label htmlFor="cm-amount">{f.yearly ? "Amount per year" : Number(f.every) > 1 ? "Amount each time" : "Amount"}</Label>
             <MoneyInput id="cm-amount" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
           </div>
           <div className="field">
@@ -248,6 +259,28 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
             />
             <span>Yearly bill (set aside monthly, due once a year)</span>
           </label>
+          {!f.yearly && (
+            <div className="field col-span-full">
+              <Label htmlFor="cm-every">Repeats</Label>
+              <Select id="cm-every" value={f.every} onChange={(e) => setF({ ...f, every: e.target.value })}>
+                <option value="1">Every month</option>
+                {Array.from({ length: 10 }, (_, i) => i + 2).map((n) => (
+                  <option key={n} value={n}>Every {n} months</option>
+                ))}
+              </Select>
+              {Number(f.every) > 1 && (
+                <>
+                  <Label htmlFor="cm-next-due" className="mt-3">Next due month (empty = this month)</Label>
+                  <Input id="cm-next-due" type="month" value={f.nextDue} onChange={(e) => setF({ ...f, nextDue: e.target.value })} />
+                  {toPaise(f.amount) ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatINR(Math.floor(toPaise(f.amount)! / Number(f.every)))} a month is set aside so the money is there when it falls due.
+                    </p>
+                  ) : null}
+                </>
+              )}
+            </div>
+          )}
           {f.yearly && (
             <div className="field col-span-full">
               <Label htmlFor="cm-due-month">Due month (leave empty if you don't remember)</Label>

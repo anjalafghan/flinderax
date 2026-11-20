@@ -600,3 +600,99 @@ fn a_planned_date_after_payday_is_not_held_yet_and_the_hold_never_goes_below_zer
     i.planned_dates = vec![PlannedDateIn { date: date!(2026 - 10 - 10), label: "Big".into(), amount: i64::MAX }];
     assert_eq!(compute(&i).safe_to_spend_paise, 0);
 }
+
+// ---------- bills every few months ----------
+
+fn every(months: u8, first: Date) -> CommitmentIn {
+    let mut c = commitment("Perfume", 6_000, 5, Some(KOTAK), Bucket::Wants);
+    c.freq = Freq::Every { months, first: month_index(first) };
+    c
+}
+
+#[test]
+fn a_bill_every_four_months_falls_due_in_every_fourth_month_from_its_first() {
+    let c = every(4, date!(2026 - 11 - 01));
+    // November, March, July, then November again; nothing in between.
+    let got = commitment_dates(&c, date!(2026 - 11 - 01), date!(2027 - 12 - 01));
+    assert_eq!(got, vec![date!(2026 - 11 - 05), date!(2027 - 03 - 05), date!(2027 - 07 - 05), date!(2027 - 11 - 05)]);
+}
+
+#[test]
+fn a_bill_every_few_months_is_never_due_before_its_first_month() {
+    // The pattern runs on in both directions, but the first month is the first payment.
+    let c = every(4, date!(2027 - 03 - 01));
+    assert!(commitment_dates(&c, date!(2026 - 07 - 01), date!(2027 - 03 - 01)).is_empty());
+    assert_eq!(commitment_dates(&c, date!(2026 - 07 - 01), date!(2027 - 04 - 01)), vec![date!(2027 - 03 - 05)]);
+}
+
+#[test]
+fn a_bill_every_few_months_counts_across_a_year_boundary() {
+    let c = every(5, date!(2026 - 10 - 01));
+    // October, March, August.
+    let months: Vec<u32> = commitment_dates(&c, date!(2026 - 10 - 01), date!(2027 - 09 - 01))
+        .iter()
+        .map(|d| d.month() as u32)
+        .collect();
+    assert_eq!(months, vec![10, 3, 8]);
+}
+
+#[test]
+fn a_bill_every_few_months_honours_its_first_and_last_month_and_pause() {
+    let mut c = every(2, date!(2026 - 01 - 01));
+    c.start_month = Some(month_index(date!(2026 - 07 - 01)));
+    c.end_month = Some(month_index(date!(2026 - 11 - 01)));
+    // Phase is January, so odd months: start July, end November.
+    let months: Vec<u32> = commitment_dates(&c, date!(2026 - 01 - 01), date!(2027 - 01 - 01))
+        .iter()
+        .map(|d| d.month() as u32)
+        .collect();
+    assert_eq!(months, vec![7, 9, 11]);
+    c.active = false;
+    assert!(commitment_dates(&c, date!(2026 - 01 - 01), date!(2027 - 01 - 01)).is_empty());
+    assert_eq!(monthly_equivalent(&c, month_index(date!(2026 - 08 - 01))), 0);
+}
+
+#[test]
+fn a_bill_every_few_months_on_the_31st_lands_on_the_last_day_of_short_months() {
+    let mut c = every(3, date!(2026 - 11 - 01));
+    c.day = 31;
+    let got = commitment_dates(&c, date!(2026 - 11 - 01), date!(2027 - 09 - 01));
+    assert_eq!(got, vec![date!(2026 - 11 - 30), date!(2027 - 02 - 28), date!(2027 - 05 - 31), date!(2027 - 08 - 31)]);
+}
+
+#[test]
+fn a_bill_every_few_months_is_set_aside_a_share_a_month_inside_the_wants_budget() {
+    let c = every(4, date!(2026 - 11 - 01));
+    // 6,000 rupees every four months is 1,500 a month, and it is set aside before it falls due.
+    assert_eq!(monthly_equivalent(&c, month_index(date!(2026 - 10 - 05))), 150_000);
+    let mut i = fixture();
+    let before = compute(&i).budget;
+    i.commitments.push(c);
+    let after = compute(&i).budget;
+    assert_eq!(after.needs_paise, before.needs_paise, "a want is not a need");
+    // The share comes out of the monthly allowance's room, not the bills.
+    assert_eq!(after.spending_paise, before.spending_paise);
+}
+
+#[test]
+fn amounts_that_do_not_divide_evenly_round_down_by_less_than_a_paise_a_month_per_month() {
+    let mut c = every(3, date!(2026 - 11 - 01));
+    c.amount = 10_000; // 100 rupees
+    assert_eq!(monthly_equivalent(&c, month_index(date!(2026 - 11 - 01))), 3_333);
+}
+
+#[test]
+fn freq_from_columns_reads_the_stored_cadence_and_falls_back_to_the_safe_side() {
+    use super::Freq as F;
+    assert_eq!(F::from_columns("monthly", 1, None), F::Monthly);
+    assert_eq!(F::from_columns("yearly", 1, None), F::Yearly);
+    assert_eq!(F::from_columns("monthly", 4, Some("2026-11")), F::Every { months: 4, first: 2026 * 12 + 10 });
+    // A gap with no readable first month, or a nonsense gap: plain monthly (over-plans).
+    assert_eq!(F::from_columns("monthly", 4, None), F::Monthly);
+    assert_eq!(F::from_columns("monthly", 4, Some("soon")), F::Monthly);
+    assert_eq!(F::from_columns("monthly", 12, Some("2026-11")), F::Monthly);
+    assert_eq!(F::from_columns("monthly", 0, Some("2026-11")), F::Monthly);
+    assert_eq!(F::from_columns("monthly", -3, Some("2026-11")), F::Monthly);
+    // A yearly bill ignores a leftover gap.
+    assert_eq!(F::from_columns("yearly", 4, Some("2026-11")), F::Yearly);
+}
