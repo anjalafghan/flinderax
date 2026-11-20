@@ -378,7 +378,10 @@ pub struct Health {
     pub actions: Vec<Action>,
 }
 
-/// (credits, debits) per completed calendar month, keyed by month index.
+/// (credits, debits) per completed calendar month, keyed by month index. Credits that are only
+/// money moving (transfers, refunds, investment proceeds) are not income, so they are left out.
+/// Debits stay whole: a card-bill payment is the only trace of card spend when no card statement
+/// is imported.
 fn monthly(txns: &[Txn], today: Date) -> BTreeMap<i32, (i64, i64)> {
     let current = month_index(today);
     let mut map: BTreeMap<i32, (i64, i64)> = BTreeMap::new();
@@ -386,7 +389,7 @@ fn monthly(txns: &[Txn], today: Date) -> BTreeMap<i32, (i64, i64)> {
         let e = map.entry(month_index(t.on)).or_insert((0, 0));
         if t.debit {
             e.1 = e.1.saturating_add(t.amount);
-        } else {
+        } else if !matches!(t.category.as_str(), TRANSFER | "refund" | "investments") {
             e.0 = e.0.saturating_add(t.amount);
         }
     }
@@ -731,6 +734,19 @@ mod tests {
         assert_eq!(h.emergency_months_tenths, Some(0));
         assert_eq!(h.score, 75);
         assert!(h.actions.iter().any(|a| a.text.starts_with("Keep")));
+    }
+
+    #[test]
+    fn transfers_and_refunds_credited_are_not_income_for_the_savings_rate() {
+        let mut txns = Vec::new();
+        for m in [8u8, 9, 10] {
+            txns.push(txn("c", d(2026, m, 5), false, 5_000_000, Some("Employer"), "income", None));
+            txns.push(txn("t", d(2026, m, 6), false, 9_000_000, Some("Me"), "transfer", None));
+            txns.push(txn("f", d(2026, m, 7), false, 4_000_000, Some("Bank"), "investments", None));
+            txns.push(txn("d", d(2026, m, 10), true, 4_000_000, Some("Rent"), "bills", None));
+        }
+        let h = health(&txns, 0, &[], today());
+        assert_eq!(h.savings_rate_bps, Some(2_000));
     }
 
     #[test]

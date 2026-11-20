@@ -1204,6 +1204,95 @@ async fn a_refund_is_not_counted_as_income() {
 }
 
 #[tokio::test]
+async fn a_bill_every_few_months_is_validated_stored_kept_on_update_and_survives_a_backup() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.1.9", "perfumer").await;
+    let this_month = {
+        let d = joy::handlers::common::today_local();
+        format!("{:04}-{:02}", d.year(), d.month() as u8)
+    };
+    let create = |extra: Value| {
+        let mut body = json!({"label": "Perfume", "amount_paise": 600_000, "day_of_month": 5, "bucket": "wants"});
+        body.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        body
+    };
+    let list = || async { authed_get(&app, &t, "/api/plan/commitment/list").await };
+
+    // Refused: out of range, on a yearly bill, a bad first month, a first month after the end.
+    for (extra, why) in [
+        (json!({"every_months": 0}), "zero"),
+        (json!({"every_months": 12}), "twelve is a yearly bill"),
+        (json!({"every_months": -2}), "negative"),
+        (json!({"every_months": 4, "frequency": "yearly", "due_month": 3}), "a gap on a yearly bill"),
+        (json!({"every_months": 4, "first_month": "soon"}), "an unreadable first month"),
+        (json!({"every_months": 4, "first_month": "2027-13"}), "month 13"),
+        (json!({"every_months": 4, "first_month": "2027-06", "end_month": "2027-02"}), "first after end"),
+    ] {
+        let (s, b) = authed_post(&app, &t, "/api/plan/commitment/create", create(extra)).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST, "{why}: {b}");
+    }
+    assert_eq!(list().await, json!([]), "nothing was saved");
+
+    // Without a first month, this month starts it.
+    let (s, b) = authed_post(&app, &t, "/api/plan/commitment/create", create(json!({"every_months": 4}))).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let id = serde_json::from_str::<Value>(&b).unwrap()["id"].as_str().unwrap().to_string();
+    let rows = list().await;
+    assert_eq!((rows[0]["every_months"].clone(), rows[0]["first_month"].clone()), (json!(4), json!(this_month)));
+    assert_eq!(rows[0]["frequency"], "monthly");
+
+    // A plain monthly bill has a gap of 1 and no first month, even if one is sent.
+    let (s, _) = authed_post(&app, &t, "/api/plan/commitment/create", json!({"label": "Rent", "amount_paise": 1_500_000, "day_of_month": 1, "first_month": "2027-01"})).await;
+    assert_eq!(s, StatusCode::OK);
+    let rent = list().await.as_array().unwrap().iter().find(|r| r["label"] == "Rent").unwrap().clone();
+    assert_eq!((rent["every_months"].clone(), rent["first_month"].clone()), (json!(1), Value::Null));
+
+    // An update that leaves the cadence out keeps it; moving the first month keeps the gap.
+    let update = |extra: Value| {
+        let mut body = json!({"commitment_id": id, "label": "Perfume", "amount_paise": 600_000, "day_of_month": 5});
+        body.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        body
+    };
+    let (s, b) = authed_post(&app, &t, "/api/plan/commitment/update", update(json!({"first_month": "2027-03"}))).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let row = list().await.as_array().unwrap().iter().find(|r| r["commitment_id"] == id.as_str()).unwrap().clone();
+    assert_eq!((row["every_months"].clone(), row["first_month"].clone()), (json!(4), json!("2027-03")));
+
+    // Back to every month clears the first month; asking for a gap again starts again from now.
+    let (s, _) = authed_post(&app, &t, "/api/plan/commitment/update", update(json!({"every_months": 1}))).await;
+    assert_eq!(s, StatusCode::OK);
+    let row = list().await.as_array().unwrap().iter().find(|r| r["commitment_id"] == id.as_str()).unwrap().clone();
+    assert_eq!((row["every_months"].clone(), row["first_month"].clone()), (json!(1), Value::Null));
+    let (s, _) = authed_post(&app, &t, "/api/plan/commitment/update", update(json!({"every_months": 6}))).await;
+    assert_eq!(s, StatusCode::OK);
+    let row = list().await.as_array().unwrap().iter().find(|r| r["commitment_id"] == id.as_str()).unwrap().clone();
+    assert_eq!((row["every_months"].clone(), row["first_month"].clone()), (json!(6), json!(this_month)));
+
+    // Turning it yearly drops the gap; a yearly bill cannot be given one in the same update.
+    let (s, _) = authed_post(&app, &t, "/api/plan/commitment/update", update(json!({"frequency": "yearly", "due_month": 3, "every_months": 4}))).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let (s, _) = authed_post(&app, &t, "/api/plan/commitment/update", update(json!({"frequency": "yearly", "due_month": 3}))).await;
+    assert_eq!(s, StatusCode::OK);
+    let row = list().await.as_array().unwrap().iter().find(|r| r["commitment_id"] == id.as_str()).unwrap().clone();
+    assert_eq!((row["every_months"].clone(), row["first_month"].clone(), row["frequency"].clone()), (json!(1), Value::Null, json!("yearly")));
+
+    // A backup keeps the cadence.
+    let (s, _) = authed_post(&app, &t, "/api/plan/commitment/update", update(json!({"frequency": "monthly", "every_months": 5, "first_month": "2027-02"}))).await;
+    assert_eq!(s, StatusCode::OK);
+    let before = authed_get(&app, &t, "/api/export").await;
+    let (s, b) = authed_post(&app, &t, "/api/import", before.clone()).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let row = list().await.as_array().unwrap().iter().find(|r| r["commitment_id"] == id.as_str()).unwrap().clone();
+    assert_eq!((row["every_months"].clone(), row["first_month"].clone()), (json!(5), json!("2027-02")));
+
+    // And it shows up on the calendar only in its months.
+    let bills = authed_get(&app, &t, "/api/bills?days=400").await;
+    let kinds: Vec<&str> = bills["bills"].as_array().unwrap().iter().filter(|b| b["label"] == "Perfume").map(|b| b["kind"].as_str().unwrap()).collect();
+    assert!(kinds.iter().all(|k| *k == "periodic"), "{kinds:?}");
+    assert!(kinds.len() <= 3, "at most three in a year: {kinds:?}");
+}
+
+#[tokio::test]
 async fn moving_a_payments_day_does_not_post_that_month_twice() {
     let (app, db) = test_app_with_db().await;
     let t = new_user(&app, "10.0.1.5", "mover2").await;

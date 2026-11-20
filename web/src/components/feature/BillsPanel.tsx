@@ -13,6 +13,7 @@ import { coveredLine, daysBetween, groupBillsByWeek, localIsoDate, nextBills, pr
 const KIND_LABEL: Record<Bill["kind"], string> = {
   monthly: "Monthly",
   yearly: "Yearly",
+  periodic: "Every few months",
   card_bill: "Card bill",
   date: "Date",
 };
@@ -53,6 +54,8 @@ function SuggestionCard({ s }: { s: BillSuggestion }) {
       bucket: defaultBucket("subscription"),
       frequency: s.every,
       due_month: s.every === "yearly" ? s.month : null,
+      every_months: 1,
+      first_month: null,
       active: true,
       start_month: null,
       end_month: null,

@@ -53,6 +53,10 @@ export interface Commitment {
   frequency: "monthly" | "yearly";
   /** 1-12, for yearly bills (null = month not known yet). */
   due_month: number | null;
+  /** 1 for a plain monthly bill; 2-11 for one due every that many months (monthly only). */
+  every_months: number;
+  /** "YYYY-MM": the first month a bill every few months is due. Null when every_months is 1. */
+  first_month: string | null;
   /** Where the money lands when it is a transfer to savings (an RD, an FD top-up...). */
   to_account_id: string | null;
   active: boolean;
@@ -575,7 +579,7 @@ export interface ArchivedGoal {
 
 // ---------- bills (what is due, and what looks like a subscription) ----------
 
-export type BillKind = "monthly" | "yearly" | "card_bill" | "date";
+export type BillKind = "monthly" | "yearly" | "periodic" | "card_bill" | "date";
 
 export interface Bill {
   /** "YYYY-MM-DD" */

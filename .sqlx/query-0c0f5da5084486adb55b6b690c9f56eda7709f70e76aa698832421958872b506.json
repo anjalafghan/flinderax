@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id,\n                  category, bucket, frequency, due_month, to_account_id, active AS \"active: bool\", start_month, end_month\n           FROM commitments WHERE user_id = ? ORDER BY day_of_month, rowid",
+  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, frequency, due_month,\n                  every_months, first_month, start_month, end_month, tax_section\n           FROM commitments WHERE user_id = ? AND active = 1 ORDER BY rowid",
   "describe": {
     "columns": [
       {
@@ -24,48 +24,38 @@
         "type_info": "Integer"
       },
       {
-        "name": "account_id",
+        "name": "frequency",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "category",
+        "name": "due_month",
         "ordinal": 5,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "bucket",
+        "name": "every_months",
         "ordinal": 6,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "frequency",
+        "name": "first_month",
         "ordinal": 7,
         "type_info": "Text"
       },
       {
-        "name": "due_month",
-        "ordinal": 8,
-        "type_info": "Integer"
-      },
-      {
-        "name": "to_account_id",
-        "ordinal": 9,
-        "type_info": "Text"
-      },
-      {
-        "name": "active: bool",
-        "ordinal": 10,
-        "type_info": "Integer"
-      },
-      {
         "name": "start_month",
-        "ordinal": 11,
+        "ordinal": 8,
         "type_info": "Text"
       },
       {
         "name": "end_month",
-        "ordinal": 12,
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "tax_section",
+        "ordinal": 10,
         "type_info": "Text"
       }
     ],
@@ -77,16 +67,14 @@
       false,
       false,
       false,
-      true,
-      false,
-      false,
       false,
       true,
-      true,
       false,
+      true,
+      true,
       true,
       true
     ]
   },
-  "hash": "8fb4ffbf4dcc8f959a38347970b55f156f9c668915ccc8fc55aaf13e7194c612"
+  "hash": "0c0f5da5084486adb55b6b690c9f56eda7709f70e76aa698832421958872b506"
 }

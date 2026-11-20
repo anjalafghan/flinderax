@@ -901,8 +901,11 @@ async fn recategorize_rows(db: &sqlx::SqlitePool, user_id: &str) -> Result<usize
     let owner = crate::narration::Owner { holder_names: &names };
     let rules = load_rules(db, &user_id).await?;
     let rows: Vec<(String, String, String, String, bool)> = sqlx::query_as(
-        "SELECT txn_id, direction, raw_text, category, card_id IS NOT NULL FROM transactions
-         WHERE user_id = ? AND on_statement = 1 AND category_locked = 0 AND raw_text IS NOT NULL",
+        // The saved payee stands in for a missing narration: before the Kotak formats were read,
+        // a narration this code did not know was stored whole as the payee.
+        "SELECT txn_id, direction, COALESCE(raw_text, merchant), category, card_id IS NOT NULL FROM transactions
+         WHERE user_id = ? AND on_statement = 1 AND category_locked = 0
+           AND COALESCE(raw_text, merchant) IS NOT NULL",
     )
     .bind(&user_id)
     .fetch_all(db)
@@ -1164,6 +1167,29 @@ mod statement_tests {
         sqlx::query("UPDATE transactions SET category = 'gifts', category_locked = 1 WHERE rrn = '612345678903'").execute(&state.db).await.unwrap();
         let _ = recategorize(State(state.clone()), user()).await.unwrap_or_else(|e| panic!("{}", e.1));
         assert_eq!(cat(state.db.clone()).await, "gifts");
+    }
+
+    #[tokio::test]
+    async fn rows_filed_as_income_before_the_kotak_formats_were_read_are_sorted_from_the_saved_payee() {
+        let state = test_state().await;
+        sqlx::query("INSERT INTO user_settings (user_id, holder_names) VALUES ('u', 'RAVI KUMAR SHARMA')").execute(&state.db).await.unwrap();
+        // Older rows: no raw text, the unread narration stored whole as the payee, filed as income.
+        for (id, merchant) in [
+            ("k1", "UPI/RAVI KUMAR S/5731242052"),
+            ("k2", "TD PREMAT PROCEEDS OF 3750996500"),
+            ("k3", "UPI/CRED CLUB/648011099143/PAY"),
+            ("k4", "SALARYFORTHEMONTHOFAUG2026ACME"),
+        ] {
+            sqlx::query("INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, merchant, category, source, dedupe_key, on_statement) VALUES (?, 'u', '2026-10-01', 'credit', 1000, ?, 'income', 'paste', ?, 1)")
+                .bind(id).bind(merchant).bind(id)
+                .execute(&state.db).await.unwrap();
+        }
+        let done = recategorize(State(state.clone()), user()).await.unwrap_or_else(|e| panic!("{}", e.1));
+        assert_eq!(done.0.recategorized, 3);
+        for (id, expected) in [("k1", "transfer"), ("k2", "transfer"), ("k3", "transfer"), ("k4", "income")] {
+            let got: String = sqlx::query_scalar("SELECT category FROM transactions WHERE txn_id = ?").bind(id).fetch_one(&state.db).await.unwrap();
+            assert_eq!(got, expected, "{id}");
+        }
     }
 
     #[tokio::test]

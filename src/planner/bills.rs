@@ -11,6 +11,8 @@ use super::{commitment_dates, cycle::add_months, Freq, PlanInput};
 pub enum BillKind {
     Monthly,
     Yearly,
+    /// Every few months (2-11): a perfume every four, a service every six.
+    Periodic,
     CardBill,
     /// A date planned in Dates, held out of Safe to Spend.
     Date,
@@ -46,7 +48,11 @@ pub fn calendar(input: &PlanInput, from: Date, to: Date) -> Vec<Bill> {
                 date,
                 label: c.label.clone(),
                 amount_paise: c.amount,
-                kind: if c.freq == Freq::Yearly { BillKind::Yearly } else { BillKind::Monthly },
+                kind: match c.freq {
+                    Freq::Monthly => BillKind::Monthly,
+                    Freq::Yearly => BillKind::Yearly,
+                    Freq::Every { .. } => BillKind::Periodic,
+                },
                 account_id: c.account_id.clone(),
                 covered_paise: 0,
             });
@@ -87,7 +93,7 @@ pub fn sinking_funds(input: &PlanInput) -> Vec<SinkingFund> {
     let mut out: Vec<SinkingFund> = input
         .commitments
         .iter()
-        .filter(|c| c.active && c.freq == Freq::Yearly)
+        .filter(|c| c.active && c.freq != Freq::Monthly)
         .filter_map(|c| {
             let horizon = {
                 let (y, m) = add_months(today.year(), today.month(), 13);
@@ -95,8 +101,9 @@ pub fn sinking_funds(input: &PlanInput) -> Vec<SinkingFund> {
             };
             let due = commitment_dates(c, today, horizon).into_iter().next()?;
             let months_left = (due.year() - today.year()) * 12 + (due.month() as i32 - today.month() as i32);
-            let months_saved = (12 - months_left).clamp(0, 12) as i64;
-            Some(SinkingFund { label: c.label.clone(), amount_paise: c.amount, due, saved_paise: c.amount * months_saved / 12 })
+            let period = c.freq.period_months();
+            let months_saved = (period - i64::from(months_left)).clamp(0, period);
+            Some(SinkingFund { label: c.label.clone(), amount_paise: c.amount, due, saved_paise: c.amount * months_saved / period })
         })
         .collect();
     out.sort_by_key(|f| f.due);
@@ -189,5 +196,30 @@ mod tests {
         let bills = calendar(&i, today, date!(2026 - 11 - 05));
         let kinds: Vec<_> = bills.iter().map(|b| (b.label.as_str(), b.kind.clone())).collect();
         assert_eq!(kinds, [("Dinner", BillKind::Date), ("Rent", BillKind::Monthly)]);
+    }
+
+    #[test]
+    fn a_bill_every_few_months_is_periodic_on_the_calendar_with_a_fund_that_fills_up() {
+        let perfume = CommitmentIn {
+            label: "Perfume".into(),
+            amount: 600_000,
+            day: 5,
+            account_id: None,
+            active: true,
+            bucket: Bucket::Wants,
+            freq: Freq::Every { months: 4, first: crate::planner::month_index(date!(2027 - 03 - 01)) },
+            due_month: None,
+            to_account_id: None,
+            start_month: None,
+            end_month: None,
+        };
+        let i = input(date!(2026 - 12 - 08), vec![perfume], vec![]);
+        let bills = calendar(&i, date!(2027 - 03 - 01), date!(2027 - 04 - 01));
+        assert_eq!(bills.len(), 1);
+        assert_eq!(bills[0].kind, BillKind::Periodic);
+        // Due 5 March; December's share is in, so a quarter of it.
+        let funds = sinking_funds(&i);
+        assert_eq!(funds.len(), 1);
+        assert_eq!((funds[0].due, funds[0].saved_paise), (date!(2027 - 03 - 05), 150_000));
     }
 }
