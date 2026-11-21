@@ -11,12 +11,12 @@ use serde::Serialize;
 
 use super::{
     regular::visit_photo_url,
-    year::{rows, MONTHS},
+    year::{rows, YearRow, MONTHS},
     AppError, Me,
 };
 use crate::{
     handlers::common::not_found,
-    joy::{db, picker},
+    joy::{ctx::Ctx, db, picker},
     models::AppState,
 };
 
@@ -125,72 +125,64 @@ pub struct MonthView {
     pub to_come: i64,
 }
 
-pub async fn page(
-    State(s): State<AppState>,
-    Extension((user_id, _)): User,
-    Path((year, month)): Path<(String, String)>,
-) -> Result<Json<MonthView>, AppError> {
-    // Typed-in nonsense ("/year/2026/abc") isn't a page.
-    let Some(year) = year.parse::<i32>().ok().filter(|y| (2000..=2100).contains(y)) else {
-        return Err(not_found("No such year"));
-    };
-    let Some(month) = month.parse::<u32>().ok().filter(|m| (1..=12).contains(m)) else {
-        return Err(not_found("No such month"));
-    };
-    let j = super::joy(&s, &user_id).await?;
-    let (couple, ctx) = (j.couple.as_str(), &j.ctx);
-    let key = format!("{year}-{month:02}");
-    let rows: Vec<_> = rows(&s.db, couple, year).await?.into_iter().filter(|r| r.month == i64::from(month)).collect();
+/// Typed-in nonsense ("/year/2026/abc") isn't a page.
+fn parse_month(year: &str, month: &str) -> Result<(i32, u32), AppError> {
+    let year = year.parse::<i32>().ok().filter(|y| (2000..=2100).contains(y)).ok_or_else(|| not_found("No such year"))?;
+    let month = month.parse::<u32>().ok().filter(|m| (1..=12).contains(m)).ok_or_else(|| not_found("No such month"))?;
+    Ok((year, month))
+}
 
+/// How a date's real cost compares with the guess, and whether it ran over.
+fn cost_diff(ctx: &Ctx, est: i64, actual: Option<i64>) -> (String, bool) {
+    match actual {
+        Some(a) if a > est => (format!("{} over our guess", ctx.money(a - est)), true),
+        Some(a) if a < est => (format!("{} under our guess", ctx.money(est - a)), false),
+        Some(_) => ("right on our guess".into(), false),
+        None => (String::new(), false),
+    }
+}
+
+fn entry_of(ctx: &Ctx, i: usize, r: &YearRow) -> Entry {
+    let cabs = r.cab_0.unwrap_or(0) + r.cab_1.unwrap_or(0);
+    let (diff, over) = cost_diff(ctx, r.est, r.actual);
+    Entry {
+        title: ctx.personalize(&r.title),
+        slip_key: r.slip_key.clone(),
+        visit: r.visit,
+        place: ctx.personalize(&r.place),
+        kind: r.setting.clone(),
+        kind_label: picker::setting_label(&r.setting).to_string(),
+        tags: r.tag_list(),
+        day: r.day_label.clone(),
+        stamp: r.stamp.clone(),
+        photo: r.cover_url(),
+        rating: r.rating.unwrap_or(0),
+        note: r.note.lines().next().unwrap_or("").to_string(),
+        est: ctx.money(r.est),
+        actual: r.actual.map(|a| ctx.money(a)).unwrap_or_default(),
+        diff,
+        over,
+        cabs: if cabs > 0 { ctx.money(cabs) } else { String::new() },
+        tilt: [-2, 1, -1, 2, 0][i % 5],
+    }
+}
+
+/// The best-rated date (the earliest, on a tie) and the average rating ("4.3", empty when none).
+fn best_and_average(ctx: &Ctx, rows: &[YearRow]) -> (Option<Best>, String) {
     let best = rows
         .iter()
         .filter(|r| r.rating.is_some())
         .max_by_key(|r| (r.rating, std::cmp::Reverse(r.id)))
         .map(|r| Best { title: ctx.personalize(&r.title), rating: r.rating.unwrap_or(0), day: r.day_label.clone() });
     let rated: Vec<i64> = rows.iter().filter_map(|r| r.rating).collect();
-    let avg_rating = if rated.is_empty() { String::new() } else { format!("{:.1}", rated.iter().sum::<i64>() as f64 / rated.len() as f64) };
+    let avg = if rated.is_empty() { String::new() } else { format!("{:.1}", rated.iter().sum::<i64>() as f64 / rated.len() as f64) };
+    (best, avg)
+}
 
-    let entries = rows
-        .iter()
-        .enumerate()
-        .map(|(i, r)| {
-            let cabs = r.cab_0.unwrap_or(0) + r.cab_1.unwrap_or(0);
-            let (diff, over) = match r.actual {
-                Some(a) if a > r.est => (format!("{} over our guess", ctx.money(a - r.est)), true),
-                Some(a) if a < r.est => (format!("{} under our guess", ctx.money(r.est - a)), false),
-                Some(_) => ("right on our guess".into(), false),
-                None => (String::new(), false),
-            };
-            Entry {
-                title: ctx.personalize(&r.title),
-                slip_key: r.slip_key.clone(),
-                visit: r.visit,
-                place: ctx.personalize(&r.place),
-                kind: r.setting.clone(),
-                kind_label: picker::setting_label(&r.setting).to_string(),
-                tags: r.tag_list(),
-                day: r.day_label.clone(),
-                stamp: r.stamp.clone(),
-                photo: r.cover_url(),
-                rating: r.rating.unwrap_or(0),
-                note: r.note.lines().next().unwrap_or("").to_string(),
-                est: ctx.money(r.est),
-                actual: r.actual.map(|a| ctx.money(a)).unwrap_or_default(),
-                diff,
-                over,
-                cabs: if cabs > 0 { ctx.money(cabs) } else { String::new() },
-                tilt: [-2, 1, -1, 2, 0][i % 5],
-            }
-        })
-        .collect();
-
-    let others = db::other_spending_in_month(&s.db, couple, &key)
-        .await?
-        .into_iter()
-        .map(|(amount, note, on)| Other { amount: ctx.money(amount), note, day: day_label(&on) })
-        .collect();
+/// Each regular's nights this month that were never kept dates, with what they cost.
+async fn night_groups(db: &sqlx::SqlitePool, couple: &str, key: &str, ctx: &Ctx) -> Result<Vec<NightGroup>, AppError> {
     let mut nights: Vec<NightGroup> = vec![];
-    for (v, title) in db::visits_in_month(&s.db, couple, &key).await? {
+    for (v, title) in db::visits_in_month(db, couple, key).await? {
         let mark = NightMark { day: day_label(&v.day), photo: if v.has_photo { visit_photo_url(ctx, v.id) } else { String::new() } };
         let href = format!("/joy/regulars/{}", v.regular_id);
         match nights.iter_mut().find(|g| g.href == href) {
@@ -210,14 +202,16 @@ pub async fn page(
         )
         .bind(couple)
         .bind(id)
-        .bind(&key)
-        .fetch_one(&s.db)
+        .bind(key)
+        .fetch_one(db)
         .await?;
         g.total = ctx.money(total);
     }
-    let spent = db::spent_by_month(&s.db, couple, year).await?[month as usize - 1];
+    Ok(nights)
+}
 
-    // Months with dates either side of this one, across every year, so the spreads read like pages.
+/// The months with dates either side of `key`, across every year, so the spreads read like pages.
+async fn neighbours(db: &sqlx::SqlitePool, couple: &str, key: &str) -> Result<(Option<Nav>, Option<Nav>), AppError> {
     let kept: Vec<String> = sqlx::query_scalar(
         "SELECT DISTINCT strftime('%Y-%m', COALESCE(planned_at, picked_at), 'unixepoch', 'localtime') AS m
          FROM joy_history WHERE couple_id = ? AND outcome = 'did_it' AND (surprise = 0 OR revealed = 1)
@@ -225,20 +219,46 @@ pub async fn page(
          ORDER BY m",
     )
     .bind(couple)
-    .fetch_all(&s.db)
+    .fetch_all(db)
     .await?;
     let nav = |m: &String| Nav { href: format!("/joy/year/{}/{}", &m[..4], m[5..].trim_start_matches('0')), label: month_label(m) };
-    let prev = kept.iter().rfind(|m| **m < key).map(nav);
-    let next = kept.iter().find(|m| **m > key).map(nav);
+    Ok((kept.iter().rfind(|m| m.as_str() < key).map(nav), kept.iter().find(|m| m.as_str() > key).map(nav)))
+}
 
-    let to_come: i64 = sqlx::query_scalar(
+/// Dates this month still to come.
+async fn dates_to_come(db: &sqlx::SqlitePool, couple: &str, key: &str) -> Result<i64, AppError> {
+    Ok(sqlx::query_scalar(
         "SELECT count(*) FROM joy_history WHERE couple_id = ? AND outcome = 'did_it' AND (surprise = 0 OR revealed = 1)
            AND planned_at > unixepoch() AND strftime('%Y-%m', planned_at, 'unixepoch', 'localtime') = ?",
     )
     .bind(couple)
-    .bind(&key)
-    .fetch_one(&s.db)
-    .await?;
+    .bind(key)
+    .fetch_one(db)
+    .await?)
+}
+
+pub async fn page(
+    State(s): State<AppState>,
+    Extension((user_id, _)): User,
+    Path((year, month)): Path<(String, String)>,
+) -> Result<Json<MonthView>, AppError> {
+    let (year, month) = parse_month(&year, &month)?;
+    let j = super::joy(&s, &user_id).await?;
+    let (couple, ctx) = (j.couple.as_str(), &j.ctx);
+    let key = format!("{year}-{month:02}");
+    let rows: Vec<_> = rows(&s.db, couple, year).await?.into_iter().filter(|r| r.month == i64::from(month)).collect();
+
+    let (best, avg_rating) = best_and_average(ctx, &rows);
+    let entries = rows.iter().enumerate().map(|(i, r)| entry_of(ctx, i, r)).collect();
+    let others = db::other_spending_in_month(&s.db, couple, &key)
+        .await?
+        .into_iter()
+        .map(|(amount, note, on)| Other { amount: ctx.money(amount), note, day: day_label(&on) })
+        .collect();
+    let nights = night_groups(&s.db, couple, &key, ctx).await?;
+    let spent = db::spent_by_month(&s.db, couple, year).await?[month as usize - 1];
+    let (prev, next) = neighbours(&s.db, couple, &key).await?;
+    let to_come = dates_to_come(&s.db, couple, &key).await?;
 
     let month_name = MONTHS[month as usize - 1].to_string();
     Ok(Json(MonthView {

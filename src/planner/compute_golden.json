@@ -1,0 +1,2604 @@
+[
+  {
+    "name": "busy_mid_period",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 0,
+            "from_account_id": "hdfc",
+            "key": "2026-09-30",
+            "kind": "allocation",
+            "skippable_paise": 4800000,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Savings top-up of ₹48,000 HDFC → KOTAK is due by 2 Oct, but nothing is free in HDFC. Skip it this month, or move money in first"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹21,958, below your ₹80,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 15 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 4301699,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3511900,
+          "label": "Fixed payments from it before 30 Oct",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": -2716901,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Savings top-up you can't fund this month",
+          "note": "₹48,000 of the plan; see \"Paying it back\"",
+          "total": false
+        },
+        {
+          "amount_paise": 0,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 5000000,
+        "savings_paise": 8000000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 25,
+      "next_income": {
+        "arrives": "2026-10-30",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-10-30",
+        "committed_paise": 2200000,
+        "income_paise": 9500000,
+        "label": "November money",
+        "left_paise": 7300000
+      },
+      "per_week_paise": 0,
+      "period_label": "October money",
+      "period_start": "2026-09-30",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 8000000,
+          "free_savings_paise": 2195800,
+          "required_paise": 7304200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 4301699,
+          "committed_paise": 3511900,
+          "free_paise": -2716901,
+          "to_move_paise": 3506700
+        }
+      },
+      "recovery": {
+        "months": 3,
+        "owed_paise": 7516901,
+        "per_month_paise": 2505634
+      },
+      "safe_to_spend_paise": 0,
+      "short_by_paise": 2716901,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 720000,
+        "left_paise": 718100,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 15,
+          "what": "KOTAK balance"
+        }
+      ],
+      "status": "red",
+      "until": "2026-10-30",
+      "upcoming": [
+        {
+          "amount_paise": 3000000,
+          "date": "2026-10-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 2400000,
+          "date": "2026-10-12",
+          "kind": "commitment",
+          "label": "Insurance"
+        },
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-13",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2026-10-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 400000,
+          "date": "2026-10-18",
+          "kind": "commitment",
+          "label": "Perfume"
+        },
+        {
+          "amount_paise": 450000,
+          "date": "2026-10-18",
+          "kind": "planned_date",
+          "label": "Dinner"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-10-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2026-10-28",
+          "kind": "commitment",
+          "label": "Donation"
+        },
+        {
+          "amount_paise": 497500,
+          "date": "2026-10-28",
+          "kind": "card_bill",
+          "label": "UPI next bill (est.)"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        }
+      ]
+    }
+  },
+  {
+    "name": "busy_on_a_payday",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 0,
+            "from_account_id": "hdfc",
+            "key": "2026-10-05",
+            "kind": "allocation",
+            "skippable_paise": 4800000,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Savings top-up of ₹48,000 HDFC → KOTAK is due by 2 Nov, but nothing is free in HDFC. Skip it this month, or move money in first"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹26,958, below your ₹80,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 40 days ago)"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update VISA snapshot (last updated 29 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 4301699,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": 794999,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Savings top-up you can't fund this month",
+          "note": "₹48,000 of the plan; see \"Paying it back\"",
+          "total": false
+        },
+        {
+          "amount_paise": 794999,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 5000000,
+        "savings_paise": 8000000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 6,
+      "next_income": {
+        "arrives": "2026-11-05",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-11-05",
+        "committed_paise": 3711900,
+        "income_paise": 4000000,
+        "label": "November money",
+        "left_paise": 288100
+      },
+      "per_week_paise": 794999,
+      "period_label": "October money",
+      "period_start": "2026-10-05",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 8000000,
+          "free_savings_paise": 2695800,
+          "required_paise": 6804200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 4301699,
+          "committed_paise": 0,
+          "free_paise": 794999,
+          "to_move_paise": 3506700
+        }
+      },
+      "recovery": {
+        "months": 3,
+        "owed_paise": 4800000,
+        "per_month_paise": 1600000
+      },
+      "safe_to_spend_paise": 794999,
+      "short_by_paise": 0,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 261290,
+        "left_paise": 1176810,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 40,
+          "what": "KOTAK balance"
+        },
+        {
+          "days_old": 29,
+          "what": "VISA snapshot"
+        }
+      ],
+      "status": "green",
+      "until": "2026-11-05",
+      "upcoming": [
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-30",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        },
+        {
+          "amount_paise": 3000000,
+          "date": "2026-11-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 2306700,
+          "date": "2026-11-13",
+          "kind": "card_bill",
+          "label": "VISA next bill (est.)"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2026-11-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-11-22",
+          "kind": "commitment",
+          "label": "Course"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-11-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2026-11-28",
+          "kind": "commitment",
+          "label": "Donation"
+        }
+      ]
+    }
+  },
+  {
+    "name": "busy_day_before_payday",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 76899,
+            "from_account_id": "hdfc",
+            "key": "2026-09-30",
+            "kind": "allocation",
+            "skippable_paise": 4723101,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "By 2 Oct: move ₹768.99 HDFC → KOTAK (needs + savings). The plan is ₹48,000, but only ₹768.99 is free this month"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹48,958, below your ₹80,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 39 days ago)"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update VISA snapshot (last updated 28 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 4301699,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": -76899,
+          "label": "Savings top-up to move to KOTAK",
+          "note": "Only from cash beyond your spending pot",
+          "total": false
+        },
+        {
+          "amount_paise": 718100,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Savings top-up you can't fund this month",
+          "note": "₹47,231.01 of the plan; see \"Paying it back\"",
+          "total": false
+        },
+        {
+          "amount_paise": 718100,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 5000000,
+        "savings_paise": 8000000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 1,
+      "next_income": {
+        "arrives": "2026-10-30",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-10-30",
+        "committed_paise": 2200000,
+        "income_paise": 9500000,
+        "label": "November money",
+        "left_paise": 7300000
+      },
+      "per_week_paise": 718100,
+      "period_label": "October money",
+      "period_start": "2026-09-30",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 8000000,
+          "free_savings_paise": 4895800,
+          "required_paise": 4604200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 4301699,
+          "committed_paise": 0,
+          "free_paise": 718100,
+          "to_move_paise": 3583599
+        }
+      },
+      "recovery": {
+        "months": 3,
+        "owed_paise": 4723101,
+        "per_month_paise": 1574367
+      },
+      "safe_to_spend_paise": 718100,
+      "short_by_paise": 0,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 720000,
+        "left_paise": 718100,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 39,
+          "what": "KOTAK balance"
+        },
+        {
+          "days_old": 28,
+          "what": "VISA snapshot"
+        }
+      ],
+      "status": "green",
+      "until": "2026-10-30",
+      "upcoming": [
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-29",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        }
+      ]
+    }
+  },
+  {
+    "name": "busy_month_end_year_end",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 0,
+            "from_account_id": "hdfc",
+            "key": "2026-12-05",
+            "kind": "allocation",
+            "skippable_paise": 4800000,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Savings top-up of ₹48,000 HDFC → KOTAK is due by 2 Jan, but nothing is free in HDFC. Skip it this month, or move money in first"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹26,958, below your ₹80,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 102 days ago)"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update VISA snapshot (last updated 91 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 4301699,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": 794999,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Savings top-up you can't fund this month",
+          "note": "₹48,000 of the plan; see \"Paying it back\"",
+          "total": false
+        },
+        {
+          "amount_paise": 794999,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 3100000,
+        "rest_savings_paise": 4700000,
+        "savings_paise": 7700000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 5,
+      "next_income": {
+        "arrives": "2027-01-05",
+        "label": "January money"
+      },
+      "next_period": {
+        "arrives": "2027-01-05",
+        "committed_paise": 3711900,
+        "income_paise": 4000000,
+        "label": "January money",
+        "left_paise": 288100
+      },
+      "per_week_paise": 794999,
+      "period_label": "December money",
+      "period_start": "2026-12-05",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 8000000,
+          "free_savings_paise": 2695800,
+          "required_paise": 6804200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 4301699,
+          "committed_paise": 0,
+          "free_paise": 794999,
+          "to_move_paise": 3506700
+        }
+      },
+      "recovery": {
+        "months": 3,
+        "owed_paise": 4800000,
+        "per_month_paise": 1600000
+      },
+      "safe_to_spend_paise": 794999,
+      "short_by_paise": 0,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 0,
+        "left_paise": 1438100,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 102,
+          "what": "KOTAK balance"
+        },
+        {
+          "days_old": 91,
+          "what": "VISA snapshot"
+        }
+      ],
+      "status": "green",
+      "until": "2027-01-05",
+      "upcoming": [
+        {
+          "amount_paise": 1800000,
+          "date": "2026-12-31",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2027-01-03",
+          "kind": "commitment",
+          "label": "Rent"
+        },
+        {
+          "amount_paise": 3000000,
+          "date": "2027-01-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2027-01-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2027-01-22",
+          "kind": "commitment",
+          "label": "Course"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2027-01-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2027-01-28",
+          "kind": "commitment",
+          "label": "Donation"
+        }
+      ]
+    }
+  },
+  {
+    "name": "busy_after_late_stale",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 0,
+            "from_account_id": "hdfc",
+            "key": "2027-02-05",
+            "kind": "allocation",
+            "skippable_paise": 4800000,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Savings top-up of ₹48,000 HDFC → KOTAK is due by 2 Mar, but nothing is free in HDFC. Skip it this month, or move money in first"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹26,958, below your ₹80,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 161 days ago)"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update VISA snapshot (last updated 150 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 4301699,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -100000,
+          "label": "Fixed payments from it before 5 Mar",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": 694999,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Savings top-up you can't fund this month",
+          "note": "₹48,000 of the plan; see \"Paying it back\"",
+          "total": false
+        },
+        {
+          "amount_paise": 694999,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 3100000,
+        "rest_savings_paise": 4700000,
+        "savings_paise": 7700000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 5,
+      "next_income": {
+        "arrives": "2027-03-05",
+        "label": "March money"
+      },
+      "next_period": {
+        "arrives": "2027-03-05",
+        "committed_paise": 3411900,
+        "income_paise": 4000000,
+        "label": "March money",
+        "left_paise": 588100
+      },
+      "per_week_paise": 694999,
+      "period_label": "February money",
+      "period_start": "2027-02-05",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 8000000,
+          "free_savings_paise": 2695800,
+          "required_paise": 6804200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 4301699,
+          "committed_paise": 100000,
+          "free_paise": 694999,
+          "to_move_paise": 3506700
+        }
+      },
+      "recovery": {
+        "months": 3,
+        "owed_paise": 4800000,
+        "per_month_paise": 1600000
+      },
+      "safe_to_spend_paise": 694999,
+      "short_by_paise": 0,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 0,
+        "left_paise": 1438100,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 161,
+          "what": "KOTAK balance"
+        },
+        {
+          "days_old": 150,
+          "what": "VISA snapshot"
+        }
+      ],
+      "status": "green",
+      "until": "2027-03-05",
+      "upcoming": [
+        {
+          "amount_paise": 100000,
+          "date": "2027-02-28",
+          "kind": "commitment",
+          "label": "Donation"
+        },
+        {
+          "amount_paise": 1800000,
+          "date": "2027-02-28",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2027-03-03",
+          "kind": "commitment",
+          "label": "Rent"
+        },
+        {
+          "amount_paise": 3000000,
+          "date": "2027-03-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2027-03-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2027-03-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2027-03-28",
+          "kind": "commitment",
+          "label": "Donation"
+        }
+      ]
+    }
+  },
+  {
+    "name": "no_reserve_account",
+    "summary": {
+      "actions": [],
+      "breakdown": [
+        {
+          "amount_paise": 2000000,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -6211900,
+          "label": "Fixed payments from it before 30 Oct",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -4604200,
+          "label": "Card bills already spent",
+          "note": "Counted now, even if due after payday",
+          "total": false
+        },
+        {
+          "amount_paise": -8816100,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 5000000,
+        "savings_paise": 8000000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 25,
+      "next_income": {
+        "arrives": "2026-10-30",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-10-30",
+        "committed_paise": 2200000,
+        "income_paise": 9500000,
+        "label": "November money",
+        "left_paise": 7300000
+      },
+      "per_week_paise": 0,
+      "period_label": "October money",
+      "period_start": "2026-09-30",
+      "pots": {
+        "locked": {
+          "count": 1,
+          "total_paise": 9000000
+        },
+        "reserve": {
+          "account_name": null,
+          "balance_paise": 0,
+          "below_floor": false,
+          "floor_paise": 8000000,
+          "free_savings_paise": 0,
+          "required_paise": 0
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 2000000,
+          "committed_paise": 6211900,
+          "free_paise": -8816100,
+          "to_move_paise": 4604200
+        }
+      },
+      "recovery": {
+        "months": 3,
+        "owed_paise": 8816100,
+        "per_month_paise": 2938700
+      },
+      "safe_to_spend_paise": 0,
+      "short_by_paise": 8816100,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 720000,
+        "left_paise": 718100,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [],
+      "status": "red",
+      "until": "2026-10-30",
+      "upcoming": [
+        {
+          "amount_paise": 3000000,
+          "date": "2026-10-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 2400000,
+          "date": "2026-10-12",
+          "kind": "commitment",
+          "label": "Insurance"
+        },
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-13",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2026-10-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 400000,
+          "date": "2026-10-18",
+          "kind": "commitment",
+          "label": "Perfume"
+        },
+        {
+          "amount_paise": 450000,
+          "date": "2026-10-18",
+          "kind": "planned_date",
+          "label": "Dinner"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-10-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2026-10-28",
+          "kind": "commitment",
+          "label": "Donation"
+        },
+        {
+          "amount_paise": 497500,
+          "date": "2026-10-28",
+          "kind": "card_bill",
+          "label": "UPI next bill (est.)"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        }
+      ]
+    }
+  },
+  {
+    "name": "overspent_and_short",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 0,
+            "from_account_id": "hdfc",
+            "key": "2026-09-30",
+            "kind": "allocation",
+            "skippable_paise": 7300000,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Savings top-up of ₹73,000 HDFC → KOTAK is due by 2 Oct, but nothing is free in HDFC. Skip it this month, or move money in first"
+        },
+        {
+          "ledger": null,
+          "severity": "urgent",
+          "text": "HDFC holds ₹1,500 but ₹35,119 leaves it before 30 Oct: move ₹33,619 KOTAK → HDFC"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹21,958, below your ₹5,00,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 15 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 150000,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3511900,
+          "label": "Fixed payments from it before 30 Oct",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": -6868600,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Savings top-up you can't fund this month",
+          "note": "₹73,000 of the plan; see \"Paying it back\"",
+          "total": false
+        },
+        {
+          "amount_paise": 0,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 5000000,
+        "savings_paise": 8000000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 25,
+      "next_income": {
+        "arrives": "2026-10-30",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-10-30",
+        "committed_paise": 2200000,
+        "income_paise": 9500000,
+        "label": "November money",
+        "left_paise": 7300000
+      },
+      "per_week_paise": 0,
+      "period_label": "October money",
+      "period_start": "2026-09-30",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 50000000,
+          "free_savings_paise": 2195800,
+          "required_paise": 7304200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 150000,
+          "committed_paise": 3511900,
+          "free_paise": -6868600,
+          "to_move_paise": 3506700
+        }
+      },
+      "recovery": {
+        "months": 3,
+        "owed_paise": 14668600,
+        "per_month_paise": 4889534
+      },
+      "safe_to_spend_paise": 0,
+      "short_by_paise": 6868600,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 720000,
+        "left_paise": 0,
+        "overspend_paise": 7881900,
+        "spent_paise": 9750000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 15,
+          "what": "KOTAK balance"
+        }
+      ],
+      "status": "red",
+      "until": "2026-10-30",
+      "upcoming": [
+        {
+          "amount_paise": 3000000,
+          "date": "2026-10-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 2400000,
+          "date": "2026-10-12",
+          "kind": "commitment",
+          "label": "Insurance"
+        },
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-13",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2026-10-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 400000,
+          "date": "2026-10-18",
+          "kind": "commitment",
+          "label": "Perfume"
+        },
+        {
+          "amount_paise": 450000,
+          "date": "2026-10-18",
+          "kind": "planned_date",
+          "label": "Dinner"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-10-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2026-10-28",
+          "kind": "commitment",
+          "label": "Donation"
+        },
+        {
+          "amount_paise": 497500,
+          "date": "2026-10-28",
+          "kind": "card_bill",
+          "label": "UPI next bill (est.)"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        }
+      ]
+    }
+  },
+  {
+    "name": "untracked_cards_bps_allowance",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 0,
+            "from_account_id": "hdfc",
+            "key": "2026-09-30",
+            "kind": "allocation",
+            "skippable_paise": 4125000,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Savings top-up of ₹41,250 HDFC → KOTAK is due by 2 Oct, but nothing is free in HDFC. Skip it this month, or move money in first"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 15 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 4301699,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3511900,
+          "label": "Fixed payments from it before 30 Oct",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": -2716901,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Savings top-up you can't fund this month",
+          "note": "₹41,250 of the plan; see \"Paying it back\"",
+          "total": false
+        },
+        {
+          "amount_paise": 0,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7125000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 4325000,
+        "savings_paise": 7325000,
+        "sip_paise": 3000000,
+        "spending_paise": 3375000
+      },
+      "days_left": 25,
+      "next_income": {
+        "arrives": "2026-10-30",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-10-30",
+        "committed_paise": 2200000,
+        "income_paise": 9500000,
+        "label": "November money",
+        "left_paise": 7300000
+      },
+      "per_week_paise": 0,
+      "period_label": "October money",
+      "period_start": "2026-09-30",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": false,
+          "floor_paise": 0,
+          "free_savings_paise": 2195800,
+          "required_paise": 7304200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 4301699,
+          "committed_paise": 3511900,
+          "free_paise": -2716901,
+          "to_move_paise": 3506700
+        }
+      },
+      "recovery": {
+        "months": 1,
+        "owed_paise": 6841901,
+        "per_month_paise": 6841901
+      },
+      "safe_to_spend_paise": 0,
+      "short_by_paise": 2716901,
+      "spending": {
+        "allowance_paise": 3375000,
+        "before_tracking_paise": 0,
+        "left_paise": 2400600,
+        "overspend_paise": 0,
+        "spent_paise": 900000,
+        "tracked": false
+      },
+      "stale": [
+        {
+          "days_old": 15,
+          "what": "KOTAK balance"
+        }
+      ],
+      "status": "red",
+      "until": "2026-10-30",
+      "upcoming": [
+        {
+          "amount_paise": 3000000,
+          "date": "2026-10-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 2400000,
+          "date": "2026-10-12",
+          "kind": "commitment",
+          "label": "Insurance"
+        },
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-13",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2026-10-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 400000,
+          "date": "2026-10-18",
+          "kind": "commitment",
+          "label": "Perfume"
+        },
+        {
+          "amount_paise": 450000,
+          "date": "2026-10-18",
+          "kind": "planned_date",
+          "label": "Dinner"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-10-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2026-10-28",
+          "kind": "commitment",
+          "label": "Donation"
+        },
+        {
+          "amount_paise": 497500,
+          "date": "2026-10-28",
+          "kind": "card_bill",
+          "label": "UPI next bill (est.)"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        }
+      ]
+    }
+  },
+  {
+    "name": "fixed_allowance_late_alloc_day",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 0,
+            "from_account_id": "hdfc",
+            "key": "2026-09-30",
+            "kind": "allocation",
+            "skippable_paise": 4500000,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Savings top-up of ₹45,000 HDFC → KOTAK is due by 31 Oct, but nothing is free in HDFC. Skip it this month, or move money in first"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹21,958, below your ₹80,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 15 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 4301699,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3511900,
+          "label": "Fixed payments from it before 30 Oct",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": -2716901,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Savings top-up you can't fund this month",
+          "note": "₹45,000 of the plan; see \"Paying it back\"",
+          "total": false
+        },
+        {
+          "amount_paise": 0,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7500000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 4700000,
+        "savings_paise": 7700000,
+        "sip_paise": 3000000,
+        "spending_paise": 3000000
+      },
+      "days_left": 25,
+      "next_income": {
+        "arrives": "2026-10-30",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-10-30",
+        "committed_paise": 2200000,
+        "income_paise": 9500000,
+        "label": "November money",
+        "left_paise": 7300000
+      },
+      "per_week_paise": 0,
+      "period_label": "October money",
+      "period_start": "2026-09-30",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 8000000,
+          "free_savings_paise": 2195800,
+          "required_paise": 7304200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 4301699,
+          "committed_paise": 3511900,
+          "free_paise": -2716901,
+          "to_move_paise": 3506700
+        }
+      },
+      "recovery": {
+        "months": 3,
+        "owed_paise": 7216901,
+        "per_month_paise": 2405634
+      },
+      "safe_to_spend_paise": 0,
+      "short_by_paise": 2716901,
+      "spending": {
+        "allowance_paise": 3000000,
+        "before_tracking_paise": 800000,
+        "left_paise": 938100,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 15,
+          "what": "KOTAK balance"
+        }
+      ],
+      "status": "red",
+      "until": "2026-10-30",
+      "upcoming": [
+        {
+          "amount_paise": 3000000,
+          "date": "2026-10-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 2400000,
+          "date": "2026-10-12",
+          "kind": "commitment",
+          "label": "Insurance"
+        },
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-13",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2026-10-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 400000,
+          "date": "2026-10-18",
+          "kind": "commitment",
+          "label": "Perfume"
+        },
+        {
+          "amount_paise": 450000,
+          "date": "2026-10-18",
+          "kind": "planned_date",
+          "label": "Dinner"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-10-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2026-10-28",
+          "kind": "commitment",
+          "label": "Donation"
+        },
+        {
+          "amount_paise": 497500,
+          "date": "2026-10-28",
+          "kind": "card_bill",
+          "label": "UPI next bill (est.)"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        }
+      ]
+    }
+  },
+  {
+    "name": "nothing_set_up",
+    "summary": {
+      "actions": [],
+      "breakdown": [
+        {
+          "amount_paise": 0,
+          "label": "spending account balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": 0,
+          "label": "Free in spending account",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 0,
+        "income_paise": 0,
+        "needs_paise": 0,
+        "rest_savings_paise": 0,
+        "savings_paise": 0,
+        "sip_paise": 0,
+        "spending_paise": 0
+      },
+      "days_left": 30,
+      "next_income": null,
+      "next_period": null,
+      "per_week_paise": 0,
+      "period_label": null,
+      "period_start": "2026-10-05",
+      "pots": {
+        "locked": {
+          "count": 0,
+          "total_paise": 0
+        },
+        "reserve": {
+          "account_name": null,
+          "balance_paise": 0,
+          "below_floor": false,
+          "floor_paise": 8000000,
+          "free_savings_paise": 0,
+          "required_paise": 0
+        },
+        "spending": {
+          "account_name": null,
+          "balance_paise": 0,
+          "committed_paise": 0,
+          "free_paise": 0,
+          "to_move_paise": 0
+        }
+      },
+      "recovery": null,
+      "safe_to_spend_paise": 0,
+      "short_by_paise": 0,
+      "spending": {
+        "allowance_paise": 0,
+        "before_tracking_paise": 0,
+        "left_paise": 0,
+        "overspend_paise": 0,
+        "spent_paise": 0,
+        "tracked": false
+      },
+      "stale": [],
+      "status": "red",
+      "until": "2026-11-04",
+      "upcoming": []
+    }
+  },
+  {
+    "name": "plenty_of_cash",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹21,958, below your ₹80,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 15 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 90000000,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3511900,
+          "label": "Fixed payments from it before 30 Oct",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": 82981400,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": -82713300,
+          "label": "Held back to fit your spending allowance",
+          "note": "₹19,819 of ₹27,000 is already used this period",
+          "total": false
+        },
+        {
+          "amount_paise": -450000,
+          "label": "Held back for planned dates",
+          "note": "1 planned before 30 Oct; released when you keep them",
+          "total": false
+        },
+        {
+          "amount_paise": 268100,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 5000000,
+        "savings_paise": 8000000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 25,
+      "next_income": {
+        "arrives": "2026-10-30",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-10-30",
+        "committed_paise": 2200000,
+        "income_paise": 9500000,
+        "label": "November money",
+        "left_paise": 7300000
+      },
+      "per_week_paise": 67025,
+      "period_label": "October money",
+      "period_start": "2026-09-30",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 8000000,
+          "free_savings_paise": 2195800,
+          "required_paise": 7304200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 90000000,
+          "committed_paise": 3511900,
+          "free_paise": 82981400,
+          "to_move_paise": 3506700
+        }
+      },
+      "recovery": null,
+      "safe_to_spend_paise": 268100,
+      "short_by_paise": 0,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 720000,
+        "left_paise": 718100,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 15,
+          "what": "KOTAK balance"
+        }
+      ],
+      "status": "yellow",
+      "until": "2026-10-30",
+      "upcoming": [
+        {
+          "amount_paise": 3000000,
+          "date": "2026-10-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 2400000,
+          "date": "2026-10-12",
+          "kind": "commitment",
+          "label": "Insurance"
+        },
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-13",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2026-10-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 400000,
+          "date": "2026-10-18",
+          "kind": "commitment",
+          "label": "Perfume"
+        },
+        {
+          "amount_paise": 450000,
+          "date": "2026-10-18",
+          "kind": "planned_date",
+          "label": "Dinner"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-10-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2026-10-28",
+          "kind": "commitment",
+          "label": "Donation"
+        },
+        {
+          "amount_paise": 497500,
+          "date": "2026-10-28",
+          "kind": "card_bill",
+          "label": "UPI next bill (est.)"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        }
+      ]
+    }
+  },
+  {
+    "name": "top_up_fully_funded",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 7800000,
+            "from_account_id": "hdfc",
+            "key": "2026-09-30",
+            "kind": "allocation",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "By 2 Oct: move ₹78,000 HDFC → KOTAK (needs + savings)"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹21,958, below your ₹80,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 15 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 90000000,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3511900,
+          "label": "Fixed payments from it before 30 Oct",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": -7800000,
+          "label": "Savings top-up to move to KOTAK",
+          "note": "Only from cash beyond your spending pot",
+          "total": false
+        },
+        {
+          "amount_paise": 75181400,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": -74913300,
+          "label": "Held back to fit your spending allowance",
+          "note": "₹19,819 of ₹27,000 is already used this period",
+          "total": false
+        },
+        {
+          "amount_paise": -450000,
+          "label": "Held back for planned dates",
+          "note": "1 planned before 30 Oct; released when you keep them",
+          "total": false
+        },
+        {
+          "amount_paise": 268100,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 5000000,
+        "savings_paise": 8000000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 25,
+      "next_income": {
+        "arrives": "2026-10-30",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-10-30",
+        "committed_paise": 2200000,
+        "income_paise": 9500000,
+        "label": "November money",
+        "left_paise": 7300000
+      },
+      "per_week_paise": 67025,
+      "period_label": "October money",
+      "period_start": "2026-09-30",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 8000000,
+          "free_savings_paise": 2195800,
+          "required_paise": 7304200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 90000000,
+          "committed_paise": 3511900,
+          "free_paise": 75181400,
+          "to_move_paise": 11306700
+        }
+      },
+      "recovery": null,
+      "safe_to_spend_paise": 268100,
+      "short_by_paise": 0,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 720000,
+        "left_paise": 718100,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 15,
+          "what": "KOTAK balance"
+        }
+      ],
+      "status": "yellow",
+      "until": "2026-10-30",
+      "upcoming": [
+        {
+          "amount_paise": 3000000,
+          "date": "2026-10-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 2400000,
+          "date": "2026-10-12",
+          "kind": "commitment",
+          "label": "Insurance"
+        },
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-13",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2026-10-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 400000,
+          "date": "2026-10-18",
+          "kind": "commitment",
+          "label": "Perfume"
+        },
+        {
+          "amount_paise": 450000,
+          "date": "2026-10-18",
+          "kind": "planned_date",
+          "label": "Dinner"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-10-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2026-10-28",
+          "kind": "commitment",
+          "label": "Donation"
+        },
+        {
+          "amount_paise": 497500,
+          "date": "2026-10-28",
+          "kind": "card_bill",
+          "label": "UPI next bill (est.)"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        }
+      ]
+    }
+  },
+  {
+    "name": "top_up_nothing_free",
+    "summary": {
+      "actions": [
+        {
+          "ledger": {
+            "amount_paise": 1200000,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-10-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹12,000 HDFC → KOTAK for VISA's current bill, pay by 13 Oct"
+        },
+        {
+          "ledger": {
+            "amount_paise": 2306700,
+            "from_account_id": "hdfc",
+            "key": "visa:2026-11-13",
+            "kind": "card_bill",
+            "skippable_paise": 0,
+            "to_account_id": "kotak"
+          },
+          "severity": "warn",
+          "text": "Move ₹23,067 HDFC → KOTAK for VISA's next bill, pay by 13 Nov"
+        },
+        {
+          "ledger": {
+            "amount_paise": 0,
+            "from_account_id": "hdfc",
+            "key": "2026-09-30",
+            "kind": "allocation",
+            "skippable_paise": 7800000,
+            "to_account_id": "kotak"
+          },
+          "severity": "urgent",
+          "text": "Savings top-up of ₹78,000 HDFC → KOTAK is due by 2 Oct, but nothing is free in HDFC. Skip it this month, or move money in first"
+        },
+        {
+          "ledger": null,
+          "severity": "urgent",
+          "text": "HDFC holds ₹100 but ₹35,119 leaves it before 30 Oct: move ₹35,019 KOTAK → HDFC"
+        },
+        {
+          "ledger": null,
+          "severity": "warn",
+          "text": "KOTAK free savings are ₹21,958, below your ₹80,000 floor"
+        },
+        {
+          "ledger": null,
+          "severity": "info",
+          "text": "Update KOTAK balance (last updated 15 days ago)"
+        }
+      ],
+      "breakdown": [
+        {
+          "amount_paise": 10000,
+          "label": "HDFC balance",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3511900,
+          "label": "Fixed payments from it before 30 Oct",
+          "note": null,
+          "total": false
+        },
+        {
+          "amount_paise": -3506700,
+          "label": "Card bills still to move to KOTAK",
+          "note": "₹10,975 of ₹46,042 is already covered",
+          "total": false
+        },
+        {
+          "amount_paise": -7008600,
+          "label": "Free in HDFC",
+          "note": null,
+          "total": true
+        },
+        {
+          "amount_paise": 0,
+          "label": "Savings top-up you can't fund this month",
+          "note": "₹78,000 of the plan; see \"Paying it back\"",
+          "total": false
+        },
+        {
+          "amount_paise": 0,
+          "label": "Safe to spend",
+          "note": null,
+          "total": true
+        }
+      ],
+      "budget": {
+        "allocation_paise": 7800000,
+        "income_paise": 13500000,
+        "needs_paise": 2800000,
+        "rest_savings_paise": 5000000,
+        "savings_paise": 8000000,
+        "sip_paise": 3000000,
+        "spending_paise": 2700000
+      },
+      "days_left": 25,
+      "next_income": {
+        "arrives": "2026-10-30",
+        "label": "November money"
+      },
+      "next_period": {
+        "arrives": "2026-10-30",
+        "committed_paise": 2200000,
+        "income_paise": 9500000,
+        "label": "November money",
+        "left_paise": 7300000
+      },
+      "per_week_paise": 0,
+      "period_label": "October money",
+      "period_start": "2026-09-30",
+      "pots": {
+        "locked": {
+          "count": 2,
+          "total_paise": 62000000
+        },
+        "reserve": {
+          "account_name": "KOTAK",
+          "balance_paise": 9500000,
+          "below_floor": true,
+          "floor_paise": 8000000,
+          "free_savings_paise": 2195800,
+          "required_paise": 7304200
+        },
+        "spending": {
+          "account_name": "HDFC",
+          "balance_paise": 10000,
+          "committed_paise": 3511900,
+          "free_paise": -7008600,
+          "to_move_paise": 3506700
+        }
+      },
+      "recovery": {
+        "months": 3,
+        "owed_paise": 14808600,
+        "per_month_paise": 4936200
+      },
+      "safe_to_spend_paise": 0,
+      "short_by_paise": 7008600,
+      "spending": {
+        "allowance_paise": 2700000,
+        "before_tracking_paise": 720000,
+        "left_paise": 718100,
+        "overspend_paise": 0,
+        "spent_paise": 1150000,
+        "tracked": true
+      },
+      "stale": [
+        {
+          "days_old": 15,
+          "what": "KOTAK balance"
+        }
+      ],
+      "status": "red",
+      "until": "2026-10-30",
+      "upcoming": [
+        {
+          "amount_paise": 3000000,
+          "date": "2026-10-07",
+          "kind": "commitment",
+          "label": "SIP"
+        },
+        {
+          "amount_paise": 2400000,
+          "date": "2026-10-12",
+          "kind": "commitment",
+          "label": "Insurance"
+        },
+        {
+          "amount_paise": 1800000,
+          "date": "2026-10-13",
+          "kind": "card_due",
+          "label": "VISA bill"
+        },
+        {
+          "amount_paise": 11900,
+          "date": "2026-10-14",
+          "kind": "commitment",
+          "label": "Spotify"
+        },
+        {
+          "amount_paise": 400000,
+          "date": "2026-10-18",
+          "kind": "commitment",
+          "label": "Perfume"
+        },
+        {
+          "amount_paise": 450000,
+          "date": "2026-10-18",
+          "kind": "planned_date",
+          "label": "Dinner"
+        },
+        {
+          "amount_paise": 300000,
+          "date": "2026-10-25",
+          "kind": "commitment",
+          "label": "Maid"
+        },
+        {
+          "amount_paise": 100000,
+          "date": "2026-10-28",
+          "kind": "commitment",
+          "label": "Donation"
+        },
+        {
+          "amount_paise": 497500,
+          "date": "2026-10-28",
+          "kind": "card_bill",
+          "label": "UPI next bill (est.)"
+        },
+        {
+          "amount_paise": 2200000,
+          "date": "2026-11-03",
+          "kind": "commitment",
+          "label": "Rent"
+        }
+      ]
+    }
+  }
+]

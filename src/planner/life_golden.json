@@ -1,0 +1,2190 @@
+[
+  {
+    "name": "default_profile",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 0,
+          "gap_paise": 0,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 0,
+          "my_share_paise": 0,
+          "note": "Already covered by what is saved.",
+          "partner_share_paise": 0,
+          "saved_paise": 0,
+          "status": "done",
+          "step_up_sip_paise": 0,
+          "today_cost_paise": 0,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 0,
+          "gap_paise": 0,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 0,
+          "my_share_paise": 0,
+          "note": "Already covered by what is saved.",
+          "partner_share_paise": 0,
+          "saved_paise": 0,
+          "status": "done",
+          "step_up_sip_paise": 0,
+          "today_cost_paise": 0,
+          "when": "2058-11-10",
+          "years_away": 32
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 100000000,
+        "health_have_paise": 0,
+        "health_needed_paise": 100000000,
+        "notes": [
+          "Enter take-home pay to size term cover.",
+          "Term cover covers 15 years of take-home, loans.",
+          "Health cover is short by ₹10,00,000. Target is ₹10,00,000 because a base family floater."
+        ],
+        "term_gap_paise": 0,
+        "term_have_paise": 0,
+        "term_needed_paise": 0
+      },
+      "monthly": {
+        "fits": true,
+        "shortfall_paise": 0,
+        "surplus_paise": 0,
+        "total_sip_paise": 0,
+        "total_step_up_sip_paise": 0
+      },
+      "timeline": [
+        {
+          "age": 28,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 60,
+          "events": [
+            "Retirement at 60"
+          ],
+          "year": 2058
+        }
+      ]
+    }
+  },
+  {
+    "name": "full",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 8676877,
+          "note": "About ₹1,44,615 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 5784584,
+          "saved_paise": 40000000,
+          "status": "on_track",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 40569354,
+          "gap_paise": 34000536,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "hybrid",
+          "mix_note": "3 to 7 years: a balanced or hybrid fund; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 770844,
+          "my_share_paise": 417502,
+          "note": "About ₹6,958 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 278334,
+          "saved_paise": 5000000,
+          "status": "on_track",
+          "step_up_sip_paise": 695836,
+          "today_cost_paise": 30000000,
+          "when": "2030-01-01",
+          "years_away": 3
+        },
+        {
+          "future_cost_paise": 2347001548,
+          "gap_paise": 2294603003,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 2012012,
+          "my_share_paise": 572237,
+          "note": "About ₹9,537 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 381491,
+          "saved_paise": 5000000,
+          "status": "on_track",
+          "step_up_sip_paise": 953728,
+          "today_cost_paise": 300000000,
+          "when": "2048-06-01",
+          "years_away": 21
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 14135202265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 6394890,
+          "my_share_paise": 1590920,
+          "note": "About ₹26,515 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 1060614,
+          "saved_paise": 100000000,
+          "status": "on_track",
+          "step_up_sip_paise": 2651534,
+          "today_cost_paise": 3323076923,
+          "when": "2053-11-10",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹6,94,70,015. It should cover 15 years of take-home for each of you, plus loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 6947001548,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 7947001548
+      },
+      "monthly": {
+        "fits": true,
+        "shortfall_paise": 0,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 25675369,
+        "total_step_up_sip_paise": 20519496
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 33,
+          "events": [
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 35,
+          "events": [
+            "Baby's first year"
+          ],
+          "year": 2030
+        },
+        {
+          "age": 53,
+          "events": [
+            "Child's education"
+          ],
+          "year": 2048
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "full_in_january_leap_day",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 250000000,
+          "gap_paise": 210000000,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 210000000,
+          "my_share_paise": 126000000,
+          "note": "Needs ₹21,00,000 a month at step-up, about ₹19,07,569 more than the surplus left for it.",
+          "partner_share_paise": 84000000,
+          "saved_paise": 40000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 210000000,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 36012829,
+          "gap_paise": 30320514,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 1228495,
+          "my_share_paise": 704574,
+          "note": "Needs ₹11,743 a month at step-up, about ₹11,743 more than the surplus left for it.",
+          "partner_share_paise": 469716,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 1174290,
+          "today_cost_paise": 30000000,
+          "when": "2030-01-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 2083399327,
+          "gap_paise": 2037666753,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 2091237,
+          "my_share_paise": 615455,
+          "note": "Needs ₹10,258 a month at step-up, about ₹10,258 more than the surplus left for it.",
+          "partner_share_paise": 410304,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 1025759,
+          "today_cost_paise": 300000000,
+          "when": "2048-06-01",
+          "years_away": 20
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 14135202265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 6394890,
+          "my_share_paise": 1590920,
+          "note": "Needs ₹26,515 a month at step-up, about ₹26,515 more than the surplus left for it.",
+          "partner_share_paise": 1060614,
+          "saved_paise": 100000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 2651534,
+          "today_cost_paise": 3323076923,
+          "when": "2055-02-28",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹6,68,33,993. It should cover 15 years of take-home for each of you, plus loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 6683399327,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 7683399327
+      },
+      "monthly": {
+        "fits": false,
+        "shortfall_paise": 195608520,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 221471559,
+        "total_step_up_sip_paise": 216608520
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target",
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 33,
+          "events": [
+            "Baby's first year"
+          ],
+          "year": 2030
+        },
+        {
+          "age": 51,
+          "events": [
+            "Child's education"
+          ],
+          "year": 2048
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2055
+        }
+      ]
+    }
+  },
+  {
+    "name": "wedding_in_the_past_and_default_budget",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 250000000,
+          "gap_paise": 210000000,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 210000000,
+          "my_share_paise": 126000000,
+          "note": "Needs ₹21,00,000 a month at step-up, about ₹19,07,569 more than the surplus left for it.",
+          "partner_share_paise": 84000000,
+          "saved_paise": 40000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 210000000,
+          "today_cost_paise": 250000000,
+          "when": "2020-06-01",
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 40569354,
+          "gap_paise": 34000536,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "hybrid",
+          "mix_note": "3 to 7 years: a balanced or hybrid fund; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 770844,
+          "my_share_paise": 417502,
+          "note": "Needs ₹6,958 a month at step-up, about ₹6,958 more than the surplus left for it.",
+          "partner_share_paise": 278334,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 695836,
+          "today_cost_paise": 30000000,
+          "when": "2030-01-01",
+          "years_away": 3
+        },
+        {
+          "future_cost_paise": 2347001548,
+          "gap_paise": 2294603003,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 2012012,
+          "my_share_paise": 572237,
+          "note": "Needs ₹9,537 a month at step-up, about ₹9,537 more than the surplus left for it.",
+          "partner_share_paise": 381491,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 953728,
+          "today_cost_paise": 300000000,
+          "when": "2048-06-01",
+          "years_away": 21
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 14135202265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 6394890,
+          "my_share_paise": 1590920,
+          "note": "Needs ₹26,515 a month at step-up, about ₹26,515 more than the surplus left for it.",
+          "partner_share_paise": 1060614,
+          "saved_paise": 100000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 2651534,
+          "today_cost_paise": 3323076923,
+          "when": "2053-11-10",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹6,94,70,015. It should cover 15 years of take-home for each of you, plus loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 6947001548,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 7947001548
+      },
+      "monthly": {
+        "fits": false,
+        "shortfall_paise": 195058035,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 220934683,
+        "total_step_up_sip_paise": 216058035
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 35,
+          "events": [
+            "Baby's first year"
+          ],
+          "year": 2030
+        },
+        {
+          "age": 53,
+          "events": [
+            "Child's education"
+          ],
+          "year": 2048
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "unreadable_wedding_date",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 40569354,
+          "gap_paise": 34000536,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "hybrid",
+          "mix_note": "3 to 7 years: a balanced or hybrid fund; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 770844,
+          "my_share_paise": 417502,
+          "note": "About ₹6,958 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 278334,
+          "saved_paise": 5000000,
+          "status": "on_track",
+          "step_up_sip_paise": 695836,
+          "today_cost_paise": 30000000,
+          "when": "2030-01-01",
+          "years_away": 3
+        },
+        {
+          "future_cost_paise": 2347001548,
+          "gap_paise": 2294603003,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 2012012,
+          "my_share_paise": 572237,
+          "note": "About ₹9,537 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 381491,
+          "saved_paise": 5000000,
+          "status": "on_track",
+          "step_up_sip_paise": 953728,
+          "today_cost_paise": 300000000,
+          "when": "2048-06-01",
+          "years_away": 21
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 14135202265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 6394890,
+          "my_share_paise": 1590920,
+          "note": "About ₹26,515 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 1060614,
+          "saved_paise": 100000000,
+          "status": "on_track",
+          "step_up_sip_paise": 2651534,
+          "today_cost_paise": 3323076923,
+          "when": "2053-11-10",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹6,94,70,015. It should cover 15 years of take-home for each of you, plus loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 6947001548,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 7947001548
+      },
+      "monthly": {
+        "fits": true,
+        "shortfall_paise": 0,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 10934683,
+        "total_step_up_sip_paise": 6058035
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 35,
+          "events": [
+            "Baby's first year"
+          ],
+          "year": 2030
+        },
+        {
+          "age": 53,
+          "events": [
+            "Child's education"
+          ],
+          "year": 2048
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "child_already_born_no_education",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 30000000,
+          "gap_paise": 25000000,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 25000000,
+          "my_share_paise": 15000000,
+          "note": "Needs ₹2,50,000 a month at step-up, about ₹57,569 more than the surplus left for it.",
+          "partner_share_paise": 10000000,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 25000000,
+          "today_cost_paise": 30000000,
+          "when": "2015-01-01",
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 8676877,
+          "note": "Needs ₹1,44,615 a month at step-up, about ₹1,44,615 more than the surplus left for it.",
+          "partner_share_paise": 5784584,
+          "saved_paise": 40000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 14135202265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 6394890,
+          "my_share_paise": 1590920,
+          "note": "Needs ₹26,515 a month at step-up, about ₹26,515 more than the surplus left for it.",
+          "partner_share_paise": 1060614,
+          "saved_paise": 100000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 2651534,
+          "today_cost_paise": 3323076923,
+          "when": "2053-11-10",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹4,60,00,000. It should cover 15 years of take-home for each of you, plus loans.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 4600000000,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 5600000000
+      },
+      "monthly": {
+        "fits": false,
+        "shortfall_paise": 22869932,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 47892513,
+        "total_step_up_sip_paise": 43869932
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 33,
+          "events": [
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "child_far_future",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 8676877,
+          "note": "About ₹1,44,615 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 5784584,
+          "saved_paise": 40000000,
+          "status": "on_track",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 14135202265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 6394890,
+          "my_share_paise": 1590920,
+          "note": "About ₹26,515 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 1060614,
+          "saved_paise": 100000000,
+          "status": "on_track",
+          "step_up_sip_paise": 2651534,
+          "today_cost_paise": 3323076923,
+          "when": "2053-11-10",
+          "years_away": 27
+        },
+        {
+          "future_cost_paise": 381852700430,
+          "gap_paise": 138037364070,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 15424,
+          "my_share_paise": 1909,
+          "note": "About ₹32 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 1272,
+          "saved_paise": 5000000,
+          "status": "on_track",
+          "step_up_sip_paise": 3181,
+          "today_cost_paise": 30000000,
+          "when": "2126-01-01",
+          "years_away": 99
+        },
+        {
+          "future_cost_paise": 4134183701947,
+          "gap_paise": 3867217217352,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 392799,
+          "my_share_paise": 48466,
+          "note": "About ₹808 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 32310,
+          "saved_paise": 5000000,
+          "status": "on_track",
+          "step_up_sip_paise": 80776,
+          "today_cost_paise": 300000000,
+          "when": "2144-06-01",
+          "years_away": 100
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹41,38,78,37,019. It should cover 15 years of take-home for each of you, plus loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 4138783701947,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 4139783701947
+      },
+      "monthly": {
+        "fits": true,
+        "shortfall_paise": 0,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 23300736,
+        "total_step_up_sip_paise": 18953889
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 33,
+          "events": [
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "no_child_young_so_base_health",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 8676877,
+          "note": "About ₹1,44,615 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 5784584,
+          "saved_paise": 40000000,
+          "status": "on_track",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 19086062985,
+          "gap_paise": 16466396394,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 5212395,
+          "my_share_paise": 1214538,
+          "note": "About ₹20,242 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 809692,
+          "saved_paise": 100000000,
+          "status": "on_track",
+          "step_up_sip_paise": 2024230,
+          "today_cost_paise": 3323076923,
+          "when": "2056-11-10",
+          "years_away": 30
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 100000000,
+        "notes": [
+          "Term cover is short by ₹4,60,00,000. It should cover 15 years of take-home for each of you, plus loans.",
+          "Health cover meets the ₹10,00,000 target because a base family floater."
+        ],
+        "term_gap_paise": 4600000000,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 5600000000
+      },
+      "monthly": {
+        "fits": true,
+        "shortfall_paise": 0,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 21710018,
+        "total_step_up_sip_paise": 18242628
+      },
+      "timeline": [
+        {
+          "age": 28,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 30,
+          "events": [
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2056
+        }
+      ]
+    }
+  },
+  {
+    "name": "no_child_older_so_wider_health",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 8676877,
+          "note": "About ₹1,44,615 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 5784584,
+          "saved_paise": 40000000,
+          "status": "on_track",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 6308192123,
+          "gap_paise": 5977043052,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 22498174,
+          "my_share_paise": 8925140,
+          "note": "Needs ₹1,48,752 a month at step-up, about ₹1,00,936 more than the surplus left for it.",
+          "partner_share_paise": 5950094,
+          "saved_paise": 100000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 14875234,
+          "today_cost_paise": 3323076923,
+          "when": "2037-11-10",
+          "years_away": 11
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹4,60,00,000. It should cover 15 years of take-home for each of you, plus loans.",
+          "Health cover meets the ₹15,00,000 target because someone in the family is 45 or older."
+        ],
+        "term_gap_paise": 4600000000,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 5600000000
+      },
+      "monthly": {
+        "fits": false,
+        "shortfall_paise": 10093632,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 38995797,
+        "total_step_up_sip_paise": 31093632
+      },
+      "timeline": [
+        {
+          "age": 47,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 49,
+          "events": [
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2037
+        }
+      ]
+    }
+  },
+  {
+    "name": "partner_older_wider_health",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 8676877,
+          "note": "About ₹1,44,615 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 5784584,
+          "saved_paise": 40000000,
+          "status": "on_track",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 14135202265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 6394890,
+          "my_share_paise": 1590920,
+          "note": "About ₹26,515 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 1060614,
+          "saved_paise": 100000000,
+          "status": "on_track",
+          "step_up_sip_paise": 2651534,
+          "today_cost_paise": 3323076923,
+          "when": "2053-11-10",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹4,60,00,000. It should cover 15 years of take-home for each of you, plus loans.",
+          "Health cover meets the ₹15,00,000 target because someone in the family is 45 or older."
+        ],
+        "term_gap_paise": 4600000000,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 5600000000
+      },
+      "monthly": {
+        "fits": true,
+        "shortfall_paise": 0,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 22892513,
+        "total_step_up_sip_paise": 18869932
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 33,
+          "events": [
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "solo_earner_tight_surplus",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 102000000,
+          "gap_paise": 69900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 5607758,
+          "my_share_paise": 5607758,
+          "note": "Needs ₹56,078 a month at step-up, about ₹46,078 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 30000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 5607758,
+          "today_cost_paise": 102000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 14461461,
+          "note": "Needs ₹1,44,615 a month at step-up, about ₹1,44,615 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 40000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 40569354,
+          "gap_paise": 34000536,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "hybrid",
+          "mix_note": "3 to 7 years: a balanced or hybrid fund; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 770844,
+          "my_share_paise": 695836,
+          "note": "Needs ₹6,958 a month at step-up, about ₹6,958 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 695836,
+          "today_cost_paise": 30000000,
+          "when": "2030-01-01",
+          "years_away": 3
+        },
+        {
+          "future_cost_paise": 2347001548,
+          "gap_paise": 2294603003,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 2012012,
+          "my_share_paise": 953728,
+          "note": "Needs ₹9,537 a month at step-up, about ₹9,537 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 953728,
+          "today_cost_paise": 300000000,
+          "when": "2048-06-01",
+          "years_away": 21
+        },
+        {
+          "future_cost_paise": 30269494523,
+          "gap_paise": 28379670265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 12839212,
+          "my_share_paise": 5323565,
+          "note": "Needs ₹53,236 a month at step-up, about ₹53,236 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 100000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 5323565,
+          "today_cost_paise": 6276923077,
+          "when": "2053-11-10",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹4,78,70,015. It should cover 15 years of take-home for each of you, plus loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 4787001548,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 5787001548
+      },
+      "monthly": {
+        "fits": false,
+        "shortfall_paise": 26042348,
+        "surplus_paise": 1000000,
+        "total_sip_paise": 35970512,
+        "total_step_up_sip_paise": 27042348
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 33,
+          "events": [
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 35,
+          "events": [
+            "Baby's first year"
+          ],
+          "year": 2030
+        },
+        {
+          "age": 53,
+          "events": [
+            "Child's education"
+          ],
+          "year": 2048
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "covered_everything",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 0,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 0,
+          "my_share_paise": 0,
+          "note": "Already covered by what is saved.",
+          "partner_share_paise": 0,
+          "saved_paise": 100000000000000,
+          "status": "done",
+          "step_up_sip_paise": 0,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 0,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 0,
+          "my_share_paise": 0,
+          "note": "Already covered by what is saved.",
+          "partner_share_paise": 0,
+          "saved_paise": 100000000000000,
+          "status": "done",
+          "step_up_sip_paise": 0,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 40569354,
+          "gap_paise": 0,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "hybrid",
+          "mix_note": "3 to 7 years: a balanced or hybrid fund; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 0,
+          "my_share_paise": 0,
+          "note": "Already covered by what is saved.",
+          "partner_share_paise": 0,
+          "saved_paise": 100000000000000,
+          "status": "done",
+          "step_up_sip_paise": 0,
+          "today_cost_paise": 30000000,
+          "when": "2030-01-01",
+          "years_away": 3
+        },
+        {
+          "future_cost_paise": 2347001548,
+          "gap_paise": 0,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 0,
+          "my_share_paise": 0,
+          "note": "Already covered by what is saved.",
+          "partner_share_paise": 0,
+          "saved_paise": 100000000000000,
+          "status": "done",
+          "step_up_sip_paise": 0,
+          "today_cost_paise": 300000000,
+          "when": "2048-06-01",
+          "years_away": 21
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 0,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 0,
+          "my_share_paise": 0,
+          "note": "Already covered by what is saved.",
+          "partner_share_paise": 0,
+          "saved_paise": 100000000000000,
+          "status": "done",
+          "step_up_sip_paise": 0,
+          "today_cost_paise": 3323076923,
+          "when": "2053-11-10",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 100000000000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover covers 15 years of take-home, loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 0,
+        "term_have_paise": 100000000000000,
+        "term_needed_paise": 7947001548
+      },
+      "monthly": {
+        "fits": true,
+        "shortfall_paise": 0,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 0,
+        "total_step_up_sip_paise": 0
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 33,
+          "events": [
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 35,
+          "events": [
+            "Baby's first year"
+          ],
+          "year": 2030
+        },
+        {
+          "age": 53,
+          "events": [
+            "Child's education"
+          ],
+          "year": 2048
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "surplus_exactly_fits_first_goal",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1756937,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 0,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 14135202265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 6394890,
+          "my_share_paise": 2651534,
+          "note": "Needs ₹26,515 a month at step-up, about ₹26,515 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 100000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 2651534,
+          "today_cost_paise": 3323076923,
+          "when": "2053-11-10",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 100000000,
+        "notes": [
+          "Term cover is short by ₹1,13,62,487. It should cover 15 years of take-home for each of you, plus loans.",
+          "Health cover meets the ₹10,00,000 target because a base family floater."
+        ],
+        "term_gap_paise": 1136248660,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 2136248660
+      },
+      "monthly": {
+        "fits": false,
+        "shortfall_paise": 2651534,
+        "surplus_paise": 1756937,
+        "total_sip_paise": 8151827,
+        "total_step_up_sip_paise": 4408471
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "no_income_at_all",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1756937,
+          "note": "Needs ₹17,569 a month at step-up, about ₹17,569 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 30000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 14461461,
+          "note": "Needs ₹1,44,615 a month at step-up, about ₹1,44,615 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 40000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 40569354,
+          "gap_paise": 34000536,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "hybrid",
+          "mix_note": "3 to 7 years: a balanced or hybrid fund; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 770844,
+          "my_share_paise": 695836,
+          "note": "Needs ₹6,958 a month at step-up, about ₹6,958 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 695836,
+          "today_cost_paise": 30000000,
+          "when": "2030-01-01",
+          "years_away": 3
+        },
+        {
+          "future_cost_paise": 2347001548,
+          "gap_paise": 2294603003,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 2012012,
+          "my_share_paise": 953728,
+          "note": "Needs ₹9,537 a month at step-up, about ₹9,537 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 953728,
+          "today_cost_paise": 300000000,
+          "when": "2048-06-01",
+          "years_away": 21
+        },
+        {
+          "future_cost_paise": 16025026523,
+          "gap_paise": 14135202265,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 6394890,
+          "my_share_paise": 2651534,
+          "note": "Needs ₹26,515 a month at step-up, about ₹26,515 more than the surplus left for it.",
+          "partner_share_paise": 0,
+          "saved_paise": 100000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 2651534,
+          "today_cost_paise": 3323076923,
+          "when": "2053-11-10",
+          "years_away": 27
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Enter take-home pay to size term cover.",
+          "Term cover is short by ₹1,54,70,015. It should cover 15 years of take-home for each of you, plus loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 1547001548,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 2547001548
+      },
+      "monthly": {
+        "fits": false,
+        "shortfall_paise": 29519496,
+        "surplus_paise": -9000000,
+        "total_sip_paise": 25675369,
+        "total_step_up_sip_paise": 20519496
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target"
+          ],
+          "year": 2026
+        },
+        {
+          "age": 33,
+          "events": [
+            "Wedding"
+          ],
+          "year": 2028
+        },
+        {
+          "age": 35,
+          "events": [
+            "Baby's first year"
+          ],
+          "year": 2030
+        },
+        {
+          "age": 53,
+          "events": [
+            "Child's education"
+          ],
+          "year": 2048
+        },
+        {
+          "age": 58,
+          "events": [
+            "Retirement at 58"
+          ],
+          "year": 2053
+        }
+      ]
+    }
+  },
+  {
+    "name": "retire_before_now",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 54000000,
+          "gap_paise": 21900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 1756937,
+          "my_share_paise": 1054162,
+          "note": "About ₹17,569 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 702775,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 1756937,
+          "today_cost_paise": 54000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 3323076923,
+          "gap_paise": 3223076923,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 3223076923,
+          "my_share_paise": 1933846154,
+          "note": "Needs ₹3,22,30,769 a month at step-up, about ₹3,20,38,339 more than the surplus left for it.",
+          "partner_share_paise": 1289230769,
+          "saved_paise": 100000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 3223076923,
+          "today_cost_paise": 3323076923,
+          "when": "2026-11-10",
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 8676877,
+          "note": "Needs ₹1,44,615 a month at step-up, about ₹1,44,615 more than the surplus left for it.",
+          "partner_share_paise": 5784584,
+          "saved_paise": 40000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 40569354,
+          "gap_paise": 34000536,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "hybrid",
+          "mix_note": "3 to 7 years: a balanced or hybrid fund; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 770844,
+          "my_share_paise": 417502,
+          "note": "Needs ₹6,958 a month at step-up, about ₹6,958 more than the surplus left for it.",
+          "partner_share_paise": 278334,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 695836,
+          "today_cost_paise": 30000000,
+          "when": "2030-01-01",
+          "years_away": 3
+        },
+        {
+          "future_cost_paise": 2347001548,
+          "gap_paise": 2294603003,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 2012012,
+          "my_share_paise": 572237,
+          "note": "Needs ₹9,537 a month at step-up, about ₹9,537 more than the surplus left for it.",
+          "partner_share_paise": 381491,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 953728,
+          "today_cost_paise": 300000000,
+          "when": "2048-06-01",
+          "years_away": 21
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹6,94,70,015. It should cover 15 years of take-home for each of you, plus loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 6947001548,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 7947001548
+      },
+      "monthly": {
+        "fits": false,
+        "shortfall_paise": 3219944885,
+        "surplus_paise": 21000000,
+        "total_sip_paise": 3242357402,
+        "total_step_up_sip_paise": 3240944885
+      },
+      "timeline": [
+        {
+          "age": 31,
+          "events": [
+            "Emergency fund target",
+            "Retirement at 20"
+          ],
+          "year": 2026
+        }
+      ]
+    }
+  },
+  {
+    "name": "extreme_ages_and_amounts",
+    "plan": {
+      "assumptions": {
+        "debt_return_bps": 700,
+        "education_inflation_bps": 1000,
+        "equity_return_bps": 1150,
+        "general_inflation_bps": 600,
+        "hybrid_return_bps": 900,
+        "medical_inflation_bps": 1000,
+        "step_up_bps": 1000,
+        "swr_bps": 325,
+        "wedding_inflation_bps": 800
+      },
+      "goals": [
+        {
+          "future_cost_paise": 100000000000000,
+          "gap_paise": 99999967900000,
+          "key": "emergency",
+          "label": "Emergency fund",
+          "mix": "debt",
+          "mix_note": "Keep it liquid: savings account, liquid fund or short FD.",
+          "monthly_sip_paise": 8022540533112,
+          "my_share_paise": 4011270266556,
+          "note": "About ₹80,22,54,05,331 a month at step-up, which fits the surplus.",
+          "partner_share_paise": 4011270266556,
+          "saved_paise": 30000000,
+          "status": "on_track",
+          "step_up_sip_paise": 8022540533112,
+          "today_cost_paise": 100000000000000,
+          "when": null,
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 100000000000000,
+          "gap_paise": 99999900000000,
+          "key": "retirement",
+          "label": "Retirement",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 99999900000000,
+          "my_share_paise": 49999950000000,
+          "note": "Needs ₹9,99,99,90,00,000 a month at step-up, about ₹80,22,44,05,331 more than the surplus left for it.",
+          "partner_share_paise": 49999950000000,
+          "saved_paise": 100000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 99999900000000,
+          "today_cost_paise": 100000000000000,
+          "when": "2026-11-10",
+          "years_away": 0
+        },
+        {
+          "future_cost_paise": 275245168,
+          "gap_paise": 231715063,
+          "key": "wedding",
+          "label": "Wedding",
+          "mix": "debt",
+          "mix_note": "Under 3 years: RD/FD or a liquid fund, not equity.",
+          "monthly_sip_paise": 14740686,
+          "my_share_paise": 7230730,
+          "note": "Needs ₹1,44,615 a month at step-up, about ₹1,44,615 more than the surplus left for it.",
+          "partner_share_paise": 7230731,
+          "saved_paise": 40000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 14461461,
+          "today_cost_paise": 250000000,
+          "when": "2028-02-01",
+          "years_away": 1
+        },
+        {
+          "future_cost_paise": 40569354,
+          "gap_paise": 34000536,
+          "key": "child_birth",
+          "label": "Baby's first year",
+          "mix": "hybrid",
+          "mix_note": "3 to 7 years: a balanced or hybrid fund; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 770844,
+          "my_share_paise": 347918,
+          "note": "Needs ₹6,958 a month at step-up, about ₹6,958 more than the surplus left for it.",
+          "partner_share_paise": 347918,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 695836,
+          "today_cost_paise": 30000000,
+          "when": "2030-01-01",
+          "years_away": 3
+        },
+        {
+          "future_cost_paise": 2347001548,
+          "gap_paise": 2294603003,
+          "key": "child_education",
+          "label": "Child's education",
+          "mix": "equity",
+          "mix_note": "Over 7 years: equity index funds; move to RD/FD in the last 2 to 3 years.",
+          "monthly_sip_paise": 2012012,
+          "my_share_paise": 476864,
+          "note": "Needs ₹9,537 a month at step-up, about ₹9,537 more than the surplus left for it.",
+          "partner_share_paise": 476864,
+          "saved_paise": 5000000,
+          "status": "needs_more",
+          "step_up_sip_paise": 953728,
+          "today_cost_paise": 300000000,
+          "when": "2048-06-01",
+          "years_away": 21
+        }
+      ],
+      "insurance": {
+        "health_gap_paise": 0,
+        "health_have_paise": 500000000,
+        "health_needed_paise": 150000000,
+        "notes": [
+          "Term cover is short by ₹9,99,99,00,00,000. It should cover 15 years of take-home for each of you, plus loans and the child's education.",
+          "Health cover meets the ₹15,00,000 target because a child is planned."
+        ],
+        "term_gap_paise": 99999000000000,
+        "term_have_paise": 1000000000,
+        "term_needed_paise": 100000000000000
+      },
+      "monthly": {
+        "fits": false,
+        "shortfall_paise": 8022456644137,
+        "surplus_paise": 100000000000000,
+        "total_sip_paise": 108022458056654,
+        "total_step_up_sip_paise": 108022456644137
+      },
+      "timeline": [
+        {
+          "age": 100,
+          "events": [
+            "Emergency fund target",
+            "Retirement at 0"
+          ],
+          "year": 2026
+        }
+      ]
+    }
+  }
+]

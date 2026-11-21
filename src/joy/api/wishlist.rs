@@ -449,15 +449,11 @@ pub async fn edit(State(s): State<AppState>, Extension((user_id, _)): User, Path
     Ok(Json(form(&s.db, &j, Some(id), &input, "").await?))
 }
 
-async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> Result<Response, AppError> {
-    let j = joy(&s, &user_id).await?;
-    if let Some(id) = id {
-        mine(&s.db, &j.couple, id).await?;
-    }
-    let allow_duplicate = body.allow_duplicate;
-    let (i, cost_ok) = body.input();
-    let latlng = parse_latlng(&i.location);
-    let error = if i.title.trim().is_empty() {
+/// What is wrong with a slip as typed, in words for the form; empty when it can be saved. The first
+/// problem found is the one reported. `cost_ok`: the cost field was a whole number; `latlng`: the
+/// location, if it parsed.
+fn slip_error(i: &ActivityInput, cost_ok: bool, latlng: Option<(f64, f64)>) -> &'static str {
+    if i.title.trim().is_empty() {
         "Give it a name."
     } else if i.title.trim().chars().count() > db::MAX_TITLE {
         "That name is too long: keep it under 120 characters."
@@ -483,7 +479,18 @@ async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> 
         "Pick a setting and duration."
     } else {
         ""
-    };
+    }
+}
+
+async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> Result<Response, AppError> {
+    let j = joy(&s, &user_id).await?;
+    if let Some(id) = id {
+        mine(&s.db, &j.couple, id).await?;
+    }
+    let allow_duplicate = body.allow_duplicate;
+    let (i, cost_ok) = body.input();
+    let latlng = parse_latlng(&i.location);
+    let error = slip_error(&i, cost_ok, latlng);
     let dup = if error.is_empty() && !allow_duplicate { db::duplicate_of(&s.db, &j.couple, &i.title, id).await? } else { None };
     let error = if dup.is_some() { "A slip like this is already in the jar. Save it anyway?" } else { error };
     if !error.is_empty() {
@@ -633,6 +640,63 @@ fn me_name(j: &Joy) -> String {
 mod tests {
     use super::*;
     use sqlx::sqlite::SqlitePoolOptions;
+
+    /// A slip that passes every check.
+    fn good() -> ActivityInput {
+        ActivityInput { title: "Sunset walk".into(), setting: "local".into(), duration: "short".into(), energy: "med".into(), ..Default::default() }
+    }
+
+    fn error_for(edit: impl FnOnce(&mut ActivityInput), cost_ok: bool) -> &'static str {
+        let mut i = good();
+        edit(&mut i);
+        slip_error(&i, cost_ok, parse_latlng(&i.location))
+    }
+
+    #[test]
+    fn a_good_slip_has_no_error() {
+        assert_eq!(error_for(|_| {}, true), "");
+    }
+
+    #[test]
+    fn each_mistake_gets_its_own_message() {
+        let long = |n: usize| "x".repeat(n);
+        let cases: Vec<(&str, Box<dyn FnOnce(&mut ActivityInput)>, bool, &str)> = vec![
+            ("blank title", Box::new(|i| i.title = "   ".into()), true, "Give it a name."),
+            ("long title", Box::new(move |i| i.title = long(db::MAX_TITLE + 1)), true, "That name is too long: keep it under 120 characters."),
+            ("long venue", Box::new(move |i| i.venue = long(db::MAX_PLACE + 1)), true, "That place is too long: keep it under 120 characters."),
+            ("long area", Box::new(move |i| i.area = long(db::MAX_PLACE + 1)), true, "That area is too long: keep it under 120 characters."),
+            ("long notes", Box::new(move |i| i.notes = long(db::MAX_NOTES + 1)), true, "Those notes are too long: keep them under 2,000 characters."),
+            ("too many tags", Box::new(|i| i.tags = (0..13).map(|n| format!("t{n}")).collect::<Vec<_>>().join(", ")), true, "Use at most 12 tags of up to 24 characters each."),
+            ("bad link", Box::new(|i| i.url = "ftp://x".into()), true, "That link should start with http:// or https:// and have no spaces."),
+            ("bad energy", Box::new(|i| i.energy = "wild".into()), true, "Pick an energy: low, medium or high."),
+            ("cost not a number", Box::new(|_| {}), false, "The cost should be a whole number."),
+            ("bad location", Box::new(|i| i.location = "somewhere".into()), true, "Location should look like “19.13, 72.81”. Leave it blank for at-home plans."),
+            ("bad hours", Box::new(|i| i.hours = "whenever".into()), true, "Hours should look like “tue-sun 12:00-23:30”, with a “;” between different days."),
+            ("bad duration", Box::new(|i| i.duration = "forever".into()), true, "Pick a setting and duration."),
+            ("bad setting", Box::new(|i| i.setting = "moon".into()), true, "Pick a setting and duration."),
+        ];
+        for (what, edit, cost_ok, want) in cases {
+            assert_eq!(error_for(edit, cost_ok), want, "{what}");
+        }
+    }
+
+    #[test]
+    fn limits_are_inclusive_and_blank_optionals_are_fine() {
+        assert_eq!(error_for(|i| i.title = "x".repeat(db::MAX_TITLE), true), "");
+        assert_eq!(error_for(|i| i.notes = "x".repeat(db::MAX_NOTES), true), "");
+        assert_eq!(error_for(|i| { i.location = "19.13, 72.81".into(); i.hours = "tue-sun 12:00-23:30".into(); }, true), "");
+        assert_eq!(error_for(|i| i.location = "  ".into(), true), "", "a blank location means an at-home plan");
+    }
+
+    #[test]
+    fn the_first_problem_found_is_the_one_reported() {
+        let both = |i: &mut ActivityInput| { i.title = String::new(); i.url = "nope".into(); i.energy = "wild".into(); };
+        assert_eq!(error_for(both, false), "Give it a name.");
+        let later = |i: &mut ActivityInput| { i.url = "nope".into(); i.energy = "wild".into(); };
+        assert_eq!(error_for(later, false), "That link should start with http:// or https:// and have no spaces.");
+        let last = |i: &mut ActivityInput| { i.energy = "wild".into(); i.hours = "whenever".into(); i.duration = "forever".into(); };
+        assert_eq!(error_for(last, true), "Pick an energy: low, medium or high.");
+    }
 
     /// A migrated database with one couple (`ua` first, `ub` second) and a slip of theirs.
     async fn couple_db() -> (SqlitePool, i64) {

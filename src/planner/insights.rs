@@ -12,12 +12,7 @@ use serde::Serialize;
 use time::{Date, Duration};
 
 use crate::alerts::normalize;
-use crate::planner::{cycle::day_in_month_offset, format_inr};
-
-/// Money in advice text: whole rupees (planning figures, not ledger entries).
-fn inr(paise: i64) -> String {
-    format_inr(paise.saturating_add(50).div_euclid(100).saturating_mul(100))
-}
+use crate::planner::{cycle::day_in_month_offset, life::inr};
 
 /// A transaction as the insights need it.
 #[derive(Debug, Clone, PartialEq)]
@@ -410,6 +405,146 @@ fn cv_bps(values: &[i64]) -> Option<i64> {
     Some((var.sqrt() / mean * 10_000.0).round() as i64)
 }
 
+/// The figures the health score and its advice are worked out from.
+struct HealthFacts {
+    liquid: i64,
+    avg_credits: i64,
+    avg_debits: i64,
+    avg_surplus: i64,
+    savings_rate_bps: Option<i64>,
+    /// Months of spending the liquid balances cover, in tenths.
+    emergency: Option<i64>,
+    income_cv: Option<i64>,
+    charges: Charges,
+}
+
+impl HealthFacts {
+    fn of(txns: &[Txn], liquid_paise: i64, today: Date) -> Self {
+        let months = monthly(txns, today);
+        let current = month_index(today);
+        let (credits, debits) = (current - 3..current)
+            .filter_map(|m| months.get(&m).copied())
+            .fold((0_i64, 0_i64), |(c, d), (mc, md)| (c.saturating_add(mc), d.saturating_add(md)));
+        let avg_debits = debits / 3;
+        let incomes: Vec<i64> = (current - 6..current).filter_map(|m| months.get(&m).map(|v| v.0)).filter(|c| *c > 0).collect();
+        HealthFacts {
+            liquid: liquid_paise,
+            avg_credits: credits / 3,
+            avg_debits,
+            avg_surplus: (credits - debits) / 3,
+            savings_rate_bps: (credits > 0).then(|| (credits - debits).saturating_mul(10_000) / credits),
+            emergency: (avg_debits > 0).then(|| liquid_paise.max(0).saturating_mul(10) / avg_debits),
+            income_cv: cv_bps(&incomes),
+            charges: charges(txns, today),
+        }
+    }
+
+    fn low_savings_rate(&self) -> Option<i64> {
+        self.savings_rate_bps.filter(|r| *r < TARGET_SAVINGS_BPS)
+    }
+
+    fn low_emergency_cover(&self) -> Option<i64> {
+        self.emergency.filter(|t| *t < TARGET_EMERGENCY_TENTHS)
+    }
+
+    fn swinging_income(&self) -> Option<i64> {
+        self.income_cv.filter(|cv| *cv > CV_ALERT_BPS)
+    }
+
+    fn costly_charges(&self) -> bool {
+        self.charges.last_12m_paise > CHARGES_ALERT_PAISE
+    }
+
+    /// 100, less points for each shortfall (see [`health`]).
+    fn score(&self) -> i64 {
+        let mut score = 100.0_f64;
+        if let Some(rate) = self.low_savings_rate() {
+            score -= ((TARGET_SAVINGS_BPS - rate) as f64 * 30.0 / TARGET_SAVINGS_BPS as f64).min(30.0);
+        }
+        if let Some(t) = self.low_emergency_cover() {
+            score -= ((TARGET_EMERGENCY_TENTHS - t) as f64 * 25.0 / TARGET_EMERGENCY_TENTHS as f64).min(25.0);
+        }
+        if self.swinging_income().is_some() {
+            score -= 10.0;
+        }
+        if self.costly_charges() {
+            score -= 10.0;
+        }
+        score.round().clamp(0.0, 100.0) as i64
+    }
+
+    fn refund_action(open_refunds: &[Refund]) -> Option<Action> {
+        if open_refunds.is_empty() {
+            return None;
+        }
+        let total = open_refunds.iter().fold(0_i64, |acc, r| acc.saturating_add(r.amount_paise));
+        let overdue = open_refunds.iter().filter(|r| r.status == RefundStatus::Overdue).count();
+        Some(Action {
+            text: match overdue {
+                0 => format!("Watch {} of failed payments that haven't been reversed yet.", inr(total)),
+                1 => format!("Chase {} of failed payments that haven't been reversed; one is past its refund deadline.", inr(total)),
+                n => format!("Chase {} of failed payments that haven't been reversed; {n} are past their refund deadline.", inr(total)),
+            },
+            impact: if overdue > 0 { Impact::High } else { Impact::Medium },
+        })
+    }
+
+    fn emergency_action(&self) -> Option<Action> {
+        let tenths = self.low_emergency_cover()?;
+        let needed = (3 * self.avg_debits - self.liquid.max(0)).max(0);
+        (needed > 0).then(|| Action {
+            text: format!("Keep {} more in liquid balances to reach 3 months of spending.", inr(needed)),
+            impact: if tenths < 10 { Impact::High } else { Impact::Medium },
+        })
+    }
+
+    fn savings_action(&self) -> Option<Action> {
+        let rate = self.low_savings_rate()?;
+        let gap = self.avg_credits * TARGET_SAVINGS_BPS / 10_000 - self.avg_surplus;
+        (gap > 0).then(|| Action {
+            text: format!("Save {} more a month to keep 20% of your income.", inr(gap)),
+            impact: if rate < 1_000 { Impact::High } else { Impact::Medium },
+        })
+    }
+
+    fn charges_action(&self) -> Option<Action> {
+        if !self.costly_charges() {
+            return None;
+        }
+        let top = self.charges.items.first().map(|i| i.label.clone()).unwrap_or_default();
+        Some(Action {
+            text: format!(
+                "Bank charges cost {} in the last 12 months, mostly {}. Ask the bank to waive or switch off the ones you do not need.",
+                inr(self.charges.last_12m_paise),
+                top
+            ),
+            impact: Impact::Medium,
+        })
+    }
+
+    fn income_action(&self) -> Option<Action> {
+        let cv = self.swinging_income()?;
+        Some(Action {
+            text: format!("Your monthly income swings by about {}%. Plan spending on your lowest month and keep the emergency fund liquid.", cv / 100),
+            impact: Impact::Medium,
+        })
+    }
+
+    /// The advice, most important first, at most 4.
+    fn actions(&self, open_refunds: &[Refund]) -> Vec<Action> {
+        let mut actions: Vec<Action> = [Self::refund_action(open_refunds), self.emergency_action(), self.savings_action(), self.charges_action(), self.income_action()]
+            .into_iter()
+            .flatten()
+            .collect();
+        if actions.is_empty() {
+            actions.push(Action { text: "Nothing urgent: keep saving steadily.".to_string(), impact: Impact::Low });
+        }
+        actions.sort_by_key(|a| a.impact);
+        actions.truncate(4);
+        actions
+    }
+}
+
 /// Money health. Score starts at 100 and loses points for:
 /// - savings rate below 20% (up to 30, scaled by the shortfall),
 /// - emergency cover below 3 months (up to 25, scaled),
@@ -419,102 +554,13 @@ fn cv_bps(values: &[i64]) -> Option<i64> {
 /// Savings rate and emergency cover use the last 3 completed months. Income CV uses the last 6.
 /// Missing data gives no penalty and no number.
 pub fn health(txns: &[Txn], liquid_paise: i64, open_refunds: &[Refund], today: Date) -> Health {
-    let months = monthly(txns, today);
-    let current = month_index(today);
-    let (credits, debits) = (current - 3..current)
-        .filter_map(|m| months.get(&m).copied())
-        .fold((0_i64, 0_i64), |(c, d), (mc, md)| (c.saturating_add(mc), d.saturating_add(md)));
-    let avg_credits = credits / 3;
-    let avg_debits = debits / 3;
-    let avg_surplus = (credits - debits) / 3;
-
-    let savings_rate_bps = (credits > 0).then(|| (credits - debits).saturating_mul(10_000) / credits);
-    let emergency = (avg_debits > 0).then(|| liquid_paise.max(0).saturating_mul(10) / avg_debits);
-    let incomes: Vec<i64> = (current - 6..current)
-        .filter_map(|m| months.get(&m).map(|v| v.0))
-        .filter(|c| *c > 0)
-        .collect();
-    let income_cv = cv_bps(&incomes);
-    let charges_out = charges(txns, today);
-
-    let mut score = 100.0_f64;
-    if let Some(rate) = savings_rate_bps.filter(|r| *r < TARGET_SAVINGS_BPS) {
-        score -= ((TARGET_SAVINGS_BPS - rate) as f64 * 30.0 / TARGET_SAVINGS_BPS as f64).min(30.0);
-    }
-    if let Some(t) = emergency.filter(|t| *t < TARGET_EMERGENCY_TENTHS) {
-        score -= ((TARGET_EMERGENCY_TENTHS - t) as f64 * 25.0 / TARGET_EMERGENCY_TENTHS as f64).min(25.0);
-    }
-    if income_cv.is_some_and(|cv| cv > CV_ALERT_BPS) {
-        score -= 10.0;
-    }
-    if charges_out.last_12m_paise > CHARGES_ALERT_PAISE {
-        score -= 10.0;
-    }
-    let score = score.round().clamp(0.0, 100.0) as i64;
-
-    let mut actions: Vec<Action> = Vec::new();
-    if !open_refunds.is_empty() {
-        let total = open_refunds.iter().fold(0_i64, |acc, r| acc.saturating_add(r.amount_paise));
-        let overdue = open_refunds.iter().filter(|r| r.status == RefundStatus::Overdue).count();
-        actions.push(Action {
-            text: match overdue {
-                0 => format!("Watch {} of failed payments that haven't been reversed yet.", inr(total)),
-                1 => format!("Chase {} of failed payments that haven't been reversed; one is past its refund deadline.", inr(total)),
-                n => format!("Chase {} of failed payments that haven't been reversed; {n} are past their refund deadline.", inr(total)),
-            },
-            impact: if overdue > 0 { Impact::High } else { Impact::Medium },
-        });
-    }
-    if let Some(tenths) = emergency.filter(|t| *t < TARGET_EMERGENCY_TENTHS) {
-        let needed = (3 * avg_debits - liquid_paise.max(0)).max(0);
-        if needed > 0 {
-            actions.push(Action {
-                text: format!("Keep {} more in liquid balances to reach 3 months of spending.", inr(needed)),
-                impact: if tenths < 10 { Impact::High } else { Impact::Medium },
-            });
-        }
-    }
-    if let Some(rate) = savings_rate_bps.filter(|r| *r < TARGET_SAVINGS_BPS) {
-        let gap = avg_credits * TARGET_SAVINGS_BPS / 10_000 - avg_surplus;
-        if gap > 0 {
-            actions.push(Action {
-                text: format!("Save {} more a month to keep 20% of your income.", inr(gap)),
-                impact: if rate < 1_000 { Impact::High } else { Impact::Medium },
-            });
-        }
-    }
-    if charges_out.last_12m_paise > CHARGES_ALERT_PAISE {
-        let top = charges_out.items.first().map(|i| i.label.clone()).unwrap_or_default();
-        actions.push(Action {
-            text: format!(
-                "Bank charges cost {} in the last 12 months, mostly {}. Ask the bank to waive or switch off the ones you do not need.",
-                inr(charges_out.last_12m_paise),
-                top
-            ),
-            impact: Impact::Medium,
-        });
-    }
-    if let Some(cv) = income_cv.filter(|cv| *cv > CV_ALERT_BPS) {
-        actions.push(Action {
-            text: format!(
-                "Your monthly income swings by about {}%. Plan spending on your lowest month and keep the emergency fund liquid.",
-                cv / 100
-            ),
-            impact: Impact::Medium,
-        });
-    }
-    if actions.is_empty() {
-        actions.push(Action { text: "Nothing urgent: keep saving steadily.".to_string(), impact: Impact::Low });
-    }
-    actions.sort_by_key(|a| a.impact);
-    actions.truncate(4);
-
+    let facts = HealthFacts::of(txns, liquid_paise, today);
     Health {
-        score,
-        savings_rate_bps,
-        emergency_months_tenths: emergency,
-        income_cv_bps: income_cv,
-        actions,
+        score: facts.score(),
+        savings_rate_bps: facts.savings_rate_bps,
+        emergency_months_tenths: facts.emergency,
+        income_cv_bps: facts.income_cv,
+        actions: facts.actions(open_refunds),
     }
 }
 

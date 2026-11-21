@@ -5,7 +5,7 @@
 use serde::Serialize;
 use time::{Date, Duration, Month};
 
-use crate::planner::{format_inr, short_date};
+use crate::planner::{life::inr, short_date};
 
 /// Most habits returned, after sorting.
 const MAX_HABITS: usize = 12;
@@ -249,7 +249,7 @@ fn cap_life_areas(out: &mut Vec<Habit>) {
     });
 }
 
-fn link(label: &str, to: &str) -> Option<Link> {
+pub(crate) fn link(label: &str, to: &str) -> Option<Link> {
     Some(Link {
         label: label.to_string(),
         to: to.to_string(),
@@ -257,7 +257,7 @@ fn link(label: &str, to: &str) -> Option<Link> {
 }
 
 /// Status of a dated habit: overdue once the date has passed, due soon within two weeks.
-fn due_status(due: Date, today: Date) -> Status {
+pub(crate) fn due_status(due: Date, today: Date) -> Status {
     let days = (due - today).whole_days();
     if days < 0 {
         Status::Overdue
@@ -266,11 +266,6 @@ fn due_status(due: Date, today: Date) -> Status {
     } else {
         Status::Ok
     }
-}
-
-/// Money in text: whole rupees, Indian grouping.
-fn inr(paise: i64) -> String {
-    format_inr(paise.saturating_add(50).div_euclid(100).saturating_mul(100))
 }
 
 /// "2026-10" becomes "October 2026". Anything else is returned as it came.

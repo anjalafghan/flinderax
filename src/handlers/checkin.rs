@@ -135,13 +135,19 @@ pub async fn report_on(
     if (end - start).whole_days() > MAX_REPORT_DAYS {
         return Err(bad_request("a report covers at most 400 days"));
     }
-    let period = Period { start, end };
+    build_report(state, user_id, today, Period { start, end }, &input.txns).await
+}
+
+/// The quarter report for `period`, with what the habits, the forecast, diet, people and the life
+/// line have to say about it.
+async fn build_report(state: &AppState, user_id: &str, today: Date, period: Period, txns: &[TxnIn]) -> Result<QuarterReport, AppError> {
+    let db = &state.db;
     let habits = habits::compute(state, user_id, today).await?;
-    let mut report = checkin::quarter_report(&input.txns, period, habits);
+    let mut report = checkin::quarter_report(txns, period, habits);
     report.calibration = calibration::latest(state, user_id, today).await?;
-    report.diet = diet::report(&state.db, user_id, period, today).await?;
-    report.people = people::report(&state.db, user_id, period, today).await?;
-    report.lifeline = crate::handlers::lifeline::checkin_note(&state.db, user_id, today).await?;
+    report.diet = diet::report(db, user_id, period, today).await?;
+    report.people = people::report(db, user_id, period, today).await?;
+    report.lifeline = crate::handlers::lifeline::checkin_note(db, user_id, today).await?;
     Ok(report)
 }
 
@@ -165,17 +171,23 @@ pub async fn complete_on(
     let period = checkin::period_after(today, prior_end);
 
     let txns = load_txns(db, user_id).await?;
-    let habits = habits::compute(state, user_id, today).await?;
-    let mut report = checkin::quarter_report(&txns, period, habits);
-    report.calibration = calibration::latest(state, user_id, today).await?;
-    report.diet = diet::report(db, user_id, period, today).await?;
-    report.people = people::report(db, user_id, period, today).await?;
-    report.lifeline = crate::handlers::lifeline::checkin_note(db, user_id, today).await?;
+    let report = build_report(state, user_id, today, period, &txns).await?;
     let summary = serde_json::to_string(&report).map_err(stored_error)?;
     // The forecast as it stands now, for the next check-in to compare with.
     let snap = calibration::snapshot(state, user_id, today).await?;
     let forecast_json = serde_json::to_string(&snap).map_err(stored_error)?;
+    save_checkin(db, user_id, today, period, &summary, &forecast_json).await?;
 
+    // One check-in a day; finishing it again the same day is the same action.
+    if let Err(e) = crate::handlers::activity::record(db, user_id, crate::planner::activity::Kind::Checkin, &today.to_string(), 1, today).await {
+        tracing::warn!(error = %e.1, "activity not recorded");
+    }
+
+    compute_status(state, user_id, today).await
+}
+
+/// Stores today's check-in, replacing one saved earlier today.
+async fn save_checkin(db: &sqlx::SqlitePool, user_id: &str, today: Date, period: Period, summary_json: &str, forecast_json: &str) -> Result<(), AppError> {
     let mut tx = db.begin().await?;
     sqlx::query("DELETE FROM checkins WHERE user_id = ? AND done_on = ?")
         .bind(user_id)
@@ -191,17 +203,12 @@ pub async fn complete_on(
     .bind(today.to_string())
     .bind(period.start.to_string())
     .bind(period.end.to_string())
-    .bind(summary)
+    .bind(summary_json)
     .bind(forecast_json)
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    // One check-in a day; finishing it again the same day is the same action.
-    if let Err(e) = crate::handlers::activity::record(db, user_id, crate::planner::activity::Kind::Checkin, &today.to_string(), 1, today).await {
-        tracing::warn!(error = %e.1, "activity not recorded");
-    }
-
-    compute_status(state, user_id, today).await
+    Ok(())
 }
 
 /// Everything the status reads for one user.

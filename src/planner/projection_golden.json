@@ -1,0 +1,5526 @@
+[
+  {
+    "name": "baseline_only",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 7374099,
+            "total_paise": 33851609
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 7284099,
+            "total_paise": 36969880
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 7194099,
+            "total_paise": 42466125
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 7104099,
+            "total_paise": 47964679
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": 7014099,
+            "total_paise": 53450426
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 6924099,
+            "total_paise": 59320410
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 27999531,
+            "spending_paise": 6834099,
+            "total_paise": 65193143
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30411931,
+            "spending_paise": 6744099,
+            "total_paise": 71068640
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32824331,
+            "spending_paise": 6654099,
+            "total_paise": 76946915
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35236731,
+            "spending_paise": 6564099,
+            "total_paise": 82827981
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37649131,
+            "spending_paise": 6474099,
+            "total_paise": 88711854
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40061531,
+            "spending_paise": 6384099,
+            "total_paise": 94598546
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42473931,
+            "spending_paise": 6294099,
+            "total_paise": 100488072
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 44886331,
+            "spending_paise": 6204099,
+            "total_paise": 106380446
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 1075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 1165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 1255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 1345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      },
+      "impacts": [],
+      "scenario": null
+    }
+  },
+  {
+    "name": "rd_with_goal",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 7374099,
+            "total_paise": 33851609
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 7284099,
+            "total_paise": 36969880
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 7194099,
+            "total_paise": 42466125
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 7104099,
+            "total_paise": 47964679
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": 7014099,
+            "total_paise": 53450426
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 6924099,
+            "total_paise": 59320410
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 27999531,
+            "spending_paise": 6834099,
+            "total_paise": 65193143
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30411931,
+            "spending_paise": 6744099,
+            "total_paise": 71068640
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32824331,
+            "spending_paise": 6654099,
+            "total_paise": 76946915
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35236731,
+            "spending_paise": 6564099,
+            "total_paise": 82827981
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37649131,
+            "spending_paise": 6474099,
+            "total_paise": 88711854
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40061531,
+            "spending_paise": 6384099,
+            "total_paise": 94598546
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42473931,
+            "spending_paise": 6294099,
+            "total_paise": 100488072
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 44886331,
+            "spending_paise": 6204099,
+            "total_paise": 106380446
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 1075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 1165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 1255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 1345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      },
+      "impacts": [
+        {
+          "goal": {
+            "gap_paise": -8844669,
+            "projected_paise": 31155331,
+            "required_monthly_paise": 3209724,
+            "target_date": "2027-11-01",
+            "target_paise": 40000000
+          },
+          "maturity_value_paise": 31155331,
+          "monthly_paise": 2500000,
+          "name": "RD",
+          "savings_first": {
+            "cost_paise": 2500000,
+            "from_fd_paise": 0,
+            "from_rest_savings_paise": 2462400,
+            "from_sip_paise": 37600,
+            "from_spending_paise": 0,
+            "rest_savings_after_paise": 0,
+            "sip_after_paise": 3462400,
+            "spending_after_paise": 1887500
+          },
+          "savings_first_thresholds": [
+            {
+              "label": "Only slows your monthly savings top-up",
+              "up_to_paise": 2462400
+            },
+            {
+              "label": "Starts cutting your SIP",
+              "up_to_paise": 5962400
+            },
+            {
+              "label": "Starts eating your spending allowance",
+              "up_to_paise": 7849900
+            },
+            {
+              "label": "Beyond this an FD would have to be touched",
+              "up_to_paise": 7849900
+            }
+          ],
+          "spending_first": {
+            "cost_paise": 2500000,
+            "from_fd_paise": 0,
+            "from_rest_savings_paise": 612500,
+            "from_sip_paise": 0,
+            "from_spending_paise": 1887500,
+            "rest_savings_after_paise": 1849900,
+            "sip_after_paise": 3500000,
+            "spending_after_paise": 0
+          }
+        }
+      ],
+      "scenario": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 7374099,
+            "total_paise": 33851609
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 4127960,
+            "reserve_paise": 13860000,
+            "spending_paise": 4784099,
+            "total_paise": 36984379
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 7167557,
+            "reserve_paise": 15890900,
+            "spending_paise": 2194099,
+            "total_paise": 42509706
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 10224362,
+            "reserve_paise": 18006800,
+            "spending_paise": -395901,
+            "total_paise": 48052010
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 10145834,
+            "reserve_paise": 23174731,
+            "spending_paise": -2985901,
+            "total_paise": 53596260
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 13221663,
+            "reserve_paise": 25587131,
+            "spending_paise": -5575901,
+            "total_paise": 59539585
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 16314917,
+            "reserve_paise": 27999531,
+            "spending_paise": -8165901,
+            "total_paise": 65500584
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 19425694,
+            "reserve_paise": 30411931,
+            "spending_paise": -10755901,
+            "total_paise": 71479358
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 22554094,
+            "reserve_paise": 32824331,
+            "spending_paise": -13345901,
+            "total_paise": 77476008
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 25700216,
+            "reserve_paise": 35236731,
+            "spending_paise": -15935901,
+            "total_paise": 83490634
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 28864163,
+            "reserve_paise": 37649131,
+            "spending_paise": -18525901,
+            "total_paise": 89523341
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 32046034,
+            "reserve_paise": 40061531,
+            "spending_paise": -21115901,
+            "total_paise": 95574229
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 35245933,
+            "reserve_paise": 42473931,
+            "spending_paise": -23705901,
+            "total_paise": 101643403
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 76041662,
+            "spending_paise": -23795901,
+            "total_paise": 107535777
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 2765801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 5355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 7945801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 10535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 13125801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 15715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 18305801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 20895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 23485801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 26075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 28665801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 31255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 31345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "fd_renew_all_and_oneoff",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 7374099,
+            "total_paise": 33851609
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 7284099,
+            "total_paise": 36969880
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 7194099,
+            "total_paise": 42466125
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 7104099,
+            "total_paise": 47964679
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": 7014099,
+            "total_paise": 53450426
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 6924099,
+            "total_paise": 59320410
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 27999531,
+            "spending_paise": 6834099,
+            "total_paise": 65193143
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30411931,
+            "spending_paise": 6744099,
+            "total_paise": 71068640
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32824331,
+            "spending_paise": 6654099,
+            "total_paise": 76946915
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35236731,
+            "spending_paise": 6564099,
+            "total_paise": 82827981
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37649131,
+            "spending_paise": 6474099,
+            "total_paise": 88711854
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40061531,
+            "spending_paise": 6384099,
+            "total_paise": 94598546
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42473931,
+            "spending_paise": 6294099,
+            "total_paise": 100488072
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 44886331,
+            "spending_paise": 6204099,
+            "total_paise": 106380446
+          },
+          {
+            "fds_paise": 8600571,
+            "invested_paise": 45000000,
+            "month": "2027-12",
+            "rds_paise": 5138881,
+            "reserve_paise": 47298731,
+            "spending_paise": 6114099,
+            "total_paise": 112275682
+          },
+          {
+            "fds_paise": 8297494,
+            "invested_paise": 48000000,
+            "month": "2028-01",
+            "rds_paise": 5666936,
+            "reserve_paise": 50059901,
+            "spending_paise": 6024099,
+            "total_paise": 118171830
+          },
+          {
+            "fds_paise": 8343441,
+            "invested_paise": 51000000,
+            "month": "2028-02",
+            "rds_paise": 6197618,
+            "reserve_paise": 52472301,
+            "spending_paise": 5934099,
+            "total_paise": 124070859
+          },
+          {
+            "fds_paise": 8389643,
+            "invested_paise": 54000000,
+            "month": "2028-03",
+            "rds_paise": 6730940,
+            "reserve_paise": 54884701,
+            "spending_paise": 5844099,
+            "total_paise": 129972783
+          },
+          {
+            "fds_paise": 8436100,
+            "invested_paise": 57000000,
+            "month": "2028-04",
+            "rds_paise": 7266915,
+            "reserve_paise": 57297101,
+            "spending_paise": 5754099,
+            "total_paise": 135877615
+          },
+          {
+            "fds_paise": 8482815,
+            "invested_paise": 60000000,
+            "month": "2028-05",
+            "rds_paise": 7805557,
+            "reserve_paise": 59709501,
+            "spending_paise": 5664099,
+            "total_paise": 141785372
+          },
+          {
+            "fds_paise": 8529788,
+            "invested_paise": 63000000,
+            "month": "2028-06",
+            "rds_paise": 8346879,
+            "reserve_paise": 62121901,
+            "spending_paise": 5574099,
+            "total_paise": 147696067
+          },
+          {
+            "fds_paise": 8577021,
+            "invested_paise": 66000000,
+            "month": "2028-07",
+            "rds_paise": 8890894,
+            "reserve_paise": 64534301,
+            "spending_paise": 5484099,
+            "total_paise": 153609715
+          },
+          {
+            "fds_paise": 8624517,
+            "invested_paise": 69000000,
+            "month": "2028-08",
+            "rds_paise": 9437616,
+            "reserve_paise": 66946701,
+            "spending_paise": 5394099,
+            "total_paise": 159526333
+          },
+          {
+            "fds_paise": 8672276,
+            "invested_paise": 72000000,
+            "month": "2028-09",
+            "rds_paise": 9987058,
+            "reserve_paise": 69359101,
+            "spending_paise": 5304099,
+            "total_paise": 165445934
+          },
+          {
+            "fds_paise": 8720299,
+            "invested_paise": 75000000,
+            "month": "2028-10",
+            "rds_paise": 10539233,
+            "reserve_paise": 71771501,
+            "spending_paise": 5214099,
+            "total_paise": 171368532
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 1075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 1165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 1255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 1345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          },
+          {
+            "amount_paise": 1435801,
+            "kind": "spending_short",
+            "month": "2027-12"
+          },
+          {
+            "amount_paise": 1525801,
+            "kind": "spending_short",
+            "month": "2028-01"
+          },
+          {
+            "amount_paise": 1615801,
+            "kind": "spending_short",
+            "month": "2028-02"
+          },
+          {
+            "amount_paise": 1705801,
+            "kind": "spending_short",
+            "month": "2028-03"
+          },
+          {
+            "amount_paise": 1795801,
+            "kind": "spending_short",
+            "month": "2028-04"
+          },
+          {
+            "amount_paise": 1885801,
+            "kind": "spending_short",
+            "month": "2028-05"
+          },
+          {
+            "amount_paise": 1975801,
+            "kind": "spending_short",
+            "month": "2028-06"
+          },
+          {
+            "amount_paise": 2065801,
+            "kind": "spending_short",
+            "month": "2028-07"
+          },
+          {
+            "amount_paise": 2155801,
+            "kind": "spending_short",
+            "month": "2028-08"
+          },
+          {
+            "amount_paise": 2245801,
+            "kind": "spending_short",
+            "month": "2028-09"
+          },
+          {
+            "amount_paise": 2335801,
+            "kind": "spending_short",
+            "month": "2028-10"
+          }
+        ]
+      },
+      "impacts": [
+        {
+          "goal": {
+            "gap_paise": -6794294,
+            "projected_paise": 23205706,
+            "required_monthly_paise": null,
+            "target_date": "2028-10-20",
+            "target_paise": 30000000
+          },
+          "maturity_value_paise": 23205706,
+          "monthly_paise": 0,
+          "name": "Big FD",
+          "savings_first": null,
+          "savings_first_thresholds": [],
+          "spending_first": null
+        },
+        {
+          "goal": {
+            "gap_paise": -1,
+            "projected_paise": 0,
+            "required_monthly_paise": null,
+            "target_date": "2027-02-14",
+            "target_paise": 1
+          },
+          "maturity_value_paise": 0,
+          "monthly_paise": 0,
+          "name": "Wedding",
+          "savings_first": null,
+          "savings_first_thresholds": [],
+          "spending_first": null
+        }
+      ],
+      "scenario": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 36953524,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": -12625901,
+            "total_paise": 33970896
+          },
+          {
+            "fds_paise": 28328206,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": -12715901,
+            "total_paise": 37209166
+          },
+          {
+            "fds_paise": 28493750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": -12805901,
+            "total_paise": 42826125
+          },
+          {
+            "fds_paise": 28574783,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": -12895901,
+            "total_paise": 48446113
+          },
+          {
+            "fds_paise": 28741789,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": -62985901,
+            "total_paise": 4054019
+          },
+          {
+            "fds_paise": 28909772,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": -63075901,
+            "total_paise": 10046890
+          },
+          {
+            "fds_paise": 29078737,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 27999531,
+            "spending_paise": -63165901,
+            "total_paise": 16043243
+          },
+          {
+            "fds_paise": 29248691,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30411931,
+            "spending_paise": -63255901,
+            "total_paise": 22043097
+          },
+          {
+            "fds_paise": 29419640,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32824331,
+            "spending_paise": -63345901,
+            "total_paise": 28046471
+          },
+          {
+            "fds_paise": 29591589,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35236731,
+            "spending_paise": -63435901,
+            "total_paise": 34053382
+          },
+          {
+            "fds_paise": 29764545,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37649131,
+            "spending_paise": -63525901,
+            "total_paise": 40063851
+          },
+          {
+            "fds_paise": 29938513,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40061531,
+            "spending_paise": -63615901,
+            "total_paise": 46077894
+          },
+          {
+            "fds_paise": 30113498,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42473931,
+            "spending_paise": -63705901,
+            "total_paise": 52095530
+          },
+          {
+            "fds_paise": 30289508,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 44886331,
+            "spending_paise": -63795901,
+            "total_paise": 58116779
+          },
+          {
+            "fds_paise": 30466547,
+            "invested_paise": 45000000,
+            "month": "2027-12",
+            "rds_paise": 5138881,
+            "reserve_paise": 47298731,
+            "spending_paise": -63885901,
+            "total_paise": 64141658
+          },
+          {
+            "fds_paise": 30293886,
+            "invested_paise": 48000000,
+            "month": "2028-01",
+            "rds_paise": 5666936,
+            "reserve_paise": 50059901,
+            "spending_paise": -63975901,
+            "total_paise": 70168222
+          },
+          {
+            "fds_paise": 30471027,
+            "invested_paise": 51000000,
+            "month": "2028-02",
+            "rds_paise": 6197618,
+            "reserve_paise": 52472301,
+            "spending_paise": -64065901,
+            "total_paise": 76198445
+          },
+          {
+            "fds_paise": 30649206,
+            "invested_paise": 54000000,
+            "month": "2028-03",
+            "rds_paise": 6730940,
+            "reserve_paise": 54884701,
+            "spending_paise": -64155901,
+            "total_paise": 82232346
+          },
+          {
+            "fds_paise": 30828427,
+            "invested_paise": 57000000,
+            "month": "2028-04",
+            "rds_paise": 7266915,
+            "reserve_paise": 57297101,
+            "spending_paise": -64245901,
+            "total_paise": 88269942
+          },
+          {
+            "fds_paise": 31008698,
+            "invested_paise": 60000000,
+            "month": "2028-05",
+            "rds_paise": 7805557,
+            "reserve_paise": 59709501,
+            "spending_paise": -64335901,
+            "total_paise": 94311255
+          },
+          {
+            "fds_paise": 31190023,
+            "invested_paise": 63000000,
+            "month": "2028-06",
+            "rds_paise": 8346879,
+            "reserve_paise": 62121901,
+            "spending_paise": -64425901,
+            "total_paise": 100356302
+          },
+          {
+            "fds_paise": 31372410,
+            "invested_paise": 66000000,
+            "month": "2028-07",
+            "rds_paise": 8890894,
+            "reserve_paise": 64534301,
+            "spending_paise": -64515901,
+            "total_paise": 106405104
+          },
+          {
+            "fds_paise": 31555866,
+            "invested_paise": 69000000,
+            "month": "2028-08",
+            "rds_paise": 9437616,
+            "reserve_paise": 66946701,
+            "spending_paise": -64605901,
+            "total_paise": 112457682
+          },
+          {
+            "fds_paise": 31740396,
+            "invested_paise": 72000000,
+            "month": "2028-09",
+            "rds_paise": 9987058,
+            "reserve_paise": 69359101,
+            "spending_paise": -64695901,
+            "total_paise": 118514054
+          },
+          {
+            "fds_paise": 31926005,
+            "invested_paise": 75000000,
+            "month": "2028-10",
+            "rds_paise": 10539233,
+            "reserve_paise": 71771501,
+            "spending_paise": -64785901,
+            "total_paise": 124574238
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 20175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 20265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 20355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 20445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 70535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 70625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 70715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 70805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 70895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 70985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 71075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 71165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 71255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 71345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          },
+          {
+            "amount_paise": 71435801,
+            "kind": "spending_short",
+            "month": "2027-12"
+          },
+          {
+            "amount_paise": 71525801,
+            "kind": "spending_short",
+            "month": "2028-01"
+          },
+          {
+            "amount_paise": 71615801,
+            "kind": "spending_short",
+            "month": "2028-02"
+          },
+          {
+            "amount_paise": 71705801,
+            "kind": "spending_short",
+            "month": "2028-03"
+          },
+          {
+            "amount_paise": 71795801,
+            "kind": "spending_short",
+            "month": "2028-04"
+          },
+          {
+            "amount_paise": 71885801,
+            "kind": "spending_short",
+            "month": "2028-05"
+          },
+          {
+            "amount_paise": 71975801,
+            "kind": "spending_short",
+            "month": "2028-06"
+          },
+          {
+            "amount_paise": 72065801,
+            "kind": "spending_short",
+            "month": "2028-07"
+          },
+          {
+            "amount_paise": 72155801,
+            "kind": "spending_short",
+            "month": "2028-08"
+          },
+          {
+            "amount_paise": 72245801,
+            "kind": "spending_short",
+            "month": "2028-09"
+          },
+          {
+            "amount_paise": 72335801,
+            "kind": "spending_short",
+            "month": "2028-10"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "fd_renew_principal_and_past_start",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 7374099,
+            "total_paise": 33851609
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 7284099,
+            "total_paise": 36969880
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 7194099,
+            "total_paise": 42466125
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 7104099,
+            "total_paise": 47964679
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": 7014099,
+            "total_paise": 53450426
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 6924099,
+            "total_paise": 59320410
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 27999531,
+            "spending_paise": 6834099,
+            "total_paise": 65193143
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30411931,
+            "spending_paise": 6744099,
+            "total_paise": 71068640
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32824331,
+            "spending_paise": 6654099,
+            "total_paise": 76946915
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35236731,
+            "spending_paise": 6564099,
+            "total_paise": 82827981
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37649131,
+            "spending_paise": 6474099,
+            "total_paise": 88711854
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40061531,
+            "spending_paise": 6384099,
+            "total_paise": 94598546
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42473931,
+            "spending_paise": 6294099,
+            "total_paise": 100488072
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 44886331,
+            "spending_paise": 6204099,
+            "total_paise": 106380446
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 1075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 1165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 1255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 1345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      },
+      "impacts": [
+        {
+          "goal": null,
+          "maturity_value_paise": 5219611,
+          "monthly_paise": 0,
+          "name": "Old FD",
+          "savings_first": null,
+          "savings_first_thresholds": [],
+          "spending_first": null
+        },
+        {
+          "goal": null,
+          "maturity_value_paise": 0,
+          "monthly_paise": 0,
+          "name": "Past spend",
+          "savings_first": null,
+          "savings_first_thresholds": [],
+          "spending_first": null
+        }
+      ],
+      "scenario": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 21861175,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 2274099,
+            "total_paise": 33778547
+          },
+          {
+            "fds_paise": 13142941,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 2184099,
+            "total_paise": 36923901
+          },
+          {
+            "fds_paise": 13215000,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 2094099,
+            "total_paise": 42447375
+          },
+          {
+            "fds_paise": 13201975,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 2004099,
+            "total_paise": 47973305
+          },
+          {
+            "fds_paise": 13274345,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": 1914099,
+            "total_paise": 53486575
+          },
+          {
+            "fds_paise": 13347112,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 1824099,
+            "total_paise": 59384230
+          },
+          {
+            "fds_paise": 13255575,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 28163351,
+            "spending_paise": 1734099,
+            "total_paise": 65283901
+          },
+          {
+            "fds_paise": 13328255,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30575751,
+            "spending_paise": 1644099,
+            "total_paise": 71186481
+          },
+          {
+            "fds_paise": 13401334,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32988151,
+            "spending_paise": 1554099,
+            "total_paise": 77091985
+          },
+          {
+            "fds_paise": 13474814,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35400551,
+            "spending_paise": 1464099,
+            "total_paise": 83000427
+          },
+          {
+            "fds_paise": 13548697,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37812951,
+            "spending_paise": 1374099,
+            "total_paise": 88911823
+          },
+          {
+            "fds_paise": 13622985,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40225351,
+            "spending_paise": 1284099,
+            "total_paise": 94826186
+          },
+          {
+            "fds_paise": 13697681,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42637751,
+            "spending_paise": 1194099,
+            "total_paise": 100743533
+          },
+          {
+            "fds_paise": 13772786,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 45050151,
+            "spending_paise": 1104099,
+            "total_paise": 106663877
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 5275801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 5365801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 5455801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 5545801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 5635801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 5725801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 5815801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 5905801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 5995801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 6085801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 6175801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 6265801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 6355801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 6445801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "default_tenure_and_no_rate",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 7374099,
+            "total_paise": 33851609
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 7284099,
+            "total_paise": 36969880
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 7194099,
+            "total_paise": 42466125
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 7104099,
+            "total_paise": 47964679
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": 7014099,
+            "total_paise": 53450426
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 6924099,
+            "total_paise": 59320410
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 27999531,
+            "spending_paise": 6834099,
+            "total_paise": 65193143
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30411931,
+            "spending_paise": 6744099,
+            "total_paise": 71068640
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32824331,
+            "spending_paise": 6654099,
+            "total_paise": 76946915
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35236731,
+            "spending_paise": 6564099,
+            "total_paise": 82827981
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37649131,
+            "spending_paise": 6474099,
+            "total_paise": 88711854
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40061531,
+            "spending_paise": 6384099,
+            "total_paise": 94598546
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42473931,
+            "spending_paise": 6294099,
+            "total_paise": 100488072
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 44886331,
+            "spending_paise": 6204099,
+            "total_paise": 106380446
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 1075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 1165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 1255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 1345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      },
+      "impacts": [
+        {
+          "goal": null,
+          "maturity_value_paise": 12000000,
+          "monthly_paise": 1000000,
+          "name": "Plain RD",
+          "savings_first": {
+            "cost_paise": 1000000,
+            "from_fd_paise": 0,
+            "from_rest_savings_paise": 1000000,
+            "from_sip_paise": 0,
+            "from_spending_paise": 0,
+            "rest_savings_after_paise": 1462400,
+            "sip_after_paise": 3500000,
+            "spending_after_paise": 1887500
+          },
+          "savings_first_thresholds": [
+            {
+              "label": "Only slows your monthly savings top-up",
+              "up_to_paise": 2462400
+            },
+            {
+              "label": "Starts cutting your SIP",
+              "up_to_paise": 5962400
+            },
+            {
+              "label": "Starts eating your spending allowance",
+              "up_to_paise": 7849900
+            },
+            {
+              "label": "Beyond this an FD would have to be touched",
+              "up_to_paise": 7849900
+            }
+          ],
+          "spending_first": {
+            "cost_paise": 1000000,
+            "from_fd_paise": 0,
+            "from_rest_savings_paise": 0,
+            "from_sip_paise": 0,
+            "from_spending_paise": 1000000,
+            "rest_savings_after_paise": 2462400,
+            "sip_after_paise": 3500000,
+            "spending_after_paise": 887500
+          }
+        }
+      ],
+      "scenario": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 2105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 6374099,
+            "total_paise": 33851609
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 3613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 5284099,
+            "total_paise": 36969880
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 5123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 4194099,
+            "total_paise": 42466125
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 6637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 3104099,
+            "total_paise": 47964679
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 5000000,
+            "reserve_paise": 23174731,
+            "spending_paise": 2014099,
+            "total_paise": 53450426
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 6502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 924099,
+            "total_paise": 59320410
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 8007476,
+            "reserve_paise": 27999531,
+            "spending_paise": -165901,
+            "total_paise": 65193143
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 9514976,
+            "reserve_paise": 30411931,
+            "spending_paise": -1255901,
+            "total_paise": 71068640
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 11025001,
+            "reserve_paise": 32824331,
+            "spending_paise": -2345901,
+            "total_paise": 76946915
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 12537563,
+            "reserve_paise": 35236731,
+            "spending_paise": -3435901,
+            "total_paise": 82827981
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 14052676,
+            "reserve_paise": 37649131,
+            "spending_paise": -4525901,
+            "total_paise": 88711854
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 15570351,
+            "reserve_paise": 40061531,
+            "spending_paise": -5615901,
+            "total_paise": 94598546
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 54473931,
+            "spending_paise": -5705901,
+            "total_paise": 100488072
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 56886331,
+            "spending_paise": -5795901,
+            "total_paise": 106380446
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 1175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 2265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 3355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 4445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 5535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 6625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 7715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 8805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 9895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 10985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 12075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 13165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 13255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 13345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "same_name_twice_and_funding",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 7374099,
+            "total_paise": 33851609
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 7284099,
+            "total_paise": 36969880
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 7194099,
+            "total_paise": 42466125
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 7104099,
+            "total_paise": 47964679
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": 7014099,
+            "total_paise": 53450426
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 6924099,
+            "total_paise": 59320410
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 27999531,
+            "spending_paise": 6834099,
+            "total_paise": 65193143
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30411931,
+            "spending_paise": 6744099,
+            "total_paise": 71068640
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32824331,
+            "spending_paise": 6654099,
+            "total_paise": 76946915
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35236731,
+            "spending_paise": 6564099,
+            "total_paise": 82827981
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37649131,
+            "spending_paise": 6474099,
+            "total_paise": 88711854
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40061531,
+            "spending_paise": 6384099,
+            "total_paise": 94598546
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42473931,
+            "spending_paise": 6294099,
+            "total_paise": 100488072
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 44886331,
+            "spending_paise": 6204099,
+            "total_paise": 106380446
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 1075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 1165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 1255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 1345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      },
+      "impacts": [
+        {
+          "goal": null,
+          "maturity_value_paise": 0,
+          "monthly_paise": 0,
+          "name": "Gadget",
+          "savings_first": null,
+          "savings_first_thresholds": [],
+          "spending_first": null
+        },
+        {
+          "goal": null,
+          "maturity_value_paise": 0,
+          "monthly_paise": 0,
+          "name": "Gadget",
+          "savings_first": null,
+          "savings_first_thresholds": [],
+          "spending_first": null
+        },
+        {
+          "goal": null,
+          "maturity_value_paise": 10353063,
+          "monthly_paise": 0,
+          "name": "FD to hdfc",
+          "savings_first": null,
+          "savings_first_thresholds": [],
+          "spending_first": null
+        }
+      ],
+      "scenario": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 6374099,
+            "total_paise": 32851609
+          },
+          {
+            "fds_paise": 18146916,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": -3715901,
+            "total_paise": 36027876
+          },
+          {
+            "fds_paise": 18250079,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 7890900,
+            "spending_paise": -3805901,
+            "total_paise": 33582454
+          },
+          {
+            "fds_paise": 18268349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 10006800,
+            "spending_paise": -3895901,
+            "total_paise": 39139679
+          },
+          {
+            "fds_paise": 18372207,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 15174731,
+            "spending_paise": -3985901,
+            "total_paise": 44684437
+          },
+          {
+            "fds_paise": 18476657,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 17587131,
+            "spending_paise": -4075901,
+            "total_paise": 50613775
+          },
+          {
+            "fds_paise": 18581700,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 19999531,
+            "spending_paise": -4165901,
+            "total_paise": 56546206
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 22411931,
+            "spending_paise": 6097162,
+            "total_paise": 62421703
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 24824331,
+            "spending_paise": 6007162,
+            "total_paise": 68299978
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 27236731,
+            "spending_paise": 5917162,
+            "total_paise": 74181044
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 29649131,
+            "spending_paise": 5827162,
+            "total_paise": 80064917
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 32061531,
+            "spending_paise": 5737162,
+            "total_paise": 85951609
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 34473931,
+            "spending_paise": 5647162,
+            "total_paise": 91841135
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 36886331,
+            "spending_paise": 5557162,
+            "total_paise": 97733509
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 1175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 11265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 11355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 11445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 11535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 11625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 11715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 1452738,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 1542738,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 1632738,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 1722738,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 1812738,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 1902738,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 1992738,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "thin_cash_stress",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 100000,
+            "spending_paise": 50000,
+            "total_paise": 17611900
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": -1400000,
+            "spending_paise": 2556150,
+            "total_paise": 22219260
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 7045600,
+            "spending_paise": 1899900,
+            "total_paise": 24771281
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 9076500,
+            "spending_paise": 1243650,
+            "total_paise": 29701276
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 11192400,
+            "spending_paise": 587400,
+            "total_paise": 34633580
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 16360331,
+            "spending_paise": -68850,
+            "total_paise": 39553077
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 18772731,
+            "spending_paise": -725100,
+            "total_paise": 44856811
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 21185131,
+            "spending_paise": -1381350,
+            "total_paise": 50163294
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 23597531,
+            "spending_paise": -2037600,
+            "total_paise": 55472541
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 26009931,
+            "spending_paise": -2693850,
+            "total_paise": 60784566
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 28422331,
+            "spending_paise": -3350100,
+            "total_paise": 66099382
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 30834731,
+            "spending_paise": -4006350,
+            "total_paise": 71417005
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 33247131,
+            "spending_paise": -4662600,
+            "total_paise": 76737447
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 35659531,
+            "spending_paise": -5318850,
+            "total_paise": 82060723
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 38071931,
+            "spending_paise": -5975100,
+            "total_paise": 87386847
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 4993750,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 1400000,
+            "kind": "fd_needed",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 5650000,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 2300000,
+            "kind": "fd_needed",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 6306250,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 6962500,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 7618750,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 8275000,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 8931250,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 9587500,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 10243750,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 10900000,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 11556250,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 12212500,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 12868750,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 13525000,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      },
+      "impacts": [
+        {
+          "goal": null,
+          "maturity_value_paise": 24421400,
+          "monthly_paise": 4000000,
+          "name": "RD",
+          "savings_first": {
+            "cost_paise": 4000000,
+            "from_fd_paise": 0,
+            "from_rest_savings_paise": 2462400,
+            "from_sip_paise": 1537600,
+            "from_spending_paise": 0,
+            "rest_savings_after_paise": 0,
+            "sip_after_paise": 1962400,
+            "spending_after_paise": 1887500
+          },
+          "savings_first_thresholds": [
+            {
+              "label": "Only slows your monthly savings top-up",
+              "up_to_paise": 2462400
+            },
+            {
+              "label": "Starts cutting your SIP",
+              "up_to_paise": 5962400
+            },
+            {
+              "label": "Starts eating your spending allowance",
+              "up_to_paise": 7849900
+            },
+            {
+              "label": "Beyond this an FD would have to be touched",
+              "up_to_paise": 7849900
+            }
+          ],
+          "spending_first": {
+            "cost_paise": 4000000,
+            "from_fd_paise": 0,
+            "from_rest_savings_paise": 2112500,
+            "from_sip_paise": 0,
+            "from_spending_paise": 1887500,
+            "rest_savings_after_paise": 349900,
+            "sip_after_paise": 3500000,
+            "spending_after_paise": 0
+          }
+        }
+      ],
+      "scenario": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 100000,
+            "spending_paise": 50000,
+            "total_paise": 17611900
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 5125374,
+            "reserve_paise": -1400000,
+            "spending_paise": -1443850,
+            "total_paise": 22239161
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 9673263,
+            "reserve_paise": 7045600,
+            "spending_paise": -6100100,
+            "total_paise": 24831083
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 14243778,
+            "reserve_paise": 9076500,
+            "spending_paise": -10756350,
+            "total_paise": 29821078
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 18837032,
+            "reserve_paise": 11192400,
+            "spending_paise": -15412600,
+            "total_paise": 34833581
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 20300500,
+            "reserve_paise": 16360331,
+            "spending_paise": -20068850,
+            "total_paise": 39853577
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 24923888,
+            "reserve_paise": 18772731,
+            "spending_paise": -24725100,
+            "total_paise": 45278211
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 45606531,
+            "spending_paise": -25381350,
+            "total_paise": 50584694
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 48018931,
+            "spending_paise": -26037600,
+            "total_paise": 55893941
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 50431331,
+            "spending_paise": -26693850,
+            "total_paise": 61205966
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 52843731,
+            "spending_paise": -27350100,
+            "total_paise": 66520782
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 55256131,
+            "spending_paise": -28006350,
+            "total_paise": 71838405
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 57668531,
+            "spending_paise": -28662600,
+            "total_paise": 77158847
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 60080931,
+            "spending_paise": -29318850,
+            "total_paise": 82482123
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 62493331,
+            "spending_paise": -29975100,
+            "total_paise": 87808247
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 8993750,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 1400000,
+            "kind": "fd_needed",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 13650000,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 2300000,
+            "kind": "fd_needed",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 18306250,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 22962500,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 27618750,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 32275000,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 32931250,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 33587500,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 34243750,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 34900000,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 35556250,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 36212500,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 36868750,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 37525000,
+            "kind": "spending_short",
+            "month": "2027-11"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "no_reserve_account",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 0,
+            "spending_paise": 4301699,
+            "total_paise": 21763599
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 0,
+            "spending_paise": 5874099,
+            "total_paise": 26937209
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 0,
+            "spending_paise": 5439799,
+            "total_paise": 30055480
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 0,
+            "spending_paise": 7780699,
+            "total_paise": 35551725
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 0,
+            "spending_paise": 10206599,
+            "total_paise": 41050279
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 0,
+            "spending_paise": 15684530,
+            "total_paise": 46536026
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 0,
+            "spending_paise": 18406930,
+            "total_paise": 52406010
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 0,
+            "spending_paise": 21129330,
+            "total_paise": 58278743
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 0,
+            "spending_paise": 23851730,
+            "total_paise": 64154240
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 0,
+            "spending_paise": 26574130,
+            "total_paise": 70032515
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 0,
+            "spending_paise": 29296530,
+            "total_paise": 75913581
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 0,
+            "spending_paise": 32018930,
+            "total_paise": 81797454
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 0,
+            "spending_paise": 34741330,
+            "total_paise": 87684146
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 0,
+            "spending_paise": 37463730,
+            "total_paise": 93573672
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 0,
+            "spending_paise": 40186130,
+            "total_paise": 99466046
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 1675801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 2110101,
+            "kind": "spending_short",
+            "month": "2026-11"
+          }
+        ]
+      },
+      "impacts": [
+        {
+          "goal": {
+            "gap_paise": -849420,
+            "projected_paise": 5150580,
+            "required_monthly_paise": 582459,
+            "target_date": "2027-09-01",
+            "target_paise": 6000000
+          },
+          "maturity_value_paise": 5150580,
+          "monthly_paise": 500000,
+          "name": "RD",
+          "savings_first": {
+            "cost_paise": 500000,
+            "from_fd_paise": 0,
+            "from_rest_savings_paise": 500000,
+            "from_sip_paise": 0,
+            "from_spending_paise": 0,
+            "rest_savings_after_paise": 1962400,
+            "sip_after_paise": 3500000,
+            "spending_after_paise": 1887500
+          },
+          "savings_first_thresholds": [
+            {
+              "label": "Only slows your monthly savings top-up",
+              "up_to_paise": 2462400
+            },
+            {
+              "label": "Starts cutting your SIP",
+              "up_to_paise": 5962400
+            },
+            {
+              "label": "Starts eating your spending allowance",
+              "up_to_paise": 7849900
+            },
+            {
+              "label": "Beyond this an FD would have to be touched",
+              "up_to_paise": 7849900
+            }
+          ],
+          "spending_first": {
+            "cost_paise": 500000,
+            "from_fd_paise": 0,
+            "from_rest_savings_paise": 0,
+            "from_sip_paise": 0,
+            "from_spending_paise": 500000,
+            "rest_savings_after_paise": 2462400,
+            "sip_after_paise": 3500000,
+            "spending_after_paise": 1387500
+          }
+        }
+      ],
+      "scenario": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 0,
+            "spending_paise": 4301699,
+            "total_paise": 21763599
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 0,
+            "spending_paise": 5874099,
+            "total_paise": 26937209
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 2116155,
+            "reserve_paise": 0,
+            "spending_paise": 4939799,
+            "total_paise": 30058174
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 3132072,
+            "reserve_paise": 0,
+            "spending_paise": 6780699,
+            "total_paise": 35559821
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 4153252,
+            "reserve_paise": 0,
+            "spending_paise": 8706599,
+            "total_paise": 41066500
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 2027084,
+            "reserve_paise": 0,
+            "spending_paise": 13684530,
+            "total_paise": 46563110
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 3043187,
+            "reserve_paise": 0,
+            "spending_paise": 15906930,
+            "total_paise": 52446709
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 4064557,
+            "reserve_paise": 0,
+            "spending_paise": 18129330,
+            "total_paise": 58335824
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 5091221,
+            "reserve_paise": 0,
+            "spending_paise": 20351730,
+            "total_paise": 64230485
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 6123207,
+            "reserve_paise": 0,
+            "spending_paise": 22574130,
+            "total_paise": 70130721
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 7160542,
+            "reserve_paise": 0,
+            "spending_paise": 24796530,
+            "total_paise": 76036560
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 8203256,
+            "reserve_paise": 0,
+            "spending_paise": 27018930,
+            "total_paise": 81948034
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 0,
+            "spending_paise": 34891910,
+            "total_paise": 87834726
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 0,
+            "spending_paise": 37614310,
+            "total_paise": 93724252
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 0,
+            "spending_paise": 40336710,
+            "total_paise": 99616626
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 1675801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 2610101,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 769201,
+            "kind": "spending_short",
+            "month": "2026-12"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "months_clamped_high",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 7374099,
+            "total_paise": 33851609
+          },
+          {
+            "fds_paise": 8088920,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 7284099,
+            "total_paise": 36969880
+          },
+          {
+            "fds_paise": 8133750,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 7194099,
+            "total_paise": 42466125
+          },
+          {
+            "fds_paise": 8093349,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 7104099,
+            "total_paise": 47964679
+          },
+          {
+            "fds_paise": 8138196,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": 7014099,
+            "total_paise": 53450426
+          },
+          {
+            "fds_paise": 8183292,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 6924099,
+            "total_paise": 59320410
+          },
+          {
+            "fds_paise": 8228637,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 27999531,
+            "spending_paise": 6834099,
+            "total_paise": 65193143
+          },
+          {
+            "fds_paise": 8274234,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30411931,
+            "spending_paise": 6744099,
+            "total_paise": 71068640
+          },
+          {
+            "fds_paise": 8320084,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32824331,
+            "spending_paise": 6654099,
+            "total_paise": 76946915
+          },
+          {
+            "fds_paise": 8366188,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35236731,
+            "spending_paise": 6564099,
+            "total_paise": 82827981
+          },
+          {
+            "fds_paise": 8412548,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37649131,
+            "spending_paise": 6474099,
+            "total_paise": 88711854
+          },
+          {
+            "fds_paise": 8459165,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40061531,
+            "spending_paise": 6384099,
+            "total_paise": 94598546
+          },
+          {
+            "fds_paise": 8506040,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42473931,
+            "spending_paise": 6294099,
+            "total_paise": 100488072
+          },
+          {
+            "fds_paise": 8553175,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 44886331,
+            "spending_paise": 6204099,
+            "total_paise": 106380446
+          },
+          {
+            "fds_paise": 8600571,
+            "invested_paise": 45000000,
+            "month": "2027-12",
+            "rds_paise": 5138881,
+            "reserve_paise": 47298731,
+            "spending_paise": 6114099,
+            "total_paise": 112275682
+          },
+          {
+            "fds_paise": 8297494,
+            "invested_paise": 48000000,
+            "month": "2028-01",
+            "rds_paise": 5666936,
+            "reserve_paise": 50059901,
+            "spending_paise": 6024099,
+            "total_paise": 118171830
+          },
+          {
+            "fds_paise": 8343441,
+            "invested_paise": 51000000,
+            "month": "2028-02",
+            "rds_paise": 6197618,
+            "reserve_paise": 52472301,
+            "spending_paise": 5934099,
+            "total_paise": 124070859
+          },
+          {
+            "fds_paise": 8389643,
+            "invested_paise": 54000000,
+            "month": "2028-03",
+            "rds_paise": 6730940,
+            "reserve_paise": 54884701,
+            "spending_paise": 5844099,
+            "total_paise": 129972783
+          },
+          {
+            "fds_paise": 8436100,
+            "invested_paise": 57000000,
+            "month": "2028-04",
+            "rds_paise": 7266915,
+            "reserve_paise": 57297101,
+            "spending_paise": 5754099,
+            "total_paise": 135877615
+          },
+          {
+            "fds_paise": 8482815,
+            "invested_paise": 60000000,
+            "month": "2028-05",
+            "rds_paise": 7805557,
+            "reserve_paise": 59709501,
+            "spending_paise": 5664099,
+            "total_paise": 141785372
+          },
+          {
+            "fds_paise": 8529788,
+            "invested_paise": 63000000,
+            "month": "2028-06",
+            "rds_paise": 8346879,
+            "reserve_paise": 62121901,
+            "spending_paise": 5574099,
+            "total_paise": 147696067
+          },
+          {
+            "fds_paise": 8577021,
+            "invested_paise": 66000000,
+            "month": "2028-07",
+            "rds_paise": 8890894,
+            "reserve_paise": 64534301,
+            "spending_paise": 5484099,
+            "total_paise": 153609715
+          },
+          {
+            "fds_paise": 8624517,
+            "invested_paise": 69000000,
+            "month": "2028-08",
+            "rds_paise": 9437616,
+            "reserve_paise": 66946701,
+            "spending_paise": 5394099,
+            "total_paise": 159526333
+          },
+          {
+            "fds_paise": 8672276,
+            "invested_paise": 72000000,
+            "month": "2028-09",
+            "rds_paise": 9987058,
+            "reserve_paise": 69359101,
+            "spending_paise": 5304099,
+            "total_paise": 165445934
+          },
+          {
+            "fds_paise": 8720299,
+            "invested_paise": 75000000,
+            "month": "2028-10",
+            "rds_paise": 10539233,
+            "reserve_paise": 71771501,
+            "spending_paise": 5214099,
+            "total_paise": 171368532
+          },
+          {
+            "fds_paise": 8768588,
+            "invested_paise": 78000000,
+            "month": "2028-11",
+            "rds_paise": 11094155,
+            "reserve_paise": 74183901,
+            "spending_paise": 5124099,
+            "total_paise": 177294143
+          },
+          {
+            "fds_paise": 8817145,
+            "invested_paise": 81000000,
+            "month": "2028-12",
+            "rds_paise": 11651838,
+            "reserve_paise": 76596301,
+            "spending_paise": 5034099,
+            "total_paise": 183222783
+          },
+          {
+            "fds_paise": 8515235,
+            "invested_paise": 84000000,
+            "month": "2029-01",
+            "rds_paise": 12212296,
+            "reserve_paise": 79357471,
+            "spending_paise": 4944099,
+            "total_paise": 189152501
+          },
+          {
+            "fds_paise": 8562355,
+            "invested_paise": 87000000,
+            "month": "2029-02",
+            "rds_paise": 12775542,
+            "reserve_paise": 81769871,
+            "spending_paise": 4854099,
+            "total_paise": 195085267
+          },
+          {
+            "fds_paise": 8609736,
+            "invested_paise": 90000000,
+            "month": "2029-03",
+            "rds_paise": 13341591,
+            "reserve_paise": 84182271,
+            "spending_paise": 4764099,
+            "total_paise": 201021097
+          },
+          {
+            "fds_paise": 8657379,
+            "invested_paise": 93000000,
+            "month": "2029-04",
+            "rds_paise": 13910456,
+            "reserve_paise": 86594671,
+            "spending_paise": 4674099,
+            "total_paise": 206960005
+          },
+          {
+            "fds_paise": 8705286,
+            "invested_paise": 96000000,
+            "month": "2029-05",
+            "rds_paise": 14482151,
+            "reserve_paise": 89057071,
+            "spending_paise": 4584099,
+            "total_paise": 212952007
+          },
+          {
+            "fds_paise": 8753458,
+            "invested_paise": 99000000,
+            "month": "2029-06",
+            "rds_paise": 15056690,
+            "reserve_paise": 91519471,
+            "spending_paise": 4494099,
+            "total_paise": 218947118
+          },
+          {
+            "fds_paise": 8801896,
+            "invested_paise": 102000000,
+            "month": "2029-07",
+            "rds_paise": 15634088,
+            "reserve_paise": 93981871,
+            "spending_paise": 4404099,
+            "total_paise": 224945354
+          },
+          {
+            "fds_paise": 8850603,
+            "invested_paise": 105000000,
+            "month": "2029-08",
+            "rds_paise": 16214358,
+            "reserve_paise": 96444271,
+            "spending_paise": 4314099,
+            "total_paise": 230946731
+          },
+          {
+            "fds_paise": 8899580,
+            "invested_paise": 108000000,
+            "month": "2029-09",
+            "rds_paise": 16797515,
+            "reserve_paise": 98906671,
+            "spending_paise": 4224099,
+            "total_paise": 236951265
+          },
+          {
+            "fds_paise": 8948828,
+            "invested_paise": 111000000,
+            "month": "2029-10",
+            "rds_paise": 17383574,
+            "reserve_paise": 101369071,
+            "spending_paise": 4134099,
+            "total_paise": 242958972
+          },
+          {
+            "fds_paise": 8998349,
+            "invested_paise": 114000000,
+            "month": "2029-11",
+            "rds_paise": 17972548,
+            "reserve_paise": 103831471,
+            "spending_paise": 4044099,
+            "total_paise": 248969867
+          },
+          {
+            "fds_paise": 9048144,
+            "invested_paise": 117000000,
+            "month": "2029-12",
+            "rds_paise": 18564453,
+            "reserve_paise": 106293871,
+            "spending_paise": 3954099,
+            "total_paise": 254983967
+          },
+          {
+            "fds_paise": 8747479,
+            "invested_paise": 120000000,
+            "month": "2030-01",
+            "rds_paise": 19159303,
+            "reserve_paise": 109105041,
+            "spending_paise": 3864099,
+            "total_paise": 260999322
+          },
+          {
+            "fds_paise": 8795850,
+            "invested_paise": 123000000,
+            "month": "2030-02",
+            "rds_paise": 19757112,
+            "reserve_paise": 111567441,
+            "spending_paise": 3774099,
+            "total_paise": 267017902
+          },
+          {
+            "fds_paise": 8844489,
+            "invested_paise": 126000000,
+            "month": "2030-03",
+            "rds_paise": 20357895,
+            "reserve_paise": 114029841,
+            "spending_paise": 3684099,
+            "total_paise": 273039724
+          },
+          {
+            "fds_paise": 8893397,
+            "invested_paise": 129000000,
+            "month": "2030-04",
+            "rds_paise": 20961667,
+            "reserve_paise": 116492241,
+            "spending_paise": 3594099,
+            "total_paise": 279064804
+          },
+          {
+            "fds_paise": 8942576,
+            "invested_paise": 132000000,
+            "month": "2030-05",
+            "rds_paise": 21568443,
+            "reserve_paise": 118954641,
+            "spending_paise": 3504099,
+            "total_paise": 285093159
+          },
+          {
+            "fds_paise": 8992026,
+            "invested_paise": 135000000,
+            "month": "2030-06",
+            "rds_paise": 22178238,
+            "reserve_paise": 121417041,
+            "spending_paise": 3414099,
+            "total_paise": 291124804
+          },
+          {
+            "fds_paise": 9041750,
+            "invested_paise": 138000000,
+            "month": "2030-07",
+            "rds_paise": 22791067,
+            "reserve_paise": 123879441,
+            "spending_paise": 3324099,
+            "total_paise": 297159757
+          },
+          {
+            "fds_paise": 9091750,
+            "invested_paise": 141000000,
+            "month": "2030-08",
+            "rds_paise": 23406945,
+            "reserve_paise": 126341841,
+            "spending_paise": 3234099,
+            "total_paise": 303198035
+          },
+          {
+            "fds_paise": 9142026,
+            "invested_paise": 144000000,
+            "month": "2030-09",
+            "rds_paise": 24025887,
+            "reserve_paise": 128804241,
+            "spending_paise": 3144099,
+            "total_paise": 309239653
+          },
+          {
+            "fds_paise": 9192580,
+            "invested_paise": 147000000,
+            "month": "2030-10",
+            "rds_paise": 24647908,
+            "reserve_paise": 131266641,
+            "spending_paise": 3054099,
+            "total_paise": 315284628
+          },
+          {
+            "fds_paise": 9243414,
+            "invested_paise": 150000000,
+            "month": "2030-11",
+            "rds_paise": 25273024,
+            "reserve_paise": 133729041,
+            "spending_paise": 2964099,
+            "total_paise": 321332978
+          },
+          {
+            "fds_paise": 9294529,
+            "invested_paise": 153000000,
+            "month": "2030-12",
+            "rds_paise": 25901250,
+            "reserve_paise": 136191441,
+            "spending_paise": 2874099,
+            "total_paise": 327384719
+          },
+          {
+            "fds_paise": 8995191,
+            "invested_paise": 156000000,
+            "month": "2031-01",
+            "rds_paise": 26532602,
+            "reserve_paise": 139002611,
+            "spending_paise": 2784099,
+            "total_paise": 333437903
+          },
+          {
+            "fds_paise": 9044897,
+            "invested_paise": 159000000,
+            "month": "2031-02",
+            "rds_paise": 27167095,
+            "reserve_paise": 141465011,
+            "spending_paise": 2694099,
+            "total_paise": 339494502
+          },
+          {
+            "fds_paise": 9094878,
+            "invested_paise": 162000000,
+            "month": "2031-03",
+            "rds_paise": 27804745,
+            "reserve_paise": 143927411,
+            "spending_paise": 2604099,
+            "total_paise": 345554533
+          },
+          {
+            "fds_paise": 9145135,
+            "invested_paise": 165000000,
+            "month": "2031-04",
+            "rds_paise": 28445567,
+            "reserve_paise": 146389811,
+            "spending_paise": 2514099,
+            "total_paise": 351618012
+          },
+          {
+            "fds_paise": 9195670,
+            "invested_paise": 168000000,
+            "month": "2031-05",
+            "rds_paise": 29089577,
+            "reserve_paise": 148852211,
+            "spending_paise": 2424099,
+            "total_paise": 357684957
+          },
+          {
+            "fds_paise": 9246484,
+            "invested_paise": 171000000,
+            "month": "2031-06",
+            "rds_paise": 29736791,
+            "reserve_paise": 151314611,
+            "spending_paise": 2334099,
+            "total_paise": 363755385
+          },
+          {
+            "fds_paise": 9297579,
+            "invested_paise": 174000000,
+            "month": "2031-07",
+            "rds_paise": 30387225,
+            "reserve_paise": 153777011,
+            "spending_paise": 2244099,
+            "total_paise": 369829314
+          },
+          {
+            "fds_paise": 9348957,
+            "invested_paise": 177000000,
+            "month": "2031-08",
+            "rds_paise": 31040895,
+            "reserve_paise": 156239411,
+            "spending_paise": 2154099,
+            "total_paise": 375906762
+          },
+          {
+            "fds_paise": 9400619,
+            "invested_paise": 180000000,
+            "month": "2031-09",
+            "rds_paise": 31697817,
+            "reserve_paise": 158701811,
+            "spending_paise": 2064099,
+            "total_paise": 381987746
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 1075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 1165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 1255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 1345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          },
+          {
+            "amount_paise": 1435801,
+            "kind": "spending_short",
+            "month": "2027-12"
+          },
+          {
+            "amount_paise": 1525801,
+            "kind": "spending_short",
+            "month": "2028-01"
+          },
+          {
+            "amount_paise": 1615801,
+            "kind": "spending_short",
+            "month": "2028-02"
+          },
+          {
+            "amount_paise": 1705801,
+            "kind": "spending_short",
+            "month": "2028-03"
+          },
+          {
+            "amount_paise": 1795801,
+            "kind": "spending_short",
+            "month": "2028-04"
+          },
+          {
+            "amount_paise": 1885801,
+            "kind": "spending_short",
+            "month": "2028-05"
+          },
+          {
+            "amount_paise": 1975801,
+            "kind": "spending_short",
+            "month": "2028-06"
+          },
+          {
+            "amount_paise": 2065801,
+            "kind": "spending_short",
+            "month": "2028-07"
+          },
+          {
+            "amount_paise": 2155801,
+            "kind": "spending_short",
+            "month": "2028-08"
+          },
+          {
+            "amount_paise": 2245801,
+            "kind": "spending_short",
+            "month": "2028-09"
+          },
+          {
+            "amount_paise": 2335801,
+            "kind": "spending_short",
+            "month": "2028-10"
+          },
+          {
+            "amount_paise": 2425801,
+            "kind": "spending_short",
+            "month": "2028-11"
+          },
+          {
+            "amount_paise": 2515801,
+            "kind": "spending_short",
+            "month": "2028-12"
+          },
+          {
+            "amount_paise": 2605801,
+            "kind": "spending_short",
+            "month": "2029-01"
+          },
+          {
+            "amount_paise": 2695801,
+            "kind": "spending_short",
+            "month": "2029-02"
+          },
+          {
+            "amount_paise": 2785801,
+            "kind": "spending_short",
+            "month": "2029-03"
+          },
+          {
+            "amount_paise": 2875801,
+            "kind": "spending_short",
+            "month": "2029-04"
+          },
+          {
+            "amount_paise": 2965801,
+            "kind": "spending_short",
+            "month": "2029-05"
+          },
+          {
+            "amount_paise": 3055801,
+            "kind": "spending_short",
+            "month": "2029-06"
+          },
+          {
+            "amount_paise": 3145801,
+            "kind": "spending_short",
+            "month": "2029-07"
+          },
+          {
+            "amount_paise": 3235801,
+            "kind": "spending_short",
+            "month": "2029-08"
+          },
+          {
+            "amount_paise": 3325801,
+            "kind": "spending_short",
+            "month": "2029-09"
+          },
+          {
+            "amount_paise": 3415801,
+            "kind": "spending_short",
+            "month": "2029-10"
+          },
+          {
+            "amount_paise": 3505801,
+            "kind": "spending_short",
+            "month": "2029-11"
+          },
+          {
+            "amount_paise": 3595801,
+            "kind": "spending_short",
+            "month": "2029-12"
+          },
+          {
+            "amount_paise": 3685801,
+            "kind": "spending_short",
+            "month": "2030-01"
+          },
+          {
+            "amount_paise": 3775801,
+            "kind": "spending_short",
+            "month": "2030-02"
+          },
+          {
+            "amount_paise": 3865801,
+            "kind": "spending_short",
+            "month": "2030-03"
+          },
+          {
+            "amount_paise": 3955801,
+            "kind": "spending_short",
+            "month": "2030-04"
+          },
+          {
+            "amount_paise": 4045801,
+            "kind": "spending_short",
+            "month": "2030-05"
+          },
+          {
+            "amount_paise": 4135801,
+            "kind": "spending_short",
+            "month": "2030-06"
+          },
+          {
+            "amount_paise": 4225801,
+            "kind": "spending_short",
+            "month": "2030-07"
+          },
+          {
+            "amount_paise": 4315801,
+            "kind": "spending_short",
+            "month": "2030-08"
+          },
+          {
+            "amount_paise": 4405801,
+            "kind": "spending_short",
+            "month": "2030-09"
+          },
+          {
+            "amount_paise": 4495801,
+            "kind": "spending_short",
+            "month": "2030-10"
+          },
+          {
+            "amount_paise": 4585801,
+            "kind": "spending_short",
+            "month": "2030-11"
+          },
+          {
+            "amount_paise": 4675801,
+            "kind": "spending_short",
+            "month": "2030-12"
+          },
+          {
+            "amount_paise": 4765801,
+            "kind": "spending_short",
+            "month": "2031-01"
+          },
+          {
+            "amount_paise": 4855801,
+            "kind": "spending_short",
+            "month": "2031-02"
+          },
+          {
+            "amount_paise": 4945801,
+            "kind": "spending_short",
+            "month": "2031-03"
+          },
+          {
+            "amount_paise": 5035801,
+            "kind": "spending_short",
+            "month": "2031-04"
+          },
+          {
+            "amount_paise": 5125801,
+            "kind": "spending_short",
+            "month": "2031-05"
+          },
+          {
+            "amount_paise": 5215801,
+            "kind": "spending_short",
+            "month": "2031-06"
+          },
+          {
+            "amount_paise": 5305801,
+            "kind": "spending_short",
+            "month": "2031-07"
+          },
+          {
+            "amount_paise": 5395801,
+            "kind": "spending_short",
+            "month": "2031-08"
+          },
+          {
+            "amount_paise": 5485801,
+            "kind": "spending_short",
+            "month": "2031-09"
+          }
+        ]
+      },
+      "impacts": [
+        {
+          "goal": null,
+          "maturity_value_paise": 1414776,
+          "monthly_paise": 0,
+          "name": "Long",
+          "savings_first": null,
+          "savings_first_thresholds": [],
+          "spending_first": null
+        }
+      ],
+      "scenario": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 17840037,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 6374099,
+            "total_paise": 33857409
+          },
+          {
+            "fds_paise": 9100553,
+            "invested_paise": 6000000,
+            "month": "2026-11",
+            "rds_paise": 1613461,
+            "reserve_paise": 13860000,
+            "spending_paise": 6284099,
+            "total_paise": 36981513
+          },
+          {
+            "fds_paise": 9151250,
+            "invested_paise": 9000000,
+            "month": "2026-12",
+            "rds_paise": 2123976,
+            "reserve_paise": 15890900,
+            "spending_paise": 6194099,
+            "total_paise": 42483625
+          },
+          {
+            "fds_paise": 9116750,
+            "invested_paise": 12000000,
+            "month": "2027-01",
+            "rds_paise": 2637031,
+            "reserve_paise": 18006800,
+            "spending_paise": 6104099,
+            "total_paise": 47988080
+          },
+          {
+            "fds_paise": 9167532,
+            "invested_paise": 15000000,
+            "month": "2027-02",
+            "rds_paise": 0,
+            "reserve_paise": 23174731,
+            "spending_paise": 6014099,
+            "total_paise": 53479762
+          },
+          {
+            "fds_paise": 9218598,
+            "invested_paise": 18000000,
+            "month": "2027-03",
+            "rds_paise": 502488,
+            "reserve_paise": 25587131,
+            "spending_paise": 5924099,
+            "total_paise": 59355716
+          },
+          {
+            "fds_paise": 9269947,
+            "invested_paise": 21000000,
+            "month": "2027-04",
+            "rds_paise": 1007476,
+            "reserve_paise": 27999531,
+            "spending_paise": 5834099,
+            "total_paise": 65234453
+          },
+          {
+            "fds_paise": 9321583,
+            "invested_paise": 24000000,
+            "month": "2027-05",
+            "rds_paise": 1514976,
+            "reserve_paise": 30411931,
+            "spending_paise": 5744099,
+            "total_paise": 71115989
+          },
+          {
+            "fds_paise": 9373507,
+            "invested_paise": 27000000,
+            "month": "2027-06",
+            "rds_paise": 2025001,
+            "reserve_paise": 32824331,
+            "spending_paise": 5654099,
+            "total_paise": 77000338
+          },
+          {
+            "fds_paise": 9425720,
+            "invested_paise": 30000000,
+            "month": "2027-07",
+            "rds_paise": 2537563,
+            "reserve_paise": 35236731,
+            "spending_paise": 5564099,
+            "total_paise": 82887513
+          },
+          {
+            "fds_paise": 9478225,
+            "invested_paise": 33000000,
+            "month": "2027-08",
+            "rds_paise": 3052676,
+            "reserve_paise": 37649131,
+            "spending_paise": 5474099,
+            "total_paise": 88777531
+          },
+          {
+            "fds_paise": 9531023,
+            "invested_paise": 36000000,
+            "month": "2027-09",
+            "rds_paise": 3570351,
+            "reserve_paise": 40061531,
+            "spending_paise": 5384099,
+            "total_paise": 94670404
+          },
+          {
+            "fds_paise": 9584114,
+            "invested_paise": 39000000,
+            "month": "2027-10",
+            "rds_paise": 4090602,
+            "reserve_paise": 42473931,
+            "spending_paise": 5294099,
+            "total_paise": 100566146
+          },
+          {
+            "fds_paise": 9637501,
+            "invested_paise": 42000000,
+            "month": "2027-11",
+            "rds_paise": 4613441,
+            "reserve_paise": 44886331,
+            "spending_paise": 5204099,
+            "total_paise": 106464772
+          },
+          {
+            "fds_paise": 9691186,
+            "invested_paise": 45000000,
+            "month": "2027-12",
+            "rds_paise": 5138881,
+            "reserve_paise": 47298731,
+            "spending_paise": 5114099,
+            "total_paise": 112366297
+          },
+          {
+            "fds_paise": 9394434,
+            "invested_paise": 48000000,
+            "month": "2028-01",
+            "rds_paise": 5666936,
+            "reserve_paise": 50059901,
+            "spending_paise": 5024099,
+            "total_paise": 118268770
+          },
+          {
+            "fds_paise": 9446743,
+            "invested_paise": 51000000,
+            "month": "2028-02",
+            "rds_paise": 6197618,
+            "reserve_paise": 52472301,
+            "spending_paise": 4934099,
+            "total_paise": 124174161
+          },
+          {
+            "fds_paise": 9499344,
+            "invested_paise": 54000000,
+            "month": "2028-03",
+            "rds_paise": 6730940,
+            "reserve_paise": 54884701,
+            "spending_paise": 4844099,
+            "total_paise": 130082484
+          },
+          {
+            "fds_paise": 9552237,
+            "invested_paise": 57000000,
+            "month": "2028-04",
+            "rds_paise": 7266915,
+            "reserve_paise": 57297101,
+            "spending_paise": 4754099,
+            "total_paise": 135993752
+          },
+          {
+            "fds_paise": 9605425,
+            "invested_paise": 60000000,
+            "month": "2028-05",
+            "rds_paise": 7805557,
+            "reserve_paise": 59709501,
+            "spending_paise": 4664099,
+            "total_paise": 141907982
+          },
+          {
+            "fds_paise": 9658909,
+            "invested_paise": 63000000,
+            "month": "2028-06",
+            "rds_paise": 8346879,
+            "reserve_paise": 62121901,
+            "spending_paise": 4574099,
+            "total_paise": 147825188
+          },
+          {
+            "fds_paise": 9712690,
+            "invested_paise": 66000000,
+            "month": "2028-07",
+            "rds_paise": 8890894,
+            "reserve_paise": 64534301,
+            "spending_paise": 4484099,
+            "total_paise": 153745384
+          },
+          {
+            "fds_paise": 9766772,
+            "invested_paise": 69000000,
+            "month": "2028-08",
+            "rds_paise": 9437616,
+            "reserve_paise": 66946701,
+            "spending_paise": 4394099,
+            "total_paise": 159668588
+          },
+          {
+            "fds_paise": 9821156,
+            "invested_paise": 72000000,
+            "month": "2028-09",
+            "rds_paise": 9987058,
+            "reserve_paise": 69359101,
+            "spending_paise": 4304099,
+            "total_paise": 165594814
+          },
+          {
+            "fds_paise": 9875842,
+            "invested_paise": 75000000,
+            "month": "2028-10",
+            "rds_paise": 10539233,
+            "reserve_paise": 71771501,
+            "spending_paise": 4214099,
+            "total_paise": 171524075
+          },
+          {
+            "fds_paise": 9930833,
+            "invested_paise": 78000000,
+            "month": "2028-11",
+            "rds_paise": 11094155,
+            "reserve_paise": 74183901,
+            "spending_paise": 4124099,
+            "total_paise": 177456388
+          },
+          {
+            "fds_paise": 9986131,
+            "invested_paise": 81000000,
+            "month": "2028-12",
+            "rds_paise": 11651838,
+            "reserve_paise": 76596301,
+            "spending_paise": 4034099,
+            "total_paise": 183391769
+          },
+          {
+            "fds_paise": 9691001,
+            "invested_paise": 84000000,
+            "month": "2029-01",
+            "rds_paise": 12212296,
+            "reserve_paise": 79357471,
+            "spending_paise": 3944099,
+            "total_paise": 189328267
+          },
+          {
+            "fds_paise": 9744940,
+            "invested_paise": 87000000,
+            "month": "2029-02",
+            "rds_paise": 12775542,
+            "reserve_paise": 81769871,
+            "spending_paise": 3854099,
+            "total_paise": 195267852
+          },
+          {
+            "fds_paise": 9799180,
+            "invested_paise": 90000000,
+            "month": "2029-03",
+            "rds_paise": 13341591,
+            "reserve_paise": 84182271,
+            "spending_paise": 3764099,
+            "total_paise": 201210541
+          },
+          {
+            "fds_paise": 9853721,
+            "invested_paise": 93000000,
+            "month": "2029-04",
+            "rds_paise": 13910456,
+            "reserve_paise": 86594671,
+            "spending_paise": 3674099,
+            "total_paise": 207156347
+          },
+          {
+            "fds_paise": 9908566,
+            "invested_paise": 96000000,
+            "month": "2029-05",
+            "rds_paise": 14482151,
+            "reserve_paise": 89057071,
+            "spending_paise": 3584099,
+            "total_paise": 213155287
+          },
+          {
+            "fds_paise": 9963717,
+            "invested_paise": 99000000,
+            "month": "2029-06",
+            "rds_paise": 15056690,
+            "reserve_paise": 91519471,
+            "spending_paise": 3494099,
+            "total_paise": 219157377
+          },
+          {
+            "fds_paise": 10019174,
+            "invested_paise": 102000000,
+            "month": "2029-07",
+            "rds_paise": 15634088,
+            "reserve_paise": 93981871,
+            "spending_paise": 3404099,
+            "total_paise": 225162632
+          },
+          {
+            "fds_paise": 10074941,
+            "invested_paise": 105000000,
+            "month": "2029-08",
+            "rds_paise": 16214358,
+            "reserve_paise": 96444271,
+            "spending_paise": 3314099,
+            "total_paise": 231171069
+          },
+          {
+            "fds_paise": 10131019,
+            "invested_paise": 108000000,
+            "month": "2029-09",
+            "rds_paise": 16797515,
+            "reserve_paise": 98906671,
+            "spending_paise": 3224099,
+            "total_paise": 237182704
+          },
+          {
+            "fds_paise": 10187409,
+            "invested_paise": 111000000,
+            "month": "2029-10",
+            "rds_paise": 17383574,
+            "reserve_paise": 101369071,
+            "spending_paise": 3134099,
+            "total_paise": 243197553
+          },
+          {
+            "fds_paise": 10244113,
+            "invested_paise": 114000000,
+            "month": "2029-11",
+            "rds_paise": 17972548,
+            "reserve_paise": 103831471,
+            "spending_paise": 3044099,
+            "total_paise": 249215631
+          },
+          {
+            "fds_paise": 10301133,
+            "invested_paise": 117000000,
+            "month": "2029-12",
+            "rds_paise": 18564453,
+            "reserve_paise": 106293871,
+            "spending_paise": 2954099,
+            "total_paise": 255236956
+          },
+          {
+            "fds_paise": 10007735,
+            "invested_paise": 120000000,
+            "month": "2030-01",
+            "rds_paise": 19159303,
+            "reserve_paise": 109105041,
+            "spending_paise": 2864099,
+            "total_paise": 261259578
+          },
+          {
+            "fds_paise": 10063415,
+            "invested_paise": 123000000,
+            "month": "2030-02",
+            "rds_paise": 19757112,
+            "reserve_paise": 111567441,
+            "spending_paise": 2774099,
+            "total_paise": 267285467
+          },
+          {
+            "fds_paise": 10119405,
+            "invested_paise": 126000000,
+            "month": "2030-03",
+            "rds_paise": 20357895,
+            "reserve_paise": 114029841,
+            "spending_paise": 2684099,
+            "total_paise": 273314640
+          },
+          {
+            "fds_paise": 10175707,
+            "invested_paise": 129000000,
+            "month": "2030-04",
+            "rds_paise": 20961667,
+            "reserve_paise": 116492241,
+            "spending_paise": 2594099,
+            "total_paise": 279347114
+          },
+          {
+            "fds_paise": 10232323,
+            "invested_paise": 132000000,
+            "month": "2030-05",
+            "rds_paise": 21568443,
+            "reserve_paise": 118954641,
+            "spending_paise": 2504099,
+            "total_paise": 285382906
+          },
+          {
+            "fds_paise": 10289253,
+            "invested_paise": 135000000,
+            "month": "2030-06",
+            "rds_paise": 22178238,
+            "reserve_paise": 121417041,
+            "spending_paise": 2414099,
+            "total_paise": 291422031
+          },
+          {
+            "fds_paise": 10346500,
+            "invested_paise": 138000000,
+            "month": "2030-07",
+            "rds_paise": 22791067,
+            "reserve_paise": 123879441,
+            "spending_paise": 2324099,
+            "total_paise": 297464507
+          },
+          {
+            "fds_paise": 10404067,
+            "invested_paise": 141000000,
+            "month": "2030-08",
+            "rds_paise": 23406945,
+            "reserve_paise": 126341841,
+            "spending_paise": 2234099,
+            "total_paise": 303510352
+          },
+          {
+            "fds_paise": 10461954,
+            "invested_paise": 144000000,
+            "month": "2030-09",
+            "rds_paise": 24025887,
+            "reserve_paise": 128804241,
+            "spending_paise": 2144099,
+            "total_paise": 309559581
+          },
+          {
+            "fds_paise": 10520163,
+            "invested_paise": 147000000,
+            "month": "2030-10",
+            "rds_paise": 24647908,
+            "reserve_paise": 131266641,
+            "spending_paise": 2054099,
+            "total_paise": 315612211
+          },
+          {
+            "fds_paise": 10578696,
+            "invested_paise": 150000000,
+            "month": "2030-11",
+            "rds_paise": 25273024,
+            "reserve_paise": 133729041,
+            "spending_paise": 1964099,
+            "total_paise": 321668260
+          },
+          {
+            "fds_paise": 10637555,
+            "invested_paise": 153000000,
+            "month": "2030-12",
+            "rds_paise": 25901250,
+            "reserve_paise": 136191441,
+            "spending_paise": 1874099,
+            "total_paise": 327727745
+          },
+          {
+            "fds_paise": 10346006,
+            "invested_paise": 156000000,
+            "month": "2031-01",
+            "rds_paise": 26532602,
+            "reserve_paise": 139002611,
+            "spending_paise": 1784099,
+            "total_paise": 333788718
+          },
+          {
+            "fds_paise": 10403546,
+            "invested_paise": 159000000,
+            "month": "2031-02",
+            "rds_paise": 27167095,
+            "reserve_paise": 141465011,
+            "spending_paise": 1694099,
+            "total_paise": 339853151
+          },
+          {
+            "fds_paise": 10461407,
+            "invested_paise": 162000000,
+            "month": "2031-03",
+            "rds_paise": 27804745,
+            "reserve_paise": 143927411,
+            "spending_paise": 1604099,
+            "total_paise": 345921062
+          },
+          {
+            "fds_paise": 10519589,
+            "invested_paise": 165000000,
+            "month": "2031-04",
+            "rds_paise": 28445567,
+            "reserve_paise": 146389811,
+            "spending_paise": 1514099,
+            "total_paise": 351992466
+          },
+          {
+            "fds_paise": 10578095,
+            "invested_paise": 168000000,
+            "month": "2031-05",
+            "rds_paise": 29089577,
+            "reserve_paise": 148852211,
+            "spending_paise": 1424099,
+            "total_paise": 358067382
+          },
+          {
+            "fds_paise": 10636927,
+            "invested_paise": 171000000,
+            "month": "2031-06",
+            "rds_paise": 29736791,
+            "reserve_paise": 151314611,
+            "spending_paise": 1334099,
+            "total_paise": 364145828
+          },
+          {
+            "fds_paise": 10696086,
+            "invested_paise": 174000000,
+            "month": "2031-07",
+            "rds_paise": 30387225,
+            "reserve_paise": 153777011,
+            "spending_paise": 1244099,
+            "total_paise": 370227821
+          },
+          {
+            "fds_paise": 10755575,
+            "invested_paise": 177000000,
+            "month": "2031-08",
+            "rds_paise": 31040895,
+            "reserve_paise": 156239411,
+            "spending_paise": 1154099,
+            "total_paise": 376313380
+          },
+          {
+            "fds_paise": 10815395,
+            "invested_paise": 180000000,
+            "month": "2031-09",
+            "rds_paise": 31697817,
+            "reserve_paise": 158701811,
+            "spending_paise": 1064099,
+            "total_paise": 382402522
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 1175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          },
+          {
+            "amount_paise": 1265801,
+            "kind": "spending_short",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 485600,
+            "kind": "reserve_below_floor",
+            "month": "2026-11"
+          },
+          {
+            "amount_paise": 1355801,
+            "kind": "spending_short",
+            "month": "2026-12"
+          },
+          {
+            "amount_paise": 1445801,
+            "kind": "spending_short",
+            "month": "2027-01"
+          },
+          {
+            "amount_paise": 1535801,
+            "kind": "spending_short",
+            "month": "2027-02"
+          },
+          {
+            "amount_paise": 1625801,
+            "kind": "spending_short",
+            "month": "2027-03"
+          },
+          {
+            "amount_paise": 1715801,
+            "kind": "spending_short",
+            "month": "2027-04"
+          },
+          {
+            "amount_paise": 1805801,
+            "kind": "spending_short",
+            "month": "2027-05"
+          },
+          {
+            "amount_paise": 1895801,
+            "kind": "spending_short",
+            "month": "2027-06"
+          },
+          {
+            "amount_paise": 1985801,
+            "kind": "spending_short",
+            "month": "2027-07"
+          },
+          {
+            "amount_paise": 2075801,
+            "kind": "spending_short",
+            "month": "2027-08"
+          },
+          {
+            "amount_paise": 2165801,
+            "kind": "spending_short",
+            "month": "2027-09"
+          },
+          {
+            "amount_paise": 2255801,
+            "kind": "spending_short",
+            "month": "2027-10"
+          },
+          {
+            "amount_paise": 2345801,
+            "kind": "spending_short",
+            "month": "2027-11"
+          },
+          {
+            "amount_paise": 2435801,
+            "kind": "spending_short",
+            "month": "2027-12"
+          },
+          {
+            "amount_paise": 2525801,
+            "kind": "spending_short",
+            "month": "2028-01"
+          },
+          {
+            "amount_paise": 2615801,
+            "kind": "spending_short",
+            "month": "2028-02"
+          },
+          {
+            "amount_paise": 2705801,
+            "kind": "spending_short",
+            "month": "2028-03"
+          },
+          {
+            "amount_paise": 2795801,
+            "kind": "spending_short",
+            "month": "2028-04"
+          },
+          {
+            "amount_paise": 2885801,
+            "kind": "spending_short",
+            "month": "2028-05"
+          },
+          {
+            "amount_paise": 2975801,
+            "kind": "spending_short",
+            "month": "2028-06"
+          },
+          {
+            "amount_paise": 3065801,
+            "kind": "spending_short",
+            "month": "2028-07"
+          },
+          {
+            "amount_paise": 3155801,
+            "kind": "spending_short",
+            "month": "2028-08"
+          },
+          {
+            "amount_paise": 3245801,
+            "kind": "spending_short",
+            "month": "2028-09"
+          },
+          {
+            "amount_paise": 3335801,
+            "kind": "spending_short",
+            "month": "2028-10"
+          },
+          {
+            "amount_paise": 3425801,
+            "kind": "spending_short",
+            "month": "2028-11"
+          },
+          {
+            "amount_paise": 3515801,
+            "kind": "spending_short",
+            "month": "2028-12"
+          },
+          {
+            "amount_paise": 3605801,
+            "kind": "spending_short",
+            "month": "2029-01"
+          },
+          {
+            "amount_paise": 3695801,
+            "kind": "spending_short",
+            "month": "2029-02"
+          },
+          {
+            "amount_paise": 3785801,
+            "kind": "spending_short",
+            "month": "2029-03"
+          },
+          {
+            "amount_paise": 3875801,
+            "kind": "spending_short",
+            "month": "2029-04"
+          },
+          {
+            "amount_paise": 3965801,
+            "kind": "spending_short",
+            "month": "2029-05"
+          },
+          {
+            "amount_paise": 4055801,
+            "kind": "spending_short",
+            "month": "2029-06"
+          },
+          {
+            "amount_paise": 4145801,
+            "kind": "spending_short",
+            "month": "2029-07"
+          },
+          {
+            "amount_paise": 4235801,
+            "kind": "spending_short",
+            "month": "2029-08"
+          },
+          {
+            "amount_paise": 4325801,
+            "kind": "spending_short",
+            "month": "2029-09"
+          },
+          {
+            "amount_paise": 4415801,
+            "kind": "spending_short",
+            "month": "2029-10"
+          },
+          {
+            "amount_paise": 4505801,
+            "kind": "spending_short",
+            "month": "2029-11"
+          },
+          {
+            "amount_paise": 4595801,
+            "kind": "spending_short",
+            "month": "2029-12"
+          },
+          {
+            "amount_paise": 4685801,
+            "kind": "spending_short",
+            "month": "2030-01"
+          },
+          {
+            "amount_paise": 4775801,
+            "kind": "spending_short",
+            "month": "2030-02"
+          },
+          {
+            "amount_paise": 4865801,
+            "kind": "spending_short",
+            "month": "2030-03"
+          },
+          {
+            "amount_paise": 4955801,
+            "kind": "spending_short",
+            "month": "2030-04"
+          },
+          {
+            "amount_paise": 5045801,
+            "kind": "spending_short",
+            "month": "2030-05"
+          },
+          {
+            "amount_paise": 5135801,
+            "kind": "spending_short",
+            "month": "2030-06"
+          },
+          {
+            "amount_paise": 5225801,
+            "kind": "spending_short",
+            "month": "2030-07"
+          },
+          {
+            "amount_paise": 5315801,
+            "kind": "spending_short",
+            "month": "2030-08"
+          },
+          {
+            "amount_paise": 5405801,
+            "kind": "spending_short",
+            "month": "2030-09"
+          },
+          {
+            "amount_paise": 5495801,
+            "kind": "spending_short",
+            "month": "2030-10"
+          },
+          {
+            "amount_paise": 5585801,
+            "kind": "spending_short",
+            "month": "2030-11"
+          },
+          {
+            "amount_paise": 5675801,
+            "kind": "spending_short",
+            "month": "2030-12"
+          },
+          {
+            "amount_paise": 5765801,
+            "kind": "spending_short",
+            "month": "2031-01"
+          },
+          {
+            "amount_paise": 5855801,
+            "kind": "spending_short",
+            "month": "2031-02"
+          },
+          {
+            "amount_paise": 5945801,
+            "kind": "spending_short",
+            "month": "2031-03"
+          },
+          {
+            "amount_paise": 6035801,
+            "kind": "spending_short",
+            "month": "2031-04"
+          },
+          {
+            "amount_paise": 6125801,
+            "kind": "spending_short",
+            "month": "2031-05"
+          },
+          {
+            "amount_paise": 6215801,
+            "kind": "spending_short",
+            "month": "2031-06"
+          },
+          {
+            "amount_paise": 6305801,
+            "kind": "spending_short",
+            "month": "2031-07"
+          },
+          {
+            "amount_paise": 6395801,
+            "kind": "spending_short",
+            "month": "2031-08"
+          },
+          {
+            "amount_paise": 6485801,
+            "kind": "spending_short",
+            "month": "2031-09"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "months_clamped_low",
+    "projection": {
+      "baseline": {
+        "points": [
+          {
+            "fds_paise": 16738500,
+            "invested_paise": 0,
+            "month": "start",
+            "rds_paise": 600000,
+            "reserve_paise": 6914400,
+            "spending_paise": 4301699,
+            "total_paise": 28677999
+          },
+          {
+            "fds_paise": 16834237,
+            "invested_paise": 3000000,
+            "month": "2026-10",
+            "rds_paise": 1105473,
+            "reserve_paise": 5414400,
+            "spending_paise": 7374099,
+            "total_paise": 33851609
+          }
+        ],
+        "stress": [
+          {
+            "amount_paise": 175801,
+            "kind": "spending_short",
+            "month": "2026-10"
+          }
+        ]
+      },
+      "impacts": [],
+      "scenario": null
+    }
+  }
+]

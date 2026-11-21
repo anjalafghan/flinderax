@@ -1,0 +1,693 @@
+{
+  "accounts": [
+    [
+      "a1",
+      5522950,
+      "2026-11-08"
+    ],
+    [
+      "a2",
+      777,
+      "2030-01-01"
+    ],
+    [
+      "other",
+      0,
+      null
+    ]
+  ],
+  "imports": [
+    [
+      "u1",
+      null,
+      null,
+      "2026-11-01",
+      "2026-11-01",
+      1,
+      25100,
+      100,
+      1
+    ],
+    [
+      "u1",
+      "a2",
+      null,
+      "2026-11-01",
+      "2026-11-02",
+      2,
+      1000000,
+      962950,
+      1
+    ],
+    [
+      "u1",
+      null,
+      "c1",
+      "2026-11-01",
+      "2026-11-02",
+      2,
+      null,
+      null,
+      0
+    ],
+    [
+      "u2",
+      null,
+      null,
+      "2026-11-01",
+      "2026-11-02",
+      2,
+      1000000,
+      962950,
+      1
+    ],
+    [
+      "u1",
+      null,
+      "c1",
+      "2026-11-01",
+      "2026-11-03",
+      3,
+      null,
+      null,
+      0
+    ],
+    [
+      "u1",
+      "a1",
+      null,
+      "2026-11-01",
+      "2026-11-06",
+      8,
+      1000000,
+      5512950,
+      1
+    ],
+    [
+      "u1",
+      "a1",
+      null,
+      "2026-11-01",
+      "2026-11-06",
+      8,
+      1000000,
+      5512950,
+      1
+    ],
+    [
+      "u1",
+      "a1",
+      null,
+      "2026-11-01",
+      "2026-11-06",
+      8,
+      1000000,
+      5512950,
+      1
+    ],
+    [
+      "u1",
+      "a1",
+      null,
+      "2026-11-05",
+      "2026-11-08",
+      3,
+      5862950,
+      5522950,
+      0
+    ],
+    [
+      "u1",
+      "a1",
+      null,
+      "2026-11-06",
+      "2026-11-07",
+      3,
+      5912950,
+      5482950,
+      1
+    ]
+  ],
+  "steps": [
+    {
+      "ok": {
+        "added": 5,
+        "balance_kept": null,
+        "balance_updated": {
+          "account_name": "HDFC",
+          "balance_paise": 5512950
+        },
+        "categorized": 6,
+        "chain_ok": true,
+        "closing_paise": 5512950,
+        "duplicates": 0,
+        "first_date": "2026-11-01",
+        "holder_name_suggestion": "ASHA RAO",
+        "last_date": "2026-11-06",
+        "matched_alerts": 3,
+        "not_on_statement": 1,
+        "older_recategorized": 0,
+        "opening_paise": 1000000,
+        "skipped": 0,
+        "total": 8,
+        "uncategorized": 2,
+        "upgraded": 3
+      },
+      "step": "bank_first_import_chain_ok"
+    },
+    {
+      "ok": {
+        "added": 0,
+        "balance_kept": null,
+        "balance_updated": {
+          "account_name": "HDFC",
+          "balance_paise": 5512950
+        },
+        "categorized": 0,
+        "chain_ok": true,
+        "closing_paise": 5512950,
+        "duplicates": 8,
+        "first_date": "2026-11-01",
+        "holder_name_suggestion": "ASHA RAO",
+        "last_date": "2026-11-06",
+        "matched_alerts": 0,
+        "not_on_statement": 1,
+        "older_recategorized": 0,
+        "opening_paise": 1000000,
+        "skipped": 0,
+        "total": 8,
+        "uncategorized": 0,
+        "upgraded": 0
+      },
+      "step": "same_file_again_all_duplicates"
+    },
+    {
+      "ok": {
+        "added": 0,
+        "balance_kept": null,
+        "balance_updated": {
+          "account_name": "HDFC",
+          "balance_paise": 5512950
+        },
+        "categorized": 0,
+        "chain_ok": true,
+        "closing_paise": 5512950,
+        "duplicates": 8,
+        "first_date": "2026-11-01",
+        "holder_name_suggestion": "ASHA RAO",
+        "last_date": "2026-11-06",
+        "matched_alerts": 0,
+        "not_on_statement": 1,
+        "older_recategorized": 0,
+        "opening_paise": 1000000,
+        "skipped": 0,
+        "total": 8,
+        "uncategorized": 0,
+        "upgraded": 0
+      },
+      "step": "newest_first_export_is_still_duplicates"
+    },
+    {
+      "ok": {
+        "added": 1,
+        "balance_kept": null,
+        "balance_updated": {
+          "account_name": "HDFC",
+          "balance_paise": 5482950
+        },
+        "categorized": 1,
+        "chain_ok": true,
+        "closing_paise": 5482950,
+        "duplicates": 2,
+        "first_date": "2026-11-06",
+        "holder_name_suggestion": null,
+        "last_date": "2026-11-07",
+        "matched_alerts": 0,
+        "not_on_statement": 0,
+        "older_recategorized": 0,
+        "opening_paise": 5912950,
+        "skipped": 0,
+        "total": 3,
+        "uncategorized": 0,
+        "upgraded": 0
+      },
+      "step": "overlap_adds_one_new_row"
+    },
+    {
+      "ok": {
+        "added": 0,
+        "balance_kept": {
+          "account_name": "Kotak",
+          "balance_paise": 777,
+          "set_on": "2030-01-01",
+          "statement_on": "2026-11-02",
+          "statement_paise": 962950
+        },
+        "balance_updated": null,
+        "categorized": 0,
+        "chain_ok": true,
+        "closing_paise": 962950,
+        "duplicates": 2,
+        "first_date": "2026-11-01",
+        "holder_name_suggestion": null,
+        "last_date": "2026-11-02",
+        "matched_alerts": 0,
+        "not_on_statement": 1,
+        "older_recategorized": 0,
+        "opening_paise": 1000000,
+        "skipped": 0,
+        "total": 2,
+        "uncategorized": 0,
+        "upgraded": 0
+      },
+      "step": "older_balance_kept_on_dated_account"
+    },
+    {
+      "ok": {
+        "added": 0,
+        "balance_kept": null,
+        "balance_updated": null,
+        "categorized": 0,
+        "chain_ok": true,
+        "closing_paise": 100,
+        "duplicates": 1,
+        "first_date": "2026-11-01",
+        "holder_name_suggestion": null,
+        "last_date": "2026-11-01",
+        "matched_alerts": 0,
+        "not_on_statement": 0,
+        "older_recategorized": 0,
+        "opening_paise": 25100,
+        "skipped": 0,
+        "total": 1,
+        "uncategorized": 0,
+        "upgraded": 0
+      },
+      "step": "no_target_matches_any_alert"
+    },
+    {
+      "ok": {
+        "added": 1,
+        "balance_kept": null,
+        "balance_updated": null,
+        "categorized": 3,
+        "chain_ok": false,
+        "closing_paise": null,
+        "duplicates": 0,
+        "first_date": "2026-11-01",
+        "holder_name_suggestion": null,
+        "last_date": "2026-11-03",
+        "matched_alerts": 2,
+        "not_on_statement": 0,
+        "older_recategorized": 0,
+        "opening_paise": null,
+        "skipped": 0,
+        "total": 3,
+        "uncategorized": 0,
+        "upgraded": 2
+      },
+      "step": "card_statement_with_payment"
+    },
+    {
+      "ok": {
+        "added": 0,
+        "balance_kept": null,
+        "balance_updated": null,
+        "categorized": 0,
+        "chain_ok": false,
+        "closing_paise": null,
+        "duplicates": 2,
+        "first_date": "2026-11-01",
+        "holder_name_suggestion": null,
+        "last_date": "2026-11-02",
+        "matched_alerts": 0,
+        "not_on_statement": 0,
+        "older_recategorized": 0,
+        "opening_paise": null,
+        "skipped": 0,
+        "total": 2,
+        "uncategorized": 0,
+        "upgraded": 0
+      },
+      "step": "card_statement_again"
+    },
+    {
+      "error": {
+        "message": "Account not found",
+        "status": 404
+      },
+      "step": "someone_elses_account"
+    },
+    {
+      "error": {
+        "message": "Card not found",
+        "status": 404
+      },
+      "step": "unknown_card"
+    },
+    {
+      "error": {
+        "message": "Couldn't find the transaction table. The file needs a Date column and Debit/Credit or Amount columns.",
+        "status": 400
+      },
+      "step": "not_a_statement"
+    },
+    {
+      "error": {
+        "message": "Couldn't read any transactions with these columns. Check the column mapping.",
+        "status": 400
+      },
+      "step": "mapping_reads_nothing"
+    },
+    {
+      "error": {
+        "message": "No transactions found in that file.",
+        "status": 400
+      },
+      "step": "empty_header_only"
+    },
+    {
+      "ok": {
+        "added": 2,
+        "balance_kept": null,
+        "balance_updated": null,
+        "categorized": 0,
+        "chain_ok": true,
+        "closing_paise": 962950,
+        "duplicates": 0,
+        "first_date": "2026-11-01",
+        "holder_name_suggestion": null,
+        "last_date": "2026-11-02",
+        "matched_alerts": 0,
+        "not_on_statement": 0,
+        "older_recategorized": 0,
+        "opening_paise": 1000000,
+        "skipped": 0,
+        "total": 2,
+        "uncategorized": 2,
+        "upgraded": 0
+      },
+      "step": "other_user_same_file_is_all_new"
+    },
+    {
+      "ok": {
+        "added": 1,
+        "balance_kept": null,
+        "balance_updated": {
+          "account_name": "HDFC",
+          "balance_paise": 5522950
+        },
+        "categorized": 1,
+        "chain_ok": false,
+        "closing_paise": 5522950,
+        "duplicates": 2,
+        "first_date": "2026-11-05",
+        "holder_name_suggestion": null,
+        "last_date": "2026-11-08",
+        "matched_alerts": 0,
+        "not_on_statement": 0,
+        "older_recategorized": 0,
+        "opening_paise": 5862950,
+        "skipped": 0,
+        "total": 3,
+        "uncategorized": 0,
+        "upgraded": 0
+      },
+      "step": "holder_names_saved"
+    }
+  ],
+  "transactions": [
+    [
+      "2026-11-01",
+      "debit",
+      25000,
+      "Ravi",
+      "uncategorized",
+      null,
+      "a2",
+      null,
+      "sms",
+      "alert text",
+      "alert:t_a2",
+      null,
+      0,
+      0
+    ],
+    [
+      "2026-11-01",
+      "debit",
+      45000,
+      "SWIGGY",
+      "shopping",
+      "c1",
+      null,
+      null,
+      "sms",
+      "SWIGGY",
+      "alert:t_card_debit",
+      null,
+      1,
+      0
+    ],
+    [
+      "2026-11-01",
+      "debit",
+      25000,
+      "RAVI KUMAR",
+      "uncategorized",
+      null,
+      "a1",
+      null,
+      "sms",
+      "UPI-RAVI KUMAR-RAVIK123@OKAXIS-SBIN0001234-612345678901-PAID VIA CRED",
+      "alert:t_plain",
+      "612345678901",
+      1,
+      0
+    ],
+    [
+      "2026-11-02",
+      "credit",
+      500000,
+      "PAYMENT RECEIVED",
+      "transfer",
+      "c1",
+      null,
+      null,
+      "sms",
+      "PAYMENT RECEIVED",
+      "alert:t_card",
+      null,
+      1,
+      0
+    ],
+    [
+      "2026-11-02",
+      "debit",
+      12050,
+      "ASHA STORES",
+      "groceries",
+      null,
+      "a1",
+      null,
+      "sms",
+      "UPI-ASHA STORES-Q123456789@YBL-YESB0YBLUPI-612345678902-UPI",
+      "alert:t_ref",
+      "612345678902",
+      1,
+      0
+    ],
+    [
+      "2026-11-03",
+      "debit",
+      100000,
+      "ACME PUNE",
+      "shopping",
+      null,
+      "a1",
+      null,
+      "sms",
+      "UPI-ACME PUNE-ACME@OKAXIS-SBIN0001234-612345678903-PAYMENT ON CRED",
+      "alert:t_locked",
+      "612345678903",
+      1,
+      1
+    ],
+    [
+      "2026-11-03",
+      "debit",
+      129900,
+      "AMAZON",
+      "shopping",
+      "c1",
+      null,
+      "9999",
+      "paste",
+      "AMAZON",
+      "stmt:2026-11-03:debit:129900:amazon:1",
+      null,
+      1,
+      0
+    ],
+    [
+      "2026-11-04",
+      "debit",
+      777700,
+      "Mystery",
+      "uncategorized",
+      null,
+      "a1",
+      null,
+      "sms",
+      "alert text",
+      "alert:t_orphan",
+      null,
+      0,
+      0
+    ],
+    [
+      "2026-11-04",
+      "credit",
+      5000000,
+      "SALARYFORTHEMONTHOFOCT2026",
+      "income",
+      null,
+      "a1",
+      "1234",
+      "paste",
+      "SALARYFORTHEMONTHOFOCT2026",
+      "stmt:2026-11-04:credit:5000000:salaryforthemonthofoct2026:1",
+      null,
+      1,
+      0
+    ],
+    [
+      "2026-11-05",
+      "credit",
+      650000,
+      "ASHA RAO",
+      "income",
+      null,
+      "a1",
+      "1234",
+      "paste",
+      "UPI-ASHA RAO-98XXXXXX12@YESCRED-KKBK0001234-612345678905-PAID VIA CRED",
+      "stmt:2026-11-05:credit:650000:upi asha rao 98xxxxxx12 yescred kkbk0001234 612345678905 paid via cred:1",
+      "612345678905",
+      1,
+      0
+    ],
+    [
+      "2026-11-05",
+      "debit",
+      600000,
+      "ASHA RAO",
+      "uncategorized",
+      null,
+      "a1",
+      "1234",
+      "paste",
+      "UPI-ASHA RAO-98XXXXXX12@YESCRED-KKBK0001234-612345678904-PAID VIA CRED",
+      "stmt:2026-11-05:debit:600000:upi asha rao 98xxxxxx12 yescred kkbk0001234 612345678904 paid via cred:1",
+      "612345678904",
+      1,
+      0
+    ],
+    [
+      "2026-11-06",
+      "debit",
+      200000,
+      "ATM WDL SELF",
+      "cash",
+      null,
+      "a1",
+      "1234",
+      "paste",
+      "ATM WDL SELF",
+      "stmt:2026-11-06:debit:200000:atm wdl self:1",
+      null,
+      1,
+      0
+    ],
+    [
+      "2026-11-06",
+      "debit",
+      200000,
+      "ATM WDL SELF",
+      "cash",
+      null,
+      "a1",
+      "1234",
+      "paste",
+      "ATM WDL SELF",
+      "stmt:2026-11-06:debit:200000:atm wdl self:2",
+      null,
+      1,
+      0
+    ],
+    [
+      "2026-11-07",
+      "debit",
+      30000,
+      "SWIGGY ORDER",
+      "food",
+      null,
+      "a1",
+      "1234",
+      "paste",
+      "SWIGGY ORDER",
+      "stmt:2026-11-07:debit:30000:swiggy order:1",
+      null,
+      1,
+      0
+    ],
+    [
+      "2026-11-08",
+      "credit",
+      10000,
+      "CHEQUE DEPOSIT",
+      "income",
+      null,
+      "a1",
+      "1234",
+      "paste",
+      "CHEQUE DEPOSIT",
+      "stmt:2026-11-08:credit:10000:cheque deposit:1",
+      null,
+      1,
+      0
+    ],
+    [
+      "2026-11-01",
+      "debit",
+      25000,
+      "RAVI KUMAR",
+      "uncategorized",
+      null,
+      null,
+      null,
+      "paste",
+      "UPI-RAVI KUMAR-RAVIK123@OKAXIS-SBIN0001234-612345678901-PAID VIA CRED",
+      "stmt:2026-11-01:debit:25000:upi ravi kumar ravik123 okaxis sbin0001234 612345678901 paid via cred:1",
+      "612345678901",
+      1,
+      0
+    ],
+    [
+      "2026-11-02",
+      "debit",
+      12050,
+      "ASHA STORES",
+      "uncategorized",
+      null,
+      null,
+      null,
+      "paste",
+      "UPI-ASHA STORES-Q123456789@YBL-YESB0YBLUPI-612345678902-UPI",
+      "stmt:2026-11-02:debit:12050:upi asha stores q123456789 ybl yesb0yblupi 612345678902 upi:1",
+      "612345678902",
+      1,
+      0
+    ]
+  ]
+}

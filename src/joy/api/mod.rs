@@ -778,21 +778,26 @@ fn unix_now() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)
 }
 
-/// The signing key: `DATES_URL_KEY`, else SHA-256 of `PASETO_KEY`, else a random per-process key
-/// (links then stop working on restart, which beats having no key).
+/// The signing key from the two secrets: `DATES_URL_KEY` as it is, else SHA-256 of `PASETO_KEY`
+/// (so rotating the login key breaks every link unless `DATES_URL_KEY` is set). Blank counts as unset.
+fn key_from(dates_url_key: Option<String>, paseto_key: Option<String>) -> Option<Vec<u8>> {
+    if let Some(k) = dates_url_key.filter(|k| !k.is_empty()) {
+        return Some(k.into_bytes());
+    }
+    paseto_key.filter(|k| !k.is_empty()).map(|k| Sha256::digest(k.as_bytes()).to_vec())
+}
+
+/// The signing key: see [`key_from`], else a random per-process key (links then stop working on
+/// restart, which beats having no key).
 fn url_key() -> &'static [u8] {
     static KEY: OnceLock<Vec<u8>> = OnceLock::new();
     KEY.get_or_init(|| {
-        if let Some(k) = std::env::var("DATES_URL_KEY").ok().filter(|k| !k.is_empty()) {
-            return k.into_bytes();
-        }
-        if let Some(k) = std::env::var("PASETO_KEY").ok().filter(|k| !k.is_empty()) {
-            return Sha256::digest(k.as_bytes()).to_vec();
-        }
-        tracing::warn!("neither DATES_URL_KEY nor PASETO_KEY is set: signed Dates links use a random key");
-        let mut k = vec![0u8; 32];
-        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut k);
-        k
+        key_from(std::env::var("DATES_URL_KEY").ok(), std::env::var("PASETO_KEY").ok()).unwrap_or_else(|| {
+            tracing::warn!("neither DATES_URL_KEY nor PASETO_KEY is set: signed Dates links use a random key");
+            let mut k = vec![0u8; 32];
+            rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut k);
+            k
+        })
     })
 }
 
@@ -849,6 +854,30 @@ pub fn verify(path: &str, exp: i64, sig: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn dates_url_key_wins_and_rotating_the_login_key_leaves_it_alone() {
+        let with_dates = key_from(Some("links-secret".into()), Some("login-secret".into())).unwrap();
+        assert_eq!(with_dates, b"links-secret");
+        // Rotating the login key must not touch links signed with the dedicated key.
+        assert_eq!(key_from(Some("links-secret".into()), Some("another-login-secret".into())).unwrap(), with_dates);
+    }
+
+    #[test]
+    fn without_a_dates_key_it_derives_from_the_login_key_so_rotating_that_breaks_links() {
+        let a = key_from(None, Some("login-secret".into())).unwrap();
+        let b = key_from(None, Some("another-login-secret".into())).unwrap();
+        assert_eq!(a, Sha256::digest(b"login-secret").to_vec());
+        assert_ne!(a, b);
+        assert_ne!(a, b"login-secret", "the login key itself is never used as the signing key");
+    }
+
+    #[test]
+    fn blank_keys_count_as_unset_and_no_key_at_all_is_none() {
+        assert_eq!(key_from(Some(String::new()), Some("login-secret".into())).unwrap(), Sha256::digest(b"login-secret").to_vec());
+        assert!(key_from(Some(String::new()), Some(String::new())).is_none());
+        assert!(key_from(None, None).is_none());
+    }
+
     use super::*;
     use crate::joy::picker::Duration;
 

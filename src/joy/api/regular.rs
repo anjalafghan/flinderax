@@ -100,8 +100,8 @@ pub async fn card(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Card, AppE
         .into_iter()
         .map(|(r, v)| WentTonight {
             visit_id: v.id,
-            title: r.title.clone(),
-            place: if v.place.is_empty() { String::new() } else { v.place.clone() },
+            title: r.title,
+            place: v.place.clone(),
             amount: ctx.money(v.amount),
             amount_raw: crate::validate::plain_rupees(v.amount),
             history_id: v.history_id,

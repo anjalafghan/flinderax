@@ -1,11 +1,12 @@
 //! Diet and health: pure rules and the quarterly report section. Phase 5.
 
 use serde::{Deserialize, Serialize};
-use time::{Date, Duration, Month};
+use time::{Date, Duration};
 
 use crate::planner::{
     checkin::rupees,
-    habits::{Area, Cadence, Habit, Impact, Link, Status},
+    habits::{due_status, link, Area, Cadence, Habit, Impact, Status},
+    short_date,
 };
 
 /// Ready-made weekly habits: (key, label, target days a week).
@@ -26,7 +27,6 @@ pub const MAX_ACTIVE: i64 = 5;
 /// Merchants (lowercase fragments) that mean a delivery order when the payment is tagged food.
 const DELIVERY_MERCHANTS: [&str; 6] = ["swiggy", "zomato", "eatsure", "box8", "dominos", "faasos"];
 
-const DUE_SOON_DAYS: i64 = 14;
 const EATING_OUT_SHARE_BPS: i64 = 4_000;
 const CAP_OVER_PACE_PCT: i64 = 115;
 
@@ -94,43 +94,6 @@ impl DietIn {
 pub fn share_bps(eating_out: i64, groceries: i64) -> Option<i64> {
     let total = eating_out + groceries;
     (total > 0).then(|| (eating_out * 10_000 * 2 + total) / (total * 2))
-}
-
-fn link(label: &str, to: &str) -> Option<Link> {
-    Some(Link { label: label.to_string(), to: to.to_string() })
-}
-
-fn status_of(due: Date, today: Date) -> Status {
-    let days = (due - today).whole_days();
-    if days < 0 {
-        Status::Overdue
-    } else if days <= DUE_SOON_DAYS {
-        Status::DueSoon
-    } else {
-        Status::Ok
-    }
-}
-
-/// "12 Mar"
-pub fn short_day(d: Date) -> String {
-    format!("{} {}", d.day(), &month_name(d.month())[..3])
-}
-
-fn month_name(m: Month) -> &'static str {
-    match m {
-        Month::January => "January",
-        Month::February => "February",
-        Month::March => "March",
-        Month::April => "April",
-        Month::May => "May",
-        Month::June => "June",
-        Month::July => "July",
-        Month::August => "August",
-        Month::September => "September",
-        Month::October => "October",
-        Month::November => "November",
-        Month::December => "December",
-    }
 }
 
 /// The habit furthest behind its target over the logged weeks: (label, average days, target).
@@ -227,11 +190,11 @@ pub fn habits(input: &DietIn, today: Date) -> Vec<Habit> {
                 key: "health_checkup".to_string(),
                 area: Area::Health,
                 title: "Annual health check-up".to_string(),
-                why: format!("Your last check-up was on {}.", short_day(last)),
+                why: format!("Your last check-up was on {}.", short_date(last)),
                 action: link("Health", "/health"),
                 cadence: Cadence::Yearly,
                 due_on: Some(due.to_string()),
-                status: status_of(due, today),
+                status: due_status(due, today),
                 impact: Impact::Low,
             }
         }
@@ -293,7 +256,7 @@ pub fn add_notes(report: &mut DietReport, prev_delivery_x100: Option<i64>, today
     let mut watch = Vec::new();
 
     if let Some(due) = report.checkup_due_on.as_deref().and_then(parse_day).filter(|d| *d < today) {
-        watch.push(format!("Your yearly check-up is overdue since {}.", short_day(due)));
+        watch.push(format!("Your yearly check-up is overdue since {}.", short_date(due)));
     }
 
     let share = report.eating_out_share_bps;

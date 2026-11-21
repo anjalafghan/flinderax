@@ -621,276 +621,9 @@ pub fn monthly_equivalent(c: &CommitmentIn, month_idx: i32) -> i64 {
     c.amount / c.freq.period_months()
 }
 
-struct Event {
-    amount: i64,
-    from_reserve: bool,
-}
-
-pub fn compute(input: &PlanInput) -> Summary {
+/// Everything due from today up to `payday2`, soonest first.
+fn upcoming_list(input: &PlanInput, payday2: Date) -> Vec<Upcoming> {
     let today = input.today;
-    let st = &input.settings;
-
-    // 1. The pay period.
-    let period = pay_period(today, &input.incomes);
-    let (payday1, payday2, period_start) = (period.payday1, period.payday2, period.start);
-    let next_pay: Option<(Date, &IncomeIn)> = input
-        .incomes
-        .iter()
-        .map(|i| (next_after(i.day, today), i))
-        .min_by_key(|(d, _)| *d);
-    let days_total = (payday1 - period_start).whole_days().max(1);
-    let days_left = (payday1 - today).whole_days().max(1);
-    let prorate = |monthly: i64| monthly * days_left / days_total;
-
-    // 2. The monthly budget in amounts: needs = listed bills, spending = allowance, savings = rest.
-    let this_month = month_index(today);
-    let sum_bucket = |b: Bucket| -> i64 {
-        input.commitments.iter().filter(|c| c.bucket == b).map(|c| monthly_equivalent(c, this_month)).sum()
-    };
-    let income: i64 = input.incomes.iter().map(|i| i.amount).sum();
-    let (needs, sip, wants_listed) = (sum_bucket(Bucket::Needs), sum_bucket(Bucket::Savings), sum_bucket(Bucket::Wants));
-    let allowance = st
-        .spending
-        .or_else(|| st.spending_bps.map(|bps| income * bps / 10_000))
-        .unwrap_or(income * DEFAULT_SPENDING_PCT / 100);
-    let savings_total = (income - needs - allowance).max(0);
-    let rest_savings = (savings_total - sip).max(0);
-    let allocation_plan = needs + rest_savings;
-    let budget = Budget {
-        income_paise: income,
-        needs_paise: needs,
-        spending_paise: allowance,
-        savings_paise: savings_total,
-        sip_paise: sip,
-        rest_savings_paise: rest_savings,
-        allocation_paise: allocation_plan,
-    };
-
-    // 3. Pots. Accounts without a role: everything unlocked is "spending", no reserve checks.
-    let reserve_accts: Vec<&AccountIn> =
-        input.accounts.iter().filter(|a| !a.locked && a.role == Role::Reserve).collect();
-    let mut spend_accts: Vec<&AccountIn> =
-        input.accounts.iter().filter(|a| !a.locked && a.role == Role::Spending).collect();
-    if spend_accts.is_empty() {
-        spend_accts = input.accounts.iter().filter(|a| !a.locked && a.role == Role::Other).collect();
-    }
-    let have_reserve = !reserve_accts.is_empty();
-    let spend_bal: i64 = spend_accts.iter().map(|a| a.balance).sum();
-    let reserve_bal: i64 = reserve_accts.iter().map(|a| a.balance).sum();
-    let locked_total: i64 = input.accounts.iter().filter(|a| a.locked).map(|a| a.balance).sum();
-    let locked_count = input.accounts.iter().filter(|a| a.locked).count();
-    let spend_id = spend_accts.first().map(|a| a.id.clone());
-    let reserve_id = reserve_accts.first().map(|a| a.id.clone());
-    let in_set = |set: &[&AccountIn], id: &Option<String>| id.as_ref().is_some_and(|i| set.iter().any(|a| &a.id == i));
-
-    // 4. Fixed payments dated before payday, and who pays them.
-    let mut events: Vec<Event> = Vec::new();
-    for c in &input.commitments {
-        for _ in commitment_dates(c, today, payday1) {
-            let from_reserve = if in_set(&reserve_accts, &c.account_id) {
-                true
-            } else if in_set(&spend_accts, &c.account_id) {
-                false
-            } else {
-                have_reserve && c.bucket == Bucket::Needs
-            };
-            events.push(Event { amount: c.amount, from_reserve });
-        }
-    }
-    let spend_outflows: i64 = events.iter().filter(|e| !e.from_reserve).map(|e| e.amount).sum();
-    let reserve_outflows: i64 = events.iter().filter(|e| e.from_reserve).map(|e| e.amount).sum();
-    let wants_in_period: i64 = input
-        .commitments
-        .iter()
-        .filter(|c| c.bucket == Bucket::Wants)
-        .map(|c| commitment_dates(c, today, payday1).len() as i64 * c.amount)
-        .sum();
-
-    // 5. Card bills and what the ledger already covers.
-    let bills_total: i64 = input.cards.iter().map(|c| c.due_now.max(0) + c.next_bill_est.max(0)).sum();
-    let card_uncovered: i64 = input
-        .cards
-        .iter()
-        .map(|c| (c.due_now - c.due_covered).max(0) + (c.next_bill_est - c.next_covered).max(0))
-        .sum();
-    // With no reserve account there is nothing to move to: every bill is a charge on the pool.
-    let card_charge = if have_reserve { card_uncovered } else { bills_total };
-
-    // 6. Spending allowance: actual spend when known, else an even pace over the period.
-    let tracked = !input.cards.is_empty() && input.cards.iter().all(|c| c.spent_this_period.is_some());
-    let spent: i64 = input.cards.iter().filter_map(|c| c.spent_this_period).sum();
-    let tracking_began = input.cards.iter().filter_map(|c| c.tracked_since).min();
-    let before_tracking = match (tracked, tracking_began) {
-        (true, Some(b)) => allowance * (b - period_start).whole_days().clamp(0, days_total) / days_total,
-        _ => 0,
-    };
-    let spending_left = if tracked {
-        (allowance - wants_listed - before_tracking - spent).max(0)
-    } else {
-        (prorate(allowance) - wants_in_period).max(0)
-    };
-    let overspend = if tracked { (spent + before_tracking + wants_listed - allowance).max(0) } else { 0 };
-
-    // 7. Cash in the spending account. The savings top-up (needs money + the rest of savings ->
-    //    reserve) only ever comes from cash BEYOND the spending pot you still have: it never eats it.
-    let free_before_top_up = spend_bal - spend_outflows - card_charge;
-    let alloc_remaining = if have_reserve {
-        (allocation_plan - input.allocation.moved - input.allocation.skipped).max(0)
-    } else {
-        0
-    };
-    let beyond_pot = (free_before_top_up - free_before_top_up.max(0).min(spending_left)).max(0);
-    let alloc_to_move = alloc_remaining.min(beyond_pot);
-    let alloc_unfunded = alloc_remaining - alloc_to_move;
-    let free_cash = free_before_top_up - alloc_to_move;
-    let safe_cash = free_cash.max(0);
-    // Planned dates before payday are spending that has not happened yet: hold their estimates back.
-    let dates_held: i64 = input
-        .planned_dates
-        .iter()
-        .filter(|d| d.date >= today && d.date < payday1)
-        .map(|d| d.amount.max(0))
-        .fold(0i64, |a, b| a.saturating_add(b));
-    let safe_before_dates = safe_cash.min(spending_left);
-    let dates_held_applied = dates_held.min(safe_before_dates);
-    let safe = safe_before_dates - dates_held_applied;
-    let weeks = ((days_left + 6) / 7).max(1);
-    let per_week = safe / weeks;
-    let status = if per_week >= GREEN_PER_WEEK_PAISE {
-        Status::Green
-    } else if safe > 0 {
-        Status::Yellow
-    } else {
-        Status::Red
-    };
-    // What is missing this month: cash that can't cover the SIP/bills, plus savings that can't be
-    // funded or were skipped. Paying it back over a few months keeps the FDs untouched.
-    let short_by = (-free_before_top_up).max(0);
-    let owed = short_by + alloc_unfunded + input.allocation.skipped;
-    let months = st.recovery_months.max(1);
-    let recovery = (owed > 0).then(|| Recovery {
-        owed_paise: owed,
-        months,
-        per_month_paise: (owed + months - 1) / months,
-    });
-
-    // 8. Reserve health.
-    let floor = st.savings_floor.unwrap_or(0);
-    let reserve_required = if have_reserve { bills_total + reserve_outflows } else { 0 };
-    let free_savings = reserve_bal - reserve_required;
-    let below_floor = have_reserve && free_savings < floor;
-
-    // 9. The walk-through.
-    let spend_name = spend_accts.first().map(|a| a.name.clone());
-    let reserve_name = reserve_accts.first().map(|a| a.name.clone());
-    let sn = spend_name.clone().unwrap_or_else(|| "spending account".into());
-    let rn = reserve_name.clone().unwrap_or_else(|| "reserve".into());
-    let line = |label: String, amount: i64, note: Option<String>, total: bool| Line { label, amount_paise: amount, note, total };
-    let mut breakdown = vec![line(format!("{sn} balance"), spend_bal, None, false)];
-    if spend_outflows > 0 {
-        breakdown.push(line(format!("Fixed payments from it before {}", short_date(payday1)), -spend_outflows, None, false));
-    }
-    if card_charge > 0 {
-        breakdown.push(line(
-            if have_reserve { format!("Card bills still to move to {rn}") } else { "Card bills already spent".into() },
-            -card_charge,
-            Some(if have_reserve {
-                format!("{} of {} is already covered", format_inr(bills_total - card_uncovered), format_inr(bills_total))
-            } else {
-                "Counted now, even if due after payday".into()
-            }),
-            false,
-        ));
-    }
-    if alloc_to_move > 0 {
-        breakdown.push(line(
-            format!("Savings top-up to move to {rn}"),
-            -alloc_to_move,
-            Some("Only from cash beyond your spending pot".into()),
-            false,
-        ));
-    }
-    breakdown.push(line(format!("Free in {sn}"), free_cash, None, true));
-    if alloc_unfunded > 0 {
-        breakdown.push(line(
-            "Savings top-up you can't fund this month".into(),
-            0,
-            Some(format!("{} of the plan; see \"Paying it back\"", format_inr(alloc_unfunded))),
-            false,
-        ));
-    }
-    if safe_cash > safe {
-        breakdown.push(line(
-            "Held back to fit your spending allowance".into(),
-            -(safe_cash - safe),
-            Some(if tracked {
-                format!("{} of {} is already used this period", format_inr(spent + before_tracking + wants_listed), format_inr(allowance))
-            } else {
-                "Spare cash beyond your spending allowance is better saved".into()
-            }),
-            false,
-        ));
-    }
-    if dates_held_applied > 0 {
-        let n = input.planned_dates.iter().filter(|d| d.date >= today && d.date < payday1 && d.amount > 0).count();
-        breakdown.push(line(
-            "Held back for planned dates".into(),
-            -dates_held_applied,
-            Some(format!("{n} planned before {}; released when you keep them", short_date(payday1))),
-            false,
-        ));
-    }
-    breakdown.push(line("Safe to spend".into(), safe, None, true));
-
-    let pots = Pots {
-        spending: SpendingPot {
-            account_name: spend_name,
-            balance_paise: spend_bal,
-            committed_paise: spend_outflows,
-            to_move_paise: card_charge + alloc_to_move,
-            free_paise: free_cash,
-        },
-        reserve: ReservePot {
-            account_name: reserve_name,
-            balance_paise: reserve_bal,
-            required_paise: reserve_required,
-            free_savings_paise: free_savings,
-            floor_paise: floor,
-            below_floor,
-        },
-        locked: LockedPot { total_paise: locked_total, count: locked_count },
-    };
-    let spending = Spending {
-        tracked,
-        spent_paise: spent,
-        before_tracking_paise: before_tracking,
-        allowance_paise: allowance,
-        left_paise: spending_left,
-        overspend_paise: overspend,
-    };
-
-    // 10. Labels, heads-up for next period, upcoming list.
-    let (next_income, period_label, next_period) = match next_pay {
-        Some((p1, src)) => {
-            let income_in: i64 =
-                input.incomes.iter().map(|i| occurrences(i.day, p1, payday2).len() as i64 * i.amount).sum();
-            let committed: i64 =
-                input.commitments.iter().map(|c| commitment_dates(c, p1, payday2).len() as i64 * c.amount).sum();
-            (
-                Some(NextIncome { label: money_label(p1), arrives: p1 }),
-                Some(money_label(day_in_month_offset(p1, -1, src.day))),
-                Some(NextPeriod {
-                    label: money_label(p1),
-                    arrives: p1,
-                    income_paise: income_in,
-                    committed_paise: committed,
-                    left_paise: income_in - committed,
-                }),
-            )
-        }
-        None => (None, None, None),
-    };
-
     let mut upcoming: Vec<Upcoming> = Vec::new();
     for c in &input.commitments {
         for d in commitment_dates(c, today, payday2) {
@@ -920,91 +653,12 @@ pub fn compute(input: &PlanInput) -> Summary {
             }
     }
     upcoming.sort_by_key(|u| u.date);
+    upcoming
+}
 
-    // 11. Actions: ledger buttons first.
-    let mut actions: Vec<Action> = Vec::new();
-    let urgency = |date: Option<Date>| match date {
-        Some(d) if (d - today).whole_days() <= URGENT_WITHIN_DAYS => "urgent",
-        _ => "warn",
-    };
-    if have_reserve {
-        for c in &input.cards {
-            let bills = [
-                (c.due_now, c.due_covered, c.due_date, "current bill"),
-                (c.next_bill_est, c.next_covered, c.next_due_date, "next bill"),
-            ];
-            for (amount, covered, due, what) in bills {
-                let open = (amount - covered).max(0);
-                if open == 0 {
-                    continue;
-                }
-                let key = format!("{}:{}", c.card_id, due.map_or("none".to_string(), |d| d.to_string()));
-                let by = due.map_or(String::new(), |d| format!(", pay by {}", short_date(d)));
-                actions.push(Action {
-                    text: format!("Move {} {} → {} for {}'s {}{}", format_inr(open), sn, rn, c.name, what, by),
-                    severity: urgency(due),
-                    ledger: Some(LedgerAction {
-                        kind: "card_bill",
-                        key,
-                        amount_paise: open,
-                        from_account_id: spend_id.clone(),
-                        to_account_id: c.pay_from.clone().or_else(|| reserve_id.clone()),
-                        skippable_paise: 0,
-                    }),
-                });
-            }
-        }
-        if alloc_remaining > 0 {
-            let alloc_date = clamped(period_start.year(), period_start.month(), st.allocation_day);
-            let alloc_date = if alloc_date <= period_start { day_in_month_offset(period_start, 1, st.allocation_day) } else { alloc_date };
-            let partial = alloc_to_move < alloc_remaining;
-            actions.push(Action {
-                text: if alloc_to_move == 0 {
-                    format!(
-                        "Savings top-up of {} {} → {} is due by {}, but nothing is free in {}. Skip it this month, or move money in first",
-                        format_inr(alloc_remaining), sn, rn, short_date(alloc_date), sn
-                    )
-                } else if partial {
-                    format!(
-                        "By {}: move {} {} → {} (needs + savings). The plan is {}, but only {} is free this month",
-                        short_date(alloc_date), format_inr(alloc_to_move), sn, rn, format_inr(alloc_remaining), format_inr(alloc_to_move)
-                    )
-                } else {
-                    format!("By {}: move {} {} → {} (needs + savings)", short_date(alloc_date), format_inr(alloc_to_move), sn, rn)
-                },
-                severity: urgency(Some(alloc_date)),
-                ledger: Some(LedgerAction {
-                    kind: "allocation",
-                    key: period_start.to_string(),
-                    amount_paise: alloc_to_move,
-                    from_account_id: spend_id.clone(),
-                    to_account_id: reserve_id.clone(),
-                    skippable_paise: alloc_remaining - alloc_to_move,
-                }),
-            });
-        }
-        if spend_bal < spend_outflows {
-            actions.push(Action {
-                text: format!(
-                    "{sn} holds {} but {} leaves it before {}: move {} {rn} → {sn}",
-                    format_inr(spend_bal), format_inr(spend_outflows), short_date(payday1), format_inr(spend_outflows - spend_bal)
-                ),
-                severity: "urgent",
-                ledger: None,
-            });
-        }
-        if below_floor {
-            actions.push(Action {
-                text: format!(
-                    "{rn} free savings are {}, below your {} floor",
-                    format_inr(free_savings), format_inr(floor)
-                ),
-                severity: "warn",
-                ledger: None,
-            });
-        }
-    }
-
+/// Balances and card snapshots that have not been updated for a while.
+fn stale_items(input: &PlanInput) -> Vec<Stale> {
+    let today = input.today;
     let mut stale = Vec::new();
     for a in input.accounts.iter().filter(|a| !a.locked) {
         if let Some(u) = a.updated {
@@ -1022,35 +676,548 @@ pub fn compute(input: &PlanInput) -> Summary {
             }
         }
     }
-    for s in &stale {
-        actions.push(Action {
-            text: format!("Update {} (last updated {} days ago)", s.what, s.days_old),
-            severity: "info",
-            ledger: None,
-        });
+    stale
+}
+
+/// The current pay period in days: how much is left of it, for prorating a monthly figure.
+struct Period {
+    start: Date,
+    payday1: Date,
+    payday2: Date,
+    days_left: i64,
+    days_total: i64,
+}
+
+impl Period {
+    fn of(today: Date, incomes: &[IncomeIn]) -> Self {
+        let p = pay_period(today, incomes);
+        Period {
+            start: p.start,
+            payday1: p.payday1,
+            payday2: p.payday2,
+            days_total: (p.payday1 - p.start).whole_days().max(1),
+            days_left: (p.payday1 - today).whole_days().max(1),
+        }
     }
 
+    fn prorate(&self, monthly: i64) -> i64 {
+        monthly * self.days_left / self.days_total
+    }
+}
+
+/// The monthly budget in amounts, and the part of it already listed as wants.
+fn budget_of(input: &PlanInput) -> (Budget, i64) {
+    let this_month = month_index(input.today);
+    let sum_bucket = |b: Bucket| -> i64 {
+        input.commitments.iter().filter(|c| c.bucket == b).map(|c| monthly_equivalent(c, this_month)).sum()
+    };
+    let income: i64 = input.incomes.iter().map(|i| i.amount).sum();
+    let (needs, sip, wants_listed) = (sum_bucket(Bucket::Needs), sum_bucket(Bucket::Savings), sum_bucket(Bucket::Wants));
+    let st = &input.settings;
+    let allowance = st
+        .spending
+        .or_else(|| st.spending_bps.map(|bps| income * bps / 10_000))
+        .unwrap_or(income * DEFAULT_SPENDING_PCT / 100);
+    let savings_total = (income - needs - allowance).max(0);
+    let rest_savings = (savings_total - sip).max(0);
+    let budget = Budget {
+        income_paise: income,
+        needs_paise: needs,
+        spending_paise: allowance,
+        savings_paise: savings_total,
+        sip_paise: sip,
+        rest_savings_paise: rest_savings,
+        allocation_paise: needs + rest_savings,
+    };
+    (budget, wants_listed)
+}
+
+/// The accounts that matter, by role. Accounts without a role: everything unlocked is "spending",
+/// with no reserve checks.
+struct Accounts<'a> {
+    spend: Vec<&'a AccountIn>,
+    reserve: Vec<&'a AccountIn>,
+    locked_total: i64,
+    locked_count: usize,
+}
+
+impl<'a> Accounts<'a> {
+    fn of(accounts: &'a [AccountIn]) -> Self {
+        let unlocked = || accounts.iter().filter(|a| !a.locked);
+        let reserve = unlocked().filter(|a| a.role == Role::Reserve).collect();
+        let mut spend: Vec<&AccountIn> = unlocked().filter(|a| a.role == Role::Spending).collect();
+        if spend.is_empty() {
+            spend = unlocked().filter(|a| a.role == Role::Other).collect();
+        }
+        Accounts {
+            spend,
+            reserve,
+            locked_total: accounts.iter().filter(|a| a.locked).map(|a| a.balance).sum(),
+            locked_count: accounts.iter().filter(|a| a.locked).count(),
+        }
+    }
+
+    fn have_reserve(&self) -> bool {
+        !self.reserve.is_empty()
+    }
+
+    fn spend_balance(&self) -> i64 {
+        self.spend.iter().map(|a| a.balance).sum()
+    }
+
+    fn reserve_balance(&self) -> i64 {
+        self.reserve.iter().map(|a| a.balance).sum()
+    }
+
+    /// Whether a fixed payment leaves the reserve: by its account, else needs when there is a reserve.
+    fn paid_from_reserve(&self, c: &CommitmentIn) -> bool {
+        let among = |set: &[&AccountIn]| c.account_id.as_ref().is_some_and(|id| set.iter().any(|a| &a.id == id));
+        if among(&self.reserve) {
+            true
+        } else if among(&self.spend) {
+            false
+        } else {
+            self.have_reserve() && c.bucket == Bucket::Needs
+        }
+    }
+}
+
+/// Fixed payments dated before payday, and who pays them.
+struct Outflows {
+    from_spending: i64,
+    from_reserve: i64,
+    wants_in_period: i64,
+}
+
+impl Outflows {
+    fn of(input: &PlanInput, accts: &Accounts, period: &Period) -> Self {
+        let mut out = Outflows { from_spending: 0, from_reserve: 0, wants_in_period: 0 };
+        for c in &input.commitments {
+            let due = commitment_dates(c, input.today, period.payday1).len() as i64 * c.amount;
+            if accts.paid_from_reserve(c) {
+                out.from_reserve += due;
+            } else {
+                out.from_spending += due;
+            }
+            if c.bucket == Bucket::Wants {
+                out.wants_in_period += due;
+            }
+        }
+        out
+    }
+}
+
+/// Card bills, and the part the ledger does not yet cover.
+struct CardBills {
+    total: i64,
+    uncovered: i64,
+}
+
+impl CardBills {
+    fn of(cards: &[CardIn]) -> Self {
+        CardBills {
+            total: cards.iter().map(|c| c.due_now.max(0) + c.next_bill_est.max(0)).sum(),
+            uncovered: cards
+                .iter()
+                .map(|c| (c.due_now - c.due_covered).max(0) + (c.next_bill_est - c.next_covered).max(0))
+                .sum(),
+        }
+    }
+
+    /// With no reserve account there is nothing to move to: every bill is a charge on the pool.
+    fn charge(&self, have_reserve: bool) -> i64 {
+        if have_reserve { self.uncovered } else { self.total }
+    }
+}
+
+/// The spending allowance: actual spend when known, else an even pace over the period.
+fn spending_of(input: &PlanInput, period: &Period, allowance: i64, wants_listed: i64, wants_in_period: i64) -> Spending {
+    let cards = &input.cards;
+    let tracked = !cards.is_empty() && cards.iter().all(|c| c.spent_this_period.is_some());
+    let spent: i64 = cards.iter().filter_map(|c| c.spent_this_period).sum();
+    let before_tracking = match (tracked, cards.iter().filter_map(|c| c.tracked_since).min()) {
+        (true, Some(b)) => allowance * (b - period.start).whole_days().clamp(0, period.days_total) / period.days_total,
+        _ => 0,
+    };
+    let left = if tracked {
+        (allowance - wants_listed - before_tracking - spent).max(0)
+    } else {
+        (period.prorate(allowance) - wants_in_period).max(0)
+    };
+    let overspend = if tracked { (spent + before_tracking + wants_listed - allowance).max(0) } else { 0 };
+    Spending {
+        tracked,
+        spent_paise: spent,
+        before_tracking_paise: before_tracking,
+        allowance_paise: allowance,
+        left_paise: left,
+        overspend_paise: overspend,
+    }
+}
+
+/// Cash in the spending account. The savings top-up (needs money + the rest of savings -> reserve)
+/// only ever comes from cash BEYOND the spending pot you still have: it never eats it.
+struct Cash {
+    free_before_top_up: i64,
+    alloc_remaining: i64,
+    alloc_to_move: i64,
+    alloc_unfunded: i64,
+    free: i64,
+    safe_cash: i64,
+    dates_held_applied: i64,
+    safe: i64,
+}
+
+impl Cash {
+    fn of(input: &PlanInput, period: &Period, accts: &Accounts, out: &Outflows, card_charge: i64, spending_left: i64, allocation_plan: i64) -> Self {
+        let free_before_top_up = accts.spend_balance() - out.from_spending - card_charge;
+        let alloc_remaining = if accts.have_reserve() {
+            (allocation_plan - input.allocation.moved - input.allocation.skipped).max(0)
+        } else {
+            0
+        };
+        let beyond_pot = (free_before_top_up - free_before_top_up.max(0).min(spending_left)).max(0);
+        let alloc_to_move = alloc_remaining.min(beyond_pot);
+        let free = free_before_top_up - alloc_to_move;
+        let safe_cash = free.max(0);
+        // Planned dates before payday are spending that has not happened yet: hold their estimates back.
+        let dates_held: i64 = planned_before(input, period.payday1).map(|d| d.amount.max(0)).fold(0i64, |a, b| a.saturating_add(b));
+        let safe_before_dates = safe_cash.min(spending_left);
+        let dates_held_applied = dates_held.min(safe_before_dates);
+        Cash {
+            free_before_top_up,
+            alloc_remaining,
+            alloc_to_move,
+            alloc_unfunded: alloc_remaining - alloc_to_move,
+            free,
+            safe_cash,
+            dates_held_applied,
+            safe: safe_before_dates - dates_held_applied,
+        }
+    }
+}
+
+fn planned_before(input: &PlanInput, until: Date) -> impl Iterator<Item = &PlannedDateIn> {
+    let today = input.today;
+    input.planned_dates.iter().filter(move |d| d.date >= today && d.date < until)
+}
+
+fn status_of(per_week: i64, safe: i64) -> Status {
+    if per_week >= GREEN_PER_WEEK_PAISE {
+        Status::Green
+    } else if safe > 0 {
+        Status::Yellow
+    } else {
+        Status::Red
+    }
+}
+
+/// What is missing this month: cash that can't cover the SIP/bills, plus savings that can't be
+/// funded or were skipped. Paying it back over a few months keeps the FDs untouched.
+fn recovery_of(input: &PlanInput, cash: &Cash) -> (i64, Option<Recovery>) {
+    let short_by = (-cash.free_before_top_up).max(0);
+    let owed = short_by + cash.alloc_unfunded + input.allocation.skipped;
+    let months = input.settings.recovery_months.max(1);
+    let recovery = (owed > 0).then(|| Recovery { owed_paise: owed, months, per_month_paise: (owed + months - 1) / months });
+    (short_by, recovery)
+}
+
+fn reserve_pot(input: &PlanInput, accts: &Accounts, bills: &CardBills, out: &Outflows) -> ReservePot {
+    let floor = input.settings.savings_floor.unwrap_or(0);
+    let required = if accts.have_reserve() { bills.total + out.from_reserve } else { 0 };
+    let balance = accts.reserve_balance();
+    let free_savings = balance - required;
+    ReservePot {
+        account_name: accts.reserve.first().map(|a| a.name.clone()),
+        balance_paise: balance,
+        required_paise: required,
+        free_savings_paise: free_savings,
+        floor_paise: floor,
+        below_floor: accts.have_reserve() && free_savings < floor,
+    }
+}
+
+/// Labels, heads-up for next period, from the next payday.
+fn next_period_of(input: &PlanInput, period: &Period) -> (Option<NextIncome>, Option<String>, Option<NextPeriod>) {
+    let next_pay = input.incomes.iter().map(|i| (next_after(i.day, input.today), i)).min_by_key(|(d, _)| *d);
+    let Some((p1, src)) = next_pay else { return (None, None, None) };
+    let income_in: i64 = input.incomes.iter().map(|i| occurrences(i.day, p1, period.payday2).len() as i64 * i.amount).sum();
+    let committed: i64 = input.commitments.iter().map(|c| commitment_dates(c, p1, period.payday2).len() as i64 * c.amount).sum();
+    (
+        Some(NextIncome { label: money_label(p1), arrives: p1 }),
+        Some(money_label(day_in_month_offset(p1, -1, src.day))),
+        Some(NextPeriod { label: money_label(p1), arrives: p1, income_paise: income_in, committed_paise: committed, left_paise: income_in - committed }),
+    )
+}
+
+/// Everything worked out so far, for the parts that explain it: the walk-through and the actions.
+struct Facts<'a> {
+    input: &'a PlanInput,
+    period: &'a Period,
+    accts: &'a Accounts<'a>,
+    out: &'a Outflows,
+    bills: &'a CardBills,
+    card_charge: i64,
+    spending: &'a Spending,
+    wants_listed: i64,
+    cash: &'a Cash,
+    reserve: &'a ReservePot,
+    /// Names for the sentences: the spending account and the reserve.
+    sn: String,
+    rn: String,
+}
+
+fn line(label: impl Into<String>, amount_paise: i64, note: Option<String>, total: bool) -> Line {
+    Line { label: label.into(), amount_paise, note, total }
+}
+
+/// The "how this is calculated" walk-through, from the spending balance down to Safe to Spend.
+fn breakdown(f: &Facts) -> Vec<Line> {
+    let (sn, rn, cash) = (&f.sn, &f.rn, f.cash);
+    let have_reserve = f.accts.have_reserve();
+    let mut rows = vec![line(format!("{sn} balance"), f.accts.spend_balance(), None, false)];
+    if f.out.from_spending > 0 {
+        rows.push(line(format!("Fixed payments from it before {}", short_date(f.period.payday1)), -f.out.from_spending, None, false));
+    }
+    if f.card_charge > 0 {
+        rows.push(line(
+            if have_reserve { format!("Card bills still to move to {rn}") } else { "Card bills already spent".into() },
+            -f.card_charge,
+            Some(if have_reserve {
+                format!("{} of {} is already covered", format_inr(f.bills.total - f.bills.uncovered), format_inr(f.bills.total))
+            } else {
+                "Counted now, even if due after payday".into()
+            }),
+            false,
+        ));
+    }
+    if cash.alloc_to_move > 0 {
+        rows.push(line(
+            format!("Savings top-up to move to {rn}"),
+            -cash.alloc_to_move,
+            Some("Only from cash beyond your spending pot".into()),
+            false,
+        ));
+    }
+    rows.push(line(format!("Free in {sn}"), cash.free, None, true));
+    if cash.alloc_unfunded > 0 {
+        rows.push(line(
+            "Savings top-up you can't fund this month",
+            0,
+            Some(format!("{} of the plan; see \"Paying it back\"", format_inr(cash.alloc_unfunded))),
+            false,
+        ));
+    }
+    if cash.safe_cash > cash.safe {
+        let s = f.spending;
+        rows.push(line(
+            "Held back to fit your spending allowance",
+            -(cash.safe_cash - cash.safe),
+            Some(if s.tracked {
+                format!(
+                    "{} of {} is already used this period",
+                    format_inr(s.spent_paise + s.before_tracking_paise + f.wants_listed),
+                    format_inr(s.allowance_paise)
+                )
+            } else {
+                "Spare cash beyond your spending allowance is better saved".into()
+            }),
+            false,
+        ));
+    }
+    if cash.dates_held_applied > 0 {
+        let n = planned_before(f.input, f.period.payday1).filter(|d| d.amount > 0).count();
+        rows.push(line(
+            "Held back for planned dates",
+            -cash.dates_held_applied,
+            Some(format!("{n} planned before {}; released when you keep them", short_date(f.period.payday1))),
+            false,
+        ));
+    }
+    rows.push(line("Safe to spend", cash.safe, None, true));
+    rows
+}
+
+fn urgency(today: Date, date: Option<Date>) -> &'static str {
+    match date {
+        Some(d) if (d - today).whole_days() <= URGENT_WITHIN_DAYS => "urgent",
+        _ => "warn",
+    }
+}
+
+/// A button per card bill the ledger has not covered yet: move the open amount to the card's payer.
+fn card_bill_actions(f: &Facts, actions: &mut Vec<Action>) {
+    let (today, sn, rn) = (f.input.today, &f.sn, &f.rn);
+    for c in &f.input.cards {
+        let bills = [
+            (c.due_now, c.due_covered, c.due_date, "current bill"),
+            (c.next_bill_est, c.next_covered, c.next_due_date, "next bill"),
+        ];
+        for (amount, covered, due, what) in bills {
+            let open = (amount - covered).max(0);
+            if open == 0 {
+                continue;
+            }
+            let by = due.map_or(String::new(), |d| format!(", pay by {}", short_date(d)));
+            actions.push(Action {
+                text: format!("Move {} {} → {} for {}'s {}{}", format_inr(open), sn, rn, c.name, what, by),
+                severity: urgency(today, due),
+                ledger: Some(LedgerAction {
+                    kind: "card_bill",
+                    key: format!("{}:{}", c.card_id, due.map_or("none".to_string(), |d| d.to_string())),
+                    amount_paise: open,
+                    from_account_id: f.accts.spend.first().map(|a| a.id.clone()),
+                    to_account_id: c.pay_from.clone().or_else(|| f.accts.reserve.first().map(|a| a.id.clone())),
+                    skippable_paise: 0,
+                }),
+            });
+        }
+    }
+}
+
+/// The savings top-up to the reserve: what to move, by when, and what can be skipped.
+fn allocation_action(f: &Facts) -> Action {
+    let (sn, rn, cash) = (&f.sn, &f.rn, f.cash);
+    let start = f.period.start;
+    let day = f.input.settings.allocation_day;
+    let alloc_date = clamped(start.year(), start.month(), day);
+    let alloc_date = if alloc_date <= start { day_in_month_offset(start, 1, day) } else { alloc_date };
+    let text = if cash.alloc_to_move == 0 {
+        format!(
+            "Savings top-up of {} {} → {} is due by {}, but nothing is free in {}. Skip it this month, or move money in first",
+            format_inr(cash.alloc_remaining), sn, rn, short_date(alloc_date), sn
+        )
+    } else if cash.alloc_to_move < cash.alloc_remaining {
+        format!(
+            "By {}: move {} {} → {} (needs + savings). The plan is {}, but only {} is free this month",
+            short_date(alloc_date), format_inr(cash.alloc_to_move), sn, rn, format_inr(cash.alloc_remaining), format_inr(cash.alloc_to_move)
+        )
+    } else {
+        format!("By {}: move {} {} → {} (needs + savings)", short_date(alloc_date), format_inr(cash.alloc_to_move), sn, rn)
+    };
+    Action {
+        text,
+        severity: urgency(f.input.today, Some(alloc_date)),
+        ledger: Some(LedgerAction {
+            kind: "allocation",
+            key: start.to_string(),
+            amount_paise: cash.alloc_to_move,
+            from_account_id: f.accts.spend.first().map(|a| a.id.clone()),
+            to_account_id: f.accts.reserve.first().map(|a| a.id.clone()),
+            skippable_paise: cash.alloc_remaining - cash.alloc_to_move,
+        }),
+    }
+}
+
+/// Ledger buttons first, then warnings, then reminders to update stale figures.
+fn actions_of(f: &Facts, stale: &[Stale]) -> Vec<Action> {
+    let mut actions = Vec::new();
+    if f.accts.have_reserve() {
+        let (sn, rn, spend_bal, leaving) = (&f.sn, &f.rn, f.accts.spend_balance(), f.out.from_spending);
+        card_bill_actions(f, &mut actions);
+        if f.cash.alloc_remaining > 0 {
+            actions.push(allocation_action(f));
+        }
+        if spend_bal < leaving {
+            actions.push(Action {
+                text: format!(
+                    "{sn} holds {} but {} leaves it before {}: move {} {rn} → {sn}",
+                    format_inr(spend_bal), format_inr(leaving), short_date(f.period.payday1), format_inr(leaving - spend_bal)
+                ),
+                severity: "urgent",
+                ledger: None,
+            });
+        }
+        if f.reserve.below_floor {
+            actions.push(Action {
+                text: format!("{rn} free savings are {}, below your {} floor", format_inr(f.reserve.free_savings_paise), format_inr(f.reserve.floor_paise)),
+                severity: "warn",
+                ledger: None,
+            });
+        }
+    }
+    for s in stale {
+        actions.push(Action { text: format!("Update {} (last updated {} days ago)", s.what, s.days_old), severity: "info", ledger: None });
+    }
+    actions
+}
+
+pub fn compute(input: &PlanInput) -> Summary {
+    let period = Period::of(input.today, &input.incomes);
+    let (budget, wants_listed) = budget_of(input);
+    let accts = Accounts::of(&input.accounts);
+    let out = Outflows::of(input, &accts, &period);
+    let bills = CardBills::of(&input.cards);
+    let card_charge = bills.charge(accts.have_reserve());
+    let spending = spending_of(input, &period, budget.spending_paise, wants_listed, out.wants_in_period);
+    let cash = Cash::of(input, &period, &accts, &out, card_charge, spending.left_paise, budget.allocation_paise);
+
+    let weeks = ((period.days_left + 6) / 7).max(1);
+    let per_week = cash.safe / weeks;
+    let (short_by, recovery) = recovery_of(input, &cash);
+    let reserve = reserve_pot(input, &accts, &bills, &out);
+    let (next_income, period_label, next_period) = next_period_of(input, &period);
+    let stale = stale_items(input);
+
+    let spend_name = accts.spend.first().map(|a| a.name.clone());
+    let facts = Facts {
+        input,
+        period: &period,
+        accts: &accts,
+        out: &out,
+        bills: &bills,
+        card_charge,
+        spending: &spending,
+        wants_listed,
+        cash: &cash,
+        reserve: &reserve,
+        sn: spend_name.clone().unwrap_or_else(|| "spending account".into()),
+        rn: reserve.account_name.clone().unwrap_or_else(|| "reserve".into()),
+    };
+    let breakdown = breakdown(&facts);
+    let actions = actions_of(&facts, &stale);
+
     Summary {
-        safe_to_spend_paise: safe,
+        safe_to_spend_paise: cash.safe,
         per_week_paise: per_week,
-        status,
-        until: payday1,
-        days_left,
-        period_start,
+        status: status_of(per_week, cash.safe),
+        until: period.payday1,
+        days_left: period.days_left,
+        period_start: period.start,
         period_label,
         next_income,
         short_by_paise: short_by,
         breakdown,
         budget,
-        pots,
+        pots: Pots {
+            spending: SpendingPot {
+                account_name: spend_name,
+                balance_paise: accts.spend_balance(),
+                committed_paise: out.from_spending,
+                to_move_paise: card_charge + cash.alloc_to_move,
+                free_paise: cash.free,
+            },
+            reserve,
+            locked: LockedPot { total_paise: accts.locked_total, count: accts.locked_count },
+        },
         spending,
         recovery,
         next_period,
-        upcoming,
+        upcoming: upcoming_list(input, period.payday2),
         actions,
         stale,
     }
 }
 
+#[cfg(test)]
+mod compute_golden;
+#[cfg(test)]
+mod projection_golden;
+#[cfg(test)]
+mod life_golden;
+#[cfg(test)]
+mod afford_golden;
+#[cfg(test)]
+mod insights_golden;
 #[cfg(test)]
 mod tests;

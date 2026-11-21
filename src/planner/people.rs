@@ -7,7 +7,7 @@ use time::{macros::format_description, util::is_leap_year, Date, Duration, Month
 
 use crate::planner::{
     checkin::{rupees, Period},
-    habits::{Area, Cadence, Habit, Impact, Link, Status},
+    habits::{due_status, Area, Cadence, Habit, Impact, Link, Status},
     short_date,
 };
 
@@ -377,17 +377,6 @@ pub fn monthly_share(total_paise: i64) -> i64 {
 }
 
 // ---------- habits ----------
-
-fn due_status(due: Date, today: Date) -> Status {
-    let days = (due - today).whole_days();
-    if days < 0 {
-        Status::Overdue
-    } else if days <= 14 {
-        Status::DueSoon
-    } else {
-        Status::Ok
-    }
-}
 
 fn ago(last: Option<Date>, today: Date) -> String {
     let Some(last) = last else { return "No catch-up logged yet.".into() };
