@@ -303,27 +303,22 @@ pub async fn current(State(s): State<AppState>, Extension(_): User) -> Result<Js
     Ok(go(format!("/joy/year/{}", if m == 1 { y - 1 } else { y })))
 }
 
-pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path(year): Path<i32>) -> Result<Json<YearView>, AppError> {
-    if !(2000..=2100).contains(&year) {
-        return Err(not_found("No such year"));
-    }
-    let j = super::joy(&s, &user_id).await?;
-    let (couple, ctx) = (j.couple.as_str(), &j.ctx);
-    let rows = rows(&s.db, couple, year).await?;
-    let (to_come, sealed_mine) = later(&s.db, couple, year, j.who).await?;
-    // Same rule as the recap itself: dates that happened and that both of us may see, so a year
-    // whose only date is a sealed surprise doesn't show up in the switcher.
-    let years: Vec<i32> = sqlx::query_scalar(
+/// Years with kept dates, newest first. Same rule as the recap itself: dates that happened and that
+/// both of us may see, so a year whose only date is a sealed surprise doesn't show up in the switcher.
+async fn years_with_dates(db: &sqlx::SqlitePool, couple: &str) -> Result<Vec<i32>, AppError> {
+    Ok(sqlx::query_scalar(
         "SELECT DISTINCT CAST(strftime('%Y', COALESCE(planned_at, picked_at), 'unixepoch', 'localtime') AS INTEGER) AS y
          FROM joy_history WHERE couple_id = ? AND outcome = 'did_it' AND (surprise = 0 OR revealed = 1)
            AND COALESCE(planned_at, picked_at) <= unixepoch()
          ORDER BY y DESC",
     )
     .bind(couple)
-    .fetch_all(&s.db)
-    .await?;
-    let r = Recap::from(&rows);
-    let money = r.money.map(|(spent, guessed, n)| {
+    .fetch_all(db)
+    .await?)
+}
+
+fn money_of(ctx: &Ctx, r: &Recap) -> Option<Money> {
+    r.money.map(|(spent, guessed, n)| {
         let d = spent - guessed;
         Money {
             spent: ctx.money(spent),
@@ -335,15 +330,19 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
             over: d > 0,
             n,
         }
-    });
-    let photos: Vec<YearPhoto> = rows
-        .iter()
+    })
+}
+
+fn photos_of(ctx: &Ctx, rows: &[YearRow]) -> Vec<YearPhoto> {
+    rows.iter()
         .flat_map(|x| {
             x.photos().into_iter().map(move |pid| YearPhoto { id: pid, date_id: x.id, url: history_photo_url(x.id, pid), title: ctx.personalize(&x.title), when: x.day_label.clone() })
         })
-        .collect();
-    let keepsakes: Vec<YearDate> = rows
-        .iter()
+        .collect()
+}
+
+fn keepsakes_of(ctx: &Ctx, rows: &[YearRow], year: i32) -> Vec<YearDate> {
+    rows.iter()
         .map(|x| YearDate {
             title: ctx.personalize(&x.title),
             slip_key: x.slip_key.clone(),
@@ -356,8 +355,11 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
             rating: x.rating.unwrap_or(0),
             href: format!("/joy/year/{year}/{}", x.month),
         })
-        .collect();
-    let best = r.best.map(|(i, more)| {
+        .collect()
+}
+
+fn best_night_of(ctx: &Ctx, rows: &[YearRow], r: &Recap) -> Option<BestNight> {
+    r.best.map(|(i, more)| {
         let b = &rows[i];
         BestNight {
             title: ctx.personalize(&b.title),
@@ -368,72 +370,67 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
             photo: b.cover_url(),
             date_id: b.id,
         }
-    });
-    let share = ShareData {
+    })
+}
+
+/// What the share picture is drawn from: nothing with names, notes or home areas in it.
+fn share_of(ctx: &Ctx, year: i32, rows: &[YearRow], r: &Recap, best: Option<&BestNight>, photos: &[YearPhoto], money: Option<&Money>) -> ShareData {
+    let mut places: Vec<String> = rows.iter().map(|x| share_safe(ctx, &x.place)).filter(|p| !p.is_empty()).collect();
+    places.dedup();
+    places.truncate(8);
+    ShareData {
         year,
         dates: rows.len(),
         months: r.months.to_vec(),
         vibe: r.vibe.as_deref().map(|v| picker::setting_label(v).to_string()).unwrap_or_default(),
         tags: r.tags.clone(),
         best_title: r.best.map(|(i, _)| share_safe(ctx, &rows[i].title)).unwrap_or_default(),
-        best_rating: best.as_ref().map_or(0, |b| b.rating),
-        best_more: best.as_ref().map_or(0, |b| b.more),
+        best_rating: best.map_or(0, |b| b.rating),
+        best_more: best.map_or(0, |b| b.more),
         vibe_key: r.vibe.clone().unwrap_or_default(),
         avg_rating: r.avg_rating.clone(),
         streak_weeks: r.streak_weeks,
-        places: {
-            let mut p: Vec<String> = rows.iter().map(|x| share_safe(ctx, &x.place)).filter(|p| !p.is_empty()).collect();
-            p.dedup();
-            p.truncate(8);
-            p
-        },
-        spent: money.as_ref().map(|m| m.spent.clone()).unwrap_or_default(),
+        places,
+        spent: money.map(|m| m.spent.clone()).unwrap_or_default(),
         photos: photos.iter().map(|p| SharePhoto { id: p.id, url: p.url.clone() }).collect(),
-    };
-    let max = r.months.iter().copied().max().unwrap_or(0).max(1);
-    let busiest = r.months.iter().enumerate().max_by_key(|(i, n)| (**n, -(*i as i64))).filter(|(_, n)| **n > 0).map(|(i, _)| MONTHS[i].to_string());
-    let busiest_n = r.months.iter().copied().max().unwrap_or(0);
-    let tally: Vec<u8> = (0..rows.len().min(120)).step_by(5).map(|i| (rows.len().min(120) - i).min(5) as u8).collect();
-    let kinds: Vec<Kind> = r
-        .kinds
+    }
+}
+
+fn kinds_of(r: &Recap, dates: usize) -> Vec<Kind> {
+    r.kinds
         .iter()
-        .map(|(k, n)| Kind {
-            key: k.clone(),
-            label: picker::setting_label(k).to_string(),
-            n: *n,
-            pct: ((*n * 100 / rows.len().max(1)) as i64).max(1),
-        })
-        .collect();
-    let best_kind = r
-        .best_kind
-        .as_ref()
-        .map(|(k, avg)| format!("our best kind of night: {} ({avg}★)", picker::setting_label(k).to_lowercase()))
-        .unwrap_or_default();
-    let top_ratings = || r.rating_hist.iter().enumerate().rev().filter(|(_, n)| **n > 0).take(2);
-    let rating_line = top_ratings().map(|(i, n)| format!("{n} {}-star", i + 1)).collect::<Vec<_>>().join(", ");
-    let rating_rows: Vec<RatingRow> = top_ratings().map(|(i, n)| RatingRow { stars: i as i64 + 1, n: *n }).collect();
-    // Slips settle in rows from the bottom of the jar; positions are fixed so the jar never jumps.
+        .map(|(k, n)| Kind { key: k.clone(), label: picker::setting_label(k).to_string(), n: *n, pct: ((*n * 100 / dates.max(1)) as i64).max(1) })
+        .collect()
+}
+
+/// "4 five-star nights, 3 four-star" style line, and the two most-given ratings, most stars first.
+fn rating_lines(r: &Recap) -> (String, Vec<RatingRow>) {
+    let top = || r.rating_hist.iter().enumerate().rev().filter(|(_, n)| **n > 0).take(2);
+    let line = top().map(|(i, n)| format!("{n} {}-star", i + 1)).collect::<Vec<_>>().join(", ");
+    (line, top().map(|(i, n)| RatingRow { stars: i as i64 + 1, n: *n }).collect())
+}
+
+/// Slips settle in rows from the bottom of the jar; positions are fixed so the jar never jumps.
+fn jar_slips_of(rows: &[YearRow]) -> Vec<JarSlip> {
     const SLIP_SPOTS: [(i64, i64, i64); 14] = [
         (52, 246, -14), (96, 252, 6), (140, 240, -8), (62, 262, 3), (150, 258, 12), (78, 224, 20), (124, 218, -26),
         (50, 206, 9), (156, 210, -4), (100, 196, -12), (136, 186, 17), (66, 182, -20), (112, 166, 5), (150, 160, -9),
     ];
-    let jar_slips: Vec<JarSlip> = rows
-        .iter()
-        .zip(SLIP_SPOTS)
-        .map(|(x, (sx, sy, rot))| JarSlip { x: sx, y: sy, rot, kind: x.setting.clone() })
-        .collect();
-    let spent = db::spent_by_month(&s.db, couple, year).await?;
-    let standing: Option<i64> = db::setting(&s.db, couple, "monthly_budget").await?.and_then(|v| v.parse().ok()).filter(|b: &i64| *b > 0);
-    let mut month_blots = vec![];
+    rows.iter().zip(SLIP_SPOTS).map(|(x, (sx, sy, rot))| JarSlip { x: sx, y: sy, rot, kind: x.setting.clone() }).collect()
+}
+
+/// A blot per month on the money line, sized against that month's budget (or the standing one, or the top month).
+async fn month_blots_of(db: &sqlx::SqlitePool, couple: &str, year: i32, ctx: &Ctx, spent: &[i64; 12], standing: Option<i64>) -> Result<Vec<MonthBlot>, AppError> {
     let top = spent.iter().copied().max().unwrap_or(0).max(1);
+    let mut blots = vec![];
     for (i, sp) in spent.iter().copied().enumerate() {
-        let budget = db::month_budget(&s.db, couple, &format!("{year}-{:02}", i + 1)).await?.map(|(b, c)| b + c).or(standing);
+        let budget = db::month_budget(db, couple, &format!("{year}-{:02}", i + 1)).await?.map(|(b, c)| b + c).or(standing);
         let r_px = match (sp, budget) {
             (0, _) => 0.0,
             (sp, Some(b)) => (sp as f64 / b as f64 * 9.0).clamp(3.0, 13.0),
             (sp, None) => (sp as f64 / top as f64 * 12.0).clamp(3.0, 13.0),
         };
-        month_blots.push(MonthBlot {
+        blots.push(MonthBlot {
             letter: MONTHS[i][..1].into(),
             r: format!("{r_px:.1}"),
             over: budget.is_some_and(|b| sp > b),
@@ -444,16 +441,52 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
             },
         });
     }
+    Ok(blots)
+}
+
+fn month_bars(r: &Recap) -> Vec<MonthBar> {
+    let max = r.months.iter().copied().max().unwrap_or(0).max(1);
+    r.months.iter().enumerate().map(|(i, n)| MonthBar { letter: MONTHS[i][..1].into(), name: MONTHS[i].into(), n: *n, pct: n * 100 / max }).collect()
+}
+
+pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path(year): Path<i32>) -> Result<Json<YearView>, AppError> {
+    if !(2000..=2100).contains(&year) {
+        return Err(not_found("No such year"));
+    }
+    let j = super::joy(&s, &user_id).await?;
+    let (couple, ctx) = (j.couple.as_str(), &j.ctx);
+    let rows = rows(&s.db, couple, year).await?;
+    let (to_come, sealed_mine) = later(&s.db, couple, year, j.who).await?;
+    let years = years_with_dates(&s.db, couple).await?;
+    let r = Recap::from(&rows);
+
+    let money = money_of(ctx, &r);
+    let photos = photos_of(ctx, &rows);
+    let best = best_night_of(ctx, &rows, &r);
+    let share = share_of(ctx, year, &rows, &r, best.as_ref(), &photos, money.as_ref());
+    let busiest = r.months.iter().enumerate().max_by_key(|(i, n)| (**n, -(*i as i64))).filter(|(_, n)| **n > 0).map(|(i, _)| MONTHS[i].to_string());
+    let tally: Vec<u8> = (0..rows.len().min(120)).step_by(5).map(|i| (rows.len().min(120) - i).min(5) as u8).collect();
+    let best_kind = r
+        .best_kind
+        .as_ref()
+        .map(|(k, avg)| format!("our best kind of night: {} ({avg}★)", picker::setting_label(k).to_lowercase()))
+        .unwrap_or_default();
+    let (rating_line, rating_rows) = rating_lines(&r);
+
+    let spent = db::spent_by_month(&s.db, couple, year).await?;
+    let standing: Option<i64> = db::setting(&s.db, couple, "monthly_budget").await?.and_then(|v| v.parse().ok()).filter(|b: &i64| *b > 0);
+    let month_blots = month_blots_of(&s.db, couple, year, ctx, &spent, standing).await?;
     let year_spent: i64 = spent.iter().sum();
+
     Ok(Json(YearView {
-        busiest_n,
+        busiest_n: r.months.iter().copied().max().unwrap_or(0),
         tally_more: rows.len().saturating_sub(120),
         tally,
-        kinds,
+        kinds: kinds_of(&r, rows.len()),
         best_kind,
         rating_line,
         rating_rows,
-        jar_slips,
+        jar_slips: jar_slips_of(&rows),
         month_blots,
         year_total: if year_spent > 0 { ctx.money(year_spent) } else { String::new() },
         budget_note: standing.map(|b| format!("{} a month", ctx.money(b))).unwrap_or_default(),
@@ -463,12 +496,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
         dates: rows.len(),
         to_come,
         sealed_mine,
-        months: r
-            .months
-            .iter()
-            .enumerate()
-            .map(|(i, n)| MonthBar { letter: MONTHS[i][..1].into(), name: MONTHS[i].into(), n: *n, pct: n * 100 / max })
-            .collect(),
+        months: month_bars(&r),
         busiest: busiest.unwrap_or_default(),
         vibe_label: r.vibe.as_deref().map(|v| picker::setting_label(v).to_string()).unwrap_or_default(),
         tags: r.tags,
@@ -479,7 +507,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User, Path
         money,
         cabs: if r.cabs > 0 { format!("{} in cabs", ctx.money(r.cabs)) } else { String::new() },
         photos,
-        keepsakes,
+        keepsakes: keepsakes_of(ctx, &rows, year),
         share,
     }))
 }

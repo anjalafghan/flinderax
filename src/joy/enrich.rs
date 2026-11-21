@@ -207,6 +207,28 @@ mod tests {
     }
 
     #[test]
+    fn coordinates_and_station_already_set_are_never_replaced() {
+        let mut lender = row(1);
+        lender.venue = "Blue Tokai".into();
+        lender.lat = Some(19.1647);
+        lender.lng = Some(72.8493);
+        lender.station = "Goregaon".into();
+        // Same venue and a few metres apart, but each has its own coordinates and station already.
+        let mut own = row(2);
+        own.venue = "Blue Tokai".into();
+        own.lat = Some(19.1648);
+        own.lng = Some(72.8494);
+        own.station = "Malad".into();
+        assert!(plan(&[lender.clone(), own]).is_empty());
+        // One blank field among filled ones: only that one is planned. It has coordinates (a few
+        // metres from the lender) but no station.
+        let mut half = row(3);
+        half.lat = Some(19.1648);
+        half.lng = Some(72.8494);
+        assert_eq!(plan(&[lender, half]), vec![(3, Fill::Station("Goregaon".into()))]);
+    }
+
+    #[test]
     fn twin_venue_lends_coordinates_and_a_close_neighbour_lends_its_station() {
         let mut a = row(1);
         a.venue = "Blue Tokai".into();

@@ -372,52 +372,104 @@ pub fn simulate(input: &LineInput, today: Date) -> Line {
     simulate_with(input, today, &Tweaks::default())
 }
 
-pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
-    let p = &input.profile;
-    let ty = today.year() as i64;
-    let age0 = p.my_age.clamp(MIN_AGE, 100);
-    let mut retire_age = p.retirement_age.clamp(age0, 100);
-    let end_age = p.live_to_age.clamp(age0, MAX_AGE);
-    // Rows are calendar years, so the first one is what is left of this year.
-    let offset = today.month() as i64 - 1;
-    let total_months = (end_age - age0 + 1) * MONTHS_PER_YEAR - offset;
-    // Your own guesses, held to a sane range.
-    let infl_bps = p.inflation_bps.map_or(GENERAL_INFLATION_BPS, |b| b.clamp(0, 2_000));
-    let equity_bps = p.equity_return_bps.map_or(EQUITY_RETURN_BPS, |b| b.clamp(0, 2_500));
-    let inflation = rate(infl_bps);
-    let grow = |today_cost: f64, bps: i64, month: i64| today_cost * (1.0 + rate(bps)).powf(month as f64 / 12.0);
+/// A cost given in today's money, grown at `bps` a year to month `month`.
+fn grow(today_cost: f64, bps: i64, month: i64) -> f64 {
+    today_cost * (1.0 + rate(bps)).powf(month as f64 / 12.0)
+}
 
-    let mut children: Vec<i64> = p.child_birth_year.into_iter().collect();
-    let mut jobs: Vec<Job> = Vec::new();
-    let mut breaks: Vec<(i64, i64)> = Vec::new();
-    let mut homes: Vec<Home> = Vec::new();
-    let mut lumps: Vec<Lump> = Vec::new();
-    let mut save_more = 0.0;
-    let mut earner_lost: Option<i64> = None;
-    let mut medical_keep = 1.0;
-    let my_raise = rate(p.raise_bps.clamp(0, 3_000));
-    let partner_raise = rate(p.partner_raise_bps.clamp(0, 3_000));
+/// What the profile and the chosen changes add up to. Built once, then only read month by month.
+struct Plan {
+    ty: i64,
+    age0: i64,
+    retire_age: i64,
+    end_age: i64,
+    /// Months of the first calendar year already gone: rows are calendar years.
+    offset: i64,
+    total_months: i64,
+    infl_bps: i64,
+    equity_bps: i64,
+    my_raise: f64,
+    partner_raise: f64,
+    /// Birth years, the planned child first.
+    children: Vec<i64>,
+    jobs: Vec<Job>,
+    breaks: Vec<(i64, i64)>,
+    homes: Vec<Home>,
+    lumps: Vec<Lump>,
+    /// (first month, last month) of the monthly cost of each child still under 18.
+    child_spans: Vec<(i64, i64)>,
+    save_more: f64,
+    earner_lost: Option<i64>,
+    medical_keep: f64,
+}
 
-    for choice in input.choices.iter().take(MAX_CHOICES) {
+impl Plan {
+    fn new(input: &LineInput, today: Date) -> Self {
+        let p = &input.profile;
+        let age0 = p.my_age.clamp(MIN_AGE, 100);
+        let end_age = p.live_to_age.clamp(age0, MAX_AGE);
+        let offset = today.month() as i64 - 1;
+        let mut plan = Plan {
+            ty: today.year() as i64,
+            age0,
+            retire_age: p.retirement_age.clamp(age0, 100),
+            end_age,
+            offset,
+            total_months: (end_age - age0 + 1) * MONTHS_PER_YEAR - offset,
+            // Your own guesses, held to a sane range.
+            infl_bps: p.inflation_bps.map_or(GENERAL_INFLATION_BPS, |b| b.clamp(0, 2_000)),
+            equity_bps: p.equity_return_bps.map_or(EQUITY_RETURN_BPS, |b| b.clamp(0, 2_500)),
+            my_raise: rate(p.raise_bps.clamp(0, 3_000)),
+            partner_raise: rate(p.partner_raise_bps.clamp(0, 3_000)),
+            children: p.child_birth_year.into_iter().collect(),
+            jobs: Vec::new(),
+            breaks: Vec::new(),
+            homes: Vec::new(),
+            lumps: Vec::new(),
+            child_spans: Vec::new(),
+            save_more: 0.0,
+            earner_lost: None,
+            medical_keep: 1.0,
+        };
+        for choice in input.choices.iter().take(MAX_CHOICES) {
+            plan.apply(choice, p, today);
+        }
+        plan.jobs.sort_by_key(|j| j.from);
+        plan.add_wedding(p, today);
+        plan.add_children(input, today);
+        plan
+    }
+
+    fn lump(&mut self, month: i64, amount: f64, label: impl Into<String>) {
+        self.lumps.push(Lump { month, amount, label: label.into() });
+    }
+
+    /// A year the user picked, held to the next 80 years.
+    fn year_from(&self, year: i64) -> i64 {
+        year.clamp(self.ty, self.ty + 80)
+    }
+
+    fn apply(&mut self, choice: &Choice, p: &LifeProfile, today: Date) {
+        let ty = self.ty;
         match choice {
             Choice::JobSwitch { month, take_home_paise, gap_months, raise_bps } => {
-                let Some(from) = month_index(month, today) else { continue };
-                jobs.push(Job {
+                let Some(from) = month_index(month, today) else { return };
+                self.jobs.push(Job {
                     from,
                     gap: (*gap_months).clamp(0, 36),
                     pay: (*take_home_paise).clamp(0, MAX_AMOUNT_PAISE) as f64,
-                    raise: raise_bps.map_or(my_raise, |b| rate(b.clamp(0, 3_000))),
+                    raise: raise_bps.map_or(self.my_raise, |b| rate(b.clamp(0, 3_000))),
                 });
             }
             Choice::House { year, price_paise, down_bps, loan_bps, tenure_years, rent_saved_paise } => {
-                let from = months_from(today, (*year).clamp(ty, ty + 80), 1);
-                let price = grow((*price_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, infl_bps, from);
+                let from = months_from(today, self.year_from(*year), 1);
+                let price = grow((*price_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, self.infl_bps, from);
                 let down = price * rate((*down_bps).clamp(0, 10_000));
                 let months = (*tenure_years).clamp(1, 40) * MONTHS_PER_YEAR;
                 let monthly_rate = rate((*loan_bps).clamp(0, 3_000)) / 12.0;
                 let loan = price - down;
-                lumps.push(Lump { month: from, amount: down, label: "Home down payment".into() });
-                homes.push(Home {
+                self.lump(from, down, "Home down payment");
+                self.homes.push(Home {
                     from,
                     price,
                     loan,
@@ -429,20 +481,19 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
             }
             Choice::Child { birth_year, another } => {
                 let year = (*birth_year).clamp(ty - 17, ty + 25);
-                if *another || children.is_empty() {
-                    children.push(year);
-                } else {
-                    children[0] = year;
+                match self.children.first_mut() {
+                    Some(planned) if !*another => *planned = year,
+                    _ => self.children.push(year),
                 }
             }
-            Choice::RetireAt { age } => retire_age = (*age).clamp(age0, 100),
+            Choice::RetireAt { age } => self.retire_age = (*age).clamp(self.age0, 100),
             Choice::BigSpend { name, year, amount_paise, every_years } => {
-                let label = if name.trim().is_empty() { "Big spend".to_string() } else { name.trim().to_string() };
+                let label = if name.trim().is_empty() { "Big spend" } else { name.trim() };
                 let step = every_years.map(|n| n.clamp(1, 50) * MONTHS_PER_YEAR);
-                let mut month = months_from(today, (*year).clamp(ty, ty + 80), 1);
-                while month < total_months {
-                    let amount = grow((*amount_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, infl_bps, month);
-                    lumps.push(Lump { month, amount, label: label.clone() });
+                let mut month = months_from(today, self.year_from(*year), 1);
+                while month < self.total_months {
+                    let amount = grow((*amount_paise).clamp(0, MAX_AMOUNT_PAISE) as f64, self.infl_bps, month);
+                    self.lump(month, amount, label);
                     match step {
                         Some(s) => month += s,
                         None => break,
@@ -450,235 +501,339 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
                 }
             }
             Choice::Break { start, months } => {
-                let Some(from) = month_index(start, today) else { continue };
-                breaks.push((from, from + (*months).clamp(1, 60)));
+                let Some(from) = month_index(start, today) else { return };
+                self.breaks.push((from, from + (*months).clamp(1, 60)));
             }
             Choice::Hospital { year, bill_paise } => {
-                let from = months_from(today, (*year).clamp(ty, ty + 80), 6);
-                let net = ((*bill_paise).clamp(0, MAX_AMOUNT_PAISE) - p.health_cover_paise.clamp(0, MAX_AMOUNT_PAISE)).max(0) as f64;
-                if net > 0.0 {
-                    lumps.push(Lump { month: from, amount: grow(net, MEDICAL_INFLATION_BPS, from), label: "Hospital bill".into() });
-                } else {
-                    // Covered in full: nothing to pay, but the year still notes it.
-                    lumps.push(Lump { month: from, amount: 0.0, label: "Hospital bill".into() });
-                }
+                let from = months_from(today, self.year_from(*year), 6);
+                let cover = p.health_cover_paise.clamp(0, MAX_AMOUNT_PAISE);
+                let net = ((*bill_paise).clamp(0, MAX_AMOUNT_PAISE) - cover).max(0) as f64;
+                // Covered in full: nothing to pay, but the year still notes it.
+                let amount = if net > 0.0 { grow(net, MEDICAL_INFLATION_BPS, from) } else { 0.0 };
+                self.lump(from, amount, "Hospital bill");
             }
             Choice::LoseEarner { year } => {
-                let from = months_from(today, (*year).clamp(ty, ty + 80), 6);
-                earner_lost = Some(earner_lost.map_or(from, |e: i64| e.min(from)));
+                let from = months_from(today, self.year_from(*year), 6);
+                self.earner_lost = Some(self.earner_lost.map_or(from, |e| e.min(from)));
                 let cover = p.term_cover_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
                 if cover > 0.0 {
                     // A payout is money coming in, which is a negative cost in that month.
-                    lumps.push(Lump { month: from, amount: -cover, label: "Term cover pays out".into() });
+                    self.lump(from, -cover, "Term cover pays out");
                 }
             }
-            Choice::SaveMore { monthly_paise } => save_more += (*monthly_paise).clamp(0, MAX_AMOUNT_PAISE) as f64,
+            Choice::SaveMore { monthly_paise } => self.save_more += (*monthly_paise).clamp(0, MAX_AMOUNT_PAISE) as f64,
             Choice::StayActive { medical_cut_bps } => {
-                medical_keep = 1.0 - rate(medical_cut_bps.unwrap_or(DEFAULT_MEDICAL_CUT_BPS).clamp(0, 9_000));
+                self.medical_keep = 1.0 - rate(medical_cut_bps.unwrap_or(DEFAULT_MEDICAL_CUT_BPS).clamp(0, 9_000));
             }
         }
     }
-    jobs.sort_by_key(|j| j.from);
 
-    if let Some(when) = p.wedding_date.as_deref().and_then(parse_date) {
+    fn add_wedding(&mut self, p: &LifeProfile, today: Date) {
+        let Some(when) = p.wedding_date.as_deref().and_then(parse_date) else { return };
         let month = months_from(today, when.year() as i64, when.month() as i64);
         let budget = p.wedding_budget_paise.unwrap_or(DEFAULT_WEDDING_BUDGET).clamp(0, MAX_AMOUNT_PAISE) as f64;
-        lumps.push(Lump { month, amount: grow(budget, WEDDING_INFLATION_BPS, month), label: "Wedding".into() });
+        self.lump(month, grow(budget, WEDDING_INFLATION_BPS, month), "Wedding");
     }
-    // (first month, last month) of the monthly cost of each child still under 18.
-    let mut child_spans: Vec<(i64, i64)> = Vec::new();
-    for (n, birth_year) in children.iter().enumerate() {
-        let name = if n == 0 { "Child".to_string() } else { format!("Child {}", n + 1) };
-        if *birth_year >= ty {
-            let month = months_from(today, *birth_year, 1);
-            let amount = grow(CHILD_BIRTH_TODAY as f64, MEDICAL_INFLATION_BPS, month);
-            lumps.push(Lump { month, amount, label: format!("{name} is born") });
-        }
-        if birth_year + CHILD_YEARS >= ty {
-            let month = months_from(today, birth_year + CHILD_YEARS, 6);
-            let cost = p.child_education_today_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
-            // With an education plan, its own fees (paid from the earmark) replace this estimate.
-            if !(n == 0 && input.earmark.is_some()) {
-                lumps.push(Lump {
-                    month,
-                    amount: grow(cost, EDUCATION_INFLATION_BPS, month),
-                    label: format!("{name}'s education"),
-                });
+
+    fn add_children(&mut self, input: &LineInput, today: Date) {
+        let (ty, p) = (self.ty, &input.profile);
+        for (n, birth_year) in self.children.clone().into_iter().enumerate() {
+            let name = if n == 0 { "Child".to_string() } else { format!("Child {}", n + 1) };
+            if birth_year >= ty {
+                let month = months_from(today, birth_year, 1);
+                self.lump(month, grow(CHILD_BIRTH_TODAY as f64, MEDICAL_INFLATION_BPS, month), format!("{name} is born"));
             }
-            child_spans.push((months_from(today, *birth_year, 1), month));
+            if birth_year + CHILD_YEARS >= ty {
+                let month = months_from(today, birth_year + CHILD_YEARS, 6);
+                let cost = p.child_education_today_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
+                // With an education plan, its own fees (paid from the earmark) replace this estimate.
+                if !(n == 0 && input.earmark.is_some()) {
+                    self.lump(month, grow(cost, EDUCATION_INFLATION_BPS, month), format!("{name}'s education"));
+                }
+                self.child_spans.push((months_from(today, birth_year, 1), month));
+            }
         }
     }
 
-    // Retirement starts in January of the year the user turns `retire_age`.
-    let retire_month = ((retire_age - age0) * MONTHS_PER_YEAR - offset).max(0);
-    let my_base = p.my_take_home_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
-    let partner_base = p.partner_take_home_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
-    let expenses = input.expenses_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
-    let swr = rate(SWR_BPS);
-
-    let mut wealth = input.wealth_paise.clamp(-MAX_AMOUNT_PAISE, MAX_AMOUNT_PAISE) as f64;
-    // Starting in debt is allowed; going further below it is "short".
-    // The earmark is taken out of savings (no more than there is) and kept as its own pot.
-    let earmark = input.earmark.as_ref();
-    let mut pot = earmark.map_or(0.0, |e| (e.corpus_paise.clamp(0, MAX_AMOUNT_PAISE) as f64).min(wealth.max(0.0)));
-    wealth -= pot;
-    let last_fee = earmark.and_then(|e| e.payouts.iter().map(|(m, _)| *m).max()).unwrap_or(0);
-    let floor = wealth.min(0.0);
-    let mut loans: Vec<f64> = homes.iter().map(|h| h.loan).collect();
-    let mut rows: Vec<Row> = Vec::new();
-    let mut marks = Marks { retire_age, end_age, ..Default::default() };
-    let (mut income_year, mut spend_year, mut short_year) = (0.0, 0.0, 0.0);
-    let mut events: Vec<String> = Vec::new();
-
-    for m in 0..total_months {
-        let year_index = (offset + m) / MONTHS_PER_YEAR;
-        let age = age0 + year_index;
-        let working = m < retire_month;
-        let years_in = year_index as i32;
-
-        // Pay: the last job that has started wins; a gap or a break pays nothing.
-        let mut mine = my_base * (1.0 + my_raise).powi(years_in);
-        if let Some(job) = jobs.iter().rev().find(|j| j.from <= m) {
+    /// The user's own pay in month `m`: the last job that has started wins; a gap or a break pays nothing.
+    fn my_pay(&self, base: f64, m: i64, years_in: i32) -> f64 {
+        let mut mine = base * (1.0 + self.my_raise).powi(years_in);
+        if let Some(job) = self.jobs.iter().rev().find(|j| j.from <= m) {
             let since = m - job.from - job.gap;
             mine = if since < 0 { 0.0 } else { job.pay * (1.0 + job.raise).powi((since / MONTHS_PER_YEAR) as i32) };
         }
-        if breaks.iter().any(|(from, to)| (*from..*to).contains(&m)) {
-            mine = 0.0;
+        let on_break = self.breaks.iter().any(|(from, to)| (*from..*to).contains(&m));
+        if on_break || self.earner_lost.is_some_and(|from| m >= from) {
+            return 0.0;
         }
-        if earner_lost.is_some_and(|from| m >= from) {
-            mine = 0.0;
-        }
-        let income = if working { mine + partner_base * (1.0 + partner_raise).powi(years_in) } else { 0.0 };
+        mine
+    }
 
-        let mut spend = grow(expenses, infl_bps, m);
+    /// Later-life medical cost this month; nothing before `MEDICAL_FROM_AGE`.
+    fn medical(&self, m: i64, age: i64) -> f64 {
+        if age < MEDICAL_FROM_AGE {
+            return 0.0;
+        }
+        grow(LATER_MEDICAL_TODAY as f64 / 12.0, MEDICAL_INFLATION_BPS, m) * self.medical_keep
+    }
+}
+
+/// The month-by-month run over a [`Plan`]: savings, the education pot, home loans, and the rows so far.
+struct Sim<'a> {
+    plan: &'a Plan,
+    tweaks: &'a Tweaks,
+    earmark: Option<&'a Earmark>,
+    expenses: f64,
+    my_base: f64,
+    partner_base: f64,
+    swr: f64,
+    retire_month: i64,
+    /// Savings can't go below where they started: what they could not pay is short.
+    floor: f64,
+    last_fee: i64,
+    wealth: f64,
+    pot: f64,
+    loans: Vec<f64>,
+    rows: Vec<Row>,
+    marks: Marks,
+    income_year: f64,
+    spend_year: f64,
+    short_year: f64,
+    events: Vec<String>,
+}
+
+impl<'a> Sim<'a> {
+    fn new(plan: &'a Plan, input: &'a LineInput, tweaks: &'a Tweaks) -> Self {
+        let p = &input.profile;
+        let mut wealth = input.wealth_paise.clamp(-MAX_AMOUNT_PAISE, MAX_AMOUNT_PAISE) as f64;
+        // The earmark is taken out of savings (no more than there is) and kept as its own pot.
+        let earmark = input.earmark.as_ref();
+        let pot = earmark.map_or(0.0, |e| (e.corpus_paise.clamp(0, MAX_AMOUNT_PAISE) as f64).min(wealth.max(0.0)));
+        wealth -= pot;
+        Sim {
+            plan,
+            tweaks,
+            earmark,
+            expenses: input.expenses_paise.clamp(0, MAX_AMOUNT_PAISE) as f64,
+            my_base: p.my_take_home_paise.clamp(0, MAX_AMOUNT_PAISE) as f64,
+            partner_base: p.partner_take_home_paise.clamp(0, MAX_AMOUNT_PAISE) as f64,
+            swr: rate(SWR_BPS),
+            // Retirement starts in January of the year the user turns `retire_age`.
+            retire_month: ((plan.retire_age - plan.age0) * MONTHS_PER_YEAR - plan.offset).max(0),
+            // Starting in debt is allowed; going further below it is "short".
+            floor: wealth.min(0.0),
+            last_fee: earmark.and_then(|e| e.payouts.iter().map(|(m, _)| *m).max()).unwrap_or(0),
+            wealth,
+            pot,
+            loans: plan.homes.iter().map(|h| h.loan).collect(),
+            rows: Vec::new(),
+            marks: Marks { retire_age: plan.retire_age, end_age: plan.end_age, ..Default::default() },
+            income_year: 0.0,
+            spend_year: 0.0,
+            short_year: 0.0,
+            events: Vec::new(),
+        }
+    }
+
+    fn step(&mut self, m: i64) {
+        let plan = self.plan;
+        let year_index = (plan.offset + m) / MONTHS_PER_YEAR;
+        let age = plan.age0 + year_index;
+        let working = m < self.retire_month;
+
+        let income = if working { self.income(m, year_index) } else { 0.0 };
+        let mut spend = self.living_cost(m, age, working);
+        self.pay_home_loans(m, &mut spend);
+        let mut lump_labels = self.pay_lumps(m, &mut spend);
+        self.run_earmark(m, &mut spend, &mut lump_labels);
+        self.note_milestones(m);
+
+        self.grow_savings(m);
+        self.wealth += income - spend;
+        let short = self.cover_shortfall(age, year_index, lump_labels);
+        self.income_year += income;
+        self.spend_year += spend;
+        self.short_year += short;
+
+        if (plan.offset + m) % MONTHS_PER_YEAR == MONTHS_PER_YEAR - 1 {
+            self.close_year(m, age, year_index);
+        }
+    }
+
+    fn income(&self, m: i64, year_index: i64) -> f64 {
+        let years_in = year_index as i32;
+        self.plan.my_pay(self.my_base, m, years_in) + self.partner_base * (1.0 + self.plan.partner_raise).powi(years_in)
+    }
+
+    /// The monthly living cost at month `m`, without one-offs, loans or children: what retirement must pay.
+    fn regular_spend(&self, m: i64, age: i64) -> f64 {
+        grow(self.expenses, self.plan.infl_bps, m) + self.plan.medical(m, age)
+    }
+
+    /// Living costs, less what the user chose to save while working, plus children's monthly cost.
+    fn living_cost(&self, m: i64, age: i64, working: bool) -> f64 {
+        let plan = self.plan;
+        let mut spend = grow(self.expenses, plan.infl_bps, m);
         if working {
-            spend = (spend - grow(save_more, infl_bps, m)).max(0.0);
+            spend = (spend - grow(plan.save_more, plan.infl_bps, m)).max(0.0);
         }
-        if age >= MEDICAL_FROM_AGE {
-            spend += grow(LATER_MEDICAL_TODAY as f64 / 12.0, MEDICAL_INFLATION_BPS, m) * medical_keep;
-        }
-        for (from, to) in &child_spans {
+        spend += plan.medical(m, age);
+        for (from, to) in &plan.child_spans {
             if (*from..*to).contains(&m) {
-                spend += grow(CHILD_MONTHLY_TODAY as f64, infl_bps, m);
+                spend += grow(CHILD_MONTHLY_TODAY as f64, plan.infl_bps, m);
             }
         }
-        for (home, loan) in homes.iter().zip(loans.iter_mut()) {
+        spend
+    }
+
+    /// Rent saved and the EMI of each home bought by month `m`.
+    fn pay_home_loans(&mut self, m: i64, spend: &mut f64) {
+        let plan = self.plan;
+        for (home, loan) in plan.homes.iter().zip(self.loans.iter_mut()) {
             if m < home.from {
                 continue;
             }
-            spend = (spend - grow(home.rent_saved, infl_bps, m)).max(0.0);
+            *spend = (*spend - grow(home.rent_saved, plan.infl_bps, m)).max(0.0);
             if m < home.from + home.months && *loan > 0.0 {
                 let interest = *loan * home.monthly_rate;
                 *loan = (*loan + interest - home.emi).max(0.0);
-                spend += home.emi;
+                *spend += home.emi;
             }
             if m == home.from {
-                events.push("Buy a home".into());
+                self.events.push("Buy a home".into());
             }
         }
-        let mut lump_labels: Vec<&str> = Vec::new();
-        for lump in lumps.iter().filter(|l| l.month == m) {
-            spend += lump.amount;
-            lump_labels.push(&lump.label);
-            if !events.iter().any(|e| e == &lump.label) && lump.label != "Home down payment" {
-                events.push(lump.label.clone());
-            }
-        }
-        if let Some(e) = earmark {
-            // Growth first, then the month's top-up, then any fee: the order the plan's maths uses.
-            if m > 0 {
-                pot *= 1.0 + rate(e.return_bps.clamp(0, 3_000)) / 12.0;
-            }
-            if m >= 1 && m <= last_fee {
-                let top_up = e.monthly_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
-                spend += top_up;
-                pot += top_up;
-            }
-            for (_, fee) in e.payouts.iter().filter(|(pm, _)| *pm == m) {
-                let fee = (*fee).clamp(0, MAX_AMOUNT_PAISE) as f64;
-                let from_pot = pot.min(fee);
-                pot -= from_pot;
-                spend += fee - from_pot;
-                if fee - from_pot > 0.0 {
-                    lump_labels.push("Child's education");
-                }
-                if !events.iter().any(|e| e == "Child's education") {
-                    events.push("Child's education".into());
-                }
-            }
-        }
-        if m == retire_month {
-            events.push(format!("Retire at {retire_age}"));
-        }
-        if let Some(job) = jobs.iter().find(|j| j.from == m) {
-            events.push(if job.pay > 0.0 { "New job".into() } else { "Leave job".into() });
-        }
-        if breaks.iter().any(|(from, _)| *from == m) {
-            events.push("Break from work".into());
-        }
+    }
 
-        // Grow what is there, then add the month's pay and take its costs.
-        let months_to_retire = retire_month - m;
-        let return_bps = if months_to_retire > EQUITY_MIN_MONTHS {
-            equity_bps
+    /// One-off costs falling in month `m`; returns their labels.
+    fn pay_lumps(&mut self, m: i64, spend: &mut f64) -> Vec<&'a str> {
+        let plan = self.plan;
+        let mut labels = Vec::new();
+        for lump in plan.lumps.iter().filter(|l| l.month == m) {
+            *spend += lump.amount;
+            labels.push(lump.label.as_str());
+            if lump.label != "Home down payment" {
+                self.note_event(&lump.label);
+            }
+        }
+        labels
+    }
+
+    /// The education pot: growth first, then the month's top-up, then any fee, the order the plan's maths uses.
+    fn run_earmark(&mut self, m: i64, spend: &mut f64, lump_labels: &mut Vec<&'a str>) {
+        let Some(e) = self.earmark else { return };
+        if m > 0 {
+            self.pot *= 1.0 + rate(e.return_bps.clamp(0, 3_000)) / 12.0;
+        }
+        if m >= 1 && m <= self.last_fee {
+            let top_up = e.monthly_paise.clamp(0, MAX_AMOUNT_PAISE) as f64;
+            *spend += top_up;
+            self.pot += top_up;
+        }
+        for (_, fee) in e.payouts.iter().filter(|(pm, _)| *pm == m) {
+            let fee = (*fee).clamp(0, MAX_AMOUNT_PAISE) as f64;
+            let from_pot = self.pot.min(fee);
+            self.pot -= from_pot;
+            *spend += fee - from_pot;
+            if fee - from_pot > 0.0 {
+                lump_labels.push("Child's education");
+            }
+            self.note_event("Child's education");
+        }
+    }
+
+    /// Record a year's event once.
+    fn note_event(&mut self, label: &str) {
+        if !self.events.iter().any(|e| e == label) {
+            self.events.push(label.to_string());
+        }
+    }
+
+    fn note_milestones(&mut self, m: i64) {
+        let plan = self.plan;
+        if m == self.retire_month {
+            self.events.push(format!("Retire at {}", plan.retire_age));
+        }
+        if let Some(job) = plan.jobs.iter().find(|j| j.from == m) {
+            self.events.push(if job.pay > 0.0 { "New job".into() } else { "Leave job".into() });
+        }
+        if plan.breaks.iter().any(|(from, _)| *from == m) {
+            self.events.push("Break from work".into());
+        }
+    }
+
+    /// Equity until 7 years before retirement, then hybrid, then half hybrid and half debt.
+    fn return_bps(&self, m: i64) -> i64 {
+        let months_to_retire = self.retire_month - m;
+        if months_to_retire > EQUITY_MIN_MONTHS {
+            self.plan.equity_bps
         } else if months_to_retire > 0 {
             HYBRID_RETURN_BPS
         } else {
             RETIRED_RETURN_BPS
-        };
-        if wealth > 0.0 {
-            let gain = wealth * rate(return_bps + tweaks.return_shift_bps) / 12.0;
-            wealth += if gain > 0.0 { gain * (1.0 - rate(tweaks.gains_tax_bps.clamp(0, 9_000))) } else { gain };
-        }
-        wealth += income - spend;
-        let mut short = 0.0;
-        if wealth < floor {
-            // Savings can't go below where they started: what they could not pay is short.
-            short = floor - wealth;
-            wealth = floor;
-            marks.runs_out_at_age.get_or_insert(age);
-            let year = ty + year_index;
-            for label in lump_labels {
-                let text = format!("{label} in {year}");
-                if !marks.unfunded.contains(&text) {
-                    marks.unfunded.push(text);
-                }
-            }
-        }
-        income_year += income;
-        spend_year += spend;
-        short_year += short;
-
-        if (offset + m) % MONTHS_PER_YEAR == MONTHS_PER_YEAR - 1 {
-            let i = year_index;
-            let home_value: f64 = homes.iter().filter(|h| h.from <= m).map(|h| grow(h.price, infl_bps, m - h.from)).sum();
-            let owed: f64 = homes.iter().zip(&loans).filter(|(h, _)| h.from <= m).map(|(_, l)| *l).sum();
-            let net = wealth + pot + home_value - owed;
-            let deflate = (1.0 + inflation).powf((m + 1) as f64 / 12.0);
-            let net_today = to_paise(net / deflate);
-            // Free: savings alone would pay a year of today's costs for good, and nothing is short.
-            let yearly_need = spend_regular(expenses, m, age, medical_keep, infl_bps, &grow) * 12.0;
-            if marks.free_at_age.is_none() && short_year == 0.0 && yearly_need > 0.0 && wealth * swr >= yearly_need {
-                marks.free_at_age = Some(age);
-            }
-            if age == 60 {
-                marks.at_60_today_paise = Some(net_today);
-            }
-            marks.at_end_today_paise = net_today;
-            rows.push(Row {
-                year: ty + i,
-                age,
-                income_paise: to_paise(income_year),
-                spend_paise: to_paise(spend_year),
-                short_paise: to_paise(short_year),
-                net_worth_paise: to_paise(net),
-                net_worth_today_paise: net_today,
-                events: std::mem::take(&mut events),
-            });
-            (income_year, spend_year, short_year) = (0.0, 0.0, 0.0);
         }
     }
 
+    /// What is there grows, less tax on a gain; a loss is not taxed back.
+    fn grow_savings(&mut self, m: i64) {
+        if self.wealth > 0.0 {
+            let gain = self.wealth * rate(self.return_bps(m) + self.tweaks.return_shift_bps) / 12.0;
+            let tax = rate(self.tweaks.gains_tax_bps.clamp(0, 9_000));
+            self.wealth += if gain > 0.0 { gain * (1.0 - tax) } else { gain };
+        }
+    }
+
+    /// Savings stop at the floor. Returns what they could not pay and marks what went unfunded.
+    fn cover_shortfall(&mut self, age: i64, year_index: i64, lump_labels: Vec<&str>) -> f64 {
+        if self.wealth >= self.floor {
+            return 0.0;
+        }
+        let short = self.floor - self.wealth;
+        self.wealth = self.floor;
+        self.marks.runs_out_at_age.get_or_insert(age);
+        let year = self.plan.ty + year_index;
+        for label in lump_labels {
+            let text = format!("{label} in {year}");
+            if !self.marks.unfunded.contains(&text) {
+                self.marks.unfunded.push(text);
+            }
+        }
+        short
+    }
+
+    /// December: set the year's row and update the marks.
+    fn close_year(&mut self, m: i64, age: i64, year_index: i64) {
+        let plan = self.plan;
+        let home_value: f64 = plan.homes.iter().filter(|h| h.from <= m).map(|h| grow(h.price, plan.infl_bps, m - h.from)).sum();
+        let owed: f64 = plan.homes.iter().zip(&self.loans).filter(|(h, _)| h.from <= m).map(|(_, l)| *l).sum();
+        let net = self.wealth + self.pot + home_value - owed;
+        let deflate = (1.0 + rate(plan.infl_bps)).powf((m + 1) as f64 / 12.0);
+        let net_today = to_paise(net / deflate);
+        // Free: savings alone would pay a year of today's costs for good, and nothing is short.
+        let yearly_need = self.regular_spend(m, age) * 12.0;
+        if self.marks.free_at_age.is_none() && self.short_year == 0.0 && yearly_need > 0.0 && self.wealth * self.swr >= yearly_need {
+            self.marks.free_at_age = Some(age);
+        }
+        if age == 60 {
+            self.marks.at_60_today_paise = Some(net_today);
+        }
+        self.marks.at_end_today_paise = net_today;
+        self.rows.push(Row {
+            year: plan.ty + year_index,
+            age,
+            income_paise: to_paise(self.income_year),
+            spend_paise: to_paise(self.spend_year),
+            short_paise: to_paise(self.short_year),
+            net_worth_paise: to_paise(net),
+            net_worth_today_paise: net_today,
+            events: std::mem::take(&mut self.events),
+        });
+        (self.income_year, self.spend_year, self.short_year) = (0.0, 0.0, 0.0);
+    }
+}
+
+/// The assumptions the line rests on, stated for the reader. Only those that applied are listed.
+fn notes(plan: &Plan, tweaks: &Tweaks, has_earmark: bool) -> Vec<String> {
     let mut notes = vec![
         "Every rupee not spent is invested: in equity until 7 years before retirement, then hybrid, then half hybrid and half debt.".to_string(),
         "Both incomes stop when you retire.".to_string(),
@@ -693,31 +848,28 @@ pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
             tweaks.gains_tax_bps / 100
         ));
     }
-    if !children.is_empty() {
-        notes.push(format!(
-            "Estimate: raising a child costs {} a month in today's money until 18, plus education.",
-            inr(CHILD_MONTHLY_TODAY)
-        ));
+    if !plan.children.is_empty() {
+        notes.push(format!("Estimate: raising a child costs {} a month in today's money until 18, plus education.", inr(CHILD_MONTHLY_TODAY)));
     }
-    if earmark.is_some() {
+    if has_earmark {
         notes.push("The education plan's fees replace the default estimate. Its top-up goes into a separate pot that pays them first, and what it cannot cover comes from savings.".to_string());
     }
-    if !homes.is_empty() {
+    if !plan.homes.is_empty() {
         notes.push("A home is counted in net worth and keeps its value in today's money.".to_string());
     }
-    if medical_keep < 1.0 {
+    if plan.medical_keep < 1.0 {
         notes.push("Estimate: staying active trims later-life medical costs. The size of the saving is a rule of thumb, not a promise.".to_string());
     }
-    Line { rows, marks, notes }
+    notes
 }
 
-/// The monthly living cost at month `m`, without one-offs, loans or children: what retirement must pay.
-fn spend_regular(expenses: f64, m: i64, age: i64, medical_keep: f64, infl_bps: i64, grow: &impl Fn(f64, i64, i64) -> f64) -> f64 {
-    let mut spend = grow(expenses, infl_bps, m);
-    if age >= MEDICAL_FROM_AGE {
-        spend += grow(LATER_MEDICAL_TODAY as f64 / 12.0, MEDICAL_INFLATION_BPS, m) * medical_keep;
+pub fn simulate_with(input: &LineInput, today: Date, tweaks: &Tweaks) -> Line {
+    let plan = Plan::new(input, today);
+    let mut sim = Sim::new(&plan, input, tweaks);
+    for m in 0..plan.total_months {
+        sim.step(m);
     }
-    spend
+    Line { notes: notes(&plan, tweaks, input.earmark.is_some()), rows: sim.rows, marks: sim.marks }
 }
 
 /// The life line's marks as a check-in keeps them, with one sentence on how they moved.
@@ -1235,5 +1387,104 @@ mod tests {
         assert_eq!(c, Choice::JobSwitch { month: "2027-04".into(), take_home_paise: 100, gap_months: 0, raise_bps: None });
         let c: Choice = serde_json::from_str(r#"{"kind":"stay_active"}"#).unwrap();
         assert_eq!(c, Choice::StayActive { medical_cut_bps: None });
+    }
+}
+
+/// Characterization tests: the whole simulation, pinned. A refactor of `simulate_with` must leave
+/// this file byte-for-byte alone. Regenerate on purpose with `UPDATE_GOLDEN=1 cargo test golden`.
+#[cfg(test)]
+mod golden {
+    use super::*;
+    use time::macros::date;
+
+    const FILE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/planner/lifeline_golden.json");
+
+    fn profile() -> LifeProfile {
+        LifeProfile {
+            my_age: 31,
+            partner_age: Some(29),
+            my_take_home_paise: 18_000_000,
+            partner_take_home_paise: 12_000_000,
+            wedding_date: Some("2028-02-01".into()),
+            wedding_budget_paise: Some(2_500_000_00),
+            child_birth_year: Some(2030),
+            child_education_today_paise: 3_000_000_00,
+            retirement_age: 58,
+            term_cover_paise: 10_000_000_00,
+            health_cover_paise: 5_000_000_00,
+            raise_bps: 700,
+            partner_raise_bps: 500,
+            live_to_age: 88,
+            equity_return_bps: Some(1_100),
+            inflation_bps: Some(550),
+            ..Default::default()
+        }
+    }
+
+    fn base(profile: LifeProfile, wealth: i64, choices: Vec<Choice>) -> LineInput {
+        LineInput { profile, expenses_paise: 9_000_000, wealth_paise: wealth, choices, earmark: None }
+    }
+
+    fn every_choice() -> Vec<Choice> {
+        vec![
+            Choice::JobSwitch { month: "2027-06".into(), take_home_paise: 25_000_000, gap_months: 3, raise_bps: Some(900) },
+            Choice::JobSwitch { month: "2033-01".into(), take_home_paise: 0, gap_months: 0, raise_bps: None },
+            Choice::House { year: 2031, price_paise: 1_200_000_000, down_bps: 2_000, loan_bps: 850, tenure_years: 20, rent_saved_paise: 3_500_000 },
+            Choice::Child { birth_year: 2032, another: true },
+            Choice::RetireAt { age: 55 },
+            Choice::BigSpend { name: " Car ".into(), year: 2029, amount_paise: 90_000_000, every_years: Some(8) },
+            Choice::BigSpend { name: String::new(), year: 2040, amount_paise: 40_000_000, every_years: None },
+            Choice::Break { start: "2035-03".into(), months: 8 },
+            Choice::Hospital { year: 2034, bill_paise: 900_000_000 },
+            Choice::LoseEarner { year: 2045 },
+            Choice::SaveMore { monthly_paise: 1_000_000 },
+            Choice::StayActive { medical_cut_bps: Some(4_000) },
+        ]
+    }
+
+    fn scenarios() -> Vec<(&'static str, LineInput, Date, Tweaks)> {
+        let plain = Tweaks::default();
+        let mut earmarked = base(profile(), 600_000_000, vec![Choice::Child { birth_year: 2030, another: false }]);
+        earmarked.earmark = Some(Earmark {
+            corpus_paise: 20_000_000,
+            monthly_paise: 1_500_000,
+            return_bps: 900,
+            payouts: vec![(150, 40_000_000), (160, 60_000_000), (12, 5_000_000)],
+        });
+        let broke = LifeProfile { my_age: 40, retirement_age: 45, live_to_age: 95, ..LifeProfile::default() };
+        vec![
+            ("baseline", base(profile(), 800_000_000, vec![]), date!(2026 - 11 - 10), plain),
+            ("every_choice", base(profile(), 800_000_000, every_choice()), date!(2026 - 11 - 10), plain),
+            ("every_choice_in_january", base(profile(), 800_000_000, every_choice()), date!(2027 - 01 - 01), plain),
+            ("earmark", earmarked, date!(2026 - 12 - 31), plain),
+            ("tweaked", base(profile(), 800_000_000, every_choice()), date!(2026 - 06 - 15), Tweaks { return_shift_bps: -250, gains_tax_bps: 1_250 }),
+            ("in_debt_and_runs_out", base(broke, -50_000_000, vec![Choice::House { year: 2027, price_paise: 900_000_000, down_bps: 1_000, loan_bps: 900, tenure_years: 15, rent_saved_paise: 0 }]), date!(2026 - 03 - 03), plain),
+            ("wild_inputs", base(LifeProfile { my_age: 5, retirement_age: 3, live_to_age: 400, ..profile() }, i64::MAX, vec![Choice::Break { start: "nonsense".into(), months: -4 }, Choice::SaveMore { monthly_paise: i64::MAX }]), date!(2026 - 11 - 10), plain),
+        ]
+    }
+
+    fn snapshot() -> String {
+        let all: Vec<_> = scenarios()
+            .into_iter()
+            .map(|(name, input, today, tweaks)| {
+                serde_json::json!({
+                    "name": name,
+                    "line": simulate_with(&input, today, &tweaks),
+                    "band": band(&input, today),
+                })
+            })
+            .collect();
+        serde_json::to_string_pretty(&all).unwrap() + "\n"
+    }
+
+    #[test]
+    fn simulate_and_band_match_the_pinned_output() {
+        let now = snapshot();
+        if std::env::var("UPDATE_GOLDEN").is_ok() {
+            std::fs::write(FILE, &now).unwrap();
+            return;
+        }
+        let pinned = std::fs::read_to_string(FILE).expect("run once with UPDATE_GOLDEN=1 to create the snapshot");
+        assert!(now == pinned, "life line output changed; if on purpose, rerun with UPDATE_GOLDEN=1");
     }
 }

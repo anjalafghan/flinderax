@@ -944,6 +944,9 @@ async fn import_and_catch_up(db: &sqlx::SqlitePool, user_id: &str, input: Statem
 
 
 #[cfg(test)]
+mod import_golden;
+
+#[cfg(test)]
 mod statement_tests {
     use super::*;
     use axum::{body::Body, http::Request, http::StatusCode};

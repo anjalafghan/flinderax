@@ -1,0 +1,312 @@
+[
+  {
+    "name": "now_fits",
+    "verdict": {
+      "answer": "yes",
+      "extra_cost_paise": 0,
+      "headline": "Yes, it fits",
+      "monthly_paise": 0,
+      "reasons": [
+        "₹30000 is still safe to spend until payday after it"
+      ],
+      "safe_to_spend_after_paise": 3000000,
+      "total_cost_paise": 2000000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "now_exactly_safe",
+    "verdict": {
+      "answer": "yes",
+      "extra_cost_paise": 0,
+      "headline": "Yes, it fits",
+      "monthly_paise": 0,
+      "reasons": [
+        "₹0 is still safe to spend until payday after it"
+      ],
+      "safe_to_spend_after_paise": 0,
+      "total_cost_paise": 5000000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "now_beyond_safe_but_nothing_runs_short",
+    "verdict": {
+      "answer": "yes_from_savings",
+      "extra_cost_paise": 0,
+      "headline": "Yes, but partly from savings",
+      "monthly_paise": 0,
+      "reasons": [
+        "₹30000 more than is safe to spend until payday",
+        "No month ahead runs short, so it's savings you'd be using, not bills money"
+      ],
+      "safe_to_spend_after_paise": -3000000,
+      "total_cost_paise": 8000000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "now_wait_two_months",
+    "verdict": {
+      "answer": "wait",
+      "extra_cost_paise": 0,
+      "headline": "Wait until Jan 2027",
+      "monthly_paise": 0,
+      "reasons": [
+        "Buying it now leaves a month ₹12000 short",
+        "From Jan 2027 nothing runs short"
+      ],
+      "safe_to_spend_after_paise": -3000000,
+      "total_cost_paise": 8000000,
+      "wait_until": "2027-01-01"
+    }
+  },
+  {
+    "name": "now_wait_next_month",
+    "verdict": {
+      "answer": "wait",
+      "extra_cost_paise": 0,
+      "headline": "Wait until Dec 2026",
+      "monthly_paise": 0,
+      "reasons": [
+        "Buying it now leaves a month ₹3000 short",
+        "From Dec 2026 nothing runs short"
+      ],
+      "safe_to_spend_after_paise": -3000000,
+      "total_cost_paise": 8000000,
+      "wait_until": "2026-12-01"
+    }
+  },
+  {
+    "name": "now_never_recovers_within_horizon",
+    "verdict": {
+      "answer": "no",
+      "extra_cost_paise": 0,
+      "headline": "Not right now",
+      "monthly_paise": 0,
+      "reasons": [
+        "It leaves a month ₹7000 short, and it still would in 4 months",
+        "Save for it as a goal instead"
+      ],
+      "safe_to_spend_after_paise": -3000000,
+      "total_cost_paise": 8000000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "now_horizon_of_one_cannot_wait",
+    "verdict": {
+      "answer": "no",
+      "extra_cost_paise": 0,
+      "headline": "Not right now",
+      "monthly_paise": 0,
+      "reasons": [
+        "It leaves a month ₹7000 short, and it still would in 1 months",
+        "Save for it as a goal instead"
+      ],
+      "safe_to_spend_after_paise": -3000000,
+      "total_cost_paise": 8000000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "now_wait_crosses_the_year",
+    "verdict": {
+      "answer": "wait",
+      "extra_cost_paise": 0,
+      "headline": "Wait until Mar 2027",
+      "monthly_paise": 0,
+      "reasons": [
+        "Buying it now leaves a month ₹7000 short",
+        "From Mar 2027 nothing runs short"
+      ],
+      "safe_to_spend_after_paise": -3000000,
+      "total_cost_paise": 8000000,
+      "wait_until": "2027-03-01"
+    }
+  },
+  {
+    "name": "now_clear_month_exactly_at_the_horizon_is_out_of_reach",
+    "verdict": {
+      "answer": "no",
+      "extra_cost_paise": 0,
+      "headline": "Not right now",
+      "monthly_paise": 0,
+      "reasons": [
+        "It leaves a month ₹7000 short, and it still would in 3 months",
+        "Save for it as a goal instead"
+      ],
+      "safe_to_spend_after_paise": -3000000,
+      "total_cost_paise": 8000000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "now_clear_month_one_inside_the_horizon",
+    "verdict": {
+      "answer": "wait",
+      "extra_cost_paise": 0,
+      "headline": "Wait until Feb 2027",
+      "monthly_paise": 0,
+      "reasons": [
+        "Buying it now leaves a month ₹7000 short",
+        "From Feb 2027 nothing runs short"
+      ],
+      "safe_to_spend_after_paise": -3000000,
+      "total_cost_paise": 8000000,
+      "wait_until": "2027-02-01"
+    }
+  },
+  {
+    "name": "now_negative_safe_to_spend",
+    "verdict": {
+      "answer": "yes_from_savings",
+      "extra_cost_paise": 0,
+      "headline": "Yes, but partly from savings",
+      "monthly_paise": 0,
+      "reasons": [
+        "₹6000 more than is safe to spend until payday",
+        "No month ahead runs short, so it's savings you'd be using, not bills money"
+      ],
+      "safe_to_spend_after_paise": -600000,
+      "total_cost_paise": 100000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "emi_fits_with_interest",
+    "verdict": {
+      "answer": "yes",
+      "extra_cost_paise": 662000,
+      "headline": "Yes, on EMI",
+      "monthly_paise": 888500,
+      "reasons": [
+        "₹8885 a month for 12 months",
+        "Costs ₹6620 more than paying now (interest, fee and GST)",
+        "It fits in the ₹10000 you save beyond your SIP each month"
+      ],
+      "safe_to_spend_after_paise": 0,
+      "total_cost_paise": 10662000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "emi_no_cost_with_no_fee",
+    "verdict": {
+      "answer": "yes",
+      "extra_cost_paise": 0,
+      "headline": "Yes, on EMI",
+      "monthly_paise": 1000000,
+      "reasons": [
+        "₹10000 a month for 12 months",
+        "No extra cost over paying now",
+        "It fits in the ₹10000 you save beyond your SIP each month"
+      ],
+      "safe_to_spend_after_paise": 0,
+      "total_cost_paise": 12000000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "emi_no_cost_with_fee_and_gst",
+    "verdict": {
+      "answer": "yes",
+      "extra_cost_paise": 23482,
+      "headline": "Yes, on EMI",
+      "monthly_paise": 2000000,
+      "reasons": [
+        "₹20000 a month for 6 months",
+        "Costs ₹234 more than paying now (interest, fee and GST)",
+        "It fits in the ₹50000 you save beyond your SIP each month"
+      ],
+      "safe_to_spend_after_paise": -23482,
+      "total_cost_paise": 12023482,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "emi_too_big_for_savings",
+    "verdict": {
+      "answer": "no",
+      "extra_cost_paise": 442400,
+      "headline": "Not on this EMI",
+      "monthly_paise": 1740400,
+      "reasons": [
+        "₹17404 a month for 6 months",
+        "Costs ₹4424 more than paying now (interest, fee and GST)",
+        "It's ₹12404 a month more than you save beyond your SIP, so it would cut your spending money"
+      ],
+      "safe_to_spend_after_paise": 0,
+      "total_cost_paise": 10442400,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "emi_exactly_equals_savings",
+    "verdict": {
+      "answer": "yes",
+      "extra_cost_paise": 0,
+      "headline": "Yes, on EMI",
+      "monthly_paise": 100000,
+      "reasons": [
+        "₹1000 a month for 12 months",
+        "No extra cost over paying now",
+        "It fits in the ₹1000 you save beyond your SIP each month"
+      ],
+      "safe_to_spend_after_paise": 0,
+      "total_cost_paise": 1200000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "emi_with_negative_savings",
+    "verdict": {
+      "answer": "no",
+      "extra_cost_paise": 66000,
+      "headline": "Not on this EMI",
+      "monthly_paise": 105500,
+      "reasons": [
+        "₹1055 a month for 12 months",
+        "Costs ₹660 more than paying now (interest, fee and GST)",
+        "It's ₹1055 a month more than you save beyond your SIP, so it would cut your spending money"
+      ],
+      "safe_to_spend_after_paise": 300000,
+      "total_cost_paise": 1266000,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "emi_zero_months",
+    "verdict": {
+      "answer": "no",
+      "extra_cost_paise": -488200,
+      "headline": "Not on this EMI",
+      "monthly_paise": 500000,
+      "reasons": [
+        "₹5000 a month for 0 months",
+        "No extra cost over paying now",
+        "It's ₹4000 a month more than you save beyond your SIP, so it would cut your spending money"
+      ],
+      "safe_to_spend_after_paise": -11800,
+      "total_cost_paise": 11800,
+      "wait_until": null
+    }
+  },
+  {
+    "name": "emi_negative_rate_treated_as_zero",
+    "verdict": {
+      "answer": "yes",
+      "extra_cost_paise": 0,
+      "headline": "Yes, on EMI",
+      "monthly_paise": 100000,
+      "reasons": [
+        "₹1000 a month for 7 months",
+        "No extra cost over paying now",
+        "It fits in the ₹2000 you save beyond your SIP each month"
+      ],
+      "safe_to_spend_after_paise": 0,
+      "total_cost_paise": 700000,
+      "wait_until": null
+    }
+  }
+]

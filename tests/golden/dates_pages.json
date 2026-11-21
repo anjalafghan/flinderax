@@ -1,0 +1,2591 @@
+[
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "entries": [],
+      "me_name": "Rohit",
+      "month": 1,
+      "month_letters": [
+        "J",
+        "a",
+        "n",
+        "u",
+        "a",
+        "r",
+        "y"
+      ],
+      "month_name": "January",
+      "next": {
+        "href": "/joy/year/2025/2",
+        "label": "February 2025"
+      },
+      "nights": [],
+      "others": [],
+      "prev": null,
+      "spent": "",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/1",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "entries": [
+        {
+          "actual": "",
+          "cabs": "",
+          "day": "14 Feb",
+          "diff": "",
+          "est": "Free",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 0,
+          "slip_key": "play pokémon emerald together",
+          "stamp": "",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "tilt": -2,
+          "title": "Play Pokémon Emerald together",
+          "visit": 1
+        }
+      ],
+      "me_name": "Rohit",
+      "month": 2,
+      "month_letters": [
+        "F",
+        "e",
+        "b",
+        "r",
+        "u",
+        "a",
+        "r",
+        "y"
+      ],
+      "month_name": "February",
+      "next": {
+        "href": "/joy/year/2025/3",
+        "label": "March 2025"
+      },
+      "nights": [],
+      "others": [],
+      "prev": null,
+      "spent": "",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/2",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "4.3",
+      "best": {
+        "day": "2 Mar",
+        "rating": 5,
+        "title": "Play Pokémon Emerald together"
+      },
+      "entries": [
+        {
+          "actual": "₹900",
+          "cabs": "₹350",
+          "day": "2 Mar",
+          "diff": "₹400 over our guess",
+          "est": "₹500",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "Lovely evening",
+          "over": true,
+          "photo": "/api/public/dates/history/2/photos/2?<signed>",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 5,
+          "slip_key": "play pokémon emerald together",
+          "stamp": "",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "tilt": -2,
+          "title": "Play Pokémon Emerald together",
+          "visit": 2
+        },
+        {
+          "actual": "₹450",
+          "cabs": "",
+          "day": "4 Mar",
+          "diff": "right on our guess",
+          "est": "₹450",
+          "kind": "local",
+          "kind_label": "Around town",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "stamp": "",
+          "tags": [],
+          "tilt": 1,
+          "title": "Blue Tokai",
+          "visit": 1
+        },
+        {
+          "actual": "₹200",
+          "cabs": "",
+          "day": "6 Mar",
+          "diff": "right on our guess",
+          "est": "₹200",
+          "kind": "local",
+          "kind_label": "Around town",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "Bandra",
+          "rating": 0,
+          "slip_key": "sunday chai",
+          "stamp": "",
+          "tags": [],
+          "tilt": -1,
+          "title": "Sunday Chai",
+          "visit": 1
+        },
+        {
+          "actual": "₹600",
+          "cabs": "",
+          "day": "16 Mar",
+          "diff": "₹400 under our guess",
+          "est": "₹1,000",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "Fine",
+          "over": false,
+          "photo": "",
+          "place": "",
+          "rating": 3,
+          "slip_key": "hindi rap listening session (watch {b} react)",
+          "stamp": "",
+          "tags": [],
+          "tilt": 2,
+          "title": "Hindi rap listening session (watch Neha react)",
+          "visit": 1
+        },
+        {
+          "actual": "₹300",
+          "cabs": "",
+          "day": "18 Mar",
+          "diff": "right on our guess",
+          "est": "₹300",
+          "kind": "local",
+          "kind_label": "Around town",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "stamp": "",
+          "tags": [],
+          "tilt": 0,
+          "title": "Blue Tokai",
+          "visit": 2
+        },
+        {
+          "actual": "₹300",
+          "cabs": "",
+          "day": "30 Mar",
+          "diff": "right on our guess",
+          "est": "₹300",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "Also lovely",
+          "over": false,
+          "photo": "",
+          "place": "",
+          "rating": 5,
+          "slip_key": "cook together",
+          "stamp": "",
+          "tags": [
+            "foodie",
+            "cozy",
+            "romantic"
+          ],
+          "tilt": -2,
+          "title": "Cook together",
+          "visit": 1
+        }
+      ],
+      "me_name": "Rohit",
+      "month": 3,
+      "month_letters": [
+        "M",
+        "a",
+        "r",
+        "c",
+        "h"
+      ],
+      "month_name": "March",
+      "next": {
+        "href": "/joy/year/2025/4",
+        "label": "April 2025"
+      },
+      "nights": [
+        {
+          "count": 1,
+          "href": "/joy/regulars/2",
+          "nights": [
+            {
+              "day": "6 Mar",
+              "photo": "/api/public/dates/nights/3/photo?<signed>"
+            }
+          ],
+          "title": "Sunday Chai",
+          "total": "₹200"
+        },
+        {
+          "count": 1,
+          "href": "/joy/regulars/1",
+          "nights": [
+            {
+              "day": "18 Mar",
+              "photo": "/api/public/dates/nights/2/photo?<signed>"
+            }
+          ],
+          "title": "Blue Tokai",
+          "total": "₹300"
+        }
+      ],
+      "others": [
+        {
+          "amount": "₹120",
+          "day": "10 Mar",
+          "note": "Ice cream"
+        },
+        {
+          "amount": "₹50",
+          "day": "11 Mar",
+          "note": "Chai"
+        }
+      ],
+      "prev": {
+        "href": "/joy/year/2025/2",
+        "label": "February 2025"
+      },
+      "spent": "₹3,420",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/3",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "4.0",
+      "best": {
+        "day": "6 Apr",
+        "rating": 4,
+        "title": "Play Pokémon Emerald together"
+      },
+      "entries": [
+        {
+          "actual": "₹350",
+          "cabs": "",
+          "day": "3 Apr",
+          "diff": "right on our guess",
+          "est": "₹350",
+          "kind": "local",
+          "kind_label": "Around town",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "stamp": "",
+          "tags": [],
+          "tilt": -2,
+          "title": "Blue Tokai",
+          "visit": 3
+        },
+        {
+          "actual": "₹500",
+          "cabs": "",
+          "day": "6 Apr",
+          "diff": "right on our guess",
+          "est": "₹500",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "Again",
+          "over": false,
+          "photo": "",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 4,
+          "slip_key": "play pokémon emerald together",
+          "stamp": "",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "tilt": 1,
+          "title": "Play Pokémon Emerald together",
+          "visit": 3
+        }
+      ],
+      "me_name": "Rohit",
+      "month": 4,
+      "month_letters": [
+        "A",
+        "p",
+        "r",
+        "i",
+        "l"
+      ],
+      "month_name": "April",
+      "next": {
+        "href": "/joy/year/2025/5",
+        "label": "May 2025"
+      },
+      "nights": [
+        {
+          "count": 1,
+          "href": "/joy/regulars/1",
+          "nights": [
+            {
+              "day": "3 Apr",
+              "photo": "/api/public/dates/nights/4/photo?<signed>"
+            }
+          ],
+          "title": "Blue Tokai",
+          "total": "₹350"
+        }
+      ],
+      "others": [],
+      "prev": {
+        "href": "/joy/year/2025/3",
+        "label": "March 2025"
+      },
+      "spent": "₹1,200",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/4",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "4.0",
+      "best": {
+        "day": "20 May",
+        "rating": 4,
+        "title": "Draw / sketch together"
+      },
+      "entries": [
+        {
+          "actual": "",
+          "cabs": "",
+          "day": "20 May",
+          "diff": "",
+          "est": "₹300",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "",
+          "rating": 4,
+          "slip_key": "draw / sketch together",
+          "stamp": "",
+          "tags": [
+            "creative",
+            "cozy",
+            "chill"
+          ],
+          "tilt": -2,
+          "title": "Draw / sketch together",
+          "visit": 1
+        }
+      ],
+      "me_name": "Rohit",
+      "month": 5,
+      "month_letters": [
+        "M",
+        "a",
+        "y"
+      ],
+      "month_name": "May",
+      "next": {
+        "href": "/joy/year/2025/11",
+        "label": "November 2025"
+      },
+      "nights": [],
+      "others": [],
+      "prev": {
+        "href": "/joy/year/2025/4",
+        "label": "April 2025"
+      },
+      "spent": "",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/5",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "entries": [],
+      "me_name": "Rohit",
+      "month": 6,
+      "month_letters": [
+        "J",
+        "u",
+        "n",
+        "e"
+      ],
+      "month_name": "June",
+      "next": {
+        "href": "/joy/year/2025/11",
+        "label": "November 2025"
+      },
+      "nights": [],
+      "others": [],
+      "prev": {
+        "href": "/joy/year/2025/5",
+        "label": "May 2025"
+      },
+      "spent": "",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/6",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "entries": [],
+      "me_name": "Rohit",
+      "month": 7,
+      "month_letters": [
+        "J",
+        "u",
+        "l",
+        "y"
+      ],
+      "month_name": "July",
+      "next": {
+        "href": "/joy/year/2025/11",
+        "label": "November 2025"
+      },
+      "nights": [],
+      "others": [],
+      "prev": {
+        "href": "/joy/year/2025/5",
+        "label": "May 2025"
+      },
+      "spent": "",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/7",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "entries": [],
+      "me_name": "Rohit",
+      "month": 8,
+      "month_letters": [
+        "A",
+        "u",
+        "g",
+        "u",
+        "s",
+        "t"
+      ],
+      "month_name": "August",
+      "next": {
+        "href": "/joy/year/2025/11",
+        "label": "November 2025"
+      },
+      "nights": [],
+      "others": [],
+      "prev": {
+        "href": "/joy/year/2025/5",
+        "label": "May 2025"
+      },
+      "spent": "",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/8",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "entries": [],
+      "me_name": "Rohit",
+      "month": 9,
+      "month_letters": [
+        "S",
+        "e",
+        "p",
+        "t",
+        "e",
+        "m",
+        "b",
+        "e",
+        "r"
+      ],
+      "month_name": "September",
+      "next": {
+        "href": "/joy/year/2025/11",
+        "label": "November 2025"
+      },
+      "nights": [],
+      "others": [
+        {
+          "amount": "₹900",
+          "day": "1 Sep",
+          "note": "Gift"
+        }
+      ],
+      "prev": {
+        "href": "/joy/year/2025/5",
+        "label": "May 2025"
+      },
+      "spent": "₹900",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/9",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "entries": [],
+      "me_name": "Rohit",
+      "month": 10,
+      "month_letters": [
+        "O",
+        "c",
+        "t",
+        "o",
+        "b",
+        "e",
+        "r"
+      ],
+      "month_name": "October",
+      "next": {
+        "href": "/joy/year/2025/11",
+        "label": "November 2025"
+      },
+      "nights": [],
+      "others": [],
+      "prev": {
+        "href": "/joy/year/2025/5",
+        "label": "May 2025"
+      },
+      "spent": "",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/10",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "2.0",
+      "best": {
+        "day": "9 Nov",
+        "rating": 2,
+        "title": "Do a physical jigsaw puzzle together"
+      },
+      "entries": [
+        {
+          "actual": "",
+          "cabs": "",
+          "day": "9 Nov",
+          "diff": "",
+          "est": "₹800",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "Meh",
+          "over": false,
+          "photo": "",
+          "place": "",
+          "rating": 2,
+          "slip_key": "do a physical jigsaw puzzle together",
+          "stamp": "",
+          "tags": [
+            "games",
+            "cozy",
+            "chill"
+          ],
+          "tilt": -2,
+          "title": "Do a physical jigsaw puzzle together",
+          "visit": 1
+        }
+      ],
+      "me_name": "Rohit",
+      "month": 11,
+      "month_letters": [
+        "N",
+        "o",
+        "v",
+        "e",
+        "m",
+        "b",
+        "e",
+        "r"
+      ],
+      "month_name": "November",
+      "next": {
+        "href": "/joy/year/2025/12",
+        "label": "December 2025"
+      },
+      "nights": [],
+      "others": [],
+      "prev": {
+        "href": "/joy/year/2025/5",
+        "label": "May 2025"
+      },
+      "spent": "",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/11",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "4.0",
+      "best": {
+        "day": "20 Dec",
+        "rating": 4,
+        "title": "Cook a dish from each other's childhood"
+      },
+      "entries": [
+        {
+          "actual": "",
+          "cabs": "",
+          "day": "20 Dec",
+          "diff": "",
+          "est": "₹600",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "",
+          "rating": 4,
+          "slip_key": "cook a dish from each other's childhood",
+          "stamp": "",
+          "tags": [
+            "foodie",
+            "cozy",
+            "romantic"
+          ],
+          "tilt": -2,
+          "title": "Cook a dish from each other's childhood",
+          "visit": 1
+        }
+      ],
+      "me_name": "Rohit",
+      "month": 12,
+      "month_letters": [
+        "D",
+        "e",
+        "c",
+        "e",
+        "m",
+        "b",
+        "e",
+        "r"
+      ],
+      "month_name": "December",
+      "next": null,
+      "nights": [],
+      "others": [],
+      "prev": {
+        "href": "/joy/year/2025/11",
+        "label": "November 2025"
+      },
+      "spent": "",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/12",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "3.9",
+      "best": {
+        "date_id": 4,
+        "more": 1,
+        "note": "Also lovely",
+        "photo": "",
+        "rating": 5,
+        "title": "Cook together",
+        "when": "30 Mar"
+      },
+      "best_kind": "",
+      "budget_note": "₹6,000 a month",
+      "busiest": "March",
+      "busiest_n": 6,
+      "cabs": "₹350 in cabs",
+      "dates": 12,
+      "jar_slips": [
+        {
+          "kind": "home",
+          "rot": -14,
+          "x": 52,
+          "y": 246
+        },
+        {
+          "kind": "home",
+          "rot": 6,
+          "x": 96,
+          "y": 252
+        },
+        {
+          "kind": "local",
+          "rot": -8,
+          "x": 140,
+          "y": 240
+        },
+        {
+          "kind": "local",
+          "rot": 3,
+          "x": 62,
+          "y": 262
+        },
+        {
+          "kind": "home",
+          "rot": 12,
+          "x": 150,
+          "y": 258
+        },
+        {
+          "kind": "local",
+          "rot": 20,
+          "x": 78,
+          "y": 224
+        },
+        {
+          "kind": "home",
+          "rot": -26,
+          "x": 124,
+          "y": 218
+        },
+        {
+          "kind": "local",
+          "rot": 9,
+          "x": 50,
+          "y": 206
+        },
+        {
+          "kind": "home",
+          "rot": -4,
+          "x": 156,
+          "y": 210
+        },
+        {
+          "kind": "home",
+          "rot": -12,
+          "x": 100,
+          "y": 196
+        },
+        {
+          "kind": "home",
+          "rot": 17,
+          "x": 136,
+          "y": 186
+        },
+        {
+          "kind": "home",
+          "rot": -20,
+          "x": 66,
+          "y": 182
+        }
+      ],
+      "keepsakes": [
+        {
+          "day": "14 Feb",
+          "href": "/joy/year/2025/2",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 0,
+          "slip_key": "play pokémon emerald together",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "title": "Play Pokémon Emerald together",
+          "visit": 1
+        },
+        {
+          "day": "2 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 5,
+          "slip_key": "play pokémon emerald together",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "title": "Play Pokémon Emerald together",
+          "visit": 2
+        },
+        {
+          "day": "4 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "local",
+          "kind_label": "Around town",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "tags": [],
+          "title": "Blue Tokai",
+          "visit": 1
+        },
+        {
+          "day": "6 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "local",
+          "kind_label": "Around town",
+          "place": "Bandra",
+          "rating": 0,
+          "slip_key": "sunday chai",
+          "tags": [],
+          "title": "Sunday Chai",
+          "visit": 1
+        },
+        {
+          "day": "16 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 3,
+          "slip_key": "hindi rap listening session (watch {b} react)",
+          "tags": [],
+          "title": "Hindi rap listening session (watch Neha react)",
+          "visit": 1
+        },
+        {
+          "day": "18 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "local",
+          "kind_label": "Around town",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "tags": [],
+          "title": "Blue Tokai",
+          "visit": 2
+        },
+        {
+          "day": "30 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 5,
+          "slip_key": "cook together",
+          "tags": [
+            "foodie",
+            "cozy",
+            "romantic"
+          ],
+          "title": "Cook together",
+          "visit": 1
+        },
+        {
+          "day": "3 Apr",
+          "href": "/joy/year/2025/4",
+          "kind": "local",
+          "kind_label": "Around town",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "tags": [],
+          "title": "Blue Tokai",
+          "visit": 3
+        },
+        {
+          "day": "6 Apr",
+          "href": "/joy/year/2025/4",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 4,
+          "slip_key": "play pokémon emerald together",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "title": "Play Pokémon Emerald together",
+          "visit": 3
+        },
+        {
+          "day": "20 May",
+          "href": "/joy/year/2025/5",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 4,
+          "slip_key": "draw / sketch together",
+          "tags": [
+            "creative",
+            "cozy",
+            "chill"
+          ],
+          "title": "Draw / sketch together",
+          "visit": 1
+        },
+        {
+          "day": "9 Nov",
+          "href": "/joy/year/2025/11",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 2,
+          "slip_key": "do a physical jigsaw puzzle together",
+          "tags": [
+            "games",
+            "cozy",
+            "chill"
+          ],
+          "title": "Do a physical jigsaw puzzle together",
+          "visit": 1
+        },
+        {
+          "day": "20 Dec",
+          "href": "/joy/year/2025/12",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 4,
+          "slip_key": "cook a dish from each other's childhood",
+          "tags": [
+            "foodie",
+            "cozy",
+            "romantic"
+          ],
+          "title": "Cook a dish from each other's childhood",
+          "visit": 1
+        }
+      ],
+      "kinds": [
+        {
+          "key": "home",
+          "label": "At home, together",
+          "n": 8,
+          "pct": 66
+        },
+        {
+          "key": "local",
+          "label": "Around town",
+          "n": 4,
+          "pct": 33
+        }
+      ],
+      "me_name": "Rohit",
+      "money": {
+        "diff": "right on what we guessed",
+        "n": 8,
+        "over": false,
+        "spent": "₹3,600"
+      },
+      "month_blots": [
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "January: nothing logged"
+        },
+        {
+          "letter": "F",
+          "over": false,
+          "r": "0.0",
+          "text": "February: nothing logged"
+        },
+        {
+          "letter": "M",
+          "over": false,
+          "r": "6.8",
+          "text": "March: ₹3,420 of ₹4,500"
+        },
+        {
+          "letter": "A",
+          "over": false,
+          "r": "9.0",
+          "text": "April: ₹1,200 of ₹1,200"
+        },
+        {
+          "letter": "M",
+          "over": false,
+          "r": "0.0",
+          "text": "May: nothing logged"
+        },
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "June: nothing logged"
+        },
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "July: nothing logged"
+        },
+        {
+          "letter": "A",
+          "over": false,
+          "r": "0.0",
+          "text": "August: nothing logged"
+        },
+        {
+          "letter": "S",
+          "over": false,
+          "r": "3.0",
+          "text": "September: ₹900 of ₹6,000"
+        },
+        {
+          "letter": "O",
+          "over": false,
+          "r": "0.0",
+          "text": "October: nothing logged"
+        },
+        {
+          "letter": "N",
+          "over": false,
+          "r": "0.0",
+          "text": "November: nothing logged"
+        },
+        {
+          "letter": "D",
+          "over": false,
+          "r": "0.0",
+          "text": "December: nothing logged"
+        }
+      ],
+      "months": [
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "January",
+          "pct": 0
+        },
+        {
+          "letter": "F",
+          "n": 1,
+          "name": "February",
+          "pct": 16
+        },
+        {
+          "letter": "M",
+          "n": 6,
+          "name": "March",
+          "pct": 100
+        },
+        {
+          "letter": "A",
+          "n": 2,
+          "name": "April",
+          "pct": 33
+        },
+        {
+          "letter": "M",
+          "n": 1,
+          "name": "May",
+          "pct": 16
+        },
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "June",
+          "pct": 0
+        },
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "July",
+          "pct": 0
+        },
+        {
+          "letter": "A",
+          "n": 0,
+          "name": "August",
+          "pct": 0
+        },
+        {
+          "letter": "S",
+          "n": 0,
+          "name": "September",
+          "pct": 0
+        },
+        {
+          "letter": "O",
+          "n": 0,
+          "name": "October",
+          "pct": 0
+        },
+        {
+          "letter": "N",
+          "n": 1,
+          "name": "November",
+          "pct": 16
+        },
+        {
+          "letter": "D",
+          "n": 1,
+          "name": "December",
+          "pct": 16
+        }
+      ],
+      "photos": [
+        {
+          "date_id": 2,
+          "id": 2,
+          "title": "Play Pokémon Emerald together",
+          "url": "/api/public/dates/history/2/photos/2?<signed>",
+          "when": "2 Mar"
+        },
+        {
+          "date_id": 2,
+          "id": 1,
+          "title": "Play Pokémon Emerald together",
+          "url": "/api/public/dates/history/2/photos/1?<signed>",
+          "when": "2 Mar"
+        }
+      ],
+      "rated": 7,
+      "rating_line": "2 5-star, 3 4-star",
+      "rating_rows": [
+        {
+          "n": 2,
+          "stars": 5
+        },
+        {
+          "n": 3,
+          "stars": 4
+        }
+      ],
+      "sealed_mine": 1,
+      "share": {
+        "avg_rating": "3.9",
+        "best_more": 1,
+        "best_rating": 5,
+        "best_title": "Cook together",
+        "dates": 12,
+        "months": [
+          0,
+          1,
+          6,
+          2,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "photos": [
+          {
+            "id": 2,
+            "url": "/api/public/dates/history/2/photos/2?<signed>"
+          },
+          {
+            "id": 1,
+            "url": "/api/public/dates/history/2/photos/1?<signed>"
+          }
+        ],
+        "places": [
+          "us's Kitchen in",
+          "Goregaon East",
+          "us's Kitchen in"
+        ],
+        "spent": "₹3,600",
+        "streak_weeks": 6,
+        "tags": [
+          "foodie",
+          "cozy",
+          "music"
+        ],
+        "vibe": "At home, together",
+        "vibe_key": "home",
+        "year": 2025
+      },
+      "streak_weeks": 6,
+      "tags": [
+        "foodie",
+        "cozy",
+        "music"
+      ],
+      "tally": [
+        5,
+        5,
+        2
+      ],
+      "tally_more": 0,
+      "to_come": 0,
+      "vibe_label": "At home, together",
+      "year": 2025,
+      "year_total": "₹5,520",
+      "years": [
+        2025
+      ]
+    },
+    "path": "/api/dates/year/2025",
+    "status": 200
+  },
+  {
+    "as": "neha",
+    "body": {
+      "avg_rating": "3.9",
+      "best": {
+        "date_id": 4,
+        "more": 1,
+        "note": "Also lovely",
+        "photo": "",
+        "rating": 5,
+        "title": "Cook together",
+        "when": "30 Mar"
+      },
+      "best_kind": "",
+      "budget_note": "₹6,000 a month",
+      "busiest": "March",
+      "busiest_n": 6,
+      "cabs": "₹350 in cabs",
+      "dates": 12,
+      "jar_slips": [
+        {
+          "kind": "home",
+          "rot": -14,
+          "x": 52,
+          "y": 246
+        },
+        {
+          "kind": "home",
+          "rot": 6,
+          "x": 96,
+          "y": 252
+        },
+        {
+          "kind": "local",
+          "rot": -8,
+          "x": 140,
+          "y": 240
+        },
+        {
+          "kind": "local",
+          "rot": 3,
+          "x": 62,
+          "y": 262
+        },
+        {
+          "kind": "home",
+          "rot": 12,
+          "x": 150,
+          "y": 258
+        },
+        {
+          "kind": "local",
+          "rot": 20,
+          "x": 78,
+          "y": 224
+        },
+        {
+          "kind": "home",
+          "rot": -26,
+          "x": 124,
+          "y": 218
+        },
+        {
+          "kind": "local",
+          "rot": 9,
+          "x": 50,
+          "y": 206
+        },
+        {
+          "kind": "home",
+          "rot": -4,
+          "x": 156,
+          "y": 210
+        },
+        {
+          "kind": "home",
+          "rot": -12,
+          "x": 100,
+          "y": 196
+        },
+        {
+          "kind": "home",
+          "rot": 17,
+          "x": 136,
+          "y": 186
+        },
+        {
+          "kind": "home",
+          "rot": -20,
+          "x": 66,
+          "y": 182
+        }
+      ],
+      "keepsakes": [
+        {
+          "day": "14 Feb",
+          "href": "/joy/year/2025/2",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 0,
+          "slip_key": "play pokémon emerald together",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "title": "Play Pokémon Emerald together",
+          "visit": 1
+        },
+        {
+          "day": "2 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 5,
+          "slip_key": "play pokémon emerald together",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "title": "Play Pokémon Emerald together",
+          "visit": 2
+        },
+        {
+          "day": "4 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "local",
+          "kind_label": "Around town",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "tags": [],
+          "title": "Blue Tokai",
+          "visit": 1
+        },
+        {
+          "day": "6 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "local",
+          "kind_label": "Around town",
+          "place": "Bandra",
+          "rating": 0,
+          "slip_key": "sunday chai",
+          "tags": [],
+          "title": "Sunday Chai",
+          "visit": 1
+        },
+        {
+          "day": "16 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 3,
+          "slip_key": "hindi rap listening session (watch {b} react)",
+          "tags": [],
+          "title": "Hindi rap listening session (watch Neha react)",
+          "visit": 1
+        },
+        {
+          "day": "18 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "local",
+          "kind_label": "Around town",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "tags": [],
+          "title": "Blue Tokai",
+          "visit": 2
+        },
+        {
+          "day": "30 Mar",
+          "href": "/joy/year/2025/3",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 5,
+          "slip_key": "cook together",
+          "tags": [
+            "foodie",
+            "cozy",
+            "romantic"
+          ],
+          "title": "Cook together",
+          "visit": 1
+        },
+        {
+          "day": "3 Apr",
+          "href": "/joy/year/2025/4",
+          "kind": "local",
+          "kind_label": "Around town",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "tags": [],
+          "title": "Blue Tokai",
+          "visit": 3
+        },
+        {
+          "day": "6 Apr",
+          "href": "/joy/year/2025/4",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 4,
+          "slip_key": "play pokémon emerald together",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "title": "Play Pokémon Emerald together",
+          "visit": 3
+        },
+        {
+          "day": "20 May",
+          "href": "/joy/year/2025/5",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 4,
+          "slip_key": "draw / sketch together",
+          "tags": [
+            "creative",
+            "cozy",
+            "chill"
+          ],
+          "title": "Draw / sketch together",
+          "visit": 1
+        },
+        {
+          "day": "9 Nov",
+          "href": "/joy/year/2025/11",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 2,
+          "slip_key": "do a physical jigsaw puzzle together",
+          "tags": [
+            "games",
+            "cozy",
+            "chill"
+          ],
+          "title": "Do a physical jigsaw puzzle together",
+          "visit": 1
+        },
+        {
+          "day": "20 Dec",
+          "href": "/joy/year/2025/12",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "place": "",
+          "rating": 4,
+          "slip_key": "cook a dish from each other's childhood",
+          "tags": [
+            "foodie",
+            "cozy",
+            "romantic"
+          ],
+          "title": "Cook a dish from each other's childhood",
+          "visit": 1
+        }
+      ],
+      "kinds": [
+        {
+          "key": "home",
+          "label": "At home, together",
+          "n": 8,
+          "pct": 66
+        },
+        {
+          "key": "local",
+          "label": "Around town",
+          "n": 4,
+          "pct": 33
+        }
+      ],
+      "me_name": "Neha",
+      "money": {
+        "diff": "right on what we guessed",
+        "n": 8,
+        "over": false,
+        "spent": "₹3,600"
+      },
+      "month_blots": [
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "January: nothing logged"
+        },
+        {
+          "letter": "F",
+          "over": false,
+          "r": "0.0",
+          "text": "February: nothing logged"
+        },
+        {
+          "letter": "M",
+          "over": false,
+          "r": "6.8",
+          "text": "March: ₹3,420 of ₹4,500"
+        },
+        {
+          "letter": "A",
+          "over": false,
+          "r": "9.0",
+          "text": "April: ₹1,200 of ₹1,200"
+        },
+        {
+          "letter": "M",
+          "over": false,
+          "r": "0.0",
+          "text": "May: nothing logged"
+        },
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "June: nothing logged"
+        },
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "July: nothing logged"
+        },
+        {
+          "letter": "A",
+          "over": false,
+          "r": "0.0",
+          "text": "August: nothing logged"
+        },
+        {
+          "letter": "S",
+          "over": false,
+          "r": "3.0",
+          "text": "September: ₹900 of ₹6,000"
+        },
+        {
+          "letter": "O",
+          "over": false,
+          "r": "0.0",
+          "text": "October: nothing logged"
+        },
+        {
+          "letter": "N",
+          "over": false,
+          "r": "0.0",
+          "text": "November: nothing logged"
+        },
+        {
+          "letter": "D",
+          "over": false,
+          "r": "0.0",
+          "text": "December: nothing logged"
+        }
+      ],
+      "months": [
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "January",
+          "pct": 0
+        },
+        {
+          "letter": "F",
+          "n": 1,
+          "name": "February",
+          "pct": 16
+        },
+        {
+          "letter": "M",
+          "n": 6,
+          "name": "March",
+          "pct": 100
+        },
+        {
+          "letter": "A",
+          "n": 2,
+          "name": "April",
+          "pct": 33
+        },
+        {
+          "letter": "M",
+          "n": 1,
+          "name": "May",
+          "pct": 16
+        },
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "June",
+          "pct": 0
+        },
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "July",
+          "pct": 0
+        },
+        {
+          "letter": "A",
+          "n": 0,
+          "name": "August",
+          "pct": 0
+        },
+        {
+          "letter": "S",
+          "n": 0,
+          "name": "September",
+          "pct": 0
+        },
+        {
+          "letter": "O",
+          "n": 0,
+          "name": "October",
+          "pct": 0
+        },
+        {
+          "letter": "N",
+          "n": 1,
+          "name": "November",
+          "pct": 16
+        },
+        {
+          "letter": "D",
+          "n": 1,
+          "name": "December",
+          "pct": 16
+        }
+      ],
+      "photos": [
+        {
+          "date_id": 2,
+          "id": 2,
+          "title": "Play Pokémon Emerald together",
+          "url": "/api/public/dates/history/2/photos/2?<signed>",
+          "when": "2 Mar"
+        },
+        {
+          "date_id": 2,
+          "id": 1,
+          "title": "Play Pokémon Emerald together",
+          "url": "/api/public/dates/history/2/photos/1?<signed>",
+          "when": "2 Mar"
+        }
+      ],
+      "rated": 7,
+      "rating_line": "2 5-star, 3 4-star",
+      "rating_rows": [
+        {
+          "n": 2,
+          "stars": 5
+        },
+        {
+          "n": 3,
+          "stars": 4
+        }
+      ],
+      "sealed_mine": 0,
+      "share": {
+        "avg_rating": "3.9",
+        "best_more": 1,
+        "best_rating": 5,
+        "best_title": "Cook together",
+        "dates": 12,
+        "months": [
+          0,
+          1,
+          6,
+          2,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1
+        ],
+        "photos": [
+          {
+            "id": 2,
+            "url": "/api/public/dates/history/2/photos/2?<signed>"
+          },
+          {
+            "id": 1,
+            "url": "/api/public/dates/history/2/photos/1?<signed>"
+          }
+        ],
+        "places": [
+          "us's Kitchen in",
+          "Goregaon East",
+          "us's Kitchen in"
+        ],
+        "spent": "₹3,600",
+        "streak_weeks": 6,
+        "tags": [
+          "foodie",
+          "cozy",
+          "music"
+        ],
+        "vibe": "At home, together",
+        "vibe_key": "home",
+        "year": 2025
+      },
+      "streak_weeks": 6,
+      "tags": [
+        "foodie",
+        "cozy",
+        "music"
+      ],
+      "tally": [
+        5,
+        5,
+        2
+      ],
+      "tally_more": 0,
+      "to_come": 0,
+      "vibe_label": "At home, together",
+      "year": 2025,
+      "year_total": "₹5,520",
+      "years": [
+        2025
+      ]
+    },
+    "path": "/api/dates/year/2025",
+    "status": 200
+  },
+  {
+    "as": "neha",
+    "body": {
+      "avg_rating": "4.3",
+      "best": {
+        "day": "2 Mar",
+        "rating": 5,
+        "title": "Play Pokémon Emerald together"
+      },
+      "entries": [
+        {
+          "actual": "₹900",
+          "cabs": "₹350",
+          "day": "2 Mar",
+          "diff": "₹400 over our guess",
+          "est": "₹500",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "Lovely evening",
+          "over": true,
+          "photo": "/api/public/dates/history/2/photos/2?<signed>",
+          "place": "Rohit's Kitchen in Bandra",
+          "rating": 5,
+          "slip_key": "play pokémon emerald together",
+          "stamp": "",
+          "tags": [
+            "foodie",
+            "music"
+          ],
+          "tilt": -2,
+          "title": "Play Pokémon Emerald together",
+          "visit": 2
+        },
+        {
+          "actual": "₹450",
+          "cabs": "",
+          "day": "4 Mar",
+          "diff": "right on our guess",
+          "est": "₹450",
+          "kind": "local",
+          "kind_label": "Around town",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "stamp": "",
+          "tags": [],
+          "tilt": 1,
+          "title": "Blue Tokai",
+          "visit": 1
+        },
+        {
+          "actual": "₹200",
+          "cabs": "",
+          "day": "6 Mar",
+          "diff": "right on our guess",
+          "est": "₹200",
+          "kind": "local",
+          "kind_label": "Around town",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "Bandra",
+          "rating": 0,
+          "slip_key": "sunday chai",
+          "stamp": "",
+          "tags": [],
+          "tilt": -1,
+          "title": "Sunday Chai",
+          "visit": 1
+        },
+        {
+          "actual": "₹600",
+          "cabs": "",
+          "day": "16 Mar",
+          "diff": "₹400 under our guess",
+          "est": "₹1,000",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "Fine",
+          "over": false,
+          "photo": "",
+          "place": "",
+          "rating": 3,
+          "slip_key": "hindi rap listening session (watch {b} react)",
+          "stamp": "",
+          "tags": [],
+          "tilt": 2,
+          "title": "Hindi rap listening session (watch Neha react)",
+          "visit": 1
+        },
+        {
+          "actual": "₹300",
+          "cabs": "",
+          "day": "18 Mar",
+          "diff": "right on our guess",
+          "est": "₹300",
+          "kind": "local",
+          "kind_label": "Around town",
+          "note": "",
+          "over": false,
+          "photo": "",
+          "place": "Goregaon East",
+          "rating": 0,
+          "slip_key": "blue tokai",
+          "stamp": "",
+          "tags": [],
+          "tilt": 0,
+          "title": "Blue Tokai",
+          "visit": 2
+        },
+        {
+          "actual": "₹300",
+          "cabs": "",
+          "day": "30 Mar",
+          "diff": "right on our guess",
+          "est": "₹300",
+          "kind": "home",
+          "kind_label": "At home, together",
+          "note": "Also lovely",
+          "over": false,
+          "photo": "",
+          "place": "",
+          "rating": 5,
+          "slip_key": "cook together",
+          "stamp": "",
+          "tags": [
+            "foodie",
+            "cozy",
+            "romantic"
+          ],
+          "tilt": -2,
+          "title": "Cook together",
+          "visit": 1
+        }
+      ],
+      "me_name": "Neha",
+      "month": 3,
+      "month_letters": [
+        "M",
+        "a",
+        "r",
+        "c",
+        "h"
+      ],
+      "month_name": "March",
+      "next": {
+        "href": "/joy/year/2025/4",
+        "label": "April 2025"
+      },
+      "nights": [
+        {
+          "count": 1,
+          "href": "/joy/regulars/2",
+          "nights": [
+            {
+              "day": "6 Mar",
+              "photo": "/api/public/dates/nights/3/photo?<signed>"
+            }
+          ],
+          "title": "Sunday Chai",
+          "total": "₹200"
+        },
+        {
+          "count": 1,
+          "href": "/joy/regulars/1",
+          "nights": [
+            {
+              "day": "18 Mar",
+              "photo": "/api/public/dates/nights/2/photo?<signed>"
+            }
+          ],
+          "title": "Blue Tokai",
+          "total": "₹300"
+        }
+      ],
+      "others": [
+        {
+          "amount": "₹120",
+          "day": "10 Mar",
+          "note": "Ice cream"
+        },
+        {
+          "amount": "₹50",
+          "day": "11 Mar",
+          "note": "Chai"
+        }
+      ],
+      "prev": {
+        "href": "/joy/year/2025/2",
+        "label": "February 2025"
+      },
+      "spent": "₹3,420",
+      "to_come": 0,
+      "year": 2025,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "5"
+      ]
+    },
+    "path": "/api/dates/year/2025/3",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "best_kind": "",
+      "budget_note": "₹6,000 a month",
+      "busiest": "",
+      "busiest_n": 0,
+      "cabs": "",
+      "dates": 0,
+      "jar_slips": [],
+      "keepsakes": [],
+      "kinds": [],
+      "me_name": "Rohit",
+      "money": null,
+      "month_blots": [
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "January: nothing logged"
+        },
+        {
+          "letter": "F",
+          "over": false,
+          "r": "0.0",
+          "text": "February: nothing logged"
+        },
+        {
+          "letter": "M",
+          "over": false,
+          "r": "0.0",
+          "text": "March: nothing logged"
+        },
+        {
+          "letter": "A",
+          "over": false,
+          "r": "0.0",
+          "text": "April: nothing logged"
+        },
+        {
+          "letter": "M",
+          "over": false,
+          "r": "0.0",
+          "text": "May: nothing logged"
+        },
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "June: nothing logged"
+        },
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "July: nothing logged"
+        },
+        {
+          "letter": "A",
+          "over": false,
+          "r": "0.0",
+          "text": "August: nothing logged"
+        },
+        {
+          "letter": "S",
+          "over": false,
+          "r": "0.0",
+          "text": "September: nothing logged"
+        },
+        {
+          "letter": "O",
+          "over": false,
+          "r": "0.0",
+          "text": "October: nothing logged"
+        },
+        {
+          "letter": "N",
+          "over": false,
+          "r": "0.0",
+          "text": "November: nothing logged"
+        },
+        {
+          "letter": "D",
+          "over": false,
+          "r": "0.0",
+          "text": "December: nothing logged"
+        }
+      ],
+      "months": [
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "January",
+          "pct": 0
+        },
+        {
+          "letter": "F",
+          "n": 0,
+          "name": "February",
+          "pct": 0
+        },
+        {
+          "letter": "M",
+          "n": 0,
+          "name": "March",
+          "pct": 0
+        },
+        {
+          "letter": "A",
+          "n": 0,
+          "name": "April",
+          "pct": 0
+        },
+        {
+          "letter": "M",
+          "n": 0,
+          "name": "May",
+          "pct": 0
+        },
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "June",
+          "pct": 0
+        },
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "July",
+          "pct": 0
+        },
+        {
+          "letter": "A",
+          "n": 0,
+          "name": "August",
+          "pct": 0
+        },
+        {
+          "letter": "S",
+          "n": 0,
+          "name": "September",
+          "pct": 0
+        },
+        {
+          "letter": "O",
+          "n": 0,
+          "name": "October",
+          "pct": 0
+        },
+        {
+          "letter": "N",
+          "n": 0,
+          "name": "November",
+          "pct": 0
+        },
+        {
+          "letter": "D",
+          "n": 0,
+          "name": "December",
+          "pct": 0
+        }
+      ],
+      "photos": [],
+      "rated": 0,
+      "rating_line": "",
+      "rating_rows": [],
+      "sealed_mine": 0,
+      "share": {
+        "avg_rating": "",
+        "best_more": 0,
+        "best_rating": 0,
+        "best_title": "",
+        "dates": 0,
+        "months": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "photos": [],
+        "places": [],
+        "spent": "",
+        "streak_weeks": 0,
+        "tags": [],
+        "vibe": "",
+        "vibe_key": "",
+        "year": 2024
+      },
+      "streak_weeks": 0,
+      "tags": [],
+      "tally": [],
+      "tally_more": 0,
+      "to_come": 0,
+      "vibe_label": "",
+      "year": 2024,
+      "year_total": "",
+      "years": [
+        2025
+      ]
+    },
+    "path": "/api/dates/year/2024",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "entries": [],
+      "me_name": "Rohit",
+      "month": 6,
+      "month_letters": [
+        "J",
+        "u",
+        "n",
+        "e"
+      ],
+      "month_name": "June",
+      "next": {
+        "href": "/joy/year/2025/2",
+        "label": "February 2025"
+      },
+      "nights": [],
+      "others": [],
+      "prev": null,
+      "spent": "",
+      "to_come": 0,
+      "year": 2024,
+      "year_letters": [
+        "2",
+        "0",
+        "2",
+        "4"
+      ]
+    },
+    "path": "/api/dates/year/2024/6",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "avg_rating": "",
+      "best": null,
+      "best_kind": "",
+      "budget_note": "₹6,000 a month",
+      "busiest": "",
+      "busiest_n": 0,
+      "cabs": "",
+      "dates": 0,
+      "jar_slips": [],
+      "keepsakes": [],
+      "kinds": [],
+      "me_name": "Rohit",
+      "money": null,
+      "month_blots": [
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "January: nothing logged"
+        },
+        {
+          "letter": "F",
+          "over": false,
+          "r": "0.0",
+          "text": "February: nothing logged"
+        },
+        {
+          "letter": "M",
+          "over": false,
+          "r": "0.0",
+          "text": "March: nothing logged"
+        },
+        {
+          "letter": "A",
+          "over": false,
+          "r": "0.0",
+          "text": "April: nothing logged"
+        },
+        {
+          "letter": "M",
+          "over": false,
+          "r": "0.0",
+          "text": "May: nothing logged"
+        },
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "June: nothing logged"
+        },
+        {
+          "letter": "J",
+          "over": false,
+          "r": "0.0",
+          "text": "July: nothing logged"
+        },
+        {
+          "letter": "A",
+          "over": false,
+          "r": "0.0",
+          "text": "August: nothing logged"
+        },
+        {
+          "letter": "S",
+          "over": false,
+          "r": "0.0",
+          "text": "September: nothing logged"
+        },
+        {
+          "letter": "O",
+          "over": false,
+          "r": "0.0",
+          "text": "October: nothing logged"
+        },
+        {
+          "letter": "N",
+          "over": false,
+          "r": "0.0",
+          "text": "November: nothing logged"
+        },
+        {
+          "letter": "D",
+          "over": false,
+          "r": "0.0",
+          "text": "December: nothing logged"
+        }
+      ],
+      "months": [
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "January",
+          "pct": 0
+        },
+        {
+          "letter": "F",
+          "n": 0,
+          "name": "February",
+          "pct": 0
+        },
+        {
+          "letter": "M",
+          "n": 0,
+          "name": "March",
+          "pct": 0
+        },
+        {
+          "letter": "A",
+          "n": 0,
+          "name": "April",
+          "pct": 0
+        },
+        {
+          "letter": "M",
+          "n": 0,
+          "name": "May",
+          "pct": 0
+        },
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "June",
+          "pct": 0
+        },
+        {
+          "letter": "J",
+          "n": 0,
+          "name": "July",
+          "pct": 0
+        },
+        {
+          "letter": "A",
+          "n": 0,
+          "name": "August",
+          "pct": 0
+        },
+        {
+          "letter": "S",
+          "n": 0,
+          "name": "September",
+          "pct": 0
+        },
+        {
+          "letter": "O",
+          "n": 0,
+          "name": "October",
+          "pct": 0
+        },
+        {
+          "letter": "N",
+          "n": 0,
+          "name": "November",
+          "pct": 0
+        },
+        {
+          "letter": "D",
+          "n": 0,
+          "name": "December",
+          "pct": 0
+        }
+      ],
+      "photos": [],
+      "rated": 0,
+      "rating_line": "",
+      "rating_rows": [],
+      "sealed_mine": 0,
+      "share": {
+        "avg_rating": "",
+        "best_more": 0,
+        "best_rating": 0,
+        "best_title": "",
+        "dates": 0,
+        "months": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "photos": [],
+        "places": [],
+        "spent": "",
+        "streak_weeks": 0,
+        "tags": [],
+        "vibe": "",
+        "vibe_key": "",
+        "year": 2099
+      },
+      "streak_weeks": 0,
+      "tags": [],
+      "tally": [],
+      "tally_more": 0,
+      "to_come": 1,
+      "vibe_label": "",
+      "year": 2099,
+      "year_total": "",
+      "years": [
+        2025
+      ]
+    },
+    "path": "/api/dates/year/2099",
+    "status": 200
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "code": "not_found",
+      "field": null,
+      "message": "No such year"
+    },
+    "path": "/api/dates/year/1999",
+    "status": 404
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "code": "not_found",
+      "field": null,
+      "message": "No such month"
+    },
+    "path": "/api/dates/year/2025/13",
+    "status": 404
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "code": "not_found",
+      "field": null,
+      "message": "No such month"
+    },
+    "path": "/api/dates/year/2025/abc",
+    "status": 404
+  },
+  {
+    "as": "rohit",
+    "body": {
+      "code": "not_found",
+      "field": null,
+      "message": "No such month"
+    },
+    "path": "/api/dates/year/2025/0",
+    "status": 404
+  }
+]

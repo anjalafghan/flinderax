@@ -323,252 +323,341 @@ fn tenure_of(it: &ScenarioItem) -> i64 {
     it.tenure_months.unwrap_or(12).clamp(1, MAX_TENURE)
 }
 
-/// Runs the simulation with the plan's own commitments plus `items`.
-fn simulate(inp: &ProjectionInput, items: &[ScenarioItem]) -> (Series, HashMap<usize, i64>) {
-    let plan = &inp.plan;
-    let today = plan.today;
-    let months = inp.months.clamp(1, MAX_MONTHS);
-    let end = plus_months(today, months);
-    let summary = compute(plan);
-    let budget = &summary.budget;
-    let payday1 = summary.until;
-    let floor = plan.settings.savings_floor.unwrap_or(0);
+struct Flow {
+    date: Date,
+    from: String,
+    to: Option<String>,
+    amount: i64,
+}
 
-    let spending_ids: Vec<String> =
-        plan.accounts.iter().filter(|a| !a.locked && a.role == Role::Spending).map(|a| a.id.clone()).collect();
-    let reserve_ids: Vec<String> =
-        plan.accounts.iter().filter(|a| !a.locked && a.role == Role::Reserve).map(|a| a.id.clone()).collect();
-    let spending_ids = if spending_ids.is_empty() {
-        plan.accounts.iter().filter(|a| !a.locked && a.role == Role::Other).map(|a| a.id.clone()).collect()
-    } else {
-        spending_ids
-    };
-    let have_reserve = !reserve_ids.is_empty();
-    let first_spend = spending_ids.first().cloned().unwrap_or_default();
-    let first_reserve = reserve_ids.first().cloned();
-
-    let mut sim = Sim {
-        bal: plan.accounts.iter().map(|a| (a.id.clone(), a.balance)).collect(),
-        deps: inp
-            .deposits
-            .iter()
-            .map(|d| Dep {
-                id: d.account_id.clone(),
-                is_rd: d.is_rd,
-                rate_bps: d.rate_bps,
-                maturity: d.maturity,
-                renewal: d.renewal,
-                payout_to: d.payout_to.clone(),
-                principal: plan.accounts.iter().find(|a| a.id == d.account_id).map_or(0, |a| a.balance),
-            })
-            .collect(),
-        invested: 0,
-        spending_ids,
-        reserve_ids,
-        first_spend,
-        first_reserve,
-    };
-
-    // Scenario items become accounts + dated flows.
-    struct Flow {
-        date: Date,
-        from: String,
-        to: Option<String>,
-        amount: i64,
+impl Sim {
+    fn new(inp: &ProjectionInput) -> Self {
+        let accounts = &inp.plan.accounts;
+        let ids = |role: Role| -> Vec<String> { accounts.iter().filter(|a| !a.locked && a.role == role).map(|a| a.id.clone()).collect() };
+        let mut spending_ids = ids(Role::Spending);
+        if spending_ids.is_empty() {
+            spending_ids = ids(Role::Other);
+        }
+        let reserve_ids = ids(Role::Reserve);
+        Sim {
+            bal: accounts.iter().map(|a| (a.id.clone(), a.balance)).collect(),
+            deps: inp
+                .deposits
+                .iter()
+                .map(|d| Dep {
+                    id: d.account_id.clone(),
+                    is_rd: d.is_rd,
+                    rate_bps: d.rate_bps,
+                    maturity: d.maturity,
+                    renewal: d.renewal,
+                    payout_to: d.payout_to.clone(),
+                    principal: accounts.iter().find(|a| a.id == d.account_id).map_or(0, |a| a.balance),
+                })
+                .collect(),
+            invested: 0,
+            first_spend: spending_ids.first().cloned().unwrap_or_default(),
+            first_reserve: reserve_ids.first().cloned(),
+            spending_ids,
+            reserve_ids,
+        }
     }
-    let mut flows: Vec<Flow> = Vec::new();
-    let mut item_accounts: HashMap<String, i64> = HashMap::new(); // name -> peak balance, filled later
-    let mut item_ids: Vec<(usize, String)> = Vec::new();
-    for (n, it) in items.iter().enumerate() {
-        let from = it.funded_from.clone().unwrap_or_else(|| sim.first_spend.clone());
-        let payout = it.payout_to.clone().or_else(|| sim.first_reserve.clone()).or_else(|| Some(sim.first_spend.clone()));
-        match it.kind {
-            ItemKind::OneOff => flows.push(Flow { date: it.start.max(today), from, to: None, amount: it.amount_paise }),
-            ItemKind::Fd | ItemKind::Rd => {
-                let id = format!("__scenario_{n}");
-                let tenure = tenure_of(it);
-                sim.bal.insert(id.clone(), 0);
-                sim.deps.push(Dep {
-                    id: id.clone(),
-                    is_rd: it.kind == ItemKind::Rd,
-                    rate_bps: it.rate_bps.unwrap_or(0),
-                    maturity: Some(plus_months(it.start, tenure).max(today)),
-                    renewal: it.renewal.unwrap_or_default(),
-                    payout_to: payout,
-                    principal: 0,
-                });
-                if it.kind == ItemKind::Fd {
+
+    fn have_reserve(&self) -> bool {
+        !self.reserve_ids.is_empty()
+    }
+
+    /// Where bills and instalments are paid from: the reserve, else the spending account.
+    fn reserve_or_spend(&self) -> String {
+        self.first_reserve.clone().unwrap_or_else(|| self.first_spend.clone())
+    }
+
+    /// Money into a deposit account: it counts as principal.
+    fn deposit_into(&mut self, to: &str, amount: i64) {
+        self.add(to, amount);
+        if let Some(dep) = self.deps.iter_mut().find(|x| x.id == to) {
+            dep.principal += amount;
+        }
+    }
+
+    /// A hypothetical deposit becomes an account of its own; returns its id.
+    fn add_deposit_item(&mut self, n: usize, it: &ScenarioItem, today: Date) -> String {
+        let id = format!("__scenario_{n}");
+        let payout = it.payout_to.clone().or_else(|| self.first_reserve.clone()).or_else(|| Some(self.first_spend.clone()));
+        self.bal.insert(id.clone(), 0);
+        self.deps.push(Dep {
+            id: id.clone(),
+            is_rd: it.kind == ItemKind::Rd,
+            rate_bps: it.rate_bps.unwrap_or(0),
+            maturity: Some(plus_months(it.start, tenure_of(it)).max(today)),
+            renewal: it.renewal.unwrap_or_default(),
+            payout_to: payout,
+            principal: 0,
+        });
+        id
+    }
+
+    /// Scenario items become accounts + dated flows. Returns the flows and (item position, account id).
+    fn add_items(&mut self, items: &[ScenarioItem], today: Date) -> (Vec<Flow>, Vec<(usize, String)>) {
+        let (mut flows, mut ids) = (Vec::new(), Vec::new());
+        for (n, it) in items.iter().enumerate() {
+            let from = it.funded_from.clone().unwrap_or_else(|| self.first_spend.clone());
+            match it.kind {
+                ItemKind::OneOff => flows.push(Flow { date: it.start.max(today), from, to: None, amount: it.amount_paise }),
+                ItemKind::Fd => {
+                    let id = self.add_deposit_item(n, it, today);
                     flows.push(Flow { date: it.start.max(today), from, to: Some(id.clone()), amount: it.amount_paise });
-                } else {
-                    for k in 0..tenure {
+                    ids.push((n, id));
+                }
+                ItemKind::Rd => {
+                    let id = self.add_deposit_item(n, it, today);
+                    for k in 0..tenure_of(it) {
                         flows.push(Flow { date: plus_months(it.start, k).max(today), from: from.clone(), to: Some(id.clone()), amount: it.amount_paise });
                     }
+                    ids.push((n, id));
                 }
-                item_ids.push((n, id));
             }
+        }
+        (flows, ids)
+    }
+}
+
+/// One run of the day-by-day simulation, and what it has recorded so far.
+struct Run<'a> {
+    inp: &'a ProjectionInput,
+    sim: Sim,
+    flows: Vec<Flow>,
+    item_ids: Vec<(usize, String)>,
+    /// Highest balance each deposit account reached, by account id.
+    peaks: HashMap<String, i64>,
+    /// The monthly top-up to the reserve, and the spending allowance.
+    allocation: i64,
+    allowance: i64,
+    payday1: Date,
+    floor: i64,
+    /// Existing EMIs: the first instalment is already in the next card bill.
+    emi_day: u32,
+    first_bill: Date,
+    points: Vec<Point>,
+    stress: Vec<Stress>,
+    /// Lowest balances seen this month: a mid-month dip matters even if the month ends fine.
+    min_spend: i64,
+    min_reserve: i64,
+}
+
+impl<'a> Run<'a> {
+    fn new(inp: &'a ProjectionInput, items: &[ScenarioItem]) -> Self {
+        let plan = &inp.plan;
+        let summary = compute(plan);
+        let mut sim = Sim::new(inp);
+        let (flows, item_ids) = sim.add_items(items, plan.today);
+        let next_due = plan.cards.iter().find_map(|c| c.next_due_date);
+        let points = vec![sim.point("start".to_string())];
+        Run {
+            inp,
+            sim,
+            flows,
+            item_ids,
+            peaks: HashMap::new(),
+            allocation: summary.budget.allocation_paise,
+            allowance: summary.budget.spending_paise,
+            payday1: summary.until,
+            floor: plan.settings.savings_floor.unwrap_or(0),
+            emi_day: next_due.map_or(13, |d| u32::from(d.day())),
+            first_bill: next_due.unwrap_or(plan.today),
+            points,
+            stress: Vec::new(),
+            min_spend: i64::MAX,
+            min_reserve: i64::MAX,
         }
     }
 
-    // Existing EMIs: the first instalment is already in the next card bill.
-    let emi_day = plan.cards.iter().find_map(|c| c.next_due_date).map_or(13, |d| d.day());
-    let first_bill = plan.cards.iter().find_map(|c| c.next_due_date).unwrap_or(today);
-
-    let mut points = vec![sim.point("start".to_string())];
-    let mut stress: Vec<Stress> = Vec::new();
-    // lowest balances seen this month: a mid-month dip matters even if the month ends fine
-    let (mut min_spend, mut min_reserve) = (i64::MAX, i64::MAX);
-    let mut d = today;
-    while d <= end {
+    fn day(&mut self, d: Date) {
         let next = d + Duration::days(1);
-        let month_end = next.month() != d.month();
-
-        // salary
-        if d > today {
-            for inc in &plan.incomes {
-                if clamped(d.year(), d.month(), inc.day) == d {
-                    let to = inc.account_id.clone().unwrap_or_else(|| sim.first_spend.clone());
-                    sim.add(&to, inc.amount);
-                }
-            }
+        self.receive_salary(d);
+        self.pay_fixed(d, next);
+        self.top_up_reserve(d);
+        self.spend(d);
+        self.pay_card_bills(d);
+        self.pay_emis(d);
+        self.apply_flows(d);
+        self.mature_deposits(d);
+        self.min_spend = self.min_spend.min(self.sim.sum(&self.sim.spending_ids));
+        self.min_reserve = self.min_reserve.min(self.sim.sum(&self.sim.reserve_ids));
+        if next.month() != d.month() {
+            self.close_month(d);
         }
-        // fixed payments
-        for c in &plan.commitments {
-            if commitment_dates(c, d, next).is_empty() {
-                continue;
-            }
+    }
+
+    fn receive_salary(&mut self, d: Date) {
+        let plan = &self.inp.plan;
+        if d <= plan.today {
+            return;
+        }
+        for inc in plan.incomes.iter().filter(|inc| clamped(d.year(), d.month(), inc.day) == d) {
+            let to = inc.account_id.clone().unwrap_or_else(|| self.sim.first_spend.clone());
+            self.sim.add(&to, inc.amount);
+        }
+    }
+
+    /// Fixed payments: from their account, else the reserve for needs, else spending.
+    fn pay_fixed(&mut self, d: Date, next: Date) {
+        for c in self.inp.plan.commitments.iter().filter(|c| !commitment_dates(c, d, next).is_empty()) {
+            let sim = &mut self.sim;
             let from = match &c.account_id {
                 Some(a) if sim.bal.contains_key(a) => a.clone(),
-                _ if have_reserve && c.bucket == Bucket::Needs => sim.first_reserve.clone().unwrap_or_default(),
+                _ if sim.have_reserve() && c.bucket == Bucket::Needs => sim.first_reserve.clone().unwrap_or_default(),
                 _ => sim.first_spend.clone(),
             };
             sim.add(&from, -c.amount);
             match (&c.to_account_id, c.bucket) {
-                (Some(to), _) => {
-                    sim.add(to, c.amount);
-                    if let Some(dep) = sim.deps.iter_mut().find(|x| &x.id == to) {
-                        dep.principal += c.amount;
-                    }
-                }
+                (Some(to), _) => sim.deposit_into(to, c.amount),
                 (None, Bucket::Savings) => sim.invested += c.amount,
                 _ => {}
             }
         }
-        // monthly top-up to the reserve (this period's was handled through the ledger)
-        if have_reserve && d >= payday1 && clamped(d.year(), d.month(), plan.settings.allocation_day) == d {
-            let (from, to) = (sim.first_spend.clone(), sim.first_reserve.clone().unwrap_or_default());
-            sim.add(&from, -budget.allocation_paise);
-            sim.add(&to, budget.allocation_paise);
+    }
+
+    /// The monthly top-up to the reserve (this period's was handled through the ledger).
+    fn top_up_reserve(&mut self, d: Date) {
+        let plan = &self.inp.plan;
+        if self.sim.have_reserve() && d >= self.payday1 && clamped(d.year(), d.month(), plan.settings.allocation_day) == d {
+            let (from, to) = (self.sim.first_spend.clone(), self.sim.first_reserve.clone().unwrap_or_default());
+            self.sim.add(&from, -self.allocation);
+            self.sim.add(&to, self.allocation);
         }
-        // spending
-        if d > today && d.day() == 15 {
-            let spend = budget.spending_paise * inp.spend_pct / 100;
-            let from = sim.first_spend.clone();
-            sim.add(&from, -spend);
+    }
+
+    fn spend(&mut self, d: Date) {
+        if d > self.inp.plan.today && d.day() == 15 {
+            let spend = self.allowance * self.inp.spend_pct / 100;
+            let from = self.sim.first_spend.clone();
+            self.sim.add(&from, -spend);
         }
-        // existing card bills, paid from the reserve
-        for c in &plan.cards {
-            let reserve = sim.first_reserve.clone().unwrap_or_else(|| sim.first_spend.clone());
+    }
+
+    /// Existing card bills, paid from the reserve.
+    fn pay_card_bills(&mut self, d: Date) {
+        let today = self.inp.plan.today;
+        for c in &self.inp.plan.cards {
+            let reserve = self.sim.reserve_or_spend();
             if c.due_now > 0 && d == c.due_date.map_or(today, |x| x.max(today)) {
-                sim.add(&reserve, -c.due_now);
+                self.sim.add(&reserve, -c.due_now);
             }
             // A missing or already-passed due date still has to be paid: assume a month out / today.
             let next_due = c.next_due_date.map_or(plus_months(today, 1), |x| x.max(today));
             if c.next_bill_est > 0 && d == next_due {
-                sim.add(&reserve, -c.next_bill_est);
+                self.sim.add(&reserve, -c.next_bill_est);
             }
         }
-        // remaining EMI instalments
-        if d.day() == emi_day.min(28) && d > first_bill {
-            let k = (month_index(d) - month_index(first_bill)) as i64; // 1.. instalments after the first bill
-            let reserve = sim.first_reserve.clone().unwrap_or_else(|| sim.first_spend.clone());
-            for e in &inp.emis {
-                if k >= 1 && k < e.months_left {
-                    sim.add(&reserve, -e.monthly);
-                }
-            }
+    }
+
+    /// Remaining EMI instalments, after the first (which is in the next bill).
+    fn pay_emis(&mut self, d: Date) {
+        if u32::from(d.day()) != self.emi_day.min(28) || d <= self.first_bill {
+            return;
         }
-        // scenario flows
-        for f in flows.iter().filter(|f| f.date == d) {
-            sim.add(&f.from, -f.amount);
+        let k = i64::from(month_index(d) - month_index(self.first_bill)); // 1.. instalments after the first bill
+        let reserve = self.sim.reserve_or_spend();
+        for e in self.inp.emis.iter().filter(|e| k >= 1 && k < e.months_left) {
+            self.sim.add(&reserve, -e.monthly);
+        }
+    }
+
+    fn apply_flows(&mut self, d: Date) {
+        for f in self.flows.iter().filter(|f| f.date == d) {
+            self.sim.add(&f.from, -f.amount);
             if let Some(to) = &f.to {
-                sim.add(to, f.amount);
-                if let Some(dep) = sim.deps.iter_mut().find(|x| &x.id == to) {
-                    dep.principal += f.amount;
-                }
+                self.sim.deposit_into(to, f.amount);
             }
         }
-        // deposits maturing today
-        let maturing: Vec<usize> =
-            sim.deps.iter().enumerate().filter(|(_, x)| x.maturity == Some(d)).map(|(i, _)| i).collect();
+    }
+
+    /// Raise `id`'s recorded peak to `balance`. A deposit seen for the first time starts at `initial`.
+    fn note_peak(&mut self, id: &str, balance: i64, initial: i64) {
+        let peak = self.peaks.entry(id.to_string()).or_insert(initial);
+        *peak = (*peak).max(balance);
+    }
+
+    /// Deposits maturing today: paid out, or renewed (with or without the interest).
+    fn mature_deposits(&mut self, d: Date) {
+        let maturing: Vec<usize> = self.sim.deps.iter().enumerate().filter(|(_, x)| x.maturity == Some(d)).map(|(i, _)| i).collect();
         for i in maturing {
             let (id, renewal, principal, payout) = {
-                let x = &sim.deps[i];
+                let x = &self.sim.deps[i];
                 (x.id.clone(), x.renewal, x.principal, x.payout_to.clone())
             };
-            let balance = sim.bal.get(&id).copied().unwrap_or(0);
-            let to = payout.unwrap_or_else(|| sim.first_reserve.clone().unwrap_or_else(|| sim.first_spend.clone()));
+            let balance = self.sim.bal.get(&id).copied().unwrap_or(0);
+            let to = payout.unwrap_or_else(|| self.sim.reserve_or_spend());
+            self.note_peak(&id, balance, balance);
+            let sim = &mut self.sim;
             match renewal {
                 Renewal::Payout => {
-                    // peak value is recorded before this by the caller via item_accounts
-                    item_accounts.entry(id.clone()).and_modify(|v| *v = (*v).max(balance)).or_insert(balance);
-                    sim.bal.insert(id.clone(), 0);
+                    sim.bal.insert(id, 0);
                     sim.add(&to, balance);
                     sim.deps[i].maturity = None;
                 }
                 Renewal::RenewPrincipal => {
                     let interest = (balance - principal).max(0);
-                    item_accounts.entry(id.clone()).and_modify(|v| *v = (*v).max(balance)).or_insert(balance);
-                    sim.bal.insert(id.clone(), balance - interest);
+                    sim.bal.insert(id, balance - interest);
                     sim.add(&to, interest);
                     sim.deps[i].maturity = sim.deps[i].maturity.map(|m| plus_months(m, 12));
                 }
                 Renewal::RenewAll => {
-                    item_accounts.entry(id.clone()).and_modify(|v| *v = (*v).max(balance)).or_insert(balance);
                     sim.deps[i].principal = balance;
                     sim.deps[i].maturity = sim.deps[i].maturity.map(|m| plus_months(m, 12));
                 }
             }
         }
+    }
 
-        min_spend = min_spend.min(sim.sum(&sim.spending_ids));
-        min_reserve = min_reserve.min(sim.sum(&sim.reserve_ids));
-
-        // month end: interest, then record
-        if month_end {
-            for dep in &sim.deps {
-                let b = sim.bal.get(&dep.id).copied().unwrap_or(0);
-                if b > 0 && dep.rate_bps > 0 {
-                    let grown = (b as f64 * monthly_factor(dep.rate_bps)).round() as i64;
-                    sim.bal.insert(dep.id.clone(), grown);
-                }
+    /// Month end: interest, then record the point and any stress.
+    fn close_month(&mut self, d: Date) {
+        for dep in &self.sim.deps {
+            let b = self.sim.bal.get(&dep.id).copied().unwrap_or(0);
+            if b > 0 && dep.rate_bps > 0 {
+                let grown = (b as f64 * monthly_factor(dep.rate_bps)).round() as i64;
+                self.sim.bal.insert(dep.id.clone(), grown);
             }
-            for dep in &sim.deps {
-                let b = sim.bal.get(&dep.id).copied().unwrap_or(0);
-                let e = item_accounts.entry(dep.id.clone()).or_insert(0);
-                *e = (*e).max(b);
-            }
-            let key = month_key(d);
-            let p = sim.point(key.clone());
-            if min_spend < 0 {
-                stress.push(Stress { month: key.clone(), kind: "spending_short", amount_paise: -min_spend });
-            }
-            if have_reserve && min_reserve < 0 {
-                stress.push(Stress { month: key.clone(), kind: "fd_needed", amount_paise: -min_reserve });
-            } else if have_reserve && min_reserve < floor {
-                stress.push(Stress { month: key.clone(), kind: "reserve_below_floor", amount_paise: floor - min_reserve });
-            }
-            (min_spend, min_reserve) = (i64::MAX, i64::MAX);
-            points.push(p);
         }
-        d = next;
+        let balances: Vec<(String, i64)> = self.sim.deps.iter().map(|dep| (dep.id.clone(), self.sim.bal.get(&dep.id).copied().unwrap_or(0))).collect();
+        for (id, b) in balances {
+            self.note_peak(&id, b, 0);
+        }
+        let key = month_key(d);
+        let have_reserve = self.sim.have_reserve();
+        let mut stress = |kind: &'static str, amount_paise: i64| self.stress.push(Stress { month: key.clone(), kind, amount_paise });
+        if self.min_spend < 0 {
+            stress("spending_short", -self.min_spend);
+        }
+        if have_reserve && self.min_reserve < 0 {
+            stress("fd_needed", -self.min_reserve);
+        } else if have_reserve && self.min_reserve < self.floor {
+            stress("reserve_below_floor", self.floor - self.min_reserve);
+        }
+        (self.min_spend, self.min_reserve) = (i64::MAX, i64::MAX);
+        let point = self.sim.point(key);
+        self.points.push(point);
     }
 
-    // peak value reached by each scenario deposit, keyed by the item's position (names can repeat)
-    let mut by_index: HashMap<usize, i64> = HashMap::new();
-    for (n, id) in item_ids {
-        by_index.insert(n, item_accounts.get(&id).copied().unwrap_or(0));
+    /// The series, and the peak value reached by each scenario deposit, keyed by the item's position
+    /// (names can repeat).
+    fn finish(self) -> (Series, HashMap<usize, i64>) {
+        let by_index = self.item_ids.iter().map(|(n, id)| (*n, self.peaks.get(id).copied().unwrap_or(0))).collect();
+        (Series { points: self.points, stress: self.stress }, by_index)
     }
-    (Series { points, stress }, by_index)
+}
+
+/// Runs the simulation with the plan's own commitments plus `items`.
+fn simulate(inp: &ProjectionInput, items: &[ScenarioItem]) -> (Series, HashMap<usize, i64>) {
+    let today = inp.plan.today;
+    let end = plus_months(today, inp.months.clamp(1, MAX_MONTHS));
+    let mut run = Run::new(inp, items);
+    let mut d = today;
+    while d <= end {
+        run.day(d);
+        d += Duration::days(1);
+    }
+    run.finish()
 }
 
 /// Baseline projection, plus the same projection with `items` applied and what each item does.

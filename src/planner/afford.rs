@@ -69,9 +69,94 @@ pub fn with_gst(fee: i64) -> i64 {
     fee + fee * GST_BPS / 10_000
 }
 
+/// Paying in full: from Safe to Spend if it fits, else from savings if no month runs short, else
+/// wait for the first month where it would, else no.
+fn pay_now(amount: i64, today: Date, safe_to_spend: i64, horizon_months: i64, short_if_spent_on: impl Fn(Date) -> Option<i64>, money: impl Fn(i64) -> String) -> Verdict {
+    let after = safe_to_spend - amount;
+    let base = Verdict {
+        answer: Answer::Yes,
+        headline: String::new(),
+        reasons: vec![],
+        safe_to_spend_after_paise: after,
+        monthly_paise: 0,
+        total_cost_paise: amount,
+        extra_cost_paise: 0,
+        wait_until: None,
+    };
+    if after >= 0 {
+        return Verdict {
+            headline: "Yes, it fits".into(),
+            reasons: vec![format!("{} is still safe to spend until payday after it", money(after))],
+            ..base
+        };
+    }
+    let Some(short) = short_if_spent_on(today) else {
+        return Verdict {
+            answer: Answer::YesFromSavings,
+            headline: "Yes, but partly from savings".into(),
+            reasons: vec![
+                format!("{} more than is safe to spend until payday", money(-after)),
+                "No month ahead runs short, so it's savings you'd be using, not bills money".into(),
+            ],
+            ..base
+        };
+    };
+    let first_clear_month = (1..horizon_months).map(|k| add_months(today.year(), today.month(), k as i32)).map(|(y, m)| clamped(y, m, 1)).find(|d| short_if_spent_on(*d).is_none());
+    match first_clear_month {
+        Some(date) => Verdict {
+            answer: Answer::Wait,
+            headline: format!("Wait until {}", month_label(date)),
+            reasons: vec![format!("Buying it now leaves a month {} short", money(short)), format!("From {} nothing runs short", month_label(date))],
+            wait_until: Some(date),
+            ..base
+        },
+        None => Verdict {
+            answer: Answer::No,
+            headline: "Not right now".into(),
+            reasons: vec![
+                format!("It leaves a month {} short, and it still would in {horizon_months} months", money(short)),
+                "Save for it as a goal instead".into(),
+            ],
+            ..base
+        },
+    }
+}
+
+/// Paying by EMI: what it really costs, and whether the monthly part fits what you save beyond the SIP.
+fn on_emi(amount: i64, months: i64, rate_bps: i64, fee_paise: i64, safe_to_spend: i64, rest_savings: i64, money: impl Fn(i64) -> String) -> Verdict {
+    let monthly = emi_monthly(amount, rate_bps, months);
+    let fees = with_gst(fee_paise);
+    let total = monthly * months + fees;
+    let extra = total - amount;
+    let mut reasons = vec![format!("{} a month for {months} months", money(monthly))];
+    reasons.push(if extra > 0 {
+        format!("Costs {} more than paying now (interest, fee and GST)", money(extra))
+    } else {
+        "No extra cost over paying now".into()
+    });
+    let (answer, headline) = if monthly <= rest_savings {
+        reasons.push(format!("It fits in the {} you save beyond your SIP each month", money(rest_savings)));
+        (Answer::Yes, "Yes, on EMI".to_string())
+    } else {
+        reasons.push(format!("It's {} a month more than you save beyond your SIP, so it would cut your spending money", money(monthly - rest_savings.max(0))));
+        (Answer::No, "Not on this EMI".to_string())
+    };
+    Verdict {
+        answer,
+        headline,
+        reasons,
+        safe_to_spend_after_paise: safe_to_spend - fees,
+        monthly_paise: monthly,
+        total_cost_paise: total,
+        extra_cost_paise: extra,
+        wait_until: None,
+    }
+}
+
 /// Decides. `short_if_spent_on(date)` returns the worst monthly shortfall a lump of `amount` on
 /// that date causes over the projection (`None` = every month stays covered). `rest_savings` is
 /// what you save beyond the SIP each month (an EMI comes out of it first).
+#[allow(clippy::too_many_arguments)]
 pub fn afford(
     amount: i64,
     pay: Pay,
@@ -83,94 +168,8 @@ pub fn afford(
     money: impl Fn(i64) -> String,
 ) -> Verdict {
     match pay {
-        Pay::Now => {
-            let after = safe_to_spend - amount;
-            let base = Verdict {
-                answer: Answer::Yes,
-                headline: String::new(),
-                reasons: vec![],
-                safe_to_spend_after_paise: after,
-                monthly_paise: 0,
-                total_cost_paise: amount,
-                extra_cost_paise: 0,
-                wait_until: None,
-            };
-            if after >= 0 {
-                return Verdict {
-                    headline: "Yes, it fits".into(),
-                    reasons: vec![format!("{} is still safe to spend until payday after it", money(after))],
-                    ..base
-                };
-            }
-            let Some(short) = short_if_spent_on(today) else {
-                return Verdict {
-                    answer: Answer::YesFromSavings,
-                    headline: "Yes, but partly from savings".into(),
-                    reasons: vec![
-                        format!("{} more than is safe to spend until payday", money(-after)),
-                        "No month ahead runs short, so it's savings you'd be using, not bills money".into(),
-                    ],
-                    ..base
-                };
-            };
-            for k in 1..horizon_months {
-                let (y, m) = add_months(today.year(), today.month(), k as i32);
-                let date = clamped(y, m, 1);
-                if short_if_spent_on(date).is_none() {
-                    return Verdict {
-                        answer: Answer::Wait,
-                        headline: format!("Wait until {}", month_label(date)),
-                        reasons: vec![
-                            format!("Buying it now leaves a month {} short", money(short)),
-                            format!("From {} nothing runs short", month_label(date)),
-                        ],
-                        wait_until: Some(date),
-                        ..base
-                    };
-                }
-            }
-            Verdict {
-                answer: Answer::No,
-                headline: "Not right now".into(),
-                reasons: vec![
-                    format!("It leaves a month {} short, and it still would in {horizon_months} months", money(short)),
-                    "Save for it as a goal instead".into(),
-                ],
-                ..base
-            }
-        }
-        Pay::Emi { months, rate_bps, fee_paise } => {
-            let monthly = emi_monthly(amount, rate_bps, months);
-            let fees = with_gst(fee_paise);
-            let total = monthly * months + fees;
-            let extra = total - amount;
-            let mut reasons = vec![format!("{} a month for {months} months", money(monthly))];
-            reasons.push(if extra > 0 {
-                format!("Costs {} more than paying now (interest, fee and GST)", money(extra))
-            } else {
-                "No extra cost over paying now".into()
-            });
-            let (answer, headline) = if monthly <= rest_savings {
-                reasons.push(format!("It fits in the {} you save beyond your SIP each month", money(rest_savings)));
-                (Answer::Yes, "Yes, on EMI".to_string())
-            } else {
-                reasons.push(format!(
-                    "It's {} a month more than you save beyond your SIP, so it would cut your spending money",
-                    money(monthly - rest_savings.max(0))
-                ));
-                (Answer::No, "Not on this EMI".to_string())
-            };
-            Verdict {
-                answer,
-                headline,
-                reasons,
-                safe_to_spend_after_paise: safe_to_spend - fees,
-                monthly_paise: monthly,
-                total_cost_paise: total,
-                extra_cost_paise: extra,
-                wait_until: None,
-            }
-        }
+        Pay::Now => pay_now(amount, today, safe_to_spend, horizon_months, short_if_spent_on, money),
+        Pay::Emi { months, rate_bps, fee_paise } => on_emi(amount, months, rate_bps, fee_paise, safe_to_spend, rest_savings, money),
     }
 }
 

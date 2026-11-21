@@ -646,6 +646,57 @@ fn drawer(ctx: &Ctx, who: usize) -> Drawer {
     Drawer { me: Me::new(ctx, Some(who)) }
 }
 
+/// "Not for me" (`veto`) takes a slip out of the draw for both of us; putting it back (`reroll`)
+/// only for now. Either way it stays out of this draw. A slip that isn't ours does nothing (404).
+async fn set_aside(db: &SqlitePool, couple: &str, who: usize, f: &PickForm, excluded: &mut Vec<i64>) -> Result<(), AppError> {
+    let Ok(cur) = f.current.parse::<i64>() else { return Ok(()) };
+    if f.veto == "1" {
+        super::unsealed(db, couple, who, cur).await?;
+        db::veto(db, couple, cur, who).await?;
+        excluded.push(cur);
+    } else if f.reroll == "1" {
+        super::unsealed(db, couple, who, cur).await?;
+        db::put_back(db, couple, cur, who, &f.reason).await?;
+        excluded.push(cur);
+    }
+    Ok(())
+}
+
+/// The card for a draw that found nothing, with a way to loosen it. For a draw from the middle,
+/// saying which filter to loosen would give away one of our answers.
+fn no_match_card(ctx: &Ctx, f: &PickForm, filters: &Filters, slot: Option<Slot>, middle: bool, h: Hint) -> PickCard {
+    match h {
+        Hint::OutsideWindow { title, why } if !middle => {
+            let label = slot.map(|sl| sl.label()).unwrap_or_default();
+            let relax = PickForm { when: "any".into(), excluded: String::new(), reason: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
+            PickCard {
+                message: format!("Nothing in the jar fits {label}. Closest: {title}, but it's {why}."),
+                relax_label: "Draw for any day".into(),
+                relax_hidden: hidden_of(relax.filter_fields()),
+                relax: Some(relax.kept()),
+                ..PickCard::blank()
+            }
+        }
+        h if middle => PickCard {
+            message: match h {
+                Hint::Exhausted => "You've been through every slip that fits you both. One of you could change your check-in.".into(),
+                _ => "Nothing in the jar fits you both tonight. One of you could change your check-in, or draw on your own.".into(),
+            },
+            ..PickCard::blank()
+        },
+        h => {
+            let (relax_label, relax) = relax(ctx, f, &h);
+            PickCard {
+                message: hint_text(ctx, f, filters, h),
+                relax_label,
+                relax_hidden: relax.as_ref().map(|r| hidden_of(r.filter_fields())).unwrap_or_default(),
+                relax: relax.map(|r| r.kept()),
+                ..PickCard::blank()
+            }
+        }
+    }
+}
+
 /// `POST /pick`: draw a slip, peek again (`reroll`), or pass on one for good (`veto`).
 pub async fn pick(
     State(s): State<AppState>,
@@ -668,21 +719,7 @@ pub async fn pick(
         None => f,
     };
     let mut excluded = f.excluded();
-
-    // "Not for me": out of the draw for both of us. A slip that
-    // isn't ours does nothing (the veto is scoped to the couple).
-    if f.veto == "1" {
-        if let Ok(cur) = f.current.parse::<i64>() {
-            super::unsealed(db, couple, j.who, cur).await?;
-            db::veto(db, couple, cur, j.who).await?;
-            excluded.push(cur);
-        }
-    } else if f.reroll == "1"
-        && let Ok(cur) = f.current.parse::<i64>() {
-            super::unsealed(db, couple, j.who, cur).await?;
-            db::put_back(db, couple, cur, j.who, &f.reason).await?;
-            excluded.push(cur);
-        }
+    set_aside(db, couple, j.who, &f, &mut excluded).await?;
 
     let jar = jar_data(db, couple, ctx, j.who, dayplan::slot_for(db, ctx, &f.when, f.start()).await?).await?;
     let mut cands = jar.candidates(ctx, &f);
@@ -706,35 +743,7 @@ pub async fn pick(
         PickResult::Pick(id) => {
             card(db, couple, ctx, &d, &f, jar.acts.iter().find(|a| a.id == id), &excluded, &jar.learned, jar.slot).await?
         }
-        PickResult::NoMatch(Hint::OutsideWindow { title, why }) if middle.is_none() => {
-            let label = jar.slot.map(|sl| sl.label()).unwrap_or_default();
-            let relax = PickForm { when: "any".into(), excluded: String::new(), reason: String::new(), current: String::new(), reroll: String::new(), ..f.clone() };
-            PickCard {
-                message: format!("Nothing in the jar fits {label}. Closest: {title}, but it's {why}."),
-                relax_label: "Draw for any day".into(),
-                relax_hidden: hidden_of(relax.filter_fields()),
-                relax: Some(relax.kept()),
-                ..PickCard::blank()
-            }
-        }
-        // Saying which filter to loosen would give away one of our answers.
-        PickResult::NoMatch(h) if middle.is_some() => PickCard {
-            message: match h {
-                Hint::Exhausted => "You've been through every slip that fits you both. One of you could change your check-in.".into(),
-                _ => "Nothing in the jar fits you both tonight. One of you could change your check-in, or draw on your own.".into(),
-            },
-            ..PickCard::blank()
-        },
-        PickResult::NoMatch(h) => {
-            let (relax_label, relax) = relax(ctx, &f, &h);
-            PickCard {
-                message: hint_text(ctx, &f, &filters, h),
-                relax_label,
-                relax_hidden: relax.as_ref().map(|r| hidden_of(r.filter_fields())).unwrap_or_default(),
-                relax: relax.map(|r| r.kept()),
-                ..PickCard::blank()
-            }
-        }
+        PickResult::NoMatch(h) => no_match_card(ctx, &f, &filters, jar.slot, middle.is_some(), h),
     };
     Ok(Json(card_out))
 }

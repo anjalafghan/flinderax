@@ -197,32 +197,40 @@ pub struct StatementInput {
     pub mapping: Option<Mapping>,
 }
 
-/// Stores a parsed statement for `user_id`. Nothing is stored twice: a row already imported is a
-/// duplicate; a row a bank alert recorded is confirmed (kept, with the statement's reference and
-/// narration) rather than doubled; every other row is added.
-pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: StatementInput) -> Result<StatementResult, AppError> {
-    // Which instrument this is, and its last digits.
-    let (mut account_id, mut card_id, mut last4) = (None, None, None);
-    if let Some(id) = input.account_id.as_deref().filter(|s| !s.is_empty()) {
-        let row = sqlx::query_as::<_, (String, Option<String>)>("SELECT account_id, last_4_digits FROM accounts WHERE account_id = ? AND user_id = ?")
-            .bind(id)
-            .bind(user_id)
-            .fetch_optional(db)
-            .await?
-            .ok_or_else(|| not_found("Account not found"))?;
-        account_id = Some(row.0);
-        last4 = row.1;
-    } else if let Some(id) = input.card_id.as_deref().filter(|s| !s.is_empty()) {
-        let row = sqlx::query_as::<_, (String, Option<String>)>("SELECT card_id, last_4_digits FROM cards WHERE card_id = ? AND user_id = ?")
-            .bind(id)
-            .bind(user_id)
-            .fetch_optional(db)
-            .await?
-            .ok_or_else(|| not_found("Card not found"))?;
-        card_id = Some(row.0);
-        last4 = row.1;
+/// The bank account or card a statement is imported to, and its last digits.
+#[derive(Default)]
+struct Target {
+    account_id: Option<String>,
+    card_id: Option<String>,
+    last4: Option<String>,
+}
+
+impl Target {
+    async fn resolve(db: &sqlx::SqlitePool, user_id: &str, input: &StatementInput) -> Result<Self, AppError> {
+        let given = |id: &Option<String>| id.clone().filter(|s| !s.is_empty());
+        let find = |sql: &'static str, id: String, missing: &'static str| async move {
+            sqlx::query_as::<_, (String, Option<String>)>(sql)
+                .bind(id)
+                .bind(user_id)
+                .fetch_optional(db)
+                .await?
+                .ok_or_else(|| not_found(missing))
+        };
+        if let Some(id) = given(&input.account_id) {
+            let (account_id, last4) =
+                find("SELECT account_id, last_4_digits FROM accounts WHERE account_id = ? AND user_id = ?", id, "Account not found").await?;
+            return Ok(Target { account_id: Some(account_id), card_id: None, last4 });
+        }
+        if let Some(id) = given(&input.card_id) {
+            let (card_id, last4) = find("SELECT card_id, last_4_digits FROM cards WHERE card_id = ? AND user_id = ?", id, "Card not found").await?;
+            return Ok(Target { account_id: None, card_id: Some(card_id), last4 });
+        }
+        Ok(Target::default())
     }
-    let card = card_id.is_some();
+}
+
+/// Reads the statement with the user's mapping, or auto-detects the layout. Empty and oversized files are refused.
+fn parse_statement(input: &StatementInput, card: bool) -> Result<crate::statement::Parsed, AppError> {
     let parsed = match &input.mapping {
         Some(mapping) => crate::statement::parse_with(&input.csv, mapping),
         None => crate::statement::parse_for(&input.csv, card)
@@ -238,128 +246,145 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
     if parsed.rows.len() > MAX_STATEMENT_ROWS {
         return Err(bad_request(format!("Too many rows (limit {MAX_STATEMENT_ROWS}). Import one period at a time.")));
     }
+    Ok(parsed)
+}
 
-    let rules = load_rules(db, user_id).await?;
-    let holder_names = load_holder_names(db, user_id).await?;
-    let owner = crate::narration::Owner { holder_names: &holder_names };
-    let (chain_ok, opening_paise, closing_paise) = balance_chain(&parsed.rows);
+/// What is worked out about a statement row before it is matched or stored.
+struct Prepared {
+    on: String,
+    credit: bool,
+    category: String,
+    merchant: Option<String>,
+    raw: String,
+    rrn: Option<String>,
+}
 
-    let mut res = StatementResult {
-        total: parsed.rows.len(),
-        added: 0,
-        duplicates: 0,
-        matched_alerts: 0,
-        upgraded: 0,
-        skipped: parsed.skipped,
-        uncategorized: 0,
-        categorized: 0,
-        first_date: None,
-        last_date: None,
-        balance_updated: None,
-        balance_kept: None,
-        older_recategorized: 0,
-        chain_ok,
-        opening_paise,
-        closing_paise,
-        not_on_statement: 0,
-        holder_name_suggestion: None,
-    };
-    let mut seen: BTreeMap<String, u32> = BTreeMap::new();
-    // Rows this import has already confirmed or added: a second identical row must not claim them.
-    let mut claimed: HashSet<String> = HashSet::new();
-    let mut tx = db.begin().await?;
+/// An import in progress: the counts so far, and the rows this import has already used.
+struct Importer<'a> {
+    user_id: &'a str,
+    target: &'a Target,
+    card: bool,
+    rules: &'a [(String, String)],
+    owner: &'a crate::narration::Owner<'a>,
+    /// How many times each statement key has appeared in this file.
+    seen: BTreeMap<String, u32>,
+    /// Rows this import has already confirmed or added: a second identical row must not claim them.
+    claimed: HashSet<String>,
+    res: StatementResult,
+}
 
-    for row in &parsed.rows {
-        let on = row.date.to_string();
-        let dir = row.direction.as_str();
-        res.first_date = Some(res.first_date.take().map_or(on.clone(), |d| d.min(on.clone())));
-        res.last_date = Some(res.last_date.take().map_or(on.clone(), |d| d.max(on.clone())));
-
-        // Two identical rows on one day are two purchases; the n-th gets its own key.
-        let base = statement_key(row);
-        let n = seen.entry(base.clone()).and_modify(|n| *n += 1).or_insert(1);
-        let dedupe_key = format!("{base}:{n}");
-
-        let exists: Option<String> = sqlx::query_scalar("SELECT txn_id FROM transactions WHERE user_id = ? AND dedupe_key = ?")
-            .bind(user_id)
-            .bind(&dedupe_key)
-            .fetch_optional(&mut *tx)
-            .await?;
-        if exists.is_some() {
-            res.duplicates += 1;
-            continue;
+impl Importer<'_> {
+    fn tally(&mut self, category: &str) {
+        if category == "uncategorized" {
+            self.res.uncategorized += 1;
+        } else {
+            self.res.categorized += 1;
         }
+    }
 
+    /// Two identical rows on one day are two purchases; the n-th gets its own key.
+    fn dedupe_key(&mut self, row: &StatementRow) -> String {
+        let base = statement_key(row);
+        let n = self.seen.entry(base.clone()).and_modify(|n| *n += 1).or_insert(1);
+        format!("{base}:{n}")
+    }
+
+    fn prepare(&self, row: &StatementRow) -> Prepared {
         let parts = crate::narration::parse(&row.narration);
         let credit = row.direction == Direction::Credit;
         // Category order: the structure of the narration (own accounts, SIPs, salary, fees...), then the
         // user's rules and the keywords, both read from the payee alone. The raw narration is never
         // matched, so app tags such as "PAID VIA CRED" cannot pick a category.
-        let category = match statement_structure(&row.narration, credit, card, &parts, &owner) {
+        let category = match statement_structure(&row.narration, credit, self.card, &parts, self.owner) {
             Some(c) => c.to_string(),
-            None => categorize(parts.payee.as_deref(), row.direction, false, &rules),
+            None => categorize(parts.payee.as_deref(), row.direction, false, self.rules),
         };
-        let merchant = parts.payee.clone().or_else(|| crate::statement::merchant_of(&row.narration));
-        let raw: String = row.narration.chars().take(500).collect();
-
-        // (1) An existing row with the same reference (or the same narration, already confirmed by an
-        // earlier statement), same direction and amount, date within a day. References are not unique,
-        // so the amount and date must agree too.
-        let mut confirm = find_by_reference(&mut tx, user_id, row, parts.rrn.as_deref())
-            .await?
-            .into_iter()
-            .find(|(id, _, _)| !claimed.contains(id));
-        // (2) Otherwise a bank-alert row on the same card or account, within a day.
-        if confirm.is_none() {
-            confirm = find_alert_to_confirm(&mut tx, user_id, row, account_id.as_deref(), card_id.as_deref())
-                .await?
-                .into_iter()
-                .find(|(id, _, _)| !claimed.contains(id));
+        Prepared {
+            on: row.date.to_string(),
+            credit,
+            category,
+            merchant: parts.payee.clone().or_else(|| crate::statement::merchant_of(&row.narration)),
+            raw: row.narration.chars().take(500).collect(),
+            rrn: parts.rrn,
         }
+    }
 
-        if let Some((txn_id, on_statement, existing)) = confirm {
-            claimed.insert(txn_id.clone());
-            if on_statement == 1 {
-                // Already confirmed by an earlier import of this statement.
-                res.duplicates += 1;
-                continue;
-            }
-            // A card credit is never income: the statement's category replaces an alert's, unless the user locked it.
-            let forced = card && credit;
-            let kept = if forced || existing == "uncategorized" { category.clone() } else { existing.clone() };
-            sqlx::query(
-                // The statement is the source of truth: its posting date replaces the alert's (±1 day).
-                "UPDATE transactions SET on_statement = 1, occurred_on = ?, rrn = COALESCE(?, rrn), merchant = COALESCE(?, merchant), raw_text = ?,
-                     category = CASE WHEN category_locked = 1 THEN category
-                                     WHEN ? = 0 AND category <> 'uncategorized' THEN category
-                                     ELSE ? END
-                 WHERE txn_id = ? AND user_id = ?",
-            )
-            .bind(&on)
-            .bind(&parts.rrn)
-            .bind(&merchant)
-            .bind(&raw)
-            .bind(forced as i64)
-            .bind(&category)
-            .bind(&txn_id)
-            .bind(user_id)
-            .execute(&mut *tx)
+    /// The row this statement row confirms, if any.
+    /// (1) An existing row with the same reference (or the same narration, already confirmed by an
+    /// earlier statement), same direction and amount, date within a day. References are not unique,
+    /// so the amount and date must agree too.
+    /// (2) Otherwise a bank-alert row on the same card or account, within a day.
+    async fn find_existing(&self, conn: &mut sqlx::SqliteConnection, row: &StatementRow, rrn: Option<&str>) -> Result<Option<(String, i64, String)>, AppError> {
+        let unclaimed = |found: Vec<(String, i64, String)>| found.into_iter().find(|(id, _, _)| !self.claimed.contains(id));
+        let by_reference = unclaimed(find_by_reference(conn, self.user_id, row, rrn).await?);
+        if by_reference.is_some() {
+            return Ok(by_reference);
+        }
+        let alerts = find_alert_to_confirm(conn, self.user_id, row, self.target.account_id.as_deref(), self.target.card_id.as_deref()).await?;
+        Ok(unclaimed(alerts))
+    }
+
+    async fn row(&mut self, conn: &mut sqlx::SqliteConnection, row: &StatementRow) -> Result<(), AppError> {
+        let on = row.date.to_string();
+        self.res.first_date = Some(self.res.first_date.take().map_or(on.clone(), |d| d.min(on.clone())));
+        self.res.last_date = Some(self.res.last_date.take().map_or(on.clone(), |d| d.max(on)));
+
+        let dedupe_key = self.dedupe_key(row);
+        let exists: Option<String> = sqlx::query_scalar("SELECT txn_id FROM transactions WHERE user_id = ? AND dedupe_key = ?")
+            .bind(self.user_id)
+            .bind(&dedupe_key)
+            .fetch_optional(&mut *conn)
             .await?;
-            res.upgraded += 1;
-            res.matched_alerts += 1;
-            if kept == "uncategorized" {
-                res.uncategorized += 1;
-            } else {
-                res.categorized += 1;
-            }
-            continue;
+        if exists.is_some() {
+            self.res.duplicates += 1;
+            return Ok(());
         }
 
-        if category == "uncategorized" {
-            res.uncategorized += 1;
-        } else {
-            res.categorized += 1;
+        let prepared = self.prepare(row);
+        match self.find_existing(conn, row, prepared.rrn.as_deref()).await? {
+            Some((txn_id, on_statement, existing)) => self.confirm(conn, &prepared, txn_id, on_statement == 1, &existing).await,
+            None => self.insert(conn, row, &prepared, &dedupe_key).await,
         }
+    }
+
+    /// The statement is the source of truth for a row a bank alert recorded: its posting date,
+    /// reference and narration replace the alert's, which is kept rather than doubled.
+    async fn confirm(&mut self, conn: &mut sqlx::SqliteConnection, p: &Prepared, txn_id: String, on_statement: bool, existing: &str) -> Result<(), AppError> {
+        self.claimed.insert(txn_id.clone());
+        if on_statement {
+            // Already confirmed by an earlier import of this statement.
+            self.res.duplicates += 1;
+            return Ok(());
+        }
+        // A card credit is never income: the statement's category replaces an alert's, unless the user locked it.
+        let forced = self.card && p.credit;
+        let kept = if forced || existing == "uncategorized" { p.category.as_str() } else { existing };
+        sqlx::query(
+            // The statement is the source of truth: its posting date replaces the alert's (±1 day).
+            "UPDATE transactions SET on_statement = 1, occurred_on = ?, rrn = COALESCE(?, rrn), merchant = COALESCE(?, merchant), raw_text = ?,
+                 category = CASE WHEN category_locked = 1 THEN category
+                                 WHEN ? = 0 AND category <> 'uncategorized' THEN category
+                                 ELSE ? END
+             WHERE txn_id = ? AND user_id = ?",
+        )
+        .bind(&p.on)
+        .bind(&p.rrn)
+        .bind(&p.merchant)
+        .bind(&p.raw)
+        .bind(forced as i64)
+        .bind(&p.category)
+        .bind(&txn_id)
+        .bind(self.user_id)
+        .execute(conn)
+        .await?;
+        self.res.upgraded += 1;
+        self.res.matched_alerts += 1;
+        self.tally(kept);
+        Ok(())
+    }
+
+    async fn insert(&mut self, conn: &mut sqlx::SqliteConnection, row: &StatementRow, p: &Prepared, dedupe_key: &str) -> Result<(), AppError> {
+        self.tally(&p.category);
         let txn_id = nanoid!();
         sqlx::query(
             "INSERT INTO transactions
@@ -367,86 +392,149 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paste', ?, ?, ?, 1)",
         )
         .bind(&txn_id)
-        .bind(user_id)
-        .bind(&on)
-        .bind(dir)
+        .bind(self.user_id)
+        .bind(&p.on)
+        .bind(row.direction.as_str())
         .bind(row.amount_paise)
-        .bind(&merchant)
-        .bind(&category)
-        .bind(&card_id)
-        .bind(&account_id)
-        .bind(&last4)
-        .bind(&raw)
-        .bind(&dedupe_key)
-        .bind(&parts.rrn)
-        .execute(&mut *tx)
+        .bind(&p.merchant)
+        .bind(&p.category)
+        .bind(&self.target.card_id)
+        .bind(&self.target.account_id)
+        .bind(&self.target.last4)
+        .bind(&p.raw)
+        .bind(dedupe_key)
+        .bind(&p.rrn)
+        .execute(conn)
         .await?;
-        claimed.insert(txn_id);
-        res.added += 1;
+        self.claimed.insert(txn_id);
+        self.res.added += 1;
+        Ok(())
     }
+}
 
-    // The statement's own balance, from its newest line, becomes the account balance unless a newer one exists.
-    if let Some(acct) = &account_id {
-        let newest = parsed.rows.iter().enumerate().filter(|(_, r)| r.balance_paise.is_some()).max_by_key(|(i, r)| (r.date, *i));
-        if let Some((_, r)) = newest {
-            // When every balance follows from the one before, the chain's closing balance is the
-            // real last one. Taking "the last row of the latest day" in file order is wrong for a
-            // newest-first export with several lines on its last day (it picks the day's first).
-            let bal = match (chain_ok, closing_paise) {
-                (true, Some(c)) => c,
-                _ => r.balance_paise.expect("filtered"),
-            };
-            let on = r.date.to_string();
-            let done = sqlx::query(
-                "UPDATE accounts SET balance_paise = ?, balance_set_on = ?, updated_at = CURRENT_TIMESTAMP
-                 WHERE account_id = ? AND user_id = ? AND (balance_set_on IS NULL OR balance_set_on <= ?)",
-            )
-            .bind(bal)
-            .bind(&on)
-            .bind(acct)
-            .bind(user_id)
-            .bind(&on)
-            .execute(&mut *tx)
-            .await?
-            .rows_affected();
-            if done == 1 {
-                let name: String = sqlx::query_scalar("SELECT name FROM accounts WHERE account_id = ?").bind(acct).fetch_one(&mut *tx).await?;
-                res.balance_updated = Some(BalanceUpdated { account_name: name, balance_paise: bal });
-            } else if let Some((name, kept, set_on)) = sqlx::query_as::<_, (String, i64, String)>(
-                "SELECT name, balance_paise, balance_set_on FROM accounts
-                 WHERE account_id = ? AND user_id = ? AND balance_set_on IS NOT NULL",
-            )
-            .bind(acct)
-            .bind(user_id)
-            .fetch_optional(&mut *tx)
-            .await?
-            {
-                // Same number: nothing to point out.
-                if kept != bal {
-                    res.balance_kept = Some(BalanceKept { account_name: name, balance_paise: kept, set_on, statement_paise: bal, statement_on: on });
-                }
-            }
+/// The statement's own balance, from its newest line, becomes the account balance unless a newer one exists.
+async fn apply_closing_balance(
+    conn: &mut sqlx::SqliteConnection,
+    user_id: &str,
+    account_id: &str,
+    parsed: &crate::statement::Parsed,
+    chain: (bool, Option<i64>),
+    res: &mut StatementResult,
+) -> Result<(), AppError> {
+    let newest = parsed.rows.iter().enumerate().filter(|(_, r)| r.balance_paise.is_some()).max_by_key(|(i, r)| (r.date, *i));
+    let Some((_, r)) = newest else { return Ok(()) };
+    // When every balance follows from the one before, the chain's closing balance is the real last
+    // one. Taking "the last row of the latest day" in file order is wrong for a newest-first export
+    // with several lines on its last day (it picks the day's first).
+    let bal = match chain {
+        (true, Some(c)) => c,
+        _ => r.balance_paise.expect("filtered"),
+    };
+    let on = r.date.to_string();
+    let done = sqlx::query(
+        "UPDATE accounts SET balance_paise = ?, balance_set_on = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE account_id = ? AND user_id = ? AND (balance_set_on IS NULL OR balance_set_on <= ?)",
+    )
+    .bind(bal)
+    .bind(&on)
+    .bind(account_id)
+    .bind(user_id)
+    .bind(&on)
+    .execute(&mut *conn)
+    .await?
+    .rows_affected();
+    if done == 1 {
+        let name: String = sqlx::query_scalar("SELECT name FROM accounts WHERE account_id = ?").bind(account_id).fetch_one(&mut *conn).await?;
+        res.balance_updated = Some(BalanceUpdated { account_name: name, balance_paise: bal });
+    } else if let Some((name, kept, set_on)) = sqlx::query_as::<_, (String, i64, String)>(
+        "SELECT name, balance_paise, balance_set_on FROM accounts
+         WHERE account_id = ? AND user_id = ? AND balance_set_on IS NOT NULL",
+    )
+    .bind(account_id)
+    .bind(user_id)
+    .fetch_optional(&mut *conn)
+    .await?
+    {
+        // Same number: nothing to point out.
+        if kept != bal {
+            res.balance_kept = Some(BalanceKept { account_name: name, balance_paise: kept, set_on, statement_paise: bal, statement_on: on });
         }
     }
+    Ok(())
+}
 
-    // Bank-alert rows on this target, inside the statement's dates, that the statement never confirmed.
-    if let (Some(first), Some(last)) = (&res.first_date, &res.last_date) {
-        let missing: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM transactions
-             WHERE user_id = ?1 AND on_statement = 0 AND dedupe_key NOT LIKE 'stmt:%' AND source != 'manual'
-               AND occurred_on BETWEEN ?2 AND ?3
-               AND ((?4 IS NOT NULL AND account_id = ?4) OR (?5 IS NOT NULL AND card_id = ?5))",
-        )
-        .bind(user_id)
-        .bind(first)
-        .bind(last)
-        .bind(account_id.as_deref())
-        .bind(card_id.as_deref())
-        .fetch_one(&mut *tx)
-        .await?;
-        res.not_on_statement = missing as usize;
+/// Bank-alert rows on this target, inside the statement's dates, that the statement never confirmed.
+async fn count_unconfirmed(conn: &mut sqlx::SqliteConnection, user_id: &str, target: &Target, first: &str, last: &str) -> Result<usize, AppError> {
+    let missing: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM transactions
+         WHERE user_id = ?1 AND on_statement = 0 AND dedupe_key NOT LIKE 'stmt:%' AND source != 'manual'
+           AND occurred_on BETWEEN ?2 AND ?3
+           AND ((?4 IS NOT NULL AND account_id = ?4) OR (?5 IS NOT NULL AND card_id = ?5))",
+    )
+    .bind(user_id)
+    .bind(first)
+    .bind(last)
+    .bind(target.account_id.as_deref())
+    .bind(target.card_id.as_deref())
+    .fetch_one(conn)
+    .await?;
+    Ok(missing as usize)
+}
+
+/// Stores a parsed statement for `user_id`. Nothing is stored twice: a row already imported is a
+/// duplicate; a row a bank alert recorded is confirmed (kept, with the statement's reference and
+/// narration) rather than doubled; every other row is added.
+pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: StatementInput) -> Result<StatementResult, AppError> {
+    let target = Target::resolve(db, user_id, &input).await?;
+    let card = target.card_id.is_some();
+    let parsed = parse_statement(&input, card)?;
+
+    let rules = load_rules(db, user_id).await?;
+    let holder_names = load_holder_names(db, user_id).await?;
+    let owner = crate::narration::Owner { holder_names: &holder_names };
+    let (chain_ok, opening_paise, closing_paise) = balance_chain(&parsed.rows);
+
+    let mut import = Importer {
+        user_id,
+        target: &target,
+        card,
+        rules: &rules,
+        owner: &owner,
+        seen: BTreeMap::new(),
+        claimed: HashSet::new(),
+        res: StatementResult {
+            total: parsed.rows.len(),
+            added: 0,
+            duplicates: 0,
+            matched_alerts: 0,
+            upgraded: 0,
+            skipped: parsed.skipped,
+            uncategorized: 0,
+            categorized: 0,
+            first_date: None,
+            last_date: None,
+            balance_updated: None,
+            balance_kept: None,
+            older_recategorized: 0,
+            chain_ok,
+            opening_paise,
+            closing_paise,
+            not_on_statement: 0,
+            holder_name_suggestion: None,
+        },
+    };
+    let mut tx = db.begin().await?;
+    for row in &parsed.rows {
+        import.row(&mut tx, row).await?;
     }
+    let mut res = import.res;
 
+    if let Some(account_id) = &target.account_id {
+        apply_closing_balance(&mut tx, user_id, account_id, &parsed, (chain_ok, closing_paise), &mut res).await?;
+    }
+    if let (Some(first), Some(last)) = (&res.first_date, &res.last_date) {
+        res.not_on_statement = count_unconfirmed(&mut tx, user_id, &target, first, last).await?;
+    }
     if holder_names.is_empty() {
         res.holder_name_suggestion = holder_suggestion(&parsed.rows);
     }
@@ -458,8 +546,8 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
     )
     .bind(&import_id)
     .bind(user_id)
-    .bind(&account_id)
-    .bind(&card_id)
+    .bind(&target.account_id)
+    .bind(&target.card_id)
     .bind(&res.first_date)
     .bind(&res.last_date)
     .bind(parsed.rows.len() as i64)

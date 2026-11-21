@@ -359,137 +359,134 @@ fn build(spec: Spec) -> LifeGoal {
     }
 }
 
-/// Builds the whole life plan. `expenses_paise` is the monthly household spend the caller resolved.
-pub fn plan(profile: &LifeProfile, expenses_paise: i64, today: Date) -> LifePlan {
-    let ty = today.year() as i64;
-    let my_age = profile.my_age.clamp(0, 100);
-    let retirement_age = profile.retirement_age.clamp(0, 100);
-    let years_to_retire = (retirement_age - my_age).max(0);
-    let expenses = cap(expenses_paise);
-    let my_take = cap(profile.my_take_home_paise);
-    let partner_take = cap(profile.partner_take_home_paise);
-    let combined = my_take.saturating_add(partner_take);
-    let child_birth = profile.child_birth_year.map(|y| y.clamp(ty - 100, ty + 100));
+/// The profile's numbers after clamping, shared by every part of the plan.
+struct Who {
+    /// This year.
+    ty: i64,
+    my_age: i64,
+    retirement_age: i64,
+    years_to_retire: i64,
+    expenses: i64,
+    my_take: i64,
+    partner_take: i64,
+    combined: i64,
+    child_birth: Option<i64>,
+}
 
-    let mut goals: Vec<(i64, LifeGoal)> = Vec::new();
+impl Who {
+    fn of(profile: &LifeProfile, expenses_paise: i64, today: Date) -> Self {
+        let ty = today.year() as i64;
+        let my_age = profile.my_age.clamp(0, 100);
+        let retirement_age = profile.retirement_age.clamp(0, 100);
+        let (my_take, partner_take) = (cap(profile.my_take_home_paise), cap(profile.partner_take_home_paise));
+        Who {
+            ty,
+            my_age,
+            retirement_age,
+            years_to_retire: (retirement_age - my_age).max(0),
+            expenses: cap(expenses_paise),
+            my_take,
+            partner_take,
+            combined: my_take.saturating_add(partner_take),
+            child_birth: profile.child_birth_year.map(|y| y.clamp(ty - 100, ty + 100)),
+        }
+    }
+}
 
-    // Emergency fund: 6 months of expenses, now, held in debt.
-    let emergency_target = cap(expenses.saturating_mul(EMERGENCY_MONTHS));
-    goals.push((
-        -1,
-        build(Spec {
-            key: "emergency",
-            label: "Emergency fund",
-            when: None,
-            months: EMERGENCY_HORIZON_MONTHS,
-            today_cost: emergency_target,
-            future_cost: emergency_target,
-            saved: profile.emergency_saved_paise,
-            mix: Mix::Debt,
-            mix_note: "Keep it liquid: savings account, liquid fund or short FD.",
-        }),
-    ));
+/// A goal on a calendar date: `cost` in today's money, inflated at `inflation_bps` to that date.
+/// Returns the months away (the order goals are listed in) and the goal.
+#[allow(clippy::too_many_arguments)]
+fn dated_goal(today: Date, key: &'static str, label: &'static str, when: Date, cost: i64, inflation_bps: i64, saved: i64) -> (i64, LifeGoal) {
+    let months = months_until(today, when);
+    let mix = mix_for(months);
+    let goal = build(Spec {
+        key,
+        label,
+        when: Some(when),
+        months,
+        today_cost: cost,
+        future_cost: future_value(cost, inflation_bps, months),
+        saved,
+        mix,
+        mix_note: mix.note(),
+    });
+    (months, goal)
+}
+
+/// Emergency fund: 6 months of expenses, now, held in debt.
+fn emergency_goal(who: &Who, profile: &LifeProfile) -> LifeGoal {
+    let target = cap(who.expenses.saturating_mul(EMERGENCY_MONTHS));
+    build(Spec {
+        key: "emergency",
+        label: "Emergency fund",
+        when: None,
+        months: EMERGENCY_HORIZON_MONTHS,
+        today_cost: target,
+        future_cost: target,
+        saved: profile.emergency_saved_paise,
+        mix: Mix::Debt,
+        mix_note: "Keep it liquid: savings account, liquid fund or short FD.",
+    })
+}
+
+/// Retirement: the corpus that pays annual expenses at the safe withdrawal rate.
+fn retirement_goal(who: &Who, profile: &LifeProfile, today: Date) -> (i64, LifeGoal) {
+    let months = who.years_to_retire * MONTHS_PER_YEAR;
+    let annual_today = who.expenses.saturating_mul(MONTHS_PER_YEAR);
+    let annual_then = future_value(annual_today, GENERAL_INFLATION_BPS, months);
+    let mix = mix_for(months);
+    let goal = build(Spec {
+        key: "retirement",
+        label: "Retirement",
+        when: Some(shift_years(today, who.years_to_retire)),
+        months,
+        today_cost: corpus(annual_today),
+        future_cost: corpus(annual_then),
+        saved: profile.retirement_saved_paise,
+        mix,
+        mix_note: mix.note(),
+    });
+    (months, goal)
+}
+
+/// Every goal, soonest first (the emergency fund, which is now, comes first).
+fn goals_of(who: &Who, profile: &LifeProfile, today: Date) -> Vec<LifeGoal> {
+    let mut goals: Vec<(i64, LifeGoal)> = vec![(-1, emergency_goal(who, profile))];
 
     // Wedding: budget in today's money, inflated to the wedding date.
     if let Some(when) = profile.wedding_date.as_deref().and_then(parse_date) {
-        let months = months_until(today, when);
         let budget = cap(profile.wedding_budget_paise.unwrap_or(DEFAULT_WEDDING_BUDGET));
-        let mix = mix_for(months);
-        goals.push((
-            months,
-            build(Spec {
-                key: "wedding",
-                label: "Wedding",
-                when: Some(when),
-                months,
-                today_cost: budget,
-                future_cost: future_value(budget, WEDDING_INFLATION_BPS, months),
-                saved: profile.wedding_saved_paise,
-                mix,
-                mix_note: mix.note(),
-            }),
-        ));
+        goals.push(dated_goal(today, "wedding", "Wedding", when, budget, WEDDING_INFLATION_BPS, profile.wedding_saved_paise));
     }
 
-    if let Some(birth_year) = child_birth {
+    if let Some(birth_year) = who.child_birth {
         // Baby's first year: January of the birth year.
         let when = on(birth_year, Month::January, 1, today);
-        let months = months_until(today, when);
-        let mix = mix_for(months);
-        goals.push((
-            months,
-            build(Spec {
-                key: "child_birth",
-                label: "Baby's first year",
-                when: Some(when),
-                months,
-                today_cost: CHILD_BIRTH_TODAY,
-                future_cost: future_value(CHILD_BIRTH_TODAY, MEDICAL_INFLATION_BPS, months),
-                saved: profile.child_saved_paise,
-                mix,
-                mix_note: mix.note(),
-            }),
-        ));
+        goals.push(dated_goal(today, "child_birth", "Baby's first year", when, CHILD_BIRTH_TODAY, MEDICAL_INFLATION_BPS, profile.child_saved_paise));
 
         // Education: June of the child's 18th year. A cost of zero means no education goal.
         if profile.child_education_today_paise > 0 {
             let when = on(birth_year + 18, Month::June, 1, today);
-            let months = months_until(today, when);
-            let mix = mix_for(months);
-            let education_today = cap(profile.child_education_today_paise);
-            goals.push((
-                months,
-                build(Spec {
-                    key: "child_education",
-                    label: "Child's education",
-                    when: Some(when),
-                    months,
-                    today_cost: education_today,
-                    future_cost: future_value(education_today, EDUCATION_INFLATION_BPS, months),
-                    saved: profile.child_saved_paise,
-                    mix,
-                    mix_note: mix.note(),
-                }),
-            ));
+            let cost = cap(profile.child_education_today_paise);
+            goals.push(dated_goal(today, "child_education", "Child's education", when, cost, EDUCATION_INFLATION_BPS, profile.child_saved_paise));
         }
     }
 
-    // Retirement: the corpus that pays annual expenses at the safe withdrawal rate.
-    let retire_on = shift_years(today, years_to_retire);
-    let months = years_to_retire * MONTHS_PER_YEAR;
-    let annual_today = expenses.saturating_mul(MONTHS_PER_YEAR);
-    let annual_then = future_value(annual_today, GENERAL_INFLATION_BPS, months);
-    let mix = mix_for(months);
-    goals.push((
-        months,
-        build(Spec {
-            key: "retirement",
-            label: "Retirement",
-            when: Some(retire_on),
-            months,
-            today_cost: corpus(annual_today),
-            future_cost: corpus(annual_then),
-            saved: profile.retirement_saved_paise,
-            mix,
-            mix_note: mix.note(),
-        }),
-    ));
-
+    goals.push(retirement_goal(who, profile, today));
     goals.sort_by_key(|(order, _)| *order);
-    let mut goals: Vec<LifeGoal> = goals.into_iter().map(|(_, g)| g).collect();
+    goals.into_iter().map(|(_, g)| g).collect()
+}
 
-    // Split each step-up SIP by take-home share, then give each goal a status in date order:
-    // each one draws from the surplus left after the goals before it.
-    let total_step_up: i64 = goals.iter().map(|g| g.step_up_sip_paise).sum();
-    let total_sip: i64 = goals.iter().map(|g| g.monthly_sip_paise).sum();
-    let surplus = combined.saturating_sub(expenses).clamp(-MAX_AMOUNT_PAISE, MAX_AMOUNT_PAISE);
+/// Split each step-up SIP by take-home share, then give each goal a status in date order:
+/// each one draws from the surplus left after the goals before it.
+fn share_and_rate(goals: &mut [LifeGoal], who: &Who, surplus: i64) {
     let mut remaining = surplus.max(0);
     for g in goals.iter_mut() {
         let step = g.step_up_sip_paise;
-        g.partner_share_paise = if combined == 0 || partner_take == 0 {
+        g.partner_share_paise = if who.combined == 0 || who.partner_take == 0 {
             0
         } else {
-            (step as f64 * partner_take as f64 / combined as f64).round() as i64
+            (step as f64 * who.partner_take as f64 / who.combined as f64).round() as i64
         };
         g.my_share_paise = step - g.partner_share_paise;
         if g.gap_paise == 0 {
@@ -501,35 +498,34 @@ pub fn plan(profile: &LifeProfile, expenses_paise: i64, today: Date) -> LifePlan
             remaining -= step;
         } else {
             g.status = "needs_more";
-            g.note = format!(
-                "Needs {} a month at step-up, about {} more than the surplus left for it.",
-                inr(step),
-                inr(step - remaining)
-            );
+            g.note = format!("Needs {} a month at step-up, about {} more than the surplus left for it.", inr(step), inr(step - remaining));
             remaining = 0;
         }
     }
+}
 
+/// Term and health cover needed, what is held, and a sentence on each.
+fn insurance_of(who: &Who, profile: &LifeProfile, goals: &[LifeGoal]) -> Insurance {
     let child_education_future = goals.iter().find(|g| g.key == "child_education").map(|g| g.future_cost_paise);
-    let loans = cap(profile.loans_paise);
+    let income_cover = |take: i64| cap(take.saturating_mul(MONTHS_PER_YEAR).saturating_mul(TERM_YEARS_OF_INCOME));
     let term_needed = cap(
-        cap(my_take.saturating_mul(MONTHS_PER_YEAR).saturating_mul(TERM_YEARS_OF_INCOME))
-            .saturating_add(cap(partner_take.saturating_mul(MONTHS_PER_YEAR).saturating_mul(TERM_YEARS_OF_INCOME)))
-            .saturating_add(loans)
+        income_cover(who.my_take)
+            .saturating_add(income_cover(who.partner_take))
+            .saturating_add(cap(profile.loans_paise))
             .saturating_add(child_education_future.unwrap_or(0)),
     );
     let term_have = cap(profile.term_cover_paise);
     let term_gap = term_needed.saturating_sub(term_have).max(0);
 
     let partner_age = profile.partner_age.map(|a| a.clamp(0, 100));
-    let wider_health_cover = child_birth.is_some() || my_age >= HEALTH_AGE_TRIGGER || partner_age.is_some_and(|a| a >= HEALTH_AGE_TRIGGER);
+    let wider_health_cover = who.child_birth.is_some() || who.my_age >= HEALTH_AGE_TRIGGER || partner_age.is_some_and(|a| a >= HEALTH_AGE_TRIGGER);
     let health_needed = if wider_health_cover { FAMILY_HEALTH_COVER } else { BASE_HEALTH_COVER };
     let health_have = cap(profile.health_cover_paise);
     let health_gap = health_needed.saturating_sub(health_have).max(0);
 
     let mut notes = Vec::new();
     let child_part = if child_education_future.is_some() { " and the child's education" } else { "" };
-    if combined == 0 {
+    if who.combined == 0 {
         notes.push("Enter take-home pay to size term cover.".to_string());
     }
     if term_gap > 0 {
@@ -540,13 +536,9 @@ pub fn plan(profile: &LifeProfile, expenses_paise: i64, today: Date) -> LifePlan
             child_part
         ));
     } else {
-        notes.push(format!(
-            "Term cover covers {} years of take-home, loans{}.",
-            TERM_YEARS_OF_INCOME,
-            child_part
-        ));
+        notes.push(format!("Term cover covers {} years of take-home, loans{}.", TERM_YEARS_OF_INCOME, child_part));
     }
-    let reason = if child_birth.is_some() {
+    let reason = if who.child_birth.is_some() {
         "a child is planned"
     } else if wider_health_cover {
         "someone in the family is 45 or older"
@@ -554,54 +546,67 @@ pub fn plan(profile: &LifeProfile, expenses_paise: i64, today: Date) -> LifePlan
         "a base family floater"
     };
     if health_gap > 0 {
-        notes.push(format!(
-            "Health cover is short by {}. Target is {} because {}.",
-            inr(health_gap),
-            inr(health_needed),
-            reason
-        ));
+        notes.push(format!("Health cover is short by {}. Target is {} because {}.", inr(health_gap), inr(health_needed), reason));
     } else {
         notes.push(format!("Health cover meets the {} target because {}.", inr(health_needed), reason));
     }
 
-    // Timeline: one row per year with an event, from this year to the retirement year.
-    let retire_year = ty + years_to_retire;
+    Insurance {
+        term_needed_paise: term_needed,
+        term_have_paise: term_have,
+        term_gap_paise: term_gap,
+        health_needed_paise: health_needed,
+        health_have_paise: health_have,
+        health_gap_paise: health_gap,
+        notes,
+    }
+}
+
+/// One row per year with an event, from this year to the retirement year.
+fn timeline_of(who: &Who, goals: &[LifeGoal]) -> Vec<TimelineRow> {
+    let retire_year = who.ty + who.years_to_retire;
     let mut events: BTreeMap<i64, Vec<String>> = BTreeMap::new();
-    events.entry(ty).or_default().push("Emergency fund target".to_string());
-    for g in &goals {
+    events.entry(who.ty).or_default().push("Emergency fund target".to_string());
+    for g in goals {
         let Some(when) = &g.when else { continue };
         let Some(year) = when.get(..4).and_then(|y| y.parse::<i64>().ok()) else { continue };
-        let text = if g.key == "retirement" { format!("Retirement at {retirement_age}") } else { g.label.to_string() };
+        let text = if g.key == "retirement" { format!("Retirement at {}", who.retirement_age) } else { g.label.to_string() };
         events.entry(year).or_default().push(text);
     }
-    let timeline = events
+    events
         .into_iter()
-        .filter(|(year, _)| *year >= ty && *year <= retire_year)
-        .map(|(year, events)| TimelineRow { year, age: my_age + (year - ty), events })
-        .collect();
+        .filter(|(year, _)| *year >= who.ty && *year <= retire_year)
+        .map(|(year, events)| TimelineRow { year, age: who.my_age + (year - who.ty), events })
+        .collect()
+}
+
+fn assumptions() -> Assumptions {
+    Assumptions {
+        general_inflation_bps: GENERAL_INFLATION_BPS,
+        education_inflation_bps: EDUCATION_INFLATION_BPS,
+        medical_inflation_bps: MEDICAL_INFLATION_BPS,
+        wedding_inflation_bps: WEDDING_INFLATION_BPS,
+        equity_return_bps: EQUITY_RETURN_BPS,
+        hybrid_return_bps: HYBRID_RETURN_BPS,
+        debt_return_bps: DEBT_RETURN_BPS,
+        step_up_bps: STEP_UP_BPS,
+        swr_bps: SWR_BPS,
+    }
+}
+
+/// Builds the whole life plan. `expenses_paise` is the monthly household spend the caller resolved.
+pub fn plan(profile: &LifeProfile, expenses_paise: i64, today: Date) -> LifePlan {
+    let who = Who::of(profile, expenses_paise, today);
+    let mut goals = goals_of(&who, profile, today);
+
+    let total_step_up: i64 = goals.iter().map(|g| g.step_up_sip_paise).sum();
+    let total_sip: i64 = goals.iter().map(|g| g.monthly_sip_paise).sum();
+    let surplus = who.combined.saturating_sub(who.expenses).clamp(-MAX_AMOUNT_PAISE, MAX_AMOUNT_PAISE);
+    share_and_rate(&mut goals, &who, surplus);
 
     LifePlan {
-        assumptions: Assumptions {
-            general_inflation_bps: GENERAL_INFLATION_BPS,
-            education_inflation_bps: EDUCATION_INFLATION_BPS,
-            medical_inflation_bps: MEDICAL_INFLATION_BPS,
-            wedding_inflation_bps: WEDDING_INFLATION_BPS,
-            equity_return_bps: EQUITY_RETURN_BPS,
-            hybrid_return_bps: HYBRID_RETURN_BPS,
-            debt_return_bps: DEBT_RETURN_BPS,
-            step_up_bps: STEP_UP_BPS,
-            swr_bps: SWR_BPS,
-        },
-        goals,
-        insurance: Insurance {
-            term_needed_paise: term_needed,
-            term_have_paise: term_have,
-            term_gap_paise: term_gap,
-            health_needed_paise: health_needed,
-            health_have_paise: health_have,
-            health_gap_paise: health_gap,
-            notes,
-        },
+        assumptions: assumptions(),
+        insurance: insurance_of(&who, profile, &goals),
         monthly: Monthly {
             total_sip_paise: total_sip,
             total_step_up_sip_paise: total_step_up,
@@ -609,7 +614,8 @@ pub fn plan(profile: &LifeProfile, expenses_paise: i64, today: Date) -> LifePlan
             fits: total_step_up <= surplus,
             shortfall_paise: total_step_up.saturating_sub(surplus).max(0),
         },
-        timeline,
+        timeline: timeline_of(&who, &goals),
+        goals,
     }
 }
 

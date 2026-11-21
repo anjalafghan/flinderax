@@ -1001,7 +1001,7 @@ async fn the_pick_card_shows_the_date_budget_left() {
     let (rohit, _, couple) = t.couple().await;
     let none = t.post("/api/dates/pick", &rohit, json!({})).await;
     assert_eq!(none.json["budget_note"], "", "no budget set, no note");
-    t.exec(&format!("INSERT INTO joy_settings (couple_id, key, value) VALUES ('{couple}', 'monthly_budget', '2000')")).await;
+    t.exec(&format!("INSERT INTO joy_settings (couple_id, key, value) VALUES ('{couple}', 'monthly_budget', '200000')")).await;
     let card = t.post("/api/dates/pick", &rohit, json!({})).await;
     let note = card.json["budget_note"].as_str().unwrap();
     assert!(note.contains("₹2,000 left") || note.contains("over this month"), "{note}");
