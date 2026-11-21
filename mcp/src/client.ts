@@ -1,5 +1,6 @@
 // A client for the joy API. It reads with GET, and writes only to WRITE_PATHS (a report, a new
-// transaction, the parser, dismissing an inbox item, tagging a payee's untagged rows); no other path can be
+// transaction, the parser, dismissing an inbox item, tagging a payee's untagged rows) and WRITE_PATTERNS
+// (filling in the blanks of a hand-marked day's slip); no other path can be
 // written, whatever a tool asks for. It never deletes a transaction, and only ever fills a blank category
 // (the payee endpoint skips rows that are already tagged or locked). Auth is a bearer token: either JOY_TOKEN, or a
 // sign-in with JOY_USERNAME / JOY_PASSWORD (renewed automatically when the server answers 401).
@@ -81,7 +82,7 @@ export class JoyClient {
    * so a retry or a second run is done once. Any other path is refused before a request is made.
    */
   async post(path: string, body: unknown, key: string): Promise<unknown> {
-    if (!WRITE_PATHS.includes(path)) throw new JoyError("That path cannot be written.");
+    if (!writable(path)) throw new JoyError("That path cannot be written.");
     if (!key) throw new JoyError("A write needs an idempotency key.");
     const send = async (token: string) =>
       this.doFetch(`${this.cfg.baseUrl}${path}`, {
@@ -112,3 +113,8 @@ export const WRITE_PATHS = [
   "/api/ingest/unrecognized/dismiss",
   "/api/ingest/payees/categorize",
 ];
+/** Writes whose path carries an id: filling in a hand-marked day's slip (the server only fills blanks,
+ * and only on a day marked by hand). */
+export const WRITE_PATTERNS = [/^\/api\/dates\/slips\/\d+\/dress$/];
+
+export const writable = (path: string) => WRITE_PATHS.includes(path) || WRITE_PATTERNS.some((re) => re.test(path));

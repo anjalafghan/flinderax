@@ -3,6 +3,7 @@ import { z } from "zod";
 import { JoyClient, JoyError } from "./client.ts";
 import { tools } from "./tools.ts";
 import { NEAR_PROMPT, nearSlips, type NearArgs } from "./near.ts";
+import { registerCustomDates } from "./custom.ts";
 import { CATEGORIES, SORT_INBOX_PROMPT, maskDigits, rupeesToPaise, shortHash, txnKey, type NewTxn } from "./inbox.ts";
 
 export function buildServer(client: JoyClient): McpServer {
@@ -61,6 +62,7 @@ export function buildServer(client: JoyClient): McpServer {
   );
 
   registerInbox(server, client);
+  registerCustomDates(server, client);
 
   server.registerTool(
     "save_analysis",

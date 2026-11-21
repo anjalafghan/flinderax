@@ -778,6 +778,50 @@ pub async fn keep_custom(
     Ok(id)
 }
 
+/// The one-off slips behind days we marked by hand (`keep_custom`), newest first, with the days
+/// they were kept on. Slips sealed from `who` are left out, like everywhere else.
+pub async fn custom_slips(db: &SqlitePool, couple: &str, who: usize) -> sqlx::Result<Vec<(Activity, String)>> {
+    let sealed = sealed_from(db, couple, who).await?;
+    let acts: Vec<Activity> = sqlx::query_as(&format!("SELECT {COLS} FROM joy_activities WHERE couple_id = ? AND custom = 1 ORDER BY id DESC"))
+        .bind(couple)
+        .fetch_all(db)
+        .await?;
+    let mut out = Vec::new();
+    for a in acts.into_iter().filter(|a| !sealed.contains(&a.id)) {
+        let days: Option<String> = sqlx::query_scalar(
+            "SELECT group_concat(day, ',') FROM (SELECT date(picked_at, 'unixepoch', 'localtime') AS day FROM joy_history
+              WHERE activity_id = ? AND couple_id = ? AND outcome = 'did_it' ORDER BY picked_at)",
+        )
+        .bind(a.id)
+        .bind(couple)
+        .fetch_one(db)
+        .await?;
+        out.push((a, days.unwrap_or_default()));
+    }
+    Ok(out)
+}
+
+/// Whether this is the one-off slip of a day we marked by hand.
+pub async fn is_custom(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<bool> {
+    let c: Option<bool> = sqlx::query_scalar("SELECT custom = 1 FROM joy_activities WHERE id = ? AND couple_id = ?")
+        .bind(id)
+        .bind(couple)
+        .fetch_optional(db)
+        .await?;
+    Ok(c.unwrap_or(false))
+}
+
+/// A hand-marked day's slip becomes an ordinary slip in the jar, so it can be drawn again. Deleting
+/// its kept date no longer removes it.
+pub async fn custom_to_jar(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<()> {
+    sqlx::query("UPDATE joy_activities SET custom = 0, archived = 0 WHERE id = ? AND couple_id = ? AND custom = 1")
+        .bind(id)
+        .bind(couple)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
 /// Moves a kept date to the day it really happened (`on`, "YYYY-MM-DD"). False when it isn't this
 /// couple's kept date, or it is a regular night and that regular already has a night on `on`.
 pub async fn set_kept_day(db: &SqlitePool, couple: &str, id: i64, on: &str) -> sqlx::Result<bool> {

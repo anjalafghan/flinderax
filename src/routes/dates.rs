@@ -32,6 +32,9 @@ pub fn routes(state: AppState) -> Router {
         .route("/slips/{id}/delete", post(wishlist::delete))
         .route("/slips/{id}/unveto", post(wishlist::unveto))
         .route("/slips/{id}/plan", post(wishlist::plan))
+        // Days marked by hand, and filling their slips in.
+        .route("/custom", get(wishlist::custom_list))
+        .route("/slips/{id}/dress", post(wishlist::dress))
         // History (Kept), budget, savings, Plan B and jobs.
         .merge(crate::joy::api::history::router())
         // Regulars, nights, month and year pages.

@@ -520,6 +520,191 @@ pub async fn update(
     save(s, user_id, Some(id), i).await
 }
 
+/// A day we marked by hand (not drawn from the jar), with its one-off slip as it stands.
+#[derive(Debug, Serialize)]
+pub struct CustomDate {
+    pub slip_id: i64,
+    pub title: String,
+    /// "YYYY-MM-DD" days it was kept on (usually one).
+    pub kept_on: Vec<String>,
+    /// The slip has been given its details (notes) already.
+    pub dressed: bool,
+    pub setting: String,
+    pub venue: String,
+    pub area: String,
+    pub location: String,
+    pub notes: String,
+    pub tags: String,
+    pub energy: String,
+    pub duration: String,
+    pub best_time: String,
+    pub minutes: Option<i64>,
+    pub cover: String,
+    pub bring: String,
+    pub station: String,
+    pub url: String,
+    pub est_cost_paise: i64,
+}
+
+/// `GET /custom`: days we marked by hand, so their slips can be filled in like any other.
+pub async fn custom_list(State(s): State<AppState>, Extension((user_id, _)): User) -> Result<Json<Vec<CustomDate>>, AppError> {
+    let j = joy(&s, &user_id).await?;
+    let rows = db::custom_slips(&s.db, &j.couple, j.who).await?;
+    Ok(Json(
+        rows.into_iter()
+            .map(|(a, days)| CustomDate {
+                slip_id: a.id,
+                kept_on: days.split(',').filter(|d| !d.is_empty()).map(str::to_string).collect(),
+                dressed: !a.notes.trim().is_empty(),
+                location: a.latlng().map(|(lat, lng)| format!("{lat}, {lng}")).unwrap_or_default(),
+                title: a.title,
+                setting: a.setting,
+                venue: a.venue,
+                area: a.area,
+                notes: a.notes,
+                tags: a.tags,
+                energy: a.energy,
+                duration: a.duration,
+                best_time: a.best_time,
+                minutes: a.minutes,
+                cover: a.cover,
+                bring: a.bring,
+                station: a.station,
+                url: a.url,
+                est_cost_paise: a.est_cost,
+            })
+            .collect(),
+    ))
+}
+
+/// What may be added to a hand-marked day's slip. Every field is optional.
+#[derive(Debug, Default, Deserialize)]
+pub struct DressBody {
+    #[serde(default)]
+    pub notes: String,
+    #[serde(default)]
+    pub venue: String,
+    #[serde(default)]
+    pub area: String,
+    /// "19.13, 72.81"
+    #[serde(default)]
+    pub location: String,
+    #[serde(default)]
+    pub tags: String,
+    #[serde(default)]
+    pub energy: String,
+    #[serde(default)]
+    pub duration: String,
+    #[serde(default)]
+    pub best_time: String,
+    #[serde(default, deserialize_with = "flex")]
+    pub minutes: String,
+    #[serde(default)]
+    pub hours: String,
+    #[serde(default)]
+    pub cover: String,
+    #[serde(default)]
+    pub bring: String,
+    #[serde(default)]
+    pub station: String,
+    #[serde(default, deserialize_with = "flex")]
+    pub station_walk_min: String,
+    #[serde(default)]
+    pub url: String,
+    /// Also put it in the jar, so it can be drawn again.
+    #[serde(default)]
+    pub in_jar: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Dressed {
+    pub ok: bool,
+    /// Fields that were blank and are now filled.
+    pub filled: Vec<&'static str>,
+    /// Fields sent that already had a value, so were left alone.
+    pub kept: Vec<&'static str>,
+    pub in_jar: bool,
+    /// What the rest of the jar filled in on top (best time, hours…).
+    pub also: Vec<String>,
+}
+
+/// Fill blanks only: `dst` takes `src` when `dst` is empty and `src` is not.
+fn fill(name: &'static str, dst: &mut String, src: &str, filled: &mut Vec<&'static str>, kept: &mut Vec<&'static str>) {
+    let src = src.trim();
+    if src.is_empty() {
+        return;
+    }
+    if dst.trim().is_empty() {
+        *dst = src.to_string();
+        filled.push(name);
+    } else if dst.trim() != src {
+        kept.push(name);
+    }
+}
+
+/// `POST /slips/{id}/dress`: give a hand-marked day's one-off slip the details a jar slip has, so
+/// it reads as well as one. Only blanks are filled; the title is never changed (its keepsake is
+/// found by title). Energy and duration were placeholders on a hand-marked day, so they may be set
+/// until the slip has notes. `in_jar` also makes it an ordinary slip in the jar.
+pub async fn dress(
+    State(s): State<AppState>,
+    Extension((user_id, _)): User,
+    Path(id): Path<i64>,
+    Json(b): Json<DressBody>,
+) -> Result<Response, AppError> {
+    let j = joy(&s, &user_id).await?;
+    unsealed(&s.db, &j, id).await?;
+    let a = mine(&s.db, &j.couple, id).await?;
+    if !db::is_custom(&s.db, &j.couple, id).await? {
+        return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, "That slip wasn't a day marked by hand; edit it from Slips instead.".into()));
+    }
+    let mut i = input_from(&j.ctx, &a);
+    // The stored text, not the personalised one, goes back in.
+    i.title = a.title.clone();
+    i.notes = a.notes.clone();
+    i.pairs = db::partners(&s.db, &j.couple, id).await?.iter().map(|p| p.id).collect();
+    let first = a.notes.trim().is_empty();
+    let (mut filled, mut kept) = (Vec::new(), Vec::new());
+    fill("notes", &mut i.notes, &b.notes, &mut filled, &mut kept);
+    fill("venue", &mut i.venue, &b.venue, &mut filled, &mut kept);
+    fill("area", &mut i.area, &b.area, &mut filled, &mut kept);
+    fill("location", &mut i.location, &b.location, &mut filled, &mut kept);
+    fill("tags", &mut i.tags, &b.tags, &mut filled, &mut kept);
+    fill("best_time", &mut i.best_time, &b.best_time, &mut filled, &mut kept);
+    fill("minutes", &mut i.minutes, &b.minutes, &mut filled, &mut kept);
+    fill("hours", &mut i.hours, &b.hours, &mut filled, &mut kept);
+    fill("cover", &mut i.cover, &b.cover, &mut filled, &mut kept);
+    fill("bring", &mut i.bring, &b.bring, &mut filled, &mut kept);
+    fill("station", &mut i.station, &b.station, &mut filled, &mut kept);
+    fill("station_walk_min", &mut i.station_walk_min, &b.station_walk_min, &mut filled, &mut kept);
+    fill("url", &mut i.url, &b.url, &mut filled, &mut kept);
+    for (name, dst, src) in [("energy", &mut i.energy, b.energy.trim()), ("duration", &mut i.duration, b.duration.trim())] {
+        if src.is_empty() || *dst == src {
+            continue;
+        }
+        if first {
+            *dst = src.to_string();
+            filled.push(name);
+        } else {
+            kept.push(name);
+        }
+    }
+    let latlng = parse_latlng(&i.location);
+    let error = slip_error(&i, true, latlng);
+    if !error.is_empty() {
+        return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, error.into()));
+    }
+    if b.in_jar && db::duplicate_of(&s.db, &j.couple, &i.title, Some(id)).await?.is_some() {
+        return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, "A slip with this name is already in the jar; leave in_jar off.".into()));
+    }
+    db::save(&s.db, &j.couple, Some(id), &i, latlng).await?;
+    if b.in_jar {
+        db::custom_to_jar(&s.db, &j.couple, id).await?;
+    }
+    let also = crate::joy::enrich::run_one(&s.db, &j.couple, id).await?.iter().map(|f| f.describe()).collect();
+    Ok(Json(Dressed { ok: true, filled, kept, in_jar: b.in_jar, also }).into_response())
+}
+
 /// `POST /slips/{id}/archive`
 pub async fn archive(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
@@ -770,6 +955,76 @@ mod tests {
         let view = ok(page(State(state(db.clone())), Extension(("ua".into(), String::new()))).await).0;
         assert!(ids(&view.groups).is_empty(), "archived slips stay out of the slip list");
         assert_eq!(view.archived.iter().map(|a| a.id).collect::<Vec<_>>(), vec![id]);
+    }
+
+    /// The dress answer as JSON, or the refusal's status.
+    async fn dress_as(db: &SqlitePool, user: &str, id: i64, b: DressBody) -> Result<serde_json::Value, StatusCode> {
+        match dress(State(state(db.clone())), Extension((user.into(), String::new())), Path(id), Json(b)).await {
+            Ok(r) => Ok(serde_json::from_slice(&axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap()).unwrap()),
+            Err(e) => Err(e.0),
+        }
+    }
+
+    fn names(v: &serde_json::Value, k: &str) -> Vec<String> {
+        v[k].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect()
+    }
+
+    #[tokio::test]
+    async fn a_hand_marked_day_is_listed_and_dressed_filling_only_blanks() {
+        let (db, slip) = couple_db().await;
+        let id = db::keep_custom(&db, "C", Some(0), "The day we met", "Bandra", "local", "2026-11-20", None).await.unwrap();
+        let act: i64 = sqlx::query_scalar("SELECT activity_id FROM joy_history WHERE id = ?").bind(id).fetch_one(&db).await.unwrap();
+
+        let list = ok(custom_list(State(state(db.clone())), Extension(("ub".into(), String::new()))).await).0;
+        assert_eq!(list.len(), 1, "only the hand-marked day, not the jar slip");
+        assert_eq!((list[0].slip_id, list[0].kept_on.clone(), list[0].dressed), (act, vec!["2026-11-20".to_string()], false));
+
+        let first = DressBody {
+            notes: "Coffee that turned into a walk to the sea.".into(),
+            venue: "Somewhere else".into(),
+            tags: "first, coffee".into(),
+            energy: "low".into(),
+            duration: "half_day".into(),
+            best_time: "evening".into(),
+            ..Default::default()
+        };
+        let d = dress_as(&db, "ua", act, first).await.unwrap();
+        let filled = names(&d, "filled");
+        assert!(["notes", "energy", "duration", "tags"].iter().all(|f| filled.iter().any(|x| x == f)), "{filled:?}");
+        assert_eq!(names(&d, "kept"), vec!["venue"], "a place already typed is left alone");
+        let a = db::get(&db, "C", act).await.unwrap().unwrap();
+        assert_eq!((a.title.as_str(), a.venue.as_str(), a.energy.as_str(), a.duration.as_str()), ("The day we met", "Bandra", "low", "half_day"));
+        assert!(a.tags.starts_with("first"), "tags are saved, in the jar's own words: {}", a.tags);
+
+        // Once dressed, notes and the old placeholders are the couple's: a second pass changes nothing.
+        let again = DressBody { notes: "Other words".into(), energy: "high".into(), ..Default::default() };
+        let d = dress_as(&db, "ua", act, again).await.unwrap();
+        assert!(names(&d, "filled").is_empty());
+        let a = db::get(&db, "C", act).await.unwrap().unwrap();
+        assert_eq!((a.notes.as_str(), a.energy.as_str()), ("Coffee that turned into a walk to the sea.", "low"));
+        assert!(!db::list(&db, "C", false).await.unwrap().iter().any(|x| x.id == act), "still out of the jar");
+
+        // A jar slip is edited from Slips, not here.
+        let refused = dress_as(&db, "ua", slip, DressBody { notes: "x".into(), ..Default::default() }).await.unwrap_err();
+        assert_eq!(refused, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
+    #[tokio::test]
+    async fn a_dressed_day_can_join_the_jar() {
+        let (db, _) = couple_db().await;
+        let id = db::keep_custom(&db, "C", Some(0), "Picnic at the lake", "", "local", "2026-11-01", None).await.unwrap();
+        let act: i64 = sqlx::query_scalar("SELECT activity_id FROM joy_history WHERE id = ?").bind(id).fetch_one(&db).await.unwrap();
+        let d = dress_as(&db, "ua", act, DressBody { notes: "Mats, mangoes, a long afternoon.".into(), in_jar: true, ..Default::default() }).await.unwrap();
+        assert_eq!(d["in_jar"], true);
+        assert!(db::list(&db, "C", false).await.unwrap().iter().any(|x| x.id == act), "now in the jar");
+        let list = ok(custom_list(State(state(db.clone())), Extension(("ua".into(), String::new()))).await).0;
+        assert!(list.is_empty(), "no longer a hand-marked one-off");
+
+        // A name already in the jar is not put in twice.
+        let id2 = db::keep_custom(&db, "C", Some(0), "Sunset walk", "", "local", "2026-11-02", None).await.unwrap();
+        let act2: i64 = sqlx::query_scalar("SELECT activity_id FROM joy_history WHERE id = ?").bind(id2).fetch_one(&db).await.unwrap();
+        let e = dress_as(&db, "ua", act2, DressBody { in_jar: true, ..Default::default() }).await.unwrap_err();
+        assert_eq!(e, StatusCode::UNPROCESSABLE_ENTITY);
     }
 
     #[tokio::test]
