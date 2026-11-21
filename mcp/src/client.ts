@@ -1,5 +1,6 @@
-// A client for the joy API. It reads with GET, and its only write is saving an analysis
-// (POST /api/analyses); no other path can be written, whatever a tool asks for. Auth is a bearer token: either JOY_TOKEN, or a
+// A client for the joy API. It reads with GET, and writes only to WRITE_PATHS (a report, a new
+// transaction, the parser, dismissing an inbox item); no other path can be written, whatever a tool asks for.
+// It never updates or deletes a transaction. Auth is a bearer token: either JOY_TOKEN, or a
 // sign-in with JOY_USERNAME / JOY_PASSWORD (renewed automatically when the server answers 401).
 // Nothing here logs a path, a token or a password.
 
@@ -69,13 +70,23 @@ export class JoyClient {
     return res.json();
   }
 
-  /** Save an analysis. The one write the connector can make. Sent with an Idempotency-Key so a retry is stored once. */
+  /** Save an analysis. Sent with an Idempotency-Key so a retry is stored once. */
   async saveAnalysis(title: string, body: string, key: string = crypto.randomUUID()): Promise<unknown> {
+    return this.post(SAVE_PATH, { title, body, source: "claude" }, key);
+  }
+
+  /**
+   * POST to one of the few paths the connector may write (WRITE_PATHS), always with an Idempotency-Key,
+   * so a retry or a second run is done once. Any other path is refused before a request is made.
+   */
+  async post(path: string, body: unknown, key: string): Promise<unknown> {
+    if (!WRITE_PATHS.includes(path)) throw new JoyError("That path cannot be written.");
+    if (!key) throw new JoyError("A write needs an idempotency key.");
     const send = async (token: string) =>
-      this.doFetch(`${this.cfg.baseUrl}${SAVE_PATH}`, {
+      this.doFetch(`${this.cfg.baseUrl}${path}`, {
         method: "POST",
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "idempotency-key": key },
-        body: JSON.stringify({ title, body, source: "claude" }),
+        body: JSON.stringify(body),
       });
     let res = await send(this.token ?? (await this.login()));
     if (res.status === 401 && this.cfg.username) res = await send(await this.login());
@@ -91,3 +102,5 @@ export class JoyClient {
 }
 
 const SAVE_PATH = "/api/analyses";
+/** Everything the connector can write: a report, a new transaction, the server's own parser, and clearing an inbox item. */
+export const WRITE_PATHS = [SAVE_PATH, "/api/ingest/transactions/create", "/api/ingest/parse", "/api/ingest/unrecognized/dismiss"];

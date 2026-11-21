@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { JoyClient, JoyError } from "./client.ts";
 import { tools } from "./tools.ts";
+import { NEAR_PROMPT, nearSlips, type NearArgs } from "./near.ts";
+import { CATEGORIES, SORT_INBOX_PROMPT, maskDigits, rupeesToPaise, shortHash, txnKey, type NewTxn } from "./inbox.ts";
 
 export function buildServer(client: JoyClient): McpServer {
   const server = new McpServer({ name: "joy", version: "0.1.0" });
@@ -22,10 +24,49 @@ export function buildServer(client: JoyClient): McpServer {
   }
 
   server.registerTool(
+    "dates_near",
+    {
+      description:
+        "Slips that fit where I'll be: pass a station or area ('CSMT', 'Bandra', 'Churchgate', 'Thane'...). Returns a short list grouped as near (walkable), short_hop (a cab or train away) and anywhere, instead of the whole jar. Optional budget in rupees and a max duration in hours. Read-only.",
+      inputSchema: {
+        area: z.string().min(1).max(60),
+        budget_rupees: z.number().int().min(0).optional(),
+        max_hours: z.number().min(0.25).max(24).optional(),
+        include_far: z.boolean().optional(),
+        include_home: z.boolean().optional(),
+        limit: z.number().int().min(1).max(40).optional(),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async (args: NearArgs) => {
+      try {
+        const data = await client.get("/api/dates/slips");
+        return { content: [{ type: "text" as const, text: JSON.stringify(nearSlips(data, args), null, 2) }] };
+      } catch (e) {
+        return { isError: true, content: [{ type: "text" as const, text: e instanceof JoyError ? e.message : "Request failed." }] };
+      }
+    },
+  );
+
+  server.registerPrompt(
+    "plan_outing",
+    {
+      title: "Plan a day out from the slips",
+      description: "Tell me where you'll be and when; I'll suggest itineraries from the jar.",
+      argsSchema: { where: z.string().optional(), when: z.string().optional() },
+    },
+    ({ where, when }: { where?: string; when?: string }) => ({
+      messages: [{ role: "user" as const, content: { type: "text" as const, text: NEAR_PROMPT(where ?? "", when ?? "") } }],
+    }),
+  );
+
+  registerInbox(server, client);
+
+  server.registerTool(
     "save_analysis",
     {
       description:
-        "Save a written analysis to the joy app, where it shows on the Review page. This is the only tool that writes. Title up to 120 characters, body up to 20,000 characters of plain text (no HTML). Write it in rupees, not paise.",
+        "Save a written analysis to the joy app, where it shows on the Review page. Title up to 120 characters, body up to 20,000 characters of plain text (no HTML). Write it in rupees, not paise.",
       inputSchema: { title: z.string().min(1).max(120), body: z.string().min(1).max(20000) },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -51,6 +92,115 @@ export function buildServer(client: JoyClient): McpServer {
     }),
   );
   return server;
+}
+
+const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
+const failed = (e: unknown, fallback: string) => ({
+  isError: true,
+  content: [{ type: "text" as const, text: e instanceof JoyError || (e instanceof Error && !(e instanceof TypeError)) ? e.message : fallback }],
+});
+
+/** The inbox of bank texts the parser missed: read them masked, post what they say, clear them. */
+export function registerInbox(server: McpServer, client: JoyClient) {
+  server.registerTool(
+    "money_unrecognized",
+    {
+      description:
+        "Bank texts from the last 30 days that joy's parser could not read, newest first, so they can be turned into transactions by hand. Numbers of 8 digits or more are masked to the last 4. Read-only.",
+      inputSchema: {},
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async () => {
+      try {
+        const inbox = (await client.get("/api/ingest/unrecognized")) as { count: number; items: { text: string }[] };
+        const items = inbox.items.map((i) => ({ ...i, text: maskDigits(i.text) }));
+        return text(JSON.stringify({ count: inbox.count, items }, null, 2));
+      } catch (e) {
+        return failed(e, "Request failed.");
+      }
+    },
+  );
+
+  server.registerTool(
+    "money_add_transaction",
+    {
+      description:
+        "Add one transaction (source 'manual'). Give the amount in rupees as written (\"1,250.50\"); it is turned into paise exactly. Pass alert_id when it comes from money_unrecognized: the alert is cleared once the transaction is saved, and calling again with the same alert_id never adds it twice. Typed by hand, identical calls also add once; for two real, identical spends on one day pass occurrence 2. Ask the person before calling this.",
+      inputSchema: {
+        occurred_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        direction: z.enum(["debit", "credit"]),
+        amount_rupees: z.string().min(1).max(24),
+        merchant: z.string().max(120).optional(),
+        category: z.enum(CATEGORIES).optional(),
+        alert_id: z.string().min(1).max(80).optional(),
+        occurrence: z.number().int().min(1).max(50).optional(),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async (t: NewTxn) => {
+      try {
+        const amount_paise = rupeesToPaise(t.amount_rupees);
+        const body = { occurred_on: t.occurred_on, direction: t.direction, amount_paise, merchant: t.merchant, category: t.category ?? "uncategorized" };
+        const saved = (await client.post("/api/ingest/transactions/create", body, await txnKey(t, amount_paise))) as { txn_id?: string };
+        let note = "";
+        if (t.alert_id) {
+          try {
+            await client.post("/api/ingest/unrecognized/dismiss", { alert_id: t.alert_id }, `mcp-dismiss:${t.alert_id}`.slice(0, 100));
+            note = " The alert is cleared from the inbox.";
+          } catch {
+            note = " The alert could not be cleared; dismiss it with money_dismiss_unrecognized.";
+          }
+        }
+        return text(`Added (txn ${saved.txn_id ?? "unknown"}, ${amount_paise} paise).${note}`);
+      } catch (e) {
+        return failed(e, "Could not add the transaction.");
+      }
+    },
+  );
+
+  server.registerTool(
+    "money_dismiss_unrecognized",
+    {
+      description: "Clear one text from the unrecognised inbox: it is not a transaction (an OTP, a promo), or it was added already. Ask the person first.",
+      inputSchema: { alert_id: z.string().min(1).max(80) },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ alert_id }: { alert_id: string }) => {
+      try {
+        await client.post("/api/ingest/unrecognized/dismiss", { alert_id }, `mcp-dismiss:${alert_id}`.slice(0, 100));
+        return text("Cleared from the inbox.");
+      } catch (e) {
+        return failed(e, "Could not clear it.");
+      }
+    },
+  );
+
+  server.registerTool(
+    "money_parse_text",
+    {
+      description:
+        "Run joy's own bank-text parser on one message (say a cleaned-up copy of an unrecognised text). If it reads it, the transaction is saved with the card or account matched, exactly as if the phone had forwarded it; the answer says created, duplicate or unrecognized. Sending the same text again does nothing. Ask the person first.",
+      inputSchema: { text: z.string().min(1).max(2000) },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ text: msg }: { text: string }) => {
+      try {
+        const res = (await client.post("/api/ingest/parse", { text: msg }, `mcp-parse:${await shortHash(msg)}`)) as { status?: string };
+        return text(JSON.stringify(res, null, 2));
+      } catch (e) {
+        return failed(e, "Could not parse it.");
+      }
+    },
+  );
+
+  server.registerPrompt(
+    "sort_inbox",
+    {
+      title: "Sort the bank texts joy could not read",
+      description: "Turn the unrecognised-alert inbox into transactions, with your yes before anything is added.",
+    },
+    () => ({ messages: [{ role: "user" as const, content: { type: "text" as const, text: SORT_INBOX_PROMPT } }] }),
+  );
 }
 
 export function analysePrompt(focus?: string): string {
