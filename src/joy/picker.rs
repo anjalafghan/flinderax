@@ -124,6 +124,8 @@ pub struct Filters {
     pub rain_likely: bool,
     /// Today (local), so closed days and seasons apply. None ignores them.
     pub today: Option<Today>,
+    /// "Something new": only slips we have never had or booked.
+    pub only_new: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -174,6 +176,8 @@ pub enum Hint {
     /// Fits everything except the date we're drawing for: too far, closed then, too long.
     OutsideWindow { title: String, why: String },
     NoMoodMatch,
+    /// Something would fit, but only slips we have had before: "something new" ruled them all out.
+    NothingNew,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -193,6 +197,8 @@ struct Checks {
     open: bool,
     /// Fits the date we're drawing for.
     window: bool,
+    /// Never had, when only new slips are asked for.
+    new: bool,
 }
 
 fn checks(c: &Candidate, f: &Filters) -> Checks {
@@ -207,6 +213,7 @@ fn checks(c: &Candidate, f: &Filters) -> Checks {
             && f.energy.as_ref().is_none_or(|e| *e == c.energy),
         open: f.today.is_none_or(|t| !c.closed_days.contains(&t.weekday) && in_season(c.season, t.month)),
         window: c.window_miss.is_none(),
+        new: !f.only_new || c.last_done_at.is_none(),
     }
 }
 
@@ -241,7 +248,7 @@ pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
 /// Does this candidate pass every hard filter? (Exclusions aside.)
 pub fn matches(c: &Candidate, f: &Filters) -> bool {
     let k = checks(c, f);
-    k.budget && k.duration && k.distance && k.setting && k.mood && k.open && k.window
+    k.budget && k.duration && k.distance && k.setting && k.mood && k.open && k.window && k.new
 }
 
 /// The slips a draw could return (they pass every filter and were not put back), with the chance of
@@ -293,9 +300,20 @@ pub fn pick<R: Rng>(
 
 /// Explain which single constraint to relax, preferring the cheapest change.
 fn hint(all: &[Candidate], f: &Filters) -> Hint {
+    // Asking for something new is the one filter to drop first: it names no single slip to stretch to.
+    if f.only_new {
+        let any = Filters { only_new: false, ..f.clone() };
+        if all.iter().any(|c| matches(c, &any)) {
+            return Hint::NothingNew;
+        }
+    }
     // Candidates that fail exactly the one check `pred` singles out.
     let only_fails = |pred: fn(Checks) -> bool| -> Vec<&Candidate> {
-        all.iter().filter(|c| pred(checks(c, f))).collect()
+        // Only slips "something new" allows, so a hint never names one that still could not be drawn.
+        all.iter().filter(|c| {
+            let k = checks(c, f);
+            k.new && pred(k)
+        }).collect()
     };
 
     let mut over_budget =
@@ -384,6 +402,34 @@ mod tests {
     fn picks(all: &[Candidate], f: &Filters, excluded: &[i64], n: usize) -> Vec<PickResult> {
         let mut r = rng();
         (0..n).map(|_| pick(all, f, excluded, NOW, &mut r)).collect()
+    }
+
+    #[test]
+    fn something_new_only_draws_slips_never_had() {
+        let mut done = cand(1, 0, "home", Duration::Short);
+        done.last_done_at = Some(NOW - 90 * DAY);
+        let all = [done, cand(2, 0, "home", Duration::Short)];
+        let f = Filters { only_new: true, ..filters(0) };
+        assert!(picks(&all, &f, &[], 200).iter().all(|p| *p == PickResult::Pick(2)));
+        assert!(picks(&all, &filters(0), &[], 200).contains(&PickResult::Pick(1)));
+    }
+
+    #[test]
+    fn something_new_with_nothing_new_says_so() {
+        let mut done = cand(1, 0, "home", Duration::Short);
+        done.last_done_at = Some(NOW - DAY);
+        let f = Filters { only_new: true, ..filters(0) };
+        assert_eq!(picks(&[done.clone()], &f, &[], 1)[0], PickResult::NoMatch(Hint::NothingNew));
+        // Over budget as well: the hint names the one new slip that a bigger budget would reach.
+        let mut pricey = cand(2, 900, "home", Duration::Short);
+        pricey.title = "new and pricey".into();
+        let mut done_cheap_over = cand(3, 500, "home", Duration::Short);
+        done_cheap_over.last_done_at = Some(NOW - DAY);
+        let f = Filters { only_new: true, ..filters(100) };
+        assert_eq!(
+            picks(&[pricey, done_cheap_over], &f, &[], 1)[0],
+            PickResult::NoMatch(Hint::OverBudget { title: "new and pricey".into(), cost: 900 })
+        );
     }
 
     #[test]

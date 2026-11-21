@@ -17,7 +17,9 @@ import { newDraft, toScenarioItem, type ScenarioDraft } from "@/utils/scenario";
 import { cn } from "@/utils/cn";
 import { ResetButton } from "@/components/ui/reset-button";
 
-const STORE = "flinderax-whatif-v1";
+const STORE = "joy-whatif-v1";
+// Drafts saved before the rename are read once from here, then moved.
+const OLD_STORE = "flinderax-whatif-v1";
 type Metric = "total" | "spending" | "reserve" | "deposits";
 const METRICS: { id: Metric; label: string }[] = [
   { id: "total", label: "Everything" },
@@ -52,7 +54,8 @@ function useDebounced<T>(value: T, ms: number): T {
 
 function loadDrafts(): ScenarioDraft[] {
   try {
-    const raw = localStorage.getItem(STORE);
+    const raw = localStorage.getItem(STORE) ?? localStorage.getItem(OLD_STORE);
+    localStorage.removeItem(OLD_STORE);
     return raw ? (JSON.parse(raw) as ScenarioDraft[]) : [];
   } catch {
     return [];

@@ -172,7 +172,7 @@ pub async fn sync_visit_history(db: &SqlitePool, couple: &str, regular_id: i64, 
     Ok(())
 }
 
-/// Start-up, once and safe to repeat: gives every night we went to that has no kept date one,
+/// `joy backfill-visits`, safe to repeat: gives every night we went to that has no kept date one,
 /// copying its photo across so nothing is lost.
 pub async fn backfill_visit_history(db: &SqlitePool, photos_root: &std::path::Path) -> sqlx::Result<()> {
     let rows: Vec<(i64, String, i64, String, bool)> = sqlx::query_as(

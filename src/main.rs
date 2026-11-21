@@ -76,18 +76,20 @@ async fn main() -> Result<(), sqlx::Error> {
         .await?;
     sqlx::migrate!().run(&pool).await?;
     optimize(&pool).await;
-    {
-        let root = joy::joy::photos::photos_root();
-        if let Err(e) = joy::joy::db::backfill_visit_history(&pool, &root).await {
-            tracing::warn!("could not link regular nights to kept dates: {e}");
-        }
-    }
     info!("Database connected successfully");
 
     // `joy vapid-keys`: make the key pair for notifications (set VAPID_PRIVATE_KEY on Fly; the page learns the public half itself).
     if env::args().nth(1).as_deref() == Some("vapid-keys") {
         let (private, public) = joy::push::WebPushSender::generate();
         println!("VAPID_PRIVATE_KEY={private}\nVAPID_PUBLIC_KEY={public} (not a secret; the app serves it)");
+        return Ok(());
+    }
+
+    // `joy backfill-visits`: give every regular night we went to that has no kept date one. New nights
+    // get theirs when they are marked; this is for nights from before that, and is safe to repeat.
+    if env::args().nth(1).as_deref() == Some("backfill-visits") {
+        joy::joy::db::backfill_visit_history(&pool, &joy::joy::photos::photos_root()).await?;
+        println!("Regular nights linked to kept dates.");
         return Ok(());
     }
 

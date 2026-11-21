@@ -184,6 +184,24 @@ async fn a_draw_returns_a_slip_and_respects_budget_and_time() {
 }
 
 #[tokio::test]
+async fn something_new_leaves_out_slips_we_have_had_or_booked() {
+    let t = setup().await;
+    let (rohit, _, _) = t.couple().await;
+    let kept = t.scalar("SELECT min(id) FROM joy_activities").await;
+    assert_eq!(t.post(&format!("/api/dates/accept/{kept}"), &rohit, json!({})).await.status, StatusCode::OK);
+
+    let any = ids(&t.post("/api/dates/match", &rohit, json!({"when": "any"})).await.json);
+    let new = ids(&t.post("/api/dates/match", &rohit, json!({"when": "any", "fresh": "1"})).await.json);
+    assert!(any.contains(&kept) && !new.contains(&kept), "a booked slip is not new");
+    assert_eq!(new.len(), any.len() - 1);
+    for _ in 0..10 {
+        let c = t.post("/api/dates/pick", &rohit, json!({"when": "any", "fresh": true})).await.json;
+        assert_ne!(drawn(&c), kept);
+        assert_eq!(c["state"]["fresh"], "1", "a put-back keeps asking for something new");
+    }
+}
+
+#[tokio::test]
 async fn the_jar_page_carries_its_view_model() {
     let t = setup().await;
     let (rohit, neha, _) = t.couple().await;

@@ -1,7 +1,8 @@
 # One image, one server: the Rust binary serves the API and the built web app.
 
 # Stage 1: build the web app with Bun
-FROM oven/bun:1 AS frontend
+# Pinned so a rebuild is the same build; bump on purpose (bun matches the local bun.lock writer).
+FROM oven/bun:1.4.1 AS frontend
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY web/package.json web/
@@ -10,7 +11,8 @@ COPY web/ web/
 RUN bun run --cwd web build
 
 # Stage 2: build the Rust server
-FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
+# Rust matches the local toolchain; bookworm matches the runtime image below.
+FROM lukemathwalker/cargo-chef:0.1.78-rust-1.99.1-bookworm AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -31,7 +33,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --profile deploy --bin joy
 
 # Final image
-FROM debian:bookworm-slim AS runtime
+FROM debian:bookworm-20261104-slim AS runtime
 WORKDIR /app
 # tzdata: TZ=Asia/Kolkata decides local dates. ca-certificates: HTTPS to the weather API (rustls).
 RUN apt-get update \

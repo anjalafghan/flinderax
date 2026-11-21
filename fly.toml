@@ -17,7 +17,7 @@ primary_region = 'sin'
   # Local time for dates, months and calendar invites.
   TZ = 'Asia/Kolkata'
   # What "today" is for the money side (330 = IST).
-  FLINDERAX_UTC_OFFSET_MINUTES = '330'
+  JOY_UTC_OFFSET_MINUTES = '330'
 
 [http_service]
   internal_port = 3000

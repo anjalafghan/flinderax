@@ -11,8 +11,9 @@ beforeEach(() => {
   localStorage.setItem("token", "tok-a");
   localStorage.setItem("expires_at", "123");
   localStorage.setItem("flinderax-whatif-v1", "[]");
+  localStorage.setItem("joy-whatif-v1", "[]");
   localStorage.setItem("vite-ui-theme", "light");
-  cacheNames = new Set(["fx-shell-v1", "fx-data-aaaa", "fx-data-bbbb"]);
+  cacheNames = new Set(["joy-shell-v1", "fx-data-aaaa", "joy-data-bbbb"]);
   g.caches = {
     keys: async () => [...cacheNames],
     delete: async (k: string) => cacheNames.delete(k),
@@ -29,20 +30,20 @@ describe("session cleanup", () => {
     clearSession();
     await new Promise((r) => setTimeout(r, 0));
     expect(keys()).toEqual(["vite-ui-theme"]);
-    expect([...cacheNames]).toEqual(["fx-shell-v1"]);
+    expect([...cacheNames]).toEqual(["joy-shell-v1"]);
   });
 
   test("sweep keeps only the current token's cache", async () => {
     const mine = await offlineCacheName("tok-a");
     cacheNames.add(mine);
     await sweepOfflineCopies();
-    expect([...cacheNames].sort()).toEqual(["fx-shell-v1", mine].sort());
+    expect([...cacheNames].sort()).toEqual(["joy-shell-v1", mine].sort());
   });
 
   test("sweep with no token removes every saved copy", async () => {
     localStorage.removeItem("token");
     await sweepOfflineCopies();
-    expect([...cacheNames]).toEqual(["fx-shell-v1"]);
+    expect([...cacheNames]).toEqual(["joy-shell-v1"]);
   });
 });
 
@@ -74,6 +75,6 @@ describe("cookie sessions", () => {
     const id = newSessionId();
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`sid:${id}`));
     const hex = [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
-    expect(await offlineCacheName(id)).toBe(`fx-data-${hex}`);
+    expect(await offlineCacheName(id)).toBe(`joy-data-${hex}`);
   });
 });

@@ -1,10 +1,13 @@
 // What a login leaves on this device, and how it is removed when the login ends.
 // Personal data kept in the browser: the token and its expiry, the what-if drafts, and the offline
-// copies of API answers that public/sw.js keeps in Cache Storage (one cache per token, "fx-data-<hash>").
+// copies of API answers that public/sw.js keeps in Cache Storage (one cache per token, "joy-data-<hash>").
 // The theme key is a display preference, not personal data, so it stays.
 
-const PERSONAL_KEYS = ["token", "expires_at", "flinderax-whatif-v1"];
-const DATA_PREFIX = "fx-data-";
+const PERSONAL_KEYS = ["token", "expires_at", "joy-whatif-v1", "flinderax-whatif-v1"];
+const DATA_PREFIX = "joy-data-";
+// Copies saved before the rename; logout and the start-up sweep remove them too.
+const OLD_DATA_PREFIX = "fx-data-";
+const isDataCache = (k: string) => k.startsWith(DATA_PREFIX) || k.startsWith(OLD_DATA_PREFIX);
 
 // A web login lives in an HttpOnly cookie that scripts cannot read. What the page keeps under
 // "token" is only an id for this login ("s_…"): it names the saved offline copies and tells the
@@ -44,7 +47,7 @@ async function dropOfflineCopies(keep?: string): Promise<void> {
   try {
     if (typeof caches === "undefined") return;
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k.startsWith(DATA_PREFIX) && k !== keep).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => isDataCache(k) && k !== keep).map((k) => caches.delete(k)));
   } catch {
     /* storage blocked: the service worker's own purge still runs */
   }

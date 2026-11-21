@@ -18,6 +18,8 @@ export interface PickForm {
   middle?: string;
   when?: string;
   start?: string;
+  /** "1": something new, only slips we have never had or booked. */
+  fresh?: string;
 }
 
 export interface Filters {
@@ -30,6 +32,8 @@ export interface Filters {
   energy: string;
   max_km: string;
   from: string;
+  /** "1" = something new. */
+  fresh: string;
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -42,9 +46,10 @@ export const EMPTY_FILTERS: Filters = {
   energy: "",
   max_km: "",
   from: "",
+  fresh: "",
 };
 
-const SCALARS = ["when", "start", "budget", "max_duration", "tag", "energy", "max_km", "from"] as const;
+const SCALARS = ["when", "start", "budget", "max_duration", "tag", "energy", "max_km", "from", "fresh"] as const;
 
 /** Drop the empty fields; the server treats missing and empty alike. */
 export function compact(form: PickForm): PickForm {

@@ -172,6 +172,15 @@ export default function Sentence({ view: v, filters: f, onChange, busy, onDraw, 
         <button id="draw" className={`btn ${bothIn ? "btn-ink" : "btn-stamp btn-draw"}`} type="submit" disabled={busy}>
           {bothIn ? "Draw with my answers" : "Draw a slip"}
         </button>
+        <button
+          className="shake-opt"
+          type="button"
+          aria-pressed={f.fresh === "1"}
+          title="Only slips we've never had"
+          onClick={() => onChange({ fresh: f.fresh === "1" ? "" : "1" })}
+        >
+          something new
+        </button>
         {shake.available && (
           <button id="shake" className="shake-opt" type="button" aria-pressed={shake.on} onClick={shake.toggle}>
             {shake.label}

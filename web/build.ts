@@ -2,7 +2,7 @@
 // (STATIC_DIR) - there is no separate frontend server, in dev or in production.
 //
 //   bun build.ts           one-off production build (minified, console dropped, .br/.gz copies)
-//   bun build.ts --watch   rebuild on change (dev); refresh the Rust server's page to see it
+//   bun build.ts --watch   rebuild on change (dev); open pages reload themselves after each rebuild
 import { HEAD_EXTRAS } from "./head-extras";
 import { copyFile, cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync, watch } from "node:fs";
@@ -15,6 +15,23 @@ const root = import.meta.dir;
 const outdir = path.join(root, "dist");
 const isWatch = process.argv.includes("--watch");
 const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
+
+// Live reload for the watch build only. Every build writes its time to dev-build.txt, and the page
+// polls it from its own origin (the CSP allows no inline script and no other host) and reloads when
+// it changes. A failed fetch (dist is being rebuilt, the server restarting) is just tried again.
+const DEV_RELOAD_JS = `(() => {
+  let seen = null;
+  setInterval(async () => {
+    try {
+      const res = await fetch("/dev-build.txt", { cache: "no-store" });
+      if (!res.ok) return;
+      const at = await res.text();
+      if (seen !== null && at !== seen) location.reload();
+      seen = at;
+    } catch {}
+  }, 1000);
+})();
+`;
 
 // Dates (joy) stylesheets stay out of the app shell. Bun would otherwise fold every lazy route's
 // CSS into index.html's one stylesheet (and write copies nothing links to), so "/" downloaded
@@ -179,7 +196,12 @@ async function build(): Promise<boolean> {
   // The install tags are added here, not written in index.html: the bundler would try to resolve
   // their absolute paths as source files and fail the build.
   const html = (await readFile(indexPath, "utf8")).replace("</head>", `${HEAD_EXTRAS}</head>`);
-  await writeFile(indexPath, html.replaceAll("__SITE_URL__", siteUrl));
+  const devTag = isWatch ? `<script src="/dev-reload.js" defer></script>` : "";
+  await writeFile(indexPath, html.replace("</head>", `${devTag}</head>`).replaceAll("__SITE_URL__", siteUrl));
+  if (isWatch) {
+    await writeFile(path.join(outdir, "dev-reload.js"), DEV_RELOAD_JS);
+    await writeFile(path.join(outdir, "dev-build.txt"), String(Date.now()));
+  }
   if (!isWatch) await precompress(outdir);
   console.log(`built web/dist in ${(performance.now() - started).toFixed(0)}ms`);
   return true;
