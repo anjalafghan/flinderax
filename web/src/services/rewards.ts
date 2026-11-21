@@ -5,12 +5,14 @@ import api from "@/services/api";
 import type { StreakKind } from "@/utils/streaks";
 
 export type RewardState = "locked" | "earned" | "claimed";
+/** goal / streak: unlocked by reaching it. wish: no trigger, bought from the wallet. */
+export type TriggerKind = "goal" | "streak" | "wish";
 
 export interface Reward {
   reward_id: string;
   name: string;
   cost_paise: number;
-  trigger_kind: "goal" | "streak";
+  trigger_kind: TriggerKind;
   goal_id: string | null;
   /** 25, 50, 75 or 100 (the goal is done). */
   goal_pct: number | null;
@@ -33,6 +35,49 @@ export interface RewardsOut {
   monthly_cap_paise: number | null;
   spent_this_month_paise: number;
   cap_left_paise: number | null;
+  /** What the reward fund's wallet holds; treats with a cost are bought from it. */
+  wallet_paise: number;
+}
+
+export type FundArea = "money" | "health" | "relationships" | "future";
+
+export interface AreaScore {
+  area: FundArea;
+  label: string;
+  weight_bps: number;
+  raw: number;
+  target: number;
+  score_bps: number;
+  tip: string;
+}
+
+export interface MonthScore {
+  areas: AreaScore[];
+  score_bps: number;
+  earned_paise: number;
+  saved_paise: number;
+  payout_paise: number;
+  held_back_paise: number;
+  focus: FundArea | null;
+}
+
+export interface SettledMonth {
+  month: string;
+  score_bps: number;
+  earned_paise: number;
+  saved_paise: number;
+  payout_paise: number;
+  detail: { areas?: AreaScore[]; held_back_paise?: number; focus?: FundArea | null } | null;
+}
+
+export interface FundOut {
+  wallet_paise: number;
+  paid_in_paise: number;
+  spent_paise: number;
+  max_payout_paise: number;
+  fund_since: string;
+  this_month: { month: string; days_left: number; score: MonthScore };
+  months: SettledMonth[];
 }
 
 export interface RewardSuggestion {
@@ -44,7 +89,7 @@ export interface RewardSuggestion {
 export interface RewardInput {
   name: string;
   cost_paise: number;
-  trigger_kind: "goal" | "streak";
+  trigger_kind: TriggerKind;
   goal_id?: string;
   goal_pct?: number;
   streak_kind?: StreakKind;
@@ -57,6 +102,7 @@ const data = <T>(p: Promise<{ data: T }>) => p.then((r) => r.data);
 
 export const rewardsApi = {
   list: () => data(api.get<RewardsOut>("/api/rewards")),
+  fund: () => data(api.get<FundOut>("/api/rewards/fund")),
   suggestions: () => data(api.get<RewardSuggestion[]>("/api/rewards/suggestions")),
   create: (r: RewardInput) => data(api.post<{ reward_id: string }>("/api/rewards/create", r)),
   remove: (reward_id: string) => data(api.post("/api/rewards/remove", { reward_id })),
@@ -66,6 +112,8 @@ export const rewardsApi = {
 };
 
 export const useRewardSuggestions = () => useQuery({ queryKey: [...rewardsKey, "suggestions"], queryFn: rewardsApi.suggestions, retry: 1 });
+
+export const useRewardFund = () => useQuery({ queryKey: [...rewardsKey, "fund"], queryFn: rewardsApi.fund, retry: 1 });
 
 export const useRewards = () => useQuery({ queryKey: rewardsKey, queryFn: rewardsApi.list, retry: 1 });
 

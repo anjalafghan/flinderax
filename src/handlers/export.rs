@@ -93,6 +93,7 @@ pub(crate) const USER_TABLES: &[(&str, &str)] = &[
         ("rewards", "SELECT * FROM rewards WHERE user_id = ?"),
         ("reward_claims", "SELECT * FROM reward_claims WHERE user_id = ?"),
         ("reward_settings", "SELECT * FROM reward_settings WHERE user_id = ?"),
+        ("reward_months", "SELECT * FROM reward_months WHERE user_id = ?"),
         ("planned_outflows", "SELECT * FROM planned_outflows WHERE user_id = ?"),
         ("activity_log", "SELECT * FROM activity_log WHERE user_id = ?"),
         ("analyses", "SELECT * FROM analyses WHERE user_id = ?"),

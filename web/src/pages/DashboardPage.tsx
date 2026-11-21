@@ -13,6 +13,7 @@ import { HabitsCard } from "@/components/feature/HabitsCard";
 import { CheckInCard } from "@/components/feature/CheckInCard";
 import { LifeLineCard } from "@/components/feature/life/LifeLineCard";
 import { StreaksCard } from "@/components/feature/StreaksCard";
+import { RewardFundCard } from "@/components/feature/RewardFundCard";
 import { DatesHome } from "@/components/feature/DatesHome";
 import { formatRupees, useCards } from "@/hooks/useCards";
 import { getCouple, keys as joyKeys } from "@/joy/api";
@@ -85,6 +86,7 @@ function MoneyDashboard() {
         </div>
 
         <div className="stack [&>*]:!my-0">
+          <RewardFundCard />
           <StreaksCard />
           <HabitsCard />
           <LifeLineCard />

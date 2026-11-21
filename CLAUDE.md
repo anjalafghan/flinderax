@@ -40,6 +40,7 @@ A private life-planning app for one household: money (Flinderax) plus the date j
 - Notifications (`src/push.rs`, `docs/notifications.md`): a morning and an evening digest of counts only (never names or amounts), sent by a scheduled call to `/api/internal/push/run`. New nudge kinds must keep that rule.
 - Every authenticated POST accepts an `Idempotency-Key` and is then done once; the web outbox (`web/src/offline.ts`) relies on it.
 - Bank texts the parser can't read are kept 30 days in `unrecognized_alerts`.
+- Reward fund (`planner/reward_fund.rs`, `handlers/reward_fund.rs`, `GET /api/rewards/fund`): each finished month is scored across money 40% / health / relationships / future 20% each, against targets learned from the user's own last six months, and pays up to ₹2,000, never more than spending came in under the allowance. A month is settled once into `reward_months` and never rewritten. Payouts build a wallet; a claim with a cost comes out of it (`reward_claims.from_wallet = 1`). New signals must count things done in the month and be capped.
 
 ## SQL, offline data and local databases
 

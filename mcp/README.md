@@ -1,7 +1,9 @@
 # joy-mcp: connector
 
-An MCP server that lets Claude read joy (money and Dates) over the existing API. Its only write is `save_analysis`, which puts a written report on the Review page.
-Everything else is GET-only, so nothing else can change. The server's own privacy rules still apply: surprises
+An MCP server that lets Claude read joy (money and Dates) over the existing API. It writes to four paths only
+(`WRITE_PATHS` in `src/client.ts`): a report on the Review page, a new transaction, joy's own text parser, and clearing
+an item from the unrecognised-alert inbox. It never edits or deletes a transaction, and every write carries an
+`Idempotency-Key`, so a retry or a second run is done once. The server's own privacy rules still apply: surprises
 sealed for you answer 404, and neither partner's quiet marks nor answers are returned.
 
 ## Tools
@@ -9,6 +11,20 @@ sealed for you answer 404, and neither partner's quiet marks nor answers are ret
 cards, transactions, month review, check-in, `money_export_all` (the full export), `analyses_list`.
 `save_analysis` writes a report to the Review page; the prompt `analyse_money` drives a full run. `dates_*`: coming up, jar, slips, packs, kept, regulars,
 year, month, summary, settle. Money is integer paise.
+
+## Sorting the bank texts joy could not read
+Texts the regexes miss wait 30 days in the inbox. Claude becomes the fallback parser, with no API key or LLM in the server:
+- `money_unrecognized` lists them, with numbers of 8+ digits masked to the last 4.
+- `money_add_transaction` takes rupees as text ("1,250.50"), converts them to paise exactly, and saves the transaction.
+  With an `alert_id` it is keyed on that alert, so it can't post twice, and it clears the alert once the transaction is saved.
+- `money_parse_text` sends a cleaned-up text through joy's own parser, which also matches the card or account.
+- `money_dismiss_unrecognized` clears an OTP, a promo and the like.
+- The `sort_inbox` prompt runs the whole pass and shows you a table to approve before it adds anything. Run it weekly.
+
+## Planning a day out
+`dates_near` takes a station or area ("CSMT", "Bandra"...) plus an optional budget and max hours, and returns a short
+list of slips grouped as near, short hop and anywhere. The `plan_outing` prompt wraps it: say "I'll be at CSMT tomorrow"
+and Claude builds itineraries, checking `dates_coming_up` and `dates_kept` for clashes. Add areas in `src/near.ts`.
 
 ## Use with Claude Code / Claude Desktop
 ```json

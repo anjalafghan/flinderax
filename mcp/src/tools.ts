@@ -29,6 +29,8 @@ export const tools: ToolDef[] = [
   { name: "money_transactions", description: "Recent transactions.", path: () => "/api/ingest/transactions" },
   { name: "money_month_review", description: "Month review.", path: () => "/api/review/month" },
   { name: "money_checkin", description: "Status of the money check-in.", path: () => "/api/checkin" },
+  { name: "rewards_fund", description: "The reward fund: this month's score across money (40%), health, relationships and future (20% each) with each area's points against its learned target and a tip for the weakest one; what past months paid (up to ₹2,000 a month, never more than was saved under the spending allowance); and the wallet balance. Use it to coach which small step would raise this month's payout. Amounts in paise.", path: () => "/api/rewards/fund" },
+  { name: "rewards_list", description: "Treats on the wishlist and what unlocks each (a goal share, a streak, or simply enough in the wallet), with their state and claim history. Amounts in paise.", path: () => "/api/rewards" },
 
   { name: "money_export_all", description: "Everything you own as one JSON file: every table of money and people data, plus your couple's Dates data (sealed surprises and your partner's marks excluded). Large; use it for deep, multi-month analysis. Amounts are paise.", path: () => "/api/export" },
   { name: "analyses_list", description: "Analyses already saved in the app, newest first. Read these before writing a new one so you build on them instead of repeating them.", path: () => "/api/analyses" },

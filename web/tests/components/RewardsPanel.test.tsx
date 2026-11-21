@@ -30,11 +30,12 @@ const out: RewardsOut = {
   monthly_cap_paise: 100000,
   spent_this_month_paise: 50000,
   cap_left_paise: 50000,
+  wallet_paise: 60000,
 };
 
-function withData(ui: React.ReactElement) {
+function withData(ui: React.ReactElement, data: RewardsOut = out) {
   const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
-  qc.setQueryData(["rewards"], out);
+  qc.setQueryData(["rewards"], data);
   qc.setQueryData(["rewards", "suggestions"], [{ name: "A back massage", cost_paise: 150000, note: "x" }, { name: "Buy something I've been wanting", cost_paise: 230000, note: "y" }]);
   qc.setQueryData(["goals"], { goals: [{ id: "g1", name: "Trip" }], available_paise: 0, unallocated_paise: 0, months_covered_tenths: null, emergency_suggested_paise: null });
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
@@ -65,11 +66,18 @@ describe("rewards", () => {
 
   it("lists rewards with a claim button only on the earned one, plus the budget and history", () => {
     withData(<RewardsPanel />);
-    expect(screen.getAllByRole("button", { name: /Claim it/ })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /Buy it from the wallet/ })).toHaveLength(1);
+    expect(screen.getByText("In your reward wallet")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Undo claim" })).toBeTruthy();
     expect(screen.getByText(/claimed this month/)).toHaveTextContent("₹500");
     expect(screen.getByText("Claimed so far (1)")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add a reward" })).toBeTruthy();
+  });
+
+  it("an earned treat the wallet can't cover yet says how much more it needs", () => {
+    withData(<RewardsPanel />, { ...out, wallet_paise: 20000 });
+    expect(screen.queryByRole("button", { name: /Buy it from the wallet/ })).toBeNull();
+    expect(screen.getByText(/more in the wallet/)).toHaveTextContent("₹300");
   });
 
   it("offers ideas, and picking one fills the form with its name and cost", () => {

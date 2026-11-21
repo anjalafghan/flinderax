@@ -15,9 +15,11 @@ use time::Date;
 use crate::{
     handlers::{
         common::{bad_request, not_found, today_local, AppError},
+        reward_fund,
         streaks::{self, StreaksOut},
     },
     models::AppState,
+    planner::reward_fund::wallet,
     planner::rewards::{cap_left, goal_reached, state as reward_state, streak_reached, RewardState, GOAL_PCTS, MAX_STREAK_TARGET},
     validate,
 };
@@ -72,6 +74,8 @@ pub struct RewardsOut {
     pub spent_this_month_paise: i64,
     /// What the cap still allows this month; null when there is no cap.
     pub cap_left_paise: Option<i64>,
+    /// What the reward fund's wallet holds: treats with a cost are bought from it.
+    pub wallet_paise: i64,
 }
 
 #[derive(Serialize)]
@@ -102,6 +106,7 @@ async fn spent_in(db: &sqlx::SqlitePool, user_id: &str, month: &str) -> Result<i
 /// Whether one reward's trigger has been met. `goals` maps goal id to (saved, target).
 fn reached(r: &RewardRow, goals: &HashMap<String, (i64, i64)>, streaks: Option<&StreaksOut>) -> bool {
     match r.trigger_kind.as_str() {
+        "wish" => true,
         "goal" => match (r.goal_id.as_ref().and_then(|g| goals.get(g)), r.goal_pct) {
             (Some(&(saved, target)), Some(pct)) => goal_reached(saved, target, pct),
             _ => false,
@@ -182,6 +187,10 @@ pub async fn compute(state: &AppState, user_id: &str, today: Date) -> Result<Rew
         monthly_cap_paise: cap,
         spent_this_month_paise: spent,
         cap_left_paise: cap_left(cap, spent),
+        wallet_paise: {
+            let (paid_in, out) = reward_fund::totals(db, user_id).await?;
+            wallet(paid_in, out)
+        },
     })
 }
 
@@ -238,7 +247,7 @@ pub struct CreatePayload {
     pub name: String,
     /// What the treat costs; 0 or missing for a free one.
     pub cost_paise: Option<i64>,
-    /// goal | streak
+    /// goal | streak | wish (no trigger: bought from the wallet)
     pub trigger_kind: String,
     pub goal_id: Option<String>,
     /// 25, 50, 75 or 100 (done).
@@ -282,7 +291,8 @@ pub async fn create(State(state): State<AppState>, Extension((user_id, _)): User
             let target = p.streak_target.filter(|t| (1..=MAX_STREAK_TARGET).contains(t)).ok_or_else(|| bad_request(format!("The streak must be between 1 and {MAX_STREAK_TARGET}")))?;
             (None, None, Some(kind), Some(target))
         }
-        _ => return Err(bad_request("trigger_kind must be goal or streak")),
+        "wish" => (None, None, None, None),
+        _ => return Err(bad_request("trigger_kind must be goal, streak or wish")),
     };
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM rewards WHERE user_id = ?").bind(&user_id).fetch_one(&state.db).await?;
     if count >= MAX_REWARDS {
@@ -348,14 +358,19 @@ pub async fn claim_on(state: &AppState, user_id: &str, reward_id: &str, today: D
         return Err(bad_request("Not earned yet"));
     }
     let day = today.to_string();
-    // One statement checks the cap and inserts, so two taps at once can't both squeeze in.
+    // Settle any finished month first, so the wallet holds every payout due.
+    reward_fund::compute(state, user_id, today).await?;
+    // One statement checks the cap and the wallet and inserts, so two taps at once can't both
+    // squeeze in. The cost comes out of the wallet (from_wallet = 1).
     let res = sqlx::query(
-        "INSERT OR IGNORE INTO reward_claims (reward_id, user_id, cost_paise, claimed_on)
-         SELECT r.reward_id, r.user_id, r.cost_paise, ?1 FROM rewards r
+        "INSERT OR IGNORE INTO reward_claims (reward_id, user_id, cost_paise, claimed_on, from_wallet)
+         SELECT r.reward_id, r.user_id, r.cost_paise, ?1, 1 FROM rewards r
           WHERE r.reward_id = ?2 AND r.user_id = ?3
             AND ((SELECT monthly_cap_paise FROM reward_settings WHERE user_id = ?3) IS NULL
                  OR r.cost_paise + COALESCE((SELECT SUM(cost_paise) FROM reward_claims WHERE user_id = ?3 AND substr(claimed_on, 1, 7) = ?4), 0)
-                    <= (SELECT monthly_cap_paise FROM reward_settings WHERE user_id = ?3))",
+                    <= (SELECT monthly_cap_paise FROM reward_settings WHERE user_id = ?3))
+            AND r.cost_paise <= COALESCE((SELECT SUM(payout_paise) FROM reward_months WHERE user_id = ?3), 0)
+                              - COALESCE((SELECT SUM(cost_paise) FROM reward_claims WHERE user_id = ?3 AND from_wallet = 1), 0)",
     )
     .bind(&day)
     .bind(reward_id)
@@ -368,6 +383,15 @@ pub async fn claim_on(state: &AppState, user_id: &str, reward_id: &str, today: D
         let taken: Option<String> = sqlx::query_scalar("SELECT reward_id FROM reward_claims WHERE reward_id = ?").bind(reward_id).fetch_optional(db).await?;
         if taken.is_some() {
             return Err(AppError(StatusCode::CONFLICT, "You already claimed that one".into()));
+        }
+        let (paid_in, out) = reward_fund::totals(db, user_id).await?;
+        let left = wallet(paid_in, out);
+        if r.cost_paise > left {
+            return Err(bad_request(format!(
+                "Your reward wallet holds ₹{}, and this costs ₹{}. It fills at the end of each month",
+                crate::validate::plain_rupees(left),
+                crate::validate::plain_rupees(r.cost_paise)
+            )));
         }
         return Err(bad_request("That would go over this month's reward budget. Wait for next month, or raise the budget"));
     }
@@ -454,6 +478,12 @@ mod tests {
         sqlx::query("INSERT INTO goal_contributions (goal_id, amount_paise, on_day) VALUES (?, ?, '2026-11-01')").bind(goal).bind(paise).execute(&state.db).await.unwrap();
     }
 
+    /// Puts `paise` in the wallet, as a settled month long ago.
+    async fn fund(state: &AppState, paise: i64) {
+        sqlx::query("INSERT INTO reward_months (user_id, month, score_bps, earned_paise, saved_paise, payout_paise, settled_on) VALUES ('u', '2020-01', 10000, ?1, ?1, ?1, '2020-02-01')")
+            .bind(paise).execute(&state.db).await.unwrap();
+    }
+
     async fn state_of(state: &AppState, id: &str, today: Date) -> RewardState {
         ok(compute(state, "u", today).await).rewards.into_iter().find(|r| r.reward_id == id).unwrap().state
     }
@@ -462,6 +492,7 @@ mod tests {
     async fn a_goal_reward_unlocks_at_its_share_and_is_claimed_once() {
         let state = test_state().await;
         let today = day(2026, 11, 11);
+        fund(&state, 20_000).await;
         let half = ok(make(&state, "u", goal_reward("g1", 50, 20_000)).await);
         assert_eq!(state_of(&state, &half, today).await, RewardState::Locked);
         assert_eq!(err(claim_on(&state, "u", &half, today).await).0, StatusCode::BAD_REQUEST);
@@ -489,6 +520,7 @@ mod tests {
     async fn the_monthly_cap_refuses_a_claim_that_would_pass_it_and_resets_next_month() {
         let state = test_state().await;
         save(&state, "g1", 100_000).await;
+        fund(&state, 100_000).await;
         let _ = ok(set_cap(State(state.clone()), Extension(("u".into(), String::new())), Json(CapPayload { monthly_cap_paise: Some(50_000) })).await);
         let a = ok(make(&state, "u", goal_reward("g1", 25, 30_000)).await);
         let b = ok(make(&state, "u", goal_reward("g1", 50, 30_000)).await);
@@ -612,6 +644,7 @@ mod tests {
         let state = test_state().await;
         let today = day(2026, 11, 11);
         save(&state, "g1", 100_000).await;
+        fund(&state, 500).await;
         let id = ok(make(&state, "u", goal_reward("g1", 100, 500)).await);
         ok(claim_on(&state, "u", &id, today).await);
         let _ = ok(remove(State(state.clone()), Extension(("u".into(), String::new())), Json(RewardRef { reward_id: id.clone() })).await);
@@ -619,5 +652,32 @@ mod tests {
         assert!(out.rewards.is_empty());
         assert_eq!((out.history.len(), out.spent_this_month_paise), (1, 500));
         assert_eq!(err(claim_on(&state, "u", &id, today).await).0, StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn a_wish_is_bought_from_the_wallet_and_undoing_it_refunds() {
+        let state = test_state().await;
+        let today = day(2026, 11, 11);
+        let wish = ok(make(&state, "u", CreatePayload { name: "Headphones".into(), cost_paise: Some(150_000), trigger_kind: "wish".into(), goal_id: None, goal_pct: None, streak_kind: None, streak_target: None }).await);
+        assert_eq!(state_of(&state, &wish, today).await, RewardState::Earned);
+        let (code, msg) = err(claim_on(&state, "u", &wish, today).await);
+        assert_eq!(code, StatusCode::BAD_REQUEST);
+        assert!(msg.contains("wallet holds ₹0") && msg.contains("₹1500"), "{msg}");
+        fund(&state, 200_000).await;
+        ok(claim_on(&state, "u", &wish, today).await);
+        assert_eq!(ok(compute(&state, "u", today).await).wallet_paise, 50_000);
+        let _ = ok(unclaim(State(state.clone()), Extension(("u".into(), String::new())), Json(RewardRef { reward_id: wish })).await);
+        assert_eq!(ok(compute(&state, "u", today).await).wallet_paise, 200_000);
+    }
+
+    #[tokio::test]
+    async fn a_wish_with_a_trigger_is_refused_and_free_treats_need_no_wallet() {
+        let state = test_state().await;
+        let mut p = CreatePayload { name: "x".into(), cost_paise: None, trigger_kind: "wish".into(), goal_id: Some("g1".into()), goal_pct: Some(100), streak_kind: None, streak_target: None };
+        // A wish ignores trigger fields rather than storing half a trigger.
+        let id = ok(make(&state, "u", p).await);
+        ok(claim_on(&state, "u", &id, day(2026, 11, 11)).await);
+        p = CreatePayload { name: "x".into(), cost_paise: None, trigger_kind: "nope".into(), goal_id: None, goal_pct: None, streak_kind: None, streak_target: None };
+        assert_eq!(err(make(&state, "u", p).await).0, StatusCode::BAD_REQUEST);
     }
 }

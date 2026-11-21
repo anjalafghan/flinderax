@@ -87,7 +87,7 @@ export default function CardsPage() {
         </section>
 
         {history && <CardUtilization cards={history.cards} />}
-        {hasCards && <RewardsPanel />}
+        <RewardsPanel />
       </main>
     </div>
   );
