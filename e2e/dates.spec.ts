@@ -34,3 +34,19 @@ test("putting a slip back has no limit", async ({ page }) => {
   // Nothing says "no more tries": there is no limit to hide the button behind.
   await expect(page.getByText(/no more tries|more tries/i)).toHaveCount(0);
 });
+
+test("mark today as the day we met, straight from the jar", async ({ page }) => {
+  await newUser(page, "markday");
+  await startJarWithSlip(page, "Chai at the corner stall");
+
+  await page.goto("/joy");
+  await page.getByRole("link", { name: /Mark a day to remember/ }).click();
+  await expect(page).toHaveURL(/\/joy\/kept#add$/);
+
+  // One tap names it; the day is already today.
+  await page.getByRole("button", { name: "The day we met" }).click();
+  await expect(page.getByLabel("What happened?")).toHaveValue("The day we met");
+  await page.getByRole("button", { name: "Keep this day" }).click();
+
+  await expect(page.getByText("The day we met").first()).toBeVisible();
+});

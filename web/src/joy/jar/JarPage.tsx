@@ -714,6 +714,9 @@ export default function JarPage() {
               <Link className="btn btn-stamp" to="/joy/slips/new">
                 Write the first slip
               </Link>
+              <p>
+                Just met? <Link to="/joy/kept#add">Mark today</Link> and start the keepsake box.
+              </p>
             </div>
           )}
 
@@ -753,6 +756,11 @@ export default function JarPage() {
                 <span className="keepsake-d">{v.memory.when}</span>
               </div>
             )}
+            <Link className="keepsake grain" to="/joy/kept#add">
+              <span className="keepsake-k">Today, or any day before</span>
+              <span className="keepsake-t">Mark a day to remember</span>
+              <span className="keepsake-d">The day you met, a first date, a night that wasn’t a slip.</span>
+            </Link>
             {!v.budget.budget ? (
               <div className="budget-line">
                 <p>
