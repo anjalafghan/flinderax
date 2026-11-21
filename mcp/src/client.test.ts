@@ -63,3 +63,10 @@ test("the prompt names the tools it needs", async () => {
   const p = analysePrompt("eating out");
   for (const n of ["analyses_list", "money_export_all", "save_analysis", "eating out"]) expect(p).toContain(n);
 });
+
+test("the payee categorize path is writable, other ingest writes are not", async () => {
+  const c = new JoyClient({ baseUrl: "http://x", token: "t", fetch: (async () => json({ updated: 2 })) as any });
+  expect(await c.post("/api/ingest/payees/categorize", { payee: "Swad", category: "food" }, "k")).toEqual({ updated: 2 });
+  expect(c.post("/api/ingest/transactions/update", {}, "k")).rejects.toThrow("cannot be written");
+  expect(c.post("/api/ingest/transactions/delete", {}, "k")).rejects.toThrow("cannot be written");
+});

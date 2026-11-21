@@ -1,6 +1,7 @@
 // A client for the joy API. It reads with GET, and writes only to WRITE_PATHS (a report, a new
-// transaction, the parser, dismissing an inbox item); no other path can be written, whatever a tool asks for.
-// It never updates or deletes a transaction. Auth is a bearer token: either JOY_TOKEN, or a
+// transaction, the parser, dismissing an inbox item, tagging a payee's untagged rows); no other path can be
+// written, whatever a tool asks for. It never deletes a transaction, and only ever fills a blank category
+// (the payee endpoint skips rows that are already tagged or locked). Auth is a bearer token: either JOY_TOKEN, or a
 // sign-in with JOY_USERNAME / JOY_PASSWORD (renewed automatically when the server answers 401).
 // Nothing here logs a path, a token or a password.
 
@@ -102,5 +103,12 @@ export class JoyClient {
 }
 
 const SAVE_PATH = "/api/analyses";
-/** Everything the connector can write: a report, a new transaction, the server's own parser, and clearing an inbox item. */
-export const WRITE_PATHS = [SAVE_PATH, "/api/ingest/transactions/create", "/api/ingest/parse", "/api/ingest/unrecognized/dismiss"];
+/** Everything the connector can write: a report, a new transaction, the server's own parser, clearing an inbox item,
+ * and giving one payee's uncategorised rows a category. */
+export const WRITE_PATHS = [
+  SAVE_PATH,
+  "/api/ingest/transactions/create",
+  "/api/ingest/parse",
+  "/api/ingest/unrecognized/dismiss",
+  "/api/ingest/payees/categorize",
+];
