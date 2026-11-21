@@ -9,16 +9,13 @@ import { Budget, CustomDateFold } from "../kept/Budget";
 import { useFold } from "../kept/useFold";
 import { KeptContext, type FinishOptions, type KeptCtx } from "../kept/ctx";
 import { Defs } from "../kept/Defs";
-import { dateWord, flatIds, moveFor, sinceLabel, splitTo, stepIndex } from "../kept/helpers";
+import { dateWord, flatIds, isoToday, moveFor, sinceLabel, splitTo, stepIndex } from "../kept/helpers";
 import { behavior, nextFrame, useDealIn } from "../kept/motion";
 import { SealedSlip, Slip } from "../kept/Slip";
 import { sceneFor, visitsOf } from "../keepsakes/scene-find";
 import "../kept/kept.css";
 
 const KEPT_PATH = "/joy/kept";
-
-/** Today in India, as "YYYY-MM-DD" (kept days are IST dates). */
-const isoToday = () => new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
 
 /** The id-or-selector a hash points at; the savings anchor lands on its heading. */
 function hashSelector(hash: string): string {
@@ -161,7 +158,7 @@ export default function KeptPage() {
           {merged.length > 0 && (
           <p className="k-add">
             <button type="button" className="btn" onClick={openAdd}>
-              + Add a date we had
+              + Mark a day
             </button>
           </p>
           )}
@@ -197,9 +194,9 @@ export default function KeptPage() {
               <Link className="btn btn-stamp" to="/joy">
                 Go to the jar
               </Link>
-              <p className="k-empty-p">Already had some great nights? Add one.</p>
+              <p className="k-empty-p">Just met, or already had some great days? Mark one.</p>
               <button type="button" className="btn" onClick={openAdd}>
-                Add a date we had
+                Mark a day
               </button>
               <p className="k-empty-hand hand" aria-hidden="true">
                 first page, saved for you

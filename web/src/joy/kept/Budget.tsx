@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { addCustomDate, addSaving, addSpend, deleteSaving, deleteSpend, keepGoal, rollover, setBudget, setGoal } from "./api";
 import { useKept } from "./ctx";
 import { useStateFrom } from "../components/useStateFrom";
-import { isBudgetHash, type RolloverChoice } from "./helpers";
+import { isBudgetHash, isoToday, type RolloverChoice } from "./helpers";
 import { buzz, reduced } from "./motion";
 import type { HistoryView, SavingsState } from "./types";
 import { useAction } from "./useAction";
@@ -156,63 +156,81 @@ const KINDS: [string, string][] = [
   ["apart", "Long distance"],
 ];
 
-/** A date we had that never was a slip. It lands in Kept, ready for photos, a rating and lines. */
+/** One tap fills the name for the days people most often want to mark. */
+const SUGGESTIONS = ["The day we met", "Our first date", "Our first trip", "Just because"];
+
+/** A day we want to remember that never was a slip: the day we met, a first date, an evening out.
+ * It lands in Kept, ready for photos, a rating and lines. */
 export function CustomDateFold({ fold }: { fold: ReturnType<typeof useFold> }) {
   const { finish } = useKept();
   const { busy, err, act } = useAction();
   const [title, setTitle] = useState("");
   const [place, setPlace] = useState("");
   const [setting, setSetting] = useState("local");
-  const [on, setOn] = useState("");
+  const [on, setOn] = useState(isoToday);
   const [cost, setCost] = useState("");
+  const reset = () => {
+    setTitle("");
+    setPlace("");
+    setSetting("local");
+    setOn(isoToday());
+    setCost("");
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     void act(async () => {
       const go = await addCustomDate({ title, place, setting, on, cost });
-      setTitle("");
-      setPlace("");
-      setOn("");
-      setCost("");
+      reset();
       fold.setOpen(false);
       await finish(go);
     });
   };
+  const today = isoToday();
   return (
     <details className="k-budget-edit" id="k-add" {...fold.props}>
-      <summary>Add a date we had</summary>
+      <summary>Mark a day to remember</summary>
       <form className="k-budget-form" onSubmit={submit}>
         <label className="k-label" htmlFor="custom-title">
-          What did you do?
+          What happened?
         </label>
-        <input className="k-field" id="custom-title" name="title" type="text" maxLength={80} required autoComplete="off" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Picnic at the lake" />
-        <div className="k-inline">
-          <input className="k-field" name="place" type="text" maxLength={80} autoComplete="off" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Where? (optional)" aria-label="Where" />
-          <select className="k-field" name="setting" value={setting} onChange={(e) => setSetting(e.target.value)} aria-label="Kind of date">
-            {KINDS.map(([k, l]) => (
-              <option key={k} value={k}>
-                {l}
-              </option>
-            ))}
-          </select>
+        <input className="k-field k-add-title" id="custom-title" name="title" type="text" maxLength={80} required autoComplete="off" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The day we met" />
+        <div className="k-inline k-add-ideas" role="group" aria-label="Quick names">
+          {SUGGESTIONS.map((t) => (
+            <button key={t} className="btn btn-quiet" type="button" aria-pressed={title === t} onClick={() => setTitle(t)}>
+              {t}
+            </button>
+          ))}
         </div>
+        <label className="k-label" htmlFor="custom-on">
+          When?
+        </label>
         <div className="k-inline">
-          <input className="k-field" name="on" type="date" value={on} onChange={(e) => setOn(e.target.value)} aria-label="When (blank is today)" />
-          <input className="k-field" name="cost" type="text" {...MONEY} value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Cost (optional)" aria-label="What it cost" />
+          <input className="k-field" id="custom-on" name="on" type="date" max={today} value={on} onChange={(e) => setOn(e.target.value)} />
+          {on !== today && (
+            <button className="btn btn-quiet" type="button" onClick={() => setOn(today)}>
+              Today
+            </button>
+          )}
+        </div>
+        <details className="k-add-more">
+          <summary>Where, what kind, what it cost (optional)</summary>
+          <div className="k-inline">
+            <input className="k-field" name="place" type="text" maxLength={80} autoComplete="off" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Where?" aria-label="Where" />
+            <select className="k-field" name="setting" value={setting} onChange={(e) => setSetting(e.target.value)} aria-label="Kind of date">
+              {KINDS.map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            <input className="k-field" name="cost" type="text" {...MONEY} value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Cost" aria-label="What it cost" />
+          </div>
+        </details>
+        <div className="k-inline">
           <button className="k-btn" type="submit" disabled={busy}>
-            Keep it
+            Keep this day
           </button>
-          <button
-            className="k-btn"
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              setTitle("");
-              setPlace("");
-              setSetting("local");
-              setOn("");
-              setCost("");
-            }}
-          >
+          <button className="k-btn" type="button" disabled={busy} onClick={reset}>
             Clear
           </button>
         </div>

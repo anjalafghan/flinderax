@@ -43,3 +43,9 @@
 /* The header's "+ Add a date we had" button opens this fold, so its own summary line only shows
    once it is open (to close it again). */
 .joy #k-add:not([open]) > summary { display: none; }
+/* Mark a day: a roomy name, one-tap ideas, the optional bits folded away. */
+.joy .k-budget-form .k-add-title { width: 100%; max-width: 22rem; }
+.joy .k-add-ideas { margin: 8px 0 12px; }
+.joy .k-add-ideas .btn[aria-pressed="true"] { text-decoration: underline; text-decoration-color: var(--stamp); text-underline-offset: 4px; }
+.joy .k-add-more { margin: 12px 0; }
+.joy .k-add-more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--ink-soft); }
