@@ -295,7 +295,7 @@ async fn export_has_the_new_tables_and_no_secrets() {
     for k in [
         "card_events", "card_running_state", "pending_charges", "auto_postings",
         "dismissed_recurring", "statement_imports", "statement_profiles", "tax_entries", "life_profiles", "transactions",
-        "followups", "person_facts", "rewards", "reward_claims", "reward_settings", "activity_log", "analyses",
+        "followups", "person_facts", "rewards", "reward_claims", "reward_settings", "reward_months", "activity_log", "analyses",
     ] {
         assert!(data[k].is_array(), "missing {k}");
     }

@@ -12,6 +12,7 @@ import {
   useUnclaimReward,
   type Reward,
   type RewardInput,
+  type TriggerKind,
 } from "@/services/rewards";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,7 +42,7 @@ function RewardForm({ onDone, preset }: { onDone: () => void; preset?: { name: s
   const add = useAddReward();
   const [name, setName] = useState(preset?.name ?? "");
   const [cost, setCost] = useState(preset && preset.cost_paise > 0 ? paiseToInput(preset.cost_paise) : "");
-  const [trigger, setTrigger] = useState<"goal" | "streak">("goal");
+  const [trigger, setTrigger] = useState<TriggerKind>("wish");
   const [goalId, setGoalId] = useState("");
   const [pct, setPct] = useState("100");
   const [streakKind, setStreakKind] = useState<StreakKind>("logging");
@@ -51,7 +52,7 @@ function RewardForm({ onDone, preset }: { onDone: () => void; preset?: { name: s
   const reset = () => {
     setName("");
     setCost("");
-    setTrigger("goal");
+    setTrigger("wish");
     setGoalId("");
     setPct("100");
     setStreakKind("logging");
@@ -70,7 +71,7 @@ function RewardForm({ onDone, preset }: { onDone: () => void; preset?: { name: s
       if (!id) return setError("Add a goal first, or pick a streak.");
       body.goal_id = id;
       body.goal_pct = Number(pct);
-    } else {
+    } else if (trigger === "streak") {
       const n = Number(streakTarget);
       if (!Number.isInteger(n) || n < 1 || n > 3650) return setError("Pick a streak between 1 and 3650.");
       body.streak_kind = streakKind;
@@ -92,12 +93,13 @@ function RewardForm({ onDone, preset }: { onDone: () => void; preset?: { name: s
       </div>
       <div className="field">
         <Label htmlFor="reward-trigger">Unlocked by</Label>
-        <Select id="reward-trigger" value={trigger} onChange={(e) => setTrigger(e.target.value as "goal" | "streak")}>
+        <Select id="reward-trigger" value={trigger} onChange={(e) => setTrigger(e.target.value as TriggerKind)}>
+          <option value="wish">Nothing: buy it once the wallet has enough</option>
           <option value="goal">Reaching a goal</option>
           <option value="streak">A streak</option>
         </Select>
       </div>
-      {trigger === "goal" ? (
+      {trigger === "wish" ? null : trigger === "goal" ? (
         <>
           <div className="field">
             <Label htmlFor="reward-goal">Which goal</Label>
@@ -176,7 +178,7 @@ function CapForm({ cap, spent, left }: { cap: number | null; spent: number; left
 
 // ---------- one reward ----------
 
-function RewardRow({ r, goalName }: { r: Reward; goalName?: string }) {
+function RewardRow({ r, goalName, wallet }: { r: Reward; goalName?: string; wallet: number }) {
   const claim = useClaimReward();
   const unclaim = useUnclaimReward();
   const remove = useRemoveReward();
@@ -201,11 +203,16 @@ function RewardRow({ r, goalName }: { r: Reward; goalName?: string }) {
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
-        {r.state === "earned" && (
+        {r.state === "earned" && r.cost_paise <= wallet && (
           <Button size="sm" disabled={claim.isPending} onClick={() => claim.mutate(r.reward_id)}>
             <Gift className="mr-1.5 h-4 w-4" aria-hidden />
-            Claim it
+            {r.cost_paise > 0 ? `Buy it from the wallet` : "Claim it"}
           </Button>
+        )}
+        {r.state === "earned" && r.cost_paise > wallet && (
+          <p className="m-0 self-center text-[13px] text-muted-foreground tabular-nums">
+            {formatINR(r.cost_paise - wallet)} more in the wallet and it's yours
+          </p>
         )}
         {r.state === "claimed" && (
           <ResetButton label="Undo claim" disabled={unclaim.isPending} onReset={() => unclaim.mutate(r.reward_id)} />
@@ -232,20 +239,33 @@ export function RewardsPanel() {
       <CardHeader className="space-y-2 pb-4">
         <CardTitle className="text-[32px]">Rewards</CardTitle>
         <p className="max-w-prose text-sm text-muted-foreground">
-          Small treats you pick now and unlock by reaching a goal or keeping a streak. Set a monthly limit so they never get in the goals' way.
+          Treats you look forward to, bought from your reward fund's wallet. Some can also wait for a goal or a streak first.
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
         {isLoading && <p className="text-sm text-muted-foreground">Loading rewards...</p>}
         {isError && <p className="text-sm text-destructive">Could not load rewards. Try again in a moment.</p>}
 
-        {data && <CapForm key={data.monthly_cap_paise ?? "none"} cap={data.monthly_cap_paise} spent={data.spent_this_month_paise} left={data.cap_left_paise} />}
+        {data && (
+          <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-2xl border border-border p-4">
+            <span className="text-sm text-muted-foreground">In your reward wallet</span>
+            <span className="font-display text-[28px] leading-none tabular-nums">{formatINR(data.wallet_paise)}</span>
+          </div>
+        )}
+        {data && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted-foreground">An extra monthly limit (optional)</summary>
+            <div className="mt-3">
+              <CapForm key={data.monthly_cap_paise ?? "none"} cap={data.monthly_cap_paise} spent={data.spent_this_month_paise} left={data.cap_left_paise} />
+            </div>
+          </details>
+        )}
 
-        {data && data.rewards.length === 0 && <EmptyScene scene="sprout" title="No rewards yet">Pick a treat to look forward to when a goal lands.</EmptyScene>}
+        {data && data.rewards.length === 0 && <EmptyScene scene="sprout" title="No treats yet">Add something you'd love; the wallet fills at the end of each month.</EmptyScene>}
         {data && data.rewards.length > 0 && (
           <ul className="ledger">
             {data.rewards.map((r) => (
-              <RewardRow key={r.reward_id} r={r} goalName={goalName(r.goal_id)} />
+              <RewardRow key={r.reward_id} r={r} goalName={goalName(r.goal_id)} wallet={data.wallet_paise} />
             ))}
           </ul>
         )}

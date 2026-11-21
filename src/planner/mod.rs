@@ -40,6 +40,7 @@ pub mod projection;
 pub mod recurring;
 pub mod reminders;
 pub mod review;
+pub mod reward_fund;
 pub mod rewards;
 pub mod streaks;
 pub mod activity;
