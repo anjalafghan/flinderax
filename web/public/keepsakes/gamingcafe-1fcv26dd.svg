@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="91 131 467 351" aria-hidden="true" focusable="false"><style>.joy .ksc-gamingcafe .toss,.joy .ksc-gamingcafe .flip,.joy .ksc-gamingcafe .pad,.joy .ksc-gamingcafe .p2{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-gamingcafe .fb{opacity:0}
+.joy .ksc-gamingcafe .p2{opacity:0;scale:.6;transition:opacity .2s,scale .2s}
+.joy .ksc-gamingcafe.open .toss{animation:tossup_gamingcafe 1.1s cubic-bezier(.3,0,.7,1)}
+.joy .ksc-gamingcafe.open .flip{animation:fl_gamingcafe .275s linear 4}
+.joy .ksc-gamingcafe.open .fa{animation:fa_gamingcafe .55s step-end 2 both}
+.joy .ksc-gamingcafe.open .fb{animation:fb_gamingcafe .55s step-end 2 both}
+.joy .ksc-gamingcafe.open .pad{animation:rumble_gamingcafe .08s linear 1.2s 10}
+.joy .ksc-gamingcafe.open .p2{opacity:1;scale:1;transition:opacity .2s 1.3s,scale .4s cubic-bezier(.3,1.6,.5,1) 1.3s}
+@keyframes tossup_gamingcafe{50%{transform:translateY(-160px)}}
+@keyframes fl_gamingcafe{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes fa_gamingcafe{0%{opacity:1}25%{opacity:0}75%{opacity:1}}
+@keyframes fb_gamingcafe{0%{opacity:0}25%{opacity:1}75%{opacity:0}}
+@keyframes rumble_gamingcafe{0%{transform:translate(0,0)}25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-gamingcafe .toss,.joy .ksc-gamingcafe .flip,.joy .ksc-gamingcafe .fa,.joy .ksc-gamingcafe .fb,.joy .ksc-gamingcafe .pad,.joy .ksc-gamingcafe .p2{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}</style><defs><radialGradient id="gamingcafe-gc-tok" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#6fe3a1"></stop><stop offset="1" stop-color="#17804a"></stop></radialGradient></defs>
+<ellipse cx="200" cy="420" rx="90" ry="14" fill="#06120c" opacity=".35"></ellipse>
+<g class="toss"><g transform="translate(200 300)"><g class="flip">
+<circle r="96" fill="url(#gamingcafe-gc-tok)" stroke="#0d5a33" stroke-width="4"></circle>
+<circle r="80" fill="none" stroke="#c9f5da" stroke-width="2" stroke-dasharray="4 6"></circle>
+<g class="fa"><text y="-22" font-family="'Space Mono', monospace" font-size="12" fill="#063a20" text-anchor="middle">Global Gaming Cafe</text>
+<text y="26" font-family="Fraunces, serif" font-weight="700" font-size="46" fill="#063a20" text-anchor="middle">PC 07</text>
+<text y="52" font-family="'Space Mono', monospace" font-size="11" fill="#063a20" text-anchor="middle">Vashi</text></g>
+<g class="fb" transform="scale(1 -1)"><text y="8" font-family="Fraunces, serif" font-weight="700" font-size="40" fill="#063a20" text-anchor="middle">2 hrs</text><text y="36" font-family="'Space Mono', monospace" font-size="11" fill="#063a20" text-anchor="middle">session time</text></g>
+</g></g></g>
+<g class="pad"><g transform="translate(410 380) rotate(-12)">
+<path d="M-90 -20 C-90 -50 -60 -56 -30 -50 H30 C60 -56 90 -50 90 -20 C96 30 100 70 70 72 C46 74 40 40 20 34 H-20 C-40 40 -46 74 -70 72 C-100 70 -96 30 -90 -20 Z" fill="#23232b"></path>
+<path d="M-62 -24 h20 M-52 -34 v20" stroke="#8a8a98" stroke-width="7" stroke-linecap="round"></path>
+<circle cx="50" cy="-34" r="7" fill="#e0245e"></circle><circle cx="64" cy="-20" r="7" fill="#2f6db5"></circle><circle cx="36" cy="-20" r="7" fill="#3b9a5a"></circle><circle cx="50" cy="-6" r="7" fill="#e8b923"></circle>
+<circle cx="-24" cy="10" r="12" fill="#3a3a44"></circle><circle cx="24" cy="10" r="12" fill="#3a3a44"></circle></g></g>
+<g class="p2"><g transform="translate(380 150) rotate(4)"><rect x="-6" y="-6" width="172" height="72" rx="10" fill="#0b0b10"></rect><rect width="160" height="60" rx="6" fill="#0f3a26"></rect>
+<text x="80" y="27" font-family="'Space Mono', monospace" font-weight="700" font-size="14" fill="#7dffb2" text-anchor="middle">PLAYER 2</text><text x="80" y="46" font-family="'Space Mono', monospace" font-size="12" fill="#7dffb2" text-anchor="middle">has joined</text></g></g></svg>

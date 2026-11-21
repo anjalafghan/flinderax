@@ -8,6 +8,8 @@ import { createUndoTimer } from "../undo";
 import { ErrorState } from "../components/ErrorState";
 import { errText, useBusy } from "../components/useBusy";
 import { PlanDialog } from "../components/PlanDialog";
+import { SceneArt } from "../keepsakes/Scene";
+import { sceneFor } from "../keepsakes/scene-find";
 
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -298,6 +300,7 @@ export default function SlipsPage() {
                       data-id={a.id}
                     >
                       <span className="fold" aria-hidden="true"></span>
+                      <SlipKeepsake title={a.title} done={a.times_done} />
                       <Link className="slip-link" to={`/joy/slips/${a.id}`}>
                         <span className="slip-title">{a.title}</span>
                       </Link>
@@ -498,3 +501,10 @@ function DrawerSlip({ a, busy, onRestore, onDelete }: { a: ActivityView; busy: b
     </li>
   );
 }
+
+/** The keepsake this slip brings home, in its corner: in colour once kept, its grey shape until then. */
+function SlipKeepsake({ title, done }: { title: string; done: number }) {
+  const scene = sceneFor(title, Math.max(1, done));
+  return scene ? <SceneArt className="slip-ks" scene={scene} ghost={done === 0} /> : null;
+}
+

@@ -14,6 +14,7 @@ import { shrinkImage } from "./photo";
 import { PhotoViewer } from "../components/PhotoViewer";
 import type { KeptView, PlannedView } from "./types";
 import { SceneButton, type SceneDef } from "../keepsakes/Scene";
+import { isSeen, markSeen } from "../keepsakes/seen";
 import { useAction } from "./useAction";
 import { LinkPayment } from "./LinkPayment";
 import { useFold } from "./useFold";
@@ -363,7 +364,7 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
         <h3 className="k-slip-title" id={`k-t${h.id}`}>
           {h.title}
         </h3>
-        {scene && <SceneButton className="k-keepsake" scene={scene} what={`${h.title}, ${h.day_label}`} />}
+        {scene && <SceneButton className="k-keepsake" scene={scene} what={`${h.title}, ${h.day_label}`} arrive={!isSeen(h.id)} onArrived={() => markSeen(h.id)} />}
         <p className="k-meta">
           <time className="visually-hidden" dateTime={h.day}>
             Stamped {h.day_label}

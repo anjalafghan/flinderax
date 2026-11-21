@@ -8,6 +8,8 @@ import DayPlanView, { Route } from "./DayPlanView";
 import { PUT_BACK_REASONS, type PutBackReason } from "./form";
 import { FOLLOW, YES } from "./swipe";
 import { pose } from "./motion";
+import { SceneArt } from "../keepsakes/Scene";
+import { sceneFor } from "../keepsakes/scene-find";
 
 export interface CardActions {
   accept: (o: { with?: string; surprise?: boolean }) => void;
@@ -172,6 +174,18 @@ interface SlipProps {
   planned?: string;
 }
 
+/** What this slip brings home once we keep it: its keepsake's shape, in grey, in the slip's corner. */
+function KeepTeaser({ title, visit, hidden }: { title: string; visit: number; hidden: boolean }) {
+  const scene = sceneFor(title, visit);
+  if (!scene || hidden) return null;
+  return (
+    <p className="j-keep" title={`Keep it to bring home: ${scene.name}`}>
+      <SceneArt scene={scene} ghost eager />
+      <span className="j-keep-t">brings home</span>
+    </p>
+  );
+}
+
 export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) {
   const a = card.activity!;
   const done = card.done;
@@ -228,6 +242,7 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
       <h2 id="slip-title" className="j-slip-title" tabIndex={-1}>
         {a.title}
       </h2>
+      <KeepTeaser title={a.title} visit={(a.times_done ?? 0) + 1} hidden={done || !!card.surprise} />
       {!done && card.plan_line && card.route.length === 0 && (
         <p className="plan-line">
           <span className="plan-line-k">{card.when_label}:</span> {card.plan_line}

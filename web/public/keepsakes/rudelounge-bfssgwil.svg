@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="131 141 318 318" aria-hidden="true" focusable="false"><style>.joy .ksc-rudelounge .ring{opacity:0}
+.joy .ksc-rudelounge.open .ring{opacity:1;transition:opacity .4s 1.1s}
+.joy .ksc-rudelounge .gl{transform-box:fill-box;opacity:0}
+.joy .ksc-rudelounge.open .gl{animation:gld_rudelounge 1.6s ease-in-out both}
+@keyframes gld_rudelounge{0%{opacity:0;transform:translate(60px,-160px)}35%{opacity:1;transform:translate(0,0)}70%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(80px,-140px)}}
+.joy .ksc-rudelounge .cs{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-rudelounge.open .cs{animation:csp_rudelounge .7s ease-out .9s}
+@keyframes csp_rudelounge{40%{transform:rotate(9deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-rudelounge .ring,.joy .ksc-rudelounge .gl,.joy .ksc-rudelounge .cs{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}</style><g class="cs"><g transform="translate(290 300) rotate(-8)"><rect x="-130" y="-130" width="260" height="260" rx="22" fill="#2b2d33"></rect><rect x="-116" y="-116" width="232" height="232" rx="14" fill="none" stroke="#f2c230" stroke-opacity=".35" stroke-width="2"></rect><text x="0" y="-30" font-family="Fraunces, serif" font-size="36" font-weight="800" fill="#f2c230" text-anchor="middle">Rude Lounge</text><text x="0" y="0" font-family="'Space Mono', monospace" font-size="12" fill="#f2c230" text-anchor="middle">8th floor, Powai</text><circle class="ring" r="48" cx="56" cy="74" fill="none" stroke="#6b4a2a" stroke-opacity=".45" stroke-width="7"></circle></g></g><g class="gl"><g transform="translate(340 320) scale(2.4)"><path d="M-18 -26 H18 L14 22 H-14 Z" fill="#ffffff" fill-opacity=".35" stroke="#ffffff" stroke-width="2"></path><path d="M-15 -6 H15 L13 20 H-13 Z" fill="#f2b33d"></path></g></g></svg>
