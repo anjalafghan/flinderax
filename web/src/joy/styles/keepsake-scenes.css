@@ -79,3 +79,81 @@
 .joy .y-stack .y-vitrine { position: relative; }
 .joy .y-stack .y-vitrine > :not(.y-times) { box-shadow: 4px 4px 0 -1px #f3ecdf, 4px 4px 0 0 rgba(60, 40, 15, .18), 8px 8px 0 -1px #efe6d5, 8px 8px 0 0 rgba(60, 40, 15, .14); }
 .joy .y-times { position: absolute; z-index: 3; top: -6px; right: 4px; display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 6px; box-sizing: border-box; border-radius: 50%; background: #a8321f; color: #fff6ea; font: 700 1.35rem/1 "Caveat", var(--font-hand), cursive; rotate: 8deg; box-shadow: 0 2px 4px rgba(40, 22, 8, .35); }
+
+/* ── the drawing, fetched when near the screen ─────────────────────────────── */
+.joy .ksc-svg { display: block; width: 100%; height: 100%; }
+.joy .ksc-svg > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.joy .ksc-wait { border-radius: 14px; background: color-mix(in srgb, var(--ink, #2b2433) 6%, transparent); }
+
+/* a keepsake not yet ours: its shape, in grey, slightly lifted from the paper */
+.joy .ksc.is-ghost { filter: none; }
+.joy .ksc.is-ghost .ksc-svg > svg { filter: grayscale(1) sepia(.25) contrast(.85) brightness(1.02); opacity: .72; }
+
+/* the first time a keepsake is seen, it plays by itself, with a small note */
+.joy .ksc-btn.is-new { position: relative; }
+.joy .ksc-new {
+  position: absolute;
+  z-index: 9;
+  top: -6px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 5px 12px 6px;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: #a8321f;
+  color: #fff6ea;
+  font: 700 1.05rem/1 "Caveat", var(--font-hand), cursive;
+  box-shadow: 0 2px 4px rgba(40, 22, 8, .3);
+  rotate: -3deg;
+  pointer-events: none;
+  animation: ksc-new-in .5s cubic-bezier(.3, 1.5, .5, 1) both;
+}
+@keyframes ksc-new-in { from { opacity: 0; scale: .6; } }
+@media (prefers-reduced-motion: reduce) { .joy .ksc-new { animation: none; } }
+
+/* ── Our museum (/joy/museum) ───────────────────────────────────────────────── */
+.joy .mu { display: grid; gap: 34px; padding-bottom: 60px; }
+.joy .mu-head { display: grid; gap: 8px; padding-top: 12px; }
+.joy .mu-title { margin: 0; font: 500 var(--step-4, 2.6rem)/1 var(--font-display); font-variation-settings: "SOFT" 100, "WONK" 1; letter-spacing: -.01em; }
+.joy .mu-count { margin: 0; font: 700 1.6rem/1.15 "Caveat", var(--font-hand), cursive; color: var(--ink-soft); rotate: -1deg; transform-origin: left; }
+.joy .mu-count strong { color: var(--stamp, #a8321f); }
+.joy .mu-shelf { display: flex; flex-wrap: wrap; gap: 3px; margin: 6px 0 0; max-width: 720px; }
+.joy .mu-shelf span { width: 7px; height: 12px; border-radius: 2px; background: color-mix(in srgb, var(--ink, #2b2433) 14%, transparent); }
+.joy .mu-shelf span.is-in { background: var(--stamp, #a8321f); }
+.joy .mu-h { margin: 0 0 6px; font: 500 var(--step-2, 1.8rem)/1.1 var(--font-display); }
+.joy .mu-sub, .joy .mu-empty, .joy .mu-plain { margin: 0 0 14px; color: var(--ink-soft); font: italic 400 var(--step-0)/1.4 var(--font-display); }
+.joy .mu-room { position: relative; padding: 28px 22px 34px; border-radius: 10px; background: #e9ddc6; color: #2b2433; box-shadow: inset 0 0 0 1px rgba(60, 40, 15, .12), 0 1px 2px rgba(40, 22, 8, .2); }
+.joy .mu-room .mu-h, .joy .mu-room .mu-sub, .joy .mu-room .mu-plain, .joy .mu-room .mu-empty { color: #2b2433; }
+.joy .mu-room::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background-image: radial-gradient(circle, rgba(60, 40, 15, .1) 1px, transparent 1.4px); background-size: 18px 18px; }
+.joy .mu-cases { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 40px 28px; margin: 12px 0 0; padding: 0; list-style: none; }
+.joy .mu-case { display: grid; gap: 14px; align-content: start; }
+.joy .mu-ex { position: relative; display: grid; place-items: center; min-height: 300px; padding: 26px 18px 18px; border-radius: 8px; background: radial-gradient(ellipse at 50% 30%, #fbf6ea 0%, #f1e8d6 70%); box-shadow: inset 0 -16px 24px -18px rgba(60, 40, 15, .35), 0 1px 1px rgba(40, 22, 8, .2), 0 14px 26px -16px rgba(40, 22, 8, .45); }
+.joy .mu-obj { position: relative; z-index: 2; width: min(100%, 260px, calc(300px * var(--arn, 1))); rotate: calc(var(--t, 0) * 1deg); }
+.joy .mu-print { position: absolute; z-index: 1; right: 6%; bottom: 10%; width: 38%; --r: 7deg; --pull-x: -40%; --pull-s: 1.6; }
+.joy .mu-print.up { z-index: 12; }
+.joy .mu-placard { display: grid; gap: 4px; padding: 10px 14px 12px; border-radius: 4px; background: #fbf8f0; box-shadow: 0 1px 1px rgba(40, 22, 8, .2); }
+.joy .mu-pl-name { margin: 0; font: 600 .95rem/1.3 var(--font-display); }
+.joy .mu-pl-what { margin: 0; font: 500 .85rem/1.4 var(--font-ui); color: #5d5566; }
+.joy .mu-pl-what a { color: inherit; }
+.joy .mu-hearts { margin-left: 8px; color: #c0392b; letter-spacing: 1px; }
+.joy .mu-pl-note { margin: 2px 0 0; font: 700 1.25rem/1.15 "Caveat", var(--font-hand), cursive; color: #2a3f7a; }
+.joy .mu-group { margin-top: 22px; }
+.joy .mu-group-h { margin: 0 0 10px; font: 600 .9rem/1 var(--font-ui); letter-spacing: .02em; color: #5d5566; }
+.joy .mu-group-h span { margin-left: 6px; font-weight: 400; }
+.joy .mu-ghosts { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 16px 12px; margin: 0; padding: 0; list-style: none; }
+.joy .mu-ghosts a { display: grid; gap: 6px; justify-items: center; padding: 8px 6px; border-radius: 8px; color: #3a3328; text-decoration: none; transition: background .2s; }
+.joy .mu-ghosts a:hover, .joy .mu-ghosts a:focus-visible { background: rgba(255, 255, 255, .45); }
+.joy .mu-ghosts .ksc { width: auto; height: 96px; max-width: 100%; }
+.joy .mu-ghosts a:hover .ksc.is-ghost .ksc-svg > svg { opacity: .75; filter: grayscale(.4) contrast(.8); }
+.joy .mu-ghost-t { font: 500 .78rem/1.25 var(--font-ui); text-align: center; overflow-wrap: anywhere; }
+
+/* ── a slip's keepsake, in its corner (Slips) and on the drawn card (the jar) ── */
+.joy .slip { position: relative; }
+.joy .slip-ks { position: absolute; top: 8px; right: 10px; width: auto; height: 52px; max-width: 76px; pointer-events: none; filter: drop-shadow(0 1px 1px rgba(40, 22, 8, .25)); rotate: 4deg; }
+.joy .slip:has(.slip-ks) .slip-title { padding-right: 70px; }
+.joy .j-keep { position: absolute; right: 14px; bottom: 12px; display: grid; justify-items: center; gap: 2px; margin: 0; pointer-events: none; }
+.joy .j-keep .ksc { width: auto; height: 64px; max-width: 96px; }
+.joy .j-keep-t { font: 700 .95rem/1 "Caveat", var(--font-hand), cursive; color: var(--ink-soft); rotate: -4deg; }
+.joy .j-slip { position: relative; }
+.joy .y-museum-link { margin: 4px 0 0; }
+.joy .y-museum-link a { font: 700 1.25rem/1 "Caveat", var(--font-hand), cursive; color: var(--stamp, #a8321f); }

@@ -11,6 +11,7 @@ const SlipsPage = lazy(() => import("./pages/SlipsPage"));
 const SlipFormPage = lazy(() => import("./pages/SlipFormPage"));
 const MiddlePage = lazy(() => import("./pages/MiddlePage"));
 const KeptPage = lazy(() => import("./pages/KeptPage"));
+const MuseumPage = lazy(() => import("./pages/MuseumPage"));
 const RegularsPage = lazy(() => import("./pages/RegularsPage"));
 const RegularPage = lazy(() => import("./pages/RegularPage"));
 const YearPage = lazy(() => import("./pages/YearPage"));
@@ -56,6 +57,7 @@ export default function DatesApp() {
                 <Route path="middle" element={<MiddlePage />} />
                 <Route path="settings" element={<Navigate to="/account" replace />} />
                 <Route path="kept" element={<KeptPage />} />
+                <Route path="museum" element={<MuseumPage />} />
                 <Route path="regulars" element={<RegularsPage />} />
                 <Route path="regulars/:id" element={<RegularPage />} />
                 <Route path="year" element={<YearPage />} />

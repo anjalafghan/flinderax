@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="126 -12 348 548" aria-hidden="true" focusable="false"><style>.joy .ksc-vr .pass,.joy .ksc-vr .needle{transform-box:fill-box}
+.joy .ksc-vr .pass{transform-origin:50% 0%}
+.joy .ksc-vr .needle{transform-origin:100% 50%;transition:transform .4s}
+.joy .ksc-vr.open .needle{transform:rotate(154deg);transition:transform 1.4s cubic-bezier(.5,0,.3,1.3) .2s}
+.joy .ksc-vr.open .pass{animation:sway_vr 1.6s ease-in-out .6s}
+.joy .ksc-vr.open .lines{opacity:1;transition:opacity .2s .9s}
+.joy .ksc-vr.open .lines path{animation:dash_vr .5s linear .9s 4}
+.joy .ksc-vr.open .sweep{animation:sw_vr 1.2s ease-in-out 2}
+@keyframes sway_vr{30%{transform:rotate(5deg)}65%{transform:rotate(-4deg)}}
+@keyframes dash_vr{from{transform:translateX(0)}to{transform:translateX(-30px);opacity:0}}
+@keyframes sw_vr{50%{transform:translateX(150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-vr .pass,.joy .ksc-vr .needle,.joy .ksc-vr .lines,.joy .ksc-vr .lines path,.joy .ksc-vr .sweep{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}</style><defs><filter id="vr-vr-g" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"></feTurbulence><feColorMatrix values="0 0 0 0 0.1  0 0 0 0 0.1  0 0 0 0 0.2  0 0 0 0.12 0"></feColorMatrix><feComposite in2="SourceGraphic" operator="in"></feComposite></filter>
+<linearGradient id="vr-vr-pass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a3c"></stop><stop offset="1" stop-color="#c22a4f"></stop></linearGradient>
+<linearGradient id="vr-vr-lens" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0d1430"></stop><stop offset=".5" stop-color="#3a4ea8"></stop><stop offset="1" stop-color="#0d1430"></stop></linearGradient></defs>
+<path d="M300 0 C260 60 240 100 252 150 M300 0 C340 60 360 100 348 150" fill="none" stroke="#111" stroke-width="10"></path>
+<g class="pass"><g transform="translate(300 150)">
+<rect x="-14" y="-6" width="28" height="22" rx="4" fill="#9aa0a6"></rect>
+<path d="M-130 40 Q-130 10 -100 10 H100 Q130 10 130 40 V58 H150 Q162 58 162 70 V112 Q162 124 150 124 H130 V320 Q130 350 100 350 H30 L0 374 L-30 350 H-100 Q-130 350 -130 320 V124 H-150 Q-162 124 -162 112 V70 Q-162 58 -150 58 H-130 Z" fill="url(#vr-vr-pass)"></path>
+<path d="M-130 40 Q-130 10 -100 10 H100 Q130 10 130 40 V58 H150 Q162 58 162 70 V112 Q162 124 150 124 H130 V320 Q130 350 100 350 H30 L0 374 L-30 350 H-100 Q-130 350 -130 320 V124 H-150 Q-162 124 -162 112 V70 Q-162 58 -150 58 H-130 Z" filter="url(#vr-vr-g)"></path>
+<path d="M-96 50 H96 Q110 50 110 64 V112 Q110 128 94 128 H30 Q14 128 8 116 L0 100 L-8 116 Q-14 128 -30 128 H-94 Q-110 128 -110 112 V64 Q-110 50 -96 50 Z" fill="url(#vr-vr-lens)"></path>
+<path class="sweep" d="M-90 70 L-60 70" stroke="#9ff3ff" stroke-width="3" stroke-linecap="round" opacity=".7"></path>
+<text y="168" font-family="Fraunces, serif" font-weight="700" font-size="30" fill="#fff4ea" text-anchor="middle">Virtual Adda</text>
+<text y="190" font-family="'Space Mono', monospace" font-size="11" fill="#ffe0d6" text-anchor="middle">sim racing &amp; VR · Thane</text>
+<text y="222" font-family="'Space Mono', monospace" font-weight="700" font-size="16" fill="#fff4ea" text-anchor="middle">SIM POD B</text>
+<g transform="translate(0 300)"><path d="M-70 0 A70 70 0 0 1 70 0" fill="none" stroke="#fff4ea" stroke-width="4"></path>
+<path d="M40 -57 A70 70 0 0 1 70 0" fill="none" stroke="#ffd23c" stroke-width="8"></path>
+<g stroke="#fff4ea" stroke-width="2"><path d="M-62.0 0.0 L-70.0 0.0"></path><path d="M-53.7 -31.0 L-60.6 -35.0"></path><path d="M-31.0 -53.7 L-35.0 -60.6"></path><path d="M-0.0 -62.0 L-0.0 -70.0"></path><path d="M31.0 -53.7 L35.0 -60.6"></path><path d="M53.7 -31.0 L60.6 -35.0"></path><path d="M62.0 -0.0 L70.0 -0.0"></path></g>
+<g class="needle"><path d="M0 0 L-56 -6" stroke="#ffd23c" stroke-width="4" stroke-linecap="round"></path></g><circle r="7" fill="#fff4ea"></circle></g>
+</g></g>
+<g class="lines" stroke="#fff4ea" stroke-width="3" stroke-linecap="round" opacity="0"><path d="M100 300 H40"></path><path d="M110 360 H20"></path><path d="M500 320 H570"></path><path d="M490 400 H580"></path></g></svg>

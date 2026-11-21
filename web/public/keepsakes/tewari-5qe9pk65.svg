@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="178 178 245 289" aria-hidden="true" focusable="false"><style>.joy .ksc-tewari .cf{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-tewari .fb{opacity:0}
+.joy .ksc-tewari.open .cf{animation:cfs_tewari .275s linear 5}
+.joy .ksc-tewari.open .fa{animation:cfa_tewari 1.375s step-end both}
+.joy .ksc-tewari.open .fb{animation:cfb_tewari 1.375s step-end both}
+@keyframes cfs_tewari{0%{transform:scaleY(1)}25%{transform:scaleY(0)}50%{transform:scaleY(-1)}75%{transform:scaleY(0)}100%{transform:scaleY(1)}}
+@keyframes cfa_tewari{0%{opacity:1}5%{opacity:0}15%{opacity:1}25%{opacity:0}35%{opacity:1}45%{opacity:0}55%{opacity:1}65%{opacity:0}75%{opacity:1}85%,100%{opacity:0}}
+@keyframes cfb_tewari{0%{opacity:0}5%{opacity:1}15%{opacity:0}25%{opacity:1}35%{opacity:0}45%{opacity:1}55%{opacity:0}65%{opacity:1}75%{opacity:0}85%,100%{opacity:1}}
+.joy .ksc-tewari.open .toss{animation:tossup_tewari 1.375s cubic-bezier(.3,0,.7,1)}
+@keyframes tossup_tewari{50%{transform:translateY(-150px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-tewari .cf,.joy .ksc-tewari .fa,.joy .ksc-tewari .fb,.joy .ksc-tewari .toss{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}</style><ellipse cx="300" cy="440" rx="100" ry="14" fill="#000" opacity=".22"></ellipse><g class="toss"><g transform="translate(300 300)"><g class="cf"><circle r="110" fill="#3b9a5a" stroke="#1f5a33" stroke-width="3"></circle><circle r="92.39999999999999" fill="none" stroke="#1f5a33" stroke-opacity=".6" stroke-dasharray="3 5"></circle><g class="fa"><text x="0" y="-40" font-family="'Space Mono', monospace" font-size="13" fill="#f6f3ec" text-anchor="middle">Tewari Brothers</text><text x="0" y="16" font-family="Fraunces, serif" font-size="40" font-weight="700" fill="#f6f3ec" text-anchor="middle">veg</text><text x="0" y="46" font-family="'Space Mono', monospace" font-size="11" fill="#f6f3ec" text-anchor="middle">Goregaon East</text></g><g class="fb"><text x="0" y="8" font-family="Fraunces, serif" font-size="34" font-weight="700" fill="#f6f3ec" text-anchor="middle">thali</text><text x="0" y="36" font-family="Kalam, cursive" font-size="18" fill="#f6f3ec" text-anchor="middle">refills welcome</text></g></g></g></g></svg>

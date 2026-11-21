@@ -56,6 +56,7 @@ const SUBTABS: Record<string, { label: string; items: SubTab[] }> = {
       { to: "/joy", label: "Jar", prefixes: ["/joy"], exact: true },
       { to: "/joy/slips", label: "Slips", prefixes: ["/joy/slips"] },
       { to: "/joy/kept", label: "Kept", prefixes: ["/joy/kept"] },
+      { to: "/joy/museum", label: "Museum", prefixes: ["/joy/museum"] },
       { to: "/joy/year", label: "Calendar", prefixes: ["/joy/year"] },
       { to: "/joy/regulars", label: "Regulars", prefixes: ["/joy/regulars"] },
       { to: "/joy/middle", label: "Middle", prefixes: ["/joy/middle"] },

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="164 73 326 477" aria-hidden="true" focusable="false"><style>.joy .ksc-perfume .bulb,.joy .ksc-perfume .strip,.joy .ksc-perfume .notes text,.joy .ksc-perfume .mist circle{transform-box:fill-box}
+.joy .ksc-perfume .bulb{transform-origin:50% 100%}
+.joy .ksc-perfume .notes text,.joy .ksc-perfume .mist circle{opacity:0}
+.joy .ksc-perfume .strip{transform-origin:50% 0%;transition:transform .5s}
+.joy .ksc-perfume.open .bulb{animation:squeeze_perfume .5s ease-in-out 2}
+.joy .ksc-perfume.open .mist circle{animation:mist_perfume 1.2s ease-out .2s both}
+.joy .ksc-perfume.open .mist circle:nth-child(2n){animation-delay:.5s}
+.joy .ksc-perfume.open .strip{animation:wave_perfume 1.4s ease-in-out .6s 2}
+.joy .ksc-perfume.open .wet{opacity:.8;transition:opacity .4s .6s}
+.joy .ksc-perfume.open .notes text{animation:waft_perfume 3s ease-out both}
+.joy .ksc-perfume.open .n1{animation-delay:1s}
+.joy .ksc-perfume.open .n2{animation-delay:1.5s}
+.joy .ksc-perfume.open .n3{animation-delay:2s}
+@keyframes squeeze_perfume{50%{transform:scale(.8,.86)}}
+@keyframes mist_perfume{0%{opacity:0;transform:translate(0,0)}30%{opacity:1}100%{opacity:0;transform:translate(70px,-30px) scale(3)}}
+@keyframes wave_perfume{0%,100%{transform:rotate(0)}30%{transform:rotate(8deg)}70%{transform:rotate(-6deg)}}
+@keyframes waft_perfume{0%{opacity:0;transform:translate(0,20px)}30%{opacity:1}100%{opacity:.85;transform:translate(-30px,-40px)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-perfume .bulb,.joy .ksc-perfume .strip,.joy .ksc-perfume .notes text,.joy .ksc-perfume .mist circle,.joy .ksc-perfume .wet{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}</style><defs>
+<linearGradient id="perfume-v-glass" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff" stop-opacity=".55"></stop><stop offset=".3" stop-color="#ffffff" stop-opacity=".1"></stop><stop offset=".85" stop-color="#ffffff" stop-opacity=".08"></stop><stop offset="1" stop-color="#ffffff" stop-opacity=".45"></stop></linearGradient>
+<linearGradient id="perfume-v-juice" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3c977"></stop><stop offset="1" stop-color="#d9932f"></stop></linearGradient>
+<linearGradient id="perfume-v-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7e2a2"></stop><stop offset="1" stop-color="#b08a33"></stop></linearGradient>
+<clipPath id="perfume-v-in"><rect x="-58" y="-150" width="116" height="250" rx="14"></rect></clipPath></defs>
+<g transform="translate(250 330) rotate(-6)">
+<ellipse cy="112" rx="70" ry="12" fill="#1d1420" opacity=".25"></ellipse>
+<g clip-path="url(#perfume-v-in)"><rect x="-58" y="-60" width="116" height="160" fill="url(#perfume-v-juice)"></rect><ellipse cy="-60" rx="58" ry="6" fill="#f7dc9a"></ellipse></g>
+<rect x="-58" y="-150" width="116" height="250" rx="14" fill="url(#perfume-v-glass)" stroke="#fff" stroke-opacity=".7" stroke-width="2"></rect>
+<rect x="-22" y="-196" width="44" height="48" rx="4" fill="url(#perfume-v-gold)"></rect>
+<g class="bulb"><path d="M-18 -196 C-30 -260 30 -260 18 -196 Z" fill="#2b1d33"></path></g>
+<g transform="translate(0 0)"><path d="M-48 -40 H48 V60 H-48 Z" fill="#fbf6ea"></path><path d="M-42 -34 H42 V54 H-42 Z" fill="none" stroke="#b08a33" stroke-width="1"></path>
+<text y="-14" font-family="'Young Serif', serif" font-size="13" fill="#3a2a40" text-anchor="middle">Our blend</text>
+<text y="2" font-family="'Young Serif', serif" font-size="13" fill="#3a2a40" text-anchor="middle">no. 1</text>
+<g font-family="Kalam, cursive" font-size="10.5" fill="#6a4c7a" text-anchor="middle"><text y="20">top: citrus</text><text y="33">heart: jasmine</text><text y="46">base: sandalwood</text></g>
+<path d="M0 66 C-8 76 -8 84 0 88 C8 84 8 76 0 66 Z" fill="url(#perfume-v-gold)"></path></g>
+</g>
+<g class="strip"><g transform="translate(420 160) rotate(14)"><path d="M0 0 H34 V260 L17 280 L0 260 Z" fill="#fbf8f2"></path><text transform="translate(22 230) rotate(-90)" font-family="'Space Mono', monospace" font-size="9" fill="#8a7a90">Small World Perfumery</text>
+<ellipse class="wet" cx="17" cy="250" rx="12" ry="18" fill="#e9b65a" opacity="0"></ellipse></g></g>
+<g class="drop"><path d="M270 120 C262 132 262 140 270 144 C278 140 278 132 270 120 Z" fill="#e9b65a" opacity="0"></path></g>
+<g class="notes" font-family="Newsreader, serif" font-style="italic" fill="#fbeaf5">
+<text class="n1" x="330" y="500" font-size="24">bergamot</text><text class="n2" x="440" y="540" font-size="22">jasmine</text><text class="n3" x="340" y="572" font-size="24">sandalwood</text></g>
+<g class="mist" fill="#fbeaf5"><circle cx="300" cy="96" r="3"></circle><circle cx="320" cy="84" r="2"></circle><circle cx="340" cy="100" r="2.5"></circle><circle cx="312" cy="70" r="1.8"></circle></g></svg>

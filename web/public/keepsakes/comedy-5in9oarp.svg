@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="57 13 565 559" aria-hidden="true" focusable="false"><style>.joy .ksc-comedy .ha text,.joy .ksc-comedy .mic{transform-box:fill-box;transform-origin:50% 100%}
+.joy .ksc-comedy .ha text{opacity:0}
+.joy .ksc-comedy.open .spot{opacity:1;transition:opacity .5s}
+.joy .ksc-comedy.open .ha text{animation:pop_comedy .9s cubic-bezier(.3,1.6,.5,1) both}
+.joy .ksc-comedy.open .h1{animation-delay:.3s}
+.joy .ksc-comedy.open .h2{animation-delay:.6s}
+.joy .ksc-comedy.open .h3{animation-delay:.9s}
+.joy .ksc-comedy.open .h4{animation-delay:1.25s}
+.joy .ksc-comedy.open .mic{animation:wob_comedy .5s ease-in-out .2s 3}
+@keyframes pop_comedy{0%{opacity:0;transform:scale(.2) rotate(-20deg)}60%{opacity:1;transform:scale(1.15) rotate(6deg)}100%{opacity:1;transform:scale(1) rotate(-4deg)}}
+@keyframes wob_comedy{50%{transform:rotate(6deg)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-comedy .ha text,.joy .ksc-comedy .mic,.joy .ksc-comedy .spot{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}</style><defs>
+<linearGradient id="comedy-w-band" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d8f23a"></stop><stop offset=".5" stop-color="#f2ff6e"></stop><stop offset="1" stop-color="#c3dd25"></stop></linearGradient>
+<radialGradient id="comedy-w-spot" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff6d2" stop-opacity=".5"></stop><stop offset="1" stop-color="#fff6d2" stop-opacity="0"></stop></radialGradient></defs>
+<ellipse class="spot" cx="420" cy="300" rx="190" ry="260" fill="url(#comedy-w-spot)" opacity="0"></ellipse>
+<g transform="translate(250 330) rotate(-12)">
+<ellipse rx="170" ry="66" fill="none" stroke="#a9bf1c" stroke-width="44"></ellipse>
+<path d="M-170 0 A170 66 0 0 0 170 0" fill="none" stroke="url(#comedy-w-band)" stroke-width="44"></path>
+<path d="M-170 0 A170 66 0 0 0 170 0" fill="none" stroke="#fffbd0" stroke-width="2" stroke-opacity=".6" transform="translate(0 -14)"></path>
+<g font-family="'Space Mono', monospace" font-weight="700" fill="#1b1b12">
+<text x="-118" y="54" font-size="15" transform="rotate(8 -118 54)">Canvas Laugh Club</text>
+<text x="56" y="52" font-size="14" transform="rotate(-8 56 52)">18+ · one night</text></g>
+<g transform="translate(-150 -36)"><circle r="12" fill="#1b1b12"></circle><path d="M-6 -2 a6 6 0 0 0 12 0 Z" fill="#d8f23a"></path></g>
+<path d="M168 -14 l12 6 l-12 6" fill="none" stroke="#1b1b12" stroke-width="2"></path>
+</g>
+<g transform="translate(440 120)"><path d="M0 40 V420 M-50 430 H50" stroke="#2a2a2e" stroke-width="7" stroke-linecap="round"></path>
+<g class="mic"><rect x="-9" y="10" width="18" height="60" rx="7" fill="#1c1c20"></rect><circle cy="0" r="22" fill="#9aa0a8"></circle><circle cy="0" r="22" fill="none" stroke="#5c6168" stroke-width="2" stroke-dasharray="2 3"></circle></g></g>
+<g class="ha" font-family="'Permanent Marker', cursive" fill="#f2ff6e">
+<text class="h1" x="350" y="120" font-size="44">HA</text><text class="h2" x="470" y="90" font-size="34">ha</text><text class="h3" x="380" y="60" font-size="30">HA!</text><text class="h4" x="500" y="170" font-size="26">heh</text></g></svg>

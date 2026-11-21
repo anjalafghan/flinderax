@@ -376,6 +376,7 @@ function Year({ v }: { v: YearView }) {
               <div className="y-sec-head">
                 <h2 id="y-shelf-h" className="y-hand-h">Our museum</h2>
                 <p className="y-hand-label">everything we kept in {year}, one keepsake for every date ♡</p>
+                <p className="y-museum-link"><Link to="/joy/museum">Walk through the whole museum <span aria-hidden="true">→</span></Link></p>
               </div>
               <ol className="y-keepsakes">
                 {museum(v.keepsakes).map(({ d, times }, i) => <MuseumPiece key={i} d={d} i={i} times={times} />)}

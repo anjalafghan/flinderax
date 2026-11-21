@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="5 3 610 588" aria-hidden="true" focusable="false"><style>.joy .ksc-tokai2 .hole-fill{fill:#b77d5f}
+.joy .ksc-tokai2 .hole-crease{stroke:#8f5a3f}
+.joy .ksc-tokai2 .punch-me .hole-fill{fill:none;stroke:#9c8a6a;stroke-width:1.4;stroke-dasharray:3 3.5;transition:fill .05s}
+.joy .ksc-tokai2 .punch-me .hole-crease{stroke:none}
+.joy .ksc-tokai2 .d12{opacity:0}
+.joy .ksc-tokai2 .card,.joy .ksc-tokai2 .chad{transform-box:fill-box;transform-origin:50% 50%}
+.joy .ksc-tokai2 .back{opacity:0}
+.joy .ksc-tokai2 .chad{opacity:0}
+.joy .ksc-tokai2.open .punch-me .hole-fill{fill:#b77d5f;stroke:none;transition-delay:.25s}
+.joy .ksc-tokai2.open .punch-me .hole-crease{stroke:#8f5a3f;transition:stroke 0s .25s}
+.joy .ksc-tokai2.open .d12{opacity:1;transition:opacity .3s .4s}
+.joy .ksc-tokai2.open .chad{animation:fall_tokai2 .9s cubic-bezier(.4,0,.8,.6) .25s both}
+.joy .ksc-tokai2.open .card{animation:flip_tokai2 .9s ease-in-out 1.3s both}
+.joy .ksc-tokai2.open .front{animation:hideA_tokai2 .9s step-end 1.3s both}
+.joy .ksc-tokai2.open .back{animation:showB_tokai2 .9s step-end 1.3s both}
+@keyframes fall_tokai2{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:1;transform:translate(26px,150px) rotate(220deg)}}
+@keyframes flip_tokai2{0%{transform:scaleX(1)}50%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+@keyframes hideA_tokai2{0%{opacity:1}50%,100%{opacity:0}}
+@keyframes showB_tokai2{0%{opacity:0}50%,100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-tokai2.open .card,.joy .ksc-tokai2.open .chad{animation:none}
+.joy .ksc-tokai2.open .front{animation:none;opacity:0}
+.joy .ksc-tokai2.open .back{animation:none;opacity:1}}</style><defs>
+<filter id="tokai2-b-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"></feTurbulence><feColorMatrix values="0 0 0 0 0.25  0 0 0 0 0.18  0 0 0 0 0.08  0 0 0 0.14 0"></feColorMatrix><feComposite in2="SourceGraphic" operator="in"></feComposite></filter>
+<linearGradient id="tokai2-b-card" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6ecd8"></stop><stop offset="1" stop-color="#e6d6b6"></stop></linearGradient>
+<linearGradient id="tokai2-b-bread" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5e2b4"></stop><stop offset="1" stop-color="#e9cd92"></stop></linearGradient>
+<clipPath id="tokai2-b-clip"><path d="M0 -205 C110 -205 160 -90 150 10 C140 130 70 205 -10 205 C-110 205 -160 100 -150 -10 C-140 -120 -90 -205 0 -205 Z"></path></clipPath>
+</defs>
+<g transform="translate(408 418) rotate(-8)">
+<path d="M0 0 L172 0 L0 132 Z" fill="url(#tokai2-b-bread)" stroke="#b9773a" stroke-width="9" stroke-linejoin="round"></path>
+<path d="M14 118 L156 8" stroke="#6aa84f" stroke-width="7" stroke-linecap="round"></path>
+<path d="M20 124 L162 14" stroke="#d0453b" stroke-width="4" stroke-linecap="round"></path>
+<path d="M4 72 L82 72 L170 44 L176 150 L-4 150 Z" fill="#f8f5ee" opacity=".93"></path>
+<path d="M4 72 L82 72 L170 44" fill="none" stroke="#d9d3c4" stroke-width="1.5"></path>
+<path d="M40 74 L46 150 M120 58 L118 150" stroke="#e2dccd" stroke-width="1.5"></path>
+<path d="M-6 112 C60 104 120 100 180 92" stroke="#b8322c" stroke-width="3.5" fill="none"></path>
+<path d="M-6 112 C60 104 120 100 180 92" stroke="#2f6b45" stroke-width="3.5" stroke-dasharray="7 7" fill="none"></path>
+<path d="M96 102 c-14 -16 -26 -6 -10 4 M96 102 c14 -18 28 -6 8 4" stroke="#b8322c" stroke-width="3" fill="none" stroke-linecap="round"></path>
+</g>
+<g transform="translate(262 286) rotate(-24)">
+<g class="card">
+<path d="M0 -205 C110 -205 160 -90 150 10 C140 130 70 205 -10 205 C-110 205 -160 100 -150 -10 C-140 -120 -90 -205 0 -205 Z" fill="url(#tokai2-b-card)"></path>
+<g clip-path="url(#tokai2-b-clip)"><rect x="-170" y="-220" width="340" height="440" filter="url(#tokai2-b-grain)"></rect></g>
+<path d="M0 -205 C110 -205 160 -90 150 10 C140 130 70 205 -10 205 C-110 205 -160 100 -150 -10 C-140 -120 -90 -205 0 -205 Z" fill="none" stroke="#b9a37c" stroke-width="1.2"></path>
+<g class="front">
+<path d="M-6 -186 C40 -120 -50 -40 0 20 C50 80 -30 140 6 188" fill="none" stroke="#b39466" stroke-width="10" stroke-linecap="round"></path>
+<path d="M-6 -186 C40 -120 -50 -40 0 20 C50 80 -30 140 6 188" fill="none" stroke="#8a6d43" stroke-width="3" stroke-linecap="round"></path>
+<path d="M-6 -186 C40 -120 -50 -40 0 20 C50 80 -30 140 6 188" fill="none" stroke="#fffaf0" stroke-width="2" stroke-linecap="round" transform="translate(-7 0)" opacity=".8"></path>
+<g fill="#1d3d6b" transform="rotate(24)">
+<text x="-6" y="-92" font-family="Fraunces, serif" font-weight="700" font-size="36" text-anchor="middle">Blue Tokai</text>
+<text x="-6" y="-66" font-family="Fraunces, serif" font-style="italic" font-size="19" text-anchor="middle">regulars now</text>
+<text x="-6" y="-42" font-family="Figtree, sans-serif" font-weight="600" font-size="10.5" letter-spacing="1.2" text-anchor="middle">Goregaon East</text>
+</g>
+<g transform="translate(-90 70) rotate(-20)" class="punched"><ellipse rx="13" ry="17" class="hole-fill"></ellipse><path d="M-1 -15 C5 -6 -5 4 1 15" fill="none" stroke-width="2" class="hole-crease"></path></g><g transform="translate(-40 112) rotate(-20)" class="punch-me"><ellipse rx="13" ry="17" class="hole-fill"></ellipse><path d="M-1 -15 C5 -6 -5 4 1 15" fill="none" stroke-width="2" class="hole-crease"></path></g><g transform="translate(20 140) rotate(-20)"><ellipse rx="13" ry="17" fill="none" stroke="#9c8a6a" stroke-width="1.4" stroke-dasharray="3 3.5"></ellipse></g><g transform="translate(78 112) rotate(-20)"><ellipse rx="13" ry="17" fill="none" stroke="#9c8a6a" stroke-width="1.4" stroke-dasharray="3 3.5"></ellipse></g><g transform="translate(112 56) rotate(-20)"><ellipse rx="13" ry="17" fill="none" stroke="#9c8a6a" stroke-width="1.4" stroke-dasharray="3 3.5"></ellipse></g><g transform="translate(120 -10) rotate(-20)"><ellipse rx="13" ry="17" fill="none" stroke="#9c8a6a" stroke-width="1.4" stroke-dasharray="3 3.5"></ellipse></g>
+<g font-family="Kalam, cursive" font-size="14" fill="#5b4a2e" text-anchor="middle">
+<text x="-90" y="104" transform="rotate(-6 -90 104)">10</text>
+<text class="d12" x="-40" y="146" transform="rotate(-6 -40 146)">12</text>
+</g>
+</g>
+<g class="back">
+<g transform="rotate(24)" text-anchor="middle">
+<text x="0" y="-70" font-family="Figtree, sans-serif" font-weight="600" font-size="11" letter-spacing="1.2" fill="#1d3d6b">12 November, visit two</text>
+<text x="0" y="0" font-family="Kalam, cursive" font-weight="700" font-size="34" fill="#2a3f80">Kya pela</text>
+<text x="0" y="40" font-family="Kalam, cursive" font-weight="700" font-size="34" fill="#2a3f80">hai bhai</text>
+<path d="M-54 58 q54 12 108 0" fill="none" stroke="#2a3f80" stroke-width="2.4" stroke-linecap="round"></path>
+</g>
+</g>
+</g>
+</g>
+<g class="chad"><g transform="translate(212 412) rotate(-44)"><ellipse rx="13" ry="17" fill="#5a3a20"></ellipse><path d="M-1 -15 C5 -6 -5 4 1 15" fill="none" stroke="#2e1a0c" stroke-width="2"></path></g></g></svg>
