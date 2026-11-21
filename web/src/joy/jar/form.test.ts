@@ -5,6 +5,9 @@ describe("form serialisation", () => {
   test("an empty sentence only says when", () => {
     expect(filtersToForm({ ...EMPTY_FILTERS, when: "2026-11-05" })).toEqual({ when: "2026-11-05" });
     expect(filtersToForm(EMPTY_FILTERS)).toEqual({});
+    expect(filtersToForm({ ...EMPTY_FILTERS, fresh: "1" })).toEqual({ fresh: "1" });
+    // From the middle, the server works the filters out itself; "something new" is not sent.
+    expect(filtersToForm({ ...EMPTY_FILTERS, fresh: "1" }, true)).toEqual({ middle: "1" });
   });
   test("filled blanks go over as strings, places as a list", () => {
     const f = { ...EMPTY_FILTERS, when: "any", start: "office" as const, budget: " 2000 ", max_duration: "half_day", settings: ["home", "local"], tag: "cozy", energy: "low", max_km: "30", from: "1" };

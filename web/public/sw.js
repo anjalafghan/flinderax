@@ -4,8 +4,8 @@
 // Copies are named by a hash of the login token, so one person's copy is never shown to another,
 // and logout deletes them all.
 
-const SHELL = "fx-shell-v1";
-const DATA_PREFIX = "fx-data-";
+const SHELL = "joy-shell-v1";
+const DATA_PREFIX = "joy-data-";
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const NETWORK_TIMEOUT_MS = 2000;
 // Read-only API answers worth keeping for offline viewing.
@@ -26,8 +26,8 @@ self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches
       .keys()
-      // Older shells, and the old Joy app's caches (joy-static-*, saved pages) from this address.
-      .then((keys) => Promise.all(keys.filter((k) => (k.startsWith("fx-shell-") && k !== SHELL) || !k.startsWith("fx-")).map((k) => caches.delete(k))))
+      // Older shells, and everything else: the old fx-* names and the old Joy app's joy-static-* caches.
+      .then((keys) => Promise.all(keys.filter((k) => k !== SHELL && !k.startsWith(DATA_PREFIX)).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -68,16 +68,16 @@ async function keptApi(req) {
     if (cache && res.ok) {
       const body = await res.clone().blob();
       const headers = new Headers(res.headers);
-      headers.set("x-fx-saved-at", String(Date.now()));
+      headers.set("x-joy-saved-at", String(Date.now()));
       await cache.put(req.url, new Response(body, { status: 200, headers }));
     }
     return res;
   } catch (err) {
     const saved = cache && (await cache.match(req.url));
-    const at = saved && Number(saved.headers.get("x-fx-saved-at"));
+    const at = saved && Number(saved.headers.get("x-joy-saved-at"));
     if (saved && Date.now() - at < MAX_AGE_MS) {
       const headers = new Headers(saved.headers);
-      headers.set("x-fx-offline", "1");
+      headers.set("x-joy-offline", "1");
       return new Response(await saved.blob(), { status: 200, headers });
     }
     throw err;

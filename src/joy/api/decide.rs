@@ -313,6 +313,9 @@ pub struct PickForm {
     /// Where we start that day when it isn't the usual: "office" or "home" ("" = usual).
     #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
     pub start: String,
+    /// "1": "something new", only slips we have never had or booked.
+    #[serde(deserialize_with = "flex", skip_serializing_if = "String::is_empty")]
+    pub fresh: String,
 }
 
 /// A hidden form field of Joy's pick card (kept for fidelity; `state` is the ready-to-post form).
@@ -339,6 +342,7 @@ impl PickForm {
             max_km: self.max_km.trim().parse().ok(),
             rain_likely: false,
             today: None,
+            only_new: self.fresh == "1",
         }
     }
 
@@ -400,6 +404,7 @@ impl PickForm {
             ("energy".into(), self.energy.clone()),
             ("max_km".into(), self.max_km.clone()),
             ("from".into(), self.from.clone()),
+            ("fresh".into(), self.fresh.clone()),
         ];
         h.extend(self.settings.iter().map(|s| ("settings".into(), s.clone())));
         h
@@ -426,6 +431,7 @@ impl PickForm {
             energy: self.energy.clone(),
             max_km: self.max_km.clone(),
             from: self.from.clone(),
+            fresh: self.fresh.clone(),
             settings: self.settings.clone(),
             ..Default::default()
         }
@@ -934,6 +940,7 @@ fn hint_text(ctx: &Ctx, form: &PickForm, f: &Filters, h: Hint) -> String {
         }
         Hint::OutsideWindow { title, why } => format!("Nothing fits that day. Closest: {title}, but it's {why}."),
         Hint::NoMoodMatch => "Nothing matches that vibe or energy.".into(),
+        Hint::NothingNew => "You've had every slip that fits. Write a new one, or draw from the ones you've done.".into(),
     }
 }
 
@@ -968,6 +975,10 @@ fn relax(ctx: &Ctx, f: &PickForm, h: &Hint) -> (String, Option<PickForm>) {
             r.tag.clear();
             r.energy.clear();
             "Any vibe, any energy".into()
+        }
+        Hint::NothingNew => {
+            r.fresh.clear();
+            "Include ones we've done".into()
         }
         Hint::Exhausted => {
             return ("Start over with these filters".into(), Some(r));
