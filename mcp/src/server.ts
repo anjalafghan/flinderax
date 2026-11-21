@@ -176,6 +176,28 @@ export function registerInbox(server: McpServer, client: JoyClient) {
   );
 
   server.registerTool(
+    "money_categorize_payee",
+    {
+      description:
+        "Give every untagged row of one payee (as money_uncategorized_payees or money_transactions names it) a category. Only blanks are filled: rows already tagged, or locked by a hand correction, are left alone. remember=true also saves a rule so future texts and statements from that payee come in tagged. Answers how many rows changed. Ask the person first.",
+      inputSchema: { payee: z.string().min(1).max(120), category: z.enum(CATEGORIES).exclude(["uncategorized"]), remember: z.boolean().optional() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ payee, category, remember }: { payee: string; category: (typeof CATEGORIES)[number]; remember?: boolean }) => {
+      try {
+        // Keyed by the day too: a retry today is done once, but tagging the same payee again tomorrow
+        // (after new rows arrived) is a fresh request rather than a replay of today's answer.
+        const day = new Date().toISOString().slice(0, 10);
+        const key = `mcp-payee:${await shortHash(`${day}|${payee.trim().toLowerCase()}|${category}|${remember ? 1 : 0}`)}`;
+        const res = (await client.post("/api/ingest/payees/categorize", { payee, category, remember: !!remember }, key)) as { updated?: number };
+        return text(`Tagged ${res.updated ?? 0} row(s) of ${payee} as ${category}.${remember ? " Remembered for future imports." : ""}`);
+      } catch (e) {
+        return failed(e, "Could not tag that payee.");
+      }
+    },
+  );
+
+  server.registerTool(
     "money_parse_text",
     {
       description:

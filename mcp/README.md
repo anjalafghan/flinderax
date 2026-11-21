@@ -1,8 +1,9 @@
 # joy-mcp: connector
 
-An MCP server that lets Claude read joy (money and Dates) over the existing API. It writes to four paths only
-(`WRITE_PATHS` in `src/client.ts`): a report on the Review page, a new transaction, joy's own text parser, and clearing
-an item from the unrecognised-alert inbox. It never edits or deletes a transaction, and every write carries an
+An MCP server that lets Claude read joy (money and Dates) over the existing API. It writes to five paths only
+(`WRITE_PATHS` in `src/client.ts`): a report on the Review page, a new transaction, joy's own text parser, clearing
+an item from the unrecognised-alert inbox, and tagging a payee's untagged rows. It never deletes a transaction and only
+ever fills a blank category (rows already tagged or locked by hand are skipped), and every write carries an
 `Idempotency-Key`, so a retry or a second run is done once. The server's own privacy rules still apply: surprises
 sealed for you answer 404, and neither partner's quiet marks nor answers are returned.
 
@@ -20,6 +21,11 @@ Texts the regexes miss wait 30 days in the inbox. Claude becomes the fallback pa
 - `money_parse_text` sends a cleaned-up text through joy's own parser, which also matches the card or account.
 - `money_dismiss_unrecognized` clears an OTP, a promo and the like.
 - The `sort_inbox` prompt runs the whole pass and shows you a table to approve before it adds anything. Run it weekly.
+
+## Tagging untagged spending
+- `money_uncategorized_payees` lists payees with untagged debits, biggest first, with joy's suggestion where it has one.
+- `money_categorize_payee` gives one payee's untagged rows a category (`remember: true` also saves a rule for future
+  imports). It calls `POST /api/ingest/payees/categorize`, which fills blanks only.
 
 ## Planning a day out
 `dates_near` takes a station or area ("CSMT", "Bandra"...) plus an optional budget and max hours, and returns a short
