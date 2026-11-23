@@ -15,6 +15,31 @@ use crate::{
 
 type User = Extension<(String, String)>;
 
+/// Keeps a balance the bank (or the person) reported, so reconciliation can compare it with the
+/// transactions. `as_of` is the bank's date. Repeats are ignored.
+pub(crate) async fn record_snapshot<'c>(
+    conn: impl sqlx::SqliteExecutor<'c>,
+    user_id: &str,
+    account_id: &str,
+    as_of: &str,
+    balance_paise: i64,
+    source: &str,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "INSERT INTO balance_snapshots (snapshot_id, user_id, account_id, as_of, balance_paise, source)
+         VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
+    )
+    .bind(nanoid!())
+    .bind(user_id)
+    .bind(account_id)
+    .bind(as_of)
+    .bind(balance_paise)
+    .bind(source)
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
 #[derive(Serialize)]
 pub struct AccountRow {
     pub account_id: String,
@@ -123,6 +148,30 @@ fn validate(name: &str, kind: &str, maturity: &Option<String>) -> Result<(), App
     Ok(())
 }
 
+/// One-off at startup: past bank alerts kept their text, so their "Avl Bal" becomes 'alert'
+/// snapshots. Skipped once any alert snapshot exists (new alerts record their own).
+pub async fn backfill_alert_snapshots(db: &sqlx::SqlitePool) -> Result<usize, AppError> {
+    let done: i64 = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM balance_snapshots WHERE source = 'alert')").fetch_one(db).await?;
+    if done == 1 {
+        return Ok(0);
+    }
+    let rows: Vec<(String, String, String, String)> = sqlx::query_as(
+        "SELECT user_id, account_id, occurred_on, raw_text FROM transactions
+         WHERE account_id IS NOT NULL AND source != 'manual' AND dedupe_key NOT LIKE 'stmt:%' AND raw_text IS NOT NULL",
+    )
+    .fetch_all(db)
+    .await?;
+    let mut n = 0;
+    let mut tx = db.begin().await?;
+    for (user_id, account_id, on, raw) in rows {
+        let Some(bal) = crate::alerts::parse(&raw).and_then(|a| a.balance_paise) else { continue };
+        record_snapshot(&mut *tx, &user_id, &account_id, &on, bal, "alert").await?;
+        n += 1;
+    }
+    tx.commit().await?;
+    Ok(n)
+}
+
 pub async fn create(
     State(state): State<AppState>,
     Extension((user_id, _)): User,
@@ -157,6 +206,7 @@ pub async fn create(
     )
     .execute(&state.db)
     .await?;
+    record_snapshot(&state.db, &user_id, &account_id, &today, p.balance_paise, "typed").await?;
     Ok(Json(AccountIdResponse { account_id, status: true }))
 }
 
@@ -216,6 +266,7 @@ pub async fn update_balance(
     if res.rows_affected() == 0 {
         return Err(not_found("Account not found"));
     }
+    record_snapshot(&state.db, &user_id, &p.account_id, &today, p.balance_paise, "typed").await?;
     Ok(Json(StatusResponse { status: true }))
 }
 

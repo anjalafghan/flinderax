@@ -419,6 +419,7 @@ async fn apply_closing_balance(
     account_id: &str,
     parsed: &crate::statement::Parsed,
     chain: (bool, Option<i64>),
+    opening: Option<i64>,
     res: &mut StatementResult,
 ) -> Result<(), AppError> {
     let newest = parsed.rows.iter().enumerate().filter(|(_, r)| r.balance_paise.is_some()).max_by_key(|(i, r)| (r.date, *i));
@@ -431,6 +432,15 @@ async fn apply_closing_balance(
         _ => r.balance_paise.expect("filtered"),
     };
     let on = r.date.to_string();
+    // Statement balances are end-of-day figures. Kept whether or not the account itself moves.
+    // Only a chain that holds makes them exact, as in the migration's backfill.
+    if chain.0 {
+        crate::handlers::account::record_snapshot(&mut *conn, user_id, account_id, &on, bal, "statement").await?;
+        let day_before = parsed.rows.iter().map(|r| r.date).min().and_then(|d| d.previous_day());
+        if let (Some(open), Some(day_before)) = (opening, day_before) {
+            crate::handlers::account::record_snapshot(&mut *conn, user_id, account_id, &day_before.to_string(), open, "statement").await?;
+        }
+    }
     let done = sqlx::query(
         "UPDATE accounts SET balance_paise = ?, balance_set_on = ?, updated_at = CURRENT_TIMESTAMP
          WHERE account_id = ? AND user_id = ? AND (balance_set_on IS NULL OR balance_set_on <= ?)",
@@ -530,7 +540,7 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
     let mut res = import.res;
 
     if let Some(account_id) = &target.account_id {
-        apply_closing_balance(&mut tx, user_id, account_id, &parsed, (chain_ok, closing_paise), &mut res).await?;
+        apply_closing_balance(&mut tx, user_id, account_id, &parsed, (chain_ok, closing_paise), opening_paise, &mut res).await?;
     }
     if let (Some(first), Some(last)) = (&res.first_date, &res.last_date) {
         res.not_on_statement = count_unconfirmed(&mut tx, user_id, &target, first, last).await?;

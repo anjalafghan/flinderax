@@ -307,6 +307,8 @@ pub async fn ingest_text(
     // "Avl Bal" is the bank's own figure: it becomes the typed-in balance, unless a newer one exists.
     let mut balance_updated = None;
     if let (Some(acct), Some(bal)) = (&account_id, alert.balance_paise) {
+        // Kept even when an out-of-order alert is too old to change the account balance.
+        crate::handlers::account::record_snapshot(db, user_id, acct, &on_s, bal, "alert").await?;
         let res = sqlx::query!(
             "UPDATE accounts SET balance_paise = ?, balance_set_on = ?, updated_at = CURRENT_TIMESTAMP
              WHERE account_id = ? AND user_id = ? AND (balance_set_on IS NULL OR balance_set_on <= ?)",
@@ -1071,6 +1073,76 @@ mod statement_tests {
         assert_eq!(acme, "UPI-ACME, PUNE-ACME@OKAXIS-SBIN0001234-612345678903-PAYMENT ON CRED");
         assert_eq!(count(&state.db, "SELECT COUNT(*) FROM transactions WHERE on_statement = 1").await, 6);
         assert_eq!(count(&state.db, "SELECT COUNT(*) FROM statement_imports WHERE chain_ok = 1 AND rows = 6").await, 1);
+    }
+
+    #[tokio::test]
+    async fn an_out_of_order_alert_is_kept_as_a_snapshot_without_moving_the_balance() {
+        let state = test_state().await;
+        sqlx::query("UPDATE accounts SET last_4_digits = '1234', balance_paise = 700, balance_set_on = '2026-11-20' WHERE account_id = 'acctB'")
+            .execute(&state.db)
+            .await
+            .unwrap();
+        let today = time::macros::date!(2026 - 11 - 22);
+        let text = "Dear Customer, Rs.2000 withdrawn from SBI ATM using A/c X1234 on 08Nov26. Avl Bal Rs.8,500.25 -SBI";
+        let r = ingest_text(&state.db, "u", text, "sms", today).await.unwrap_or_else(|e| panic!("{}", e.1));
+        assert_eq!(r.status, "created");
+        assert!(r.balance_updated.is_none());
+        let bal: i64 = sqlx::query_scalar("SELECT balance_paise FROM accounts WHERE account_id = 'acctB'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(bal, 700);
+        let snap: (String, i64, String) =
+            sqlx::query_as("SELECT as_of, balance_paise, source FROM balance_snapshots WHERE account_id = 'acctB'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(snap, ("2026-11-08".to_string(), 850_025, "alert".to_string()));
+    }
+
+    #[tokio::test]
+    async fn a_statement_import_keeps_closing_and_opening_snapshots_even_when_a_newer_balance_wins() {
+        let state = test_state().await;
+        sqlx::query("UPDATE accounts SET balance_paise = 7000000, balance_set_on = '2026-11-20' WHERE account_id = 'acctB'")
+            .execute(&state.db)
+            .await
+            .unwrap();
+        import(&state, &csv(ROWS), Some("acctB")).await;
+        let snaps: Vec<(String, i64, String)> =
+            sqlx::query_as("SELECT as_of, balance_paise, source FROM balance_snapshots WHERE account_id = 'acctB' ORDER BY as_of")
+                .fetch_all(&state.db)
+                .await
+                .unwrap();
+        assert_eq!(
+            snaps,
+            vec![
+                ("2026-10-31".to_string(), 1_000_000, "statement".to_string()),
+                ("2026-11-06".to_string(), 5_513_050, "statement".to_string()),
+            ]
+        );
+        // Importing the same file again adds nothing.
+        import(&state, &csv(ROWS), Some("acctB")).await;
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM balance_snapshots").await, 2);
+    }
+
+    #[tokio::test]
+    async fn a_typed_balance_is_recorded_only_when_the_account_exists() {
+        let state = test_state().await;
+        let pay = |id: &str| axum::Json(crate::handlers::account::UpdateBalancePayload { account_id: id.into(), balance_paise: 123_400 });
+        assert!(crate::handlers::account::update_balance(State(state.clone()), user(), pay("nope")).await.is_err());
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM balance_snapshots").await, 0);
+        let _ = crate::handlers::account::update_balance(State(state.clone()), user(), pay("acctB")).await.unwrap_or_else(|e| panic!("{}", e.1));
+        let snap: (i64, String) = sqlx::query_as("SELECT balance_paise, source FROM balance_snapshots WHERE account_id = 'acctB'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(snap, (123_400, "typed".to_string()));
+    }
+
+    #[tokio::test]
+    async fn past_alerts_are_backfilled_once() {
+        let state = test_state().await;
+        sqlx::query(
+            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, account_id, source, raw_text, dedupe_key)
+             VALUES ('old', 'u', '2026-11-08', 'debit', 200000, 'acctB', 'sms', 'Dear Customer, Rs.2000 withdrawn from SBI ATM using A/c X1234 on 08Nov26. Avl Bal Rs.8,500.25 -SBI', 'fp:old')",
+        )
+        .execute(&state.db)
+        .await
+        .unwrap();
+        assert_eq!(crate::handlers::account::backfill_alert_snapshots(&state.db).await.unwrap_or_else(|e| panic!("{}", e.1)), 1);
+        assert_eq!(crate::handlers::account::backfill_alert_snapshots(&state.db).await.unwrap_or_else(|e| panic!("{}", e.1)), 0);
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM balance_snapshots WHERE balance_paise = 850025 AND as_of = '2026-11-08'").await, 1);
     }
 
     #[tokio::test]

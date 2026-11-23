@@ -51,6 +51,7 @@ async fn rows(db: &sqlx::SqlitePool, sql: &str, id: &str) -> Result<Vec<Value>, 
 /// and the query that reads it. `import` loads them back in this order.
 pub(crate) const USER_TABLES: &[(&str, &str)] = &[
         ("accounts", "SELECT * FROM accounts WHERE user_id = ?"),
+        ("balance_snapshots", "SELECT * FROM balance_snapshots WHERE user_id = ?"),
         ("balance_history", "SELECT h.* FROM balance_history h JOIN accounts a ON a.account_id = h.account_id WHERE a.user_id = ?"),
         ("cards", "SELECT * FROM cards WHERE user_id = ?"),
         ("card_snapshots", "SELECT s.* FROM card_snapshots s JOIN cards c ON c.card_id = s.card_id WHERE c.user_id = ?"),
