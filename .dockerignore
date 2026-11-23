@@ -14,3 +14,18 @@ web/dist/
 *.md
 fly.toml
 .claude/
+
+# Not needed to build the image. Leaving them out shrinks the upload and, more usefully, stops an edit
+# to a test, a doc or a script from invalidating the `COPY . .` layers and recompiling the server.
+e2e/
+tests/
+mcp/
+tools/
+backups/
+docs/
+reports/
+research_notes/
+deploy/
+scripts/
+test-results/
+playwright-report/

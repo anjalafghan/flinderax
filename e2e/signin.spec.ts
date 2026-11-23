@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { newUser, PASSWORD, register, signIn, uniqueName } from "./helpers";
+import { newUser, PASSWORD, register, registerAndStay, signIn, uniqueName } from "./helpers";
 
 test("sign in: the session lives in an HttpOnly cookie and the page keeps no token", async ({ page, context }) => {
   await newUser(page, "signin");
@@ -42,4 +42,10 @@ test("signing out ends the session", async ({ page, context }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/auth/);
   await signIn(page, name);
+});
+
+test("creating an account signs you straight in", async ({ page }) => {
+  await registerAndStay(page, uniqueName("autologin"));
+  await page.reload();
+  await expect(page).not.toHaveURL(/\/auth/);
 });

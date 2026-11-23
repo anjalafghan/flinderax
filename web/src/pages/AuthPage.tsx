@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 ;
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,28 @@ import { useAuth } from "@/context/AuthContext";
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error && error.message ? error.message : fallback;
 
+/** A password field with a show/hide eye, so a phone keyboard typo can be checked before submitting. */
+function PasswordInput({
+  shown,
+  onToggle,
+  ...props
+}: React.ComponentProps<typeof Input> & { shown: boolean; onToggle: () => void }) {
+  return (
+    <div className="relative">
+      <Input {...props} type={shown ? "text" : "password"} className="pr-12" />
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={shown ? "Hide password" : "Show password"}
+        aria-pressed={shown}
+        className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {shown ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      </button>
+    </div>
+  );
+}
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -38,44 +61,53 @@ export default function AuthPage() {
   const [regPass, setRegPass] = useState("");
   const [regCode, setRegCode] = useState("");
 
+  const [showPass, setShowPass] = useState(false);
+  const [tab, setTab] = useState("login");
+
+  const signIn = async (user: string, pass: string) => {
+    const res = await api.post<{ access_token: string; expires_at: number; cookie?: boolean }>("/api/common/login", {
+      user_name: user,
+      user_password: pass,
+    });
+    return res.data;
+  };
+  const finishSignIn = (data: Awaited<ReturnType<typeof signIn>>, welcome: string) => {
+    toast.success(welcome, { duration: 1200 });
+    const kept = loginToKeep(data);
+    login(kept.token, kept.expiresAt);
+    navigate("/");
+  };
+
   const loginMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post<{ access_token: string; expires_at: number; cookie?: boolean }>(
-        "/api/common/login",
-        {
-          user_name: loginUser,
-          user_password: loginPass,
-        },
-      );
-      return res.data;
-    },
-    onSuccess: (data) => {
-      toast.success("Welcome back!", { duration: 1200 });
-      const kept = loginToKeep(data);
-      login(kept.token, kept.expiresAt);
-      navigate("/");
-    },
+    mutationFn: () => signIn(loginUser, loginPass),
+    onSuccess: (data) => finishSignIn(data, "Welcome back!"),
     onError: (error) => {
       toast.error(errorMessage(error, "Login failed. Please check your credentials."));
     },
   });
 
   const registerMutation = useMutation({
+    // Creating an account signs you straight in: no second form, no retyping the password.
     mutationFn: async () => {
-      const res = await api.post<unknown>("/api/common/register", {
+      await api.post<unknown>("/api/common/register", {
         user_name: regUser,
         user_password: regPass,
         signup_code: regCode,
       });
-      return res.data;
+      try {
+        return await signIn(regUser, regPass);
+      } catch {
+        return null;
+      }
     },
-    onSuccess: () => {
-      toast.success("Account created successfully! Please login.");
-      // Switch to login tab? For now just notify.
-      // Reset fields
-      setRegUser("");
+    onSuccess: (data) => {
+      if (data) return finishSignIn(data, "Welcome to joy");
+      // The account exists but the automatic sign-in failed: land on Login with the name filled in.
+      toast.success("Account created. Sign in to continue.");
+      setLoginUser(regUser);
       setRegPass("");
       setRegCode("");
+      setTab("login");
     },
     onError: (error) => {
       toast.error(errorMessage(error, "Registration failed. Please try again."));
@@ -113,7 +145,7 @@ export default function AuthPage() {
         </div>
 
         <div className="glass rounded-[2rem] p-2">
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue="login" value={tab} onValueChange={setTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-2 p-1 bg-transparent rounded-full h-12">
               <TabsTrigger
                 value="login"
@@ -134,7 +166,7 @@ export default function AuthPage() {
                 <CardHeader className="pb-4">
                   <CardTitle className="text-[24px]">Welcome Back</CardTitle>
                   <CardDescription>
-                    Enter your credentials to access your wallet.
+                    Sign in to pick up where you left off.
                   </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleLogin}>
@@ -143,6 +175,9 @@ export default function AuthPage() {
                       <Label htmlFor="username">Username</Label>
                       <Input
                         id="username"
+                        autoComplete="username"
+                        autoCapitalize="none"
+                        autoCorrect="off"
                         placeholder="e.g. johndoe"
                         value={loginUser}
                         onChange={(e) => setLoginUser(e.target.value)}
@@ -150,12 +185,14 @@ export default function AuthPage() {
                     </div>
                     <div className="field">
                       <Label htmlFor="password">Password</Label>
-                      <Input
+                      <PasswordInput
                         id="password"
-                        type="password"
+                        autoComplete="current-password"
                         placeholder="••••••••"
                         value={loginPass}
                         onChange={(e) => setLoginPass(e.target.value)}
+                        shown={showPass}
+                        onToggle={() => setShowPass((v) => !v)}
                       />
                     </div>
                   </CardContent>
@@ -177,7 +214,7 @@ export default function AuthPage() {
                 <CardHeader className="pb-4">
                   <CardTitle className="text-[24px]">Create Account</CardTitle>
                   <CardDescription>
-                    Start your financial journey today.
+                    Your money and your dates, ready in a minute.
                   </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleRegister}>
@@ -186,6 +223,9 @@ export default function AuthPage() {
                       <Label htmlFor="reg-username">Username</Label>
                       <Input
                         id="reg-username"
+                        autoComplete="username"
+                        autoCapitalize="none"
+                        autoCorrect="off"
                         placeholder="Choose a username"
                         value={regUser}
                         onChange={(e) => setRegUser(e.target.value)}
@@ -203,12 +243,14 @@ export default function AuthPage() {
                     </div>
                     <div className="field">
                       <Label htmlFor="reg-password">Password</Label>
-                      <Input
+                      <PasswordInput
                         id="reg-password"
-                        type="password"
+                        autoComplete="new-password"
                         placeholder="Create a password"
                         value={regPass}
                         onChange={(e) => setRegPass(e.target.value)}
+                        shown={showPass}
+                        onToggle={() => setShowPass((v) => !v)}
                       />
                     </div>
                   </CardContent>
@@ -218,7 +260,7 @@ export default function AuthPage() {
                       className="h-12 w-full text-base"
                       disabled={registerMutation.isPending}
                     >
-                      {registerMutation.isPending ? "Creating..." : "Register"}
+                      {registerMutation.isPending ? "Creating your account..." : "Create account"}
                     </Button>
                   </CardFooter>
                 </form>

@@ -245,6 +245,8 @@ body:has([data-status="red"])::before { opacity: .4; background: radial-gradient
 ::view-transition-old(root) { animation: vt-out .22s ease-in both; }
 ::view-transition-new(root) { animation: vt-in .38s cubic-bezier(.22, 1, .36, 1) both; }
 
+@keyframes skeleton-in { from { opacity: 0; } to { opacity: 1; } }
+
 /* Loading placeholders shimmer instead of pulsing. */
 @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
 [class*="animate-pulse"][class*="bg-muted"] {

@@ -17,7 +17,7 @@ export function InfoTip({ text, className }: { text: string; className?: string 
         onBlur={() => setOpen(false)}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative rounded-full text-muted-foreground before:absolute before:-inset-3.5 before:content-[''] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Info className="h-4 w-4" />
       </button>
