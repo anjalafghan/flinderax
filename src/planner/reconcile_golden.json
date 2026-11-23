@@ -1,0 +1,562 @@
+[
+  {
+    "headlines": [
+      null
+    ],
+    "name": "clean_window",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      "a savings: ₹300 went out that joy didn't see between 1 Nov and 10 Nov. Upload a statement to fill it in."
+    ],
+    "name": "missing_debit",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [
+            {
+              "direction": "missing_debit",
+              "expected_high_paise": -30000,
+              "expected_low_paise": -30000,
+              "from": "2026-11-01",
+              "gap_paise": -30000,
+              "observed_paise": -60000,
+              "to": "2026-11-10",
+              "unattributed_count": 0,
+              "unattributed_paise": 0
+            }
+          ],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": null,
+          "snapshot_days": 2,
+          "status": "gap"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      "a savings: ₹400 came in that joy didn't see between 1 Nov and 10 Nov. Upload a statement to fill it in."
+    ],
+    "name": "missing_credit",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [
+            {
+              "direction": "missing_credit",
+              "expected_high_paise": 10000,
+              "expected_low_paise": 10000,
+              "from": "2026-11-01",
+              "gap_paise": 40000,
+              "observed_paise": 50000,
+              "to": "2026-11-10",
+              "unattributed_count": 0,
+              "unattributed_paise": 0
+            }
+          ],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": null,
+          "snapshot_days": 2,
+          "status": "gap"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "boundary_alert_midday_not_flagged",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": "2026-11-10",
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      "a savings: ₹150 went out that joy didn't see between 1 Nov and 10 Nov. Upload a statement to fill it in."
+    ],
+    "name": "boundary_statement_statement_flagged",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [
+            {
+              "direction": "missing_debit",
+              "expected_high_paise": -15000,
+              "expected_low_paise": -15000,
+              "from": "2026-11-01",
+              "gap_paise": -15000,
+              "observed_paise": -30000,
+              "to": "2026-11-10",
+              "unattributed_count": 0,
+              "unattributed_paise": 0
+            }
+          ],
+          "last_alert_on": "2026-11-10",
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": null,
+          "snapshot_days": 2,
+          "status": "gap"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      "a savings: ₹150 went out that joy didn't see between 1 Nov and 10 Nov. Upload a statement to fill it in."
+    ],
+    "name": "boundary_statement_then_alert_flagged",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [
+            {
+              "direction": "missing_debit",
+              "expected_high_paise": -10000,
+              "expected_low_paise": -15000,
+              "from": "2026-11-01",
+              "gap_paise": -15000,
+              "observed_paise": -30000,
+              "to": "2026-11-10",
+              "unattributed_count": 0,
+              "unattributed_paise": 0
+            }
+          ],
+          "last_alert_on": "2026-11-10",
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": null,
+          "snapshot_days": 2,
+          "status": "gap"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "autopost_inside_window_counted",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "autopost_also_in_statement_not_doubled",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "one_row_covers_one_adjustment_only",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null,
+      null
+    ],
+    "name": "move_inside_window_both_legs",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        },
+        {
+          "account_id": "b",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "b savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null,
+      null
+    ],
+    "name": "transfer_txn_legs_counted",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        },
+        {
+          "account_id": "b",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "b savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null,
+      "b savings: ₹1,000 came in that joy didn't see between 1 Nov and 10 Nov. Upload a statement to fill it in."
+    ],
+    "name": "transfer_one_leg_missing",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        },
+        {
+          "account_id": "b",
+          "gaps": [
+            {
+              "direction": "missing_credit",
+              "expected_high_paise": 0,
+              "expected_low_paise": 0,
+              "from": "2026-11-01",
+              "gap_paise": 100000,
+              "observed_paise": 100000,
+              "to": "2026-11-10",
+              "unattributed_count": 0,
+              "unattributed_paise": 0
+            }
+          ],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "b savings",
+          "reconciled_through": null,
+          "snapshot_days": 2,
+          "status": "gap"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      "a savings: ₹600 went out that joy didn't see between 1 Nov and 10 Nov. Upload a statement to fill it in."
+    ],
+    "name": "null_account_rows_are_a_hint",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [
+            {
+              "direction": "missing_debit",
+              "expected_high_paise": 0,
+              "expected_low_paise": 0,
+              "from": "2026-11-01",
+              "gap_paise": -60000,
+              "observed_paise": -60000,
+              "to": "2026-11-10",
+              "unattributed_count": 1,
+              "unattributed_paise": -60000
+            }
+          ],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": null,
+          "snapshot_days": 2,
+          "status": "gap"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "single_snapshot_is_never",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-01",
+          "name": "a savings",
+          "reconciled_through": null,
+          "snapshot_days": 1,
+          "status": "never"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "no_snapshots_is_never",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": null,
+          "name": "a savings",
+          "reconciled_through": null,
+          "snapshot_days": 0,
+          "status": "never"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "locked_and_non_bank_ignored",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "old_gap_dropped_after_clean_window",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 3,
+          "status": "reconciled"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      "a savings: ₹500 went out that joy didn't see between 12 Aug and 22 Aug. Upload a statement to fill it in."
+    ],
+    "name": "gap_ending_on_the_cutoff_day_kept",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [
+            {
+              "direction": "missing_debit",
+              "expected_high_paise": 0,
+              "expected_low_paise": 0,
+              "from": "2026-08-12",
+              "gap_paise": -50000,
+              "observed_paise": -50000,
+              "to": "2026-08-22",
+              "unattributed_count": 0,
+              "unattributed_paise": 0
+            }
+          ],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-08-22",
+          "name": "a savings",
+          "reconciled_through": null,
+          "snapshot_days": 2,
+          "status": "gap"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "gap_one_day_before_the_cutoff_dropped",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-08-21",
+          "name": "a savings",
+          "reconciled_through": null,
+          "snapshot_days": 2,
+          "status": "gap"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      "a savings: ₹500 went out that joy didn't see between 5 Nov and 15 Nov. Upload a statement to fill it in."
+    ],
+    "name": "two_gaps_newest_first",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [
+            {
+              "direction": "missing_debit",
+              "expected_high_paise": 0,
+              "expected_low_paise": 0,
+              "from": "2026-11-05",
+              "gap_paise": -50000,
+              "observed_paise": -50000,
+              "to": "2026-11-15",
+              "unattributed_count": 0,
+              "unattributed_paise": 0
+            },
+            {
+              "direction": "missing_debit",
+              "expected_high_paise": 0,
+              "expected_low_paise": 0,
+              "from": "2026-10-10",
+              "gap_paise": -50000,
+              "observed_paise": -50000,
+              "to": "2026-10-20",
+              "unattributed_count": 0,
+              "unattributed_paise": 0
+            }
+          ],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-15",
+          "name": "a savings",
+          "reconciled_through": "2026-11-05",
+          "snapshot_days": 5,
+          "status": "gap"
+        }
+      ]
+    }
+  },
+  {
+    "headlines": [
+      null
+    ],
+    "name": "same_day_snapshots_statement_then_highest_seq",
+    "report": {
+      "accounts": [
+        {
+          "account_id": "a",
+          "gaps": [],
+          "last_alert_on": null,
+          "last_snapshot_on": "2026-11-10",
+          "name": "a savings",
+          "reconciled_through": "2026-11-10",
+          "snapshot_days": 2,
+          "status": "reconciled"
+        }
+      ]
+    }
+  }
+]
