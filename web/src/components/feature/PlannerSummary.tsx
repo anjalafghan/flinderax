@@ -2,6 +2,8 @@ import { useSummary } from "@/hooks/usePlanner";
 import { SafeToSpendHero } from "@/components/feature/SafeToSpendHero";
 import { ActionList } from "@/components/feature/ActionList";
 import { Button } from "@/components/ui/button";
+import { SetupCard } from "@/components/feature/SetupCard";
+import { isBlankSummary } from "@/utils/setup";
 
 /** The home-screen block, kept clean: the number and what to do. The working lives on /working. */
 export function PlannerSummary() {
@@ -20,6 +22,8 @@ export function PlannerSummary() {
       </div>
     );
   }
+
+  if (isBlankSummary(data)) return <SetupCard summary={data} />;
 
   return (
     <div className="space-y-6">

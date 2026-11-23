@@ -262,17 +262,21 @@ async fn a_put_back_remembers_why_and_only_not_my_thing_teaches_taste() {
     let (rohit, _, couple) = t.couple().await;
     let a = t.id_of(&couple, "Cook together").await;
     let b = t.id_of(&couple, "Play Pokémon Emerald together").await;
+    let tags: String = sqlx::query_scalar(&format!("SELECT tags FROM joy_activities WHERE id = {a}")).fetch_one(&t.db).await.unwrap();
+    let tags: Vec<String> = tags.split(',').map(str::to_string).collect();
+    let factor = || async { joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste.factor_for(&joy::joy::taste::features(&tags, "local", "low", 0)) };
+    let untouched = factor().await;
     t.post("/api/dates/pick", &rohit, json!({"current": a, "reroll": true, "reason": "too_pricey"})).await;
     t.post("/api/dates/pick", &rohit, json!({"current": b, "reroll": true, "reason": "bogus"})).await;
     let reasons: Vec<(i64, String)> = sqlx::query_as("SELECT activity_id, reason FROM joy_peeks ORDER BY id").fetch_all(&t.db).await.unwrap();
     assert_eq!(reasons, vec![(a, "too_pricey".to_string()), (b, String::new())], "an unknown reason is stored as none");
     assert!(t.scalar(&format!("SELECT last_skipped_at IS NOT NULL FROM joy_activities WHERE id = {a}")).await == 1, "still damped for a few days");
 
-    // Only "not my thing" counts against the slip's tags.
-    let tags: String = sqlx::query_scalar(&format!("SELECT tags FROM joy_activities WHERE id = {a}")).fetch_one(&t.db).await.unwrap();
-    let before = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste.factor_for(&joy::joy::taste::features(&tags.split(',').map(str::to_string).collect::<Vec<_>>(), "local", "low", 0));
+    // Only "not my thing" counts against the slip's tags: "too pricey" (and a reason we don't know) taught nothing.
+    let before = factor().await;
+    assert_eq!(before, untouched, "too pricey says nothing about taste");
     t.post("/api/dates/pick", &rohit, json!({"current": a, "reroll": true, "reason": "not_my_thing"})).await;
-    let after = joy::joy::api::learned(&t.db, &couple).await.ok().unwrap().taste.factor_for(&joy::joy::taste::features(&tags.split(',').map(str::to_string).collect::<Vec<_>>(), "local", "low", 0));
+    let after = factor().await;
     assert!(after < before, "not my thing lowers the tags' taste ({before} -> {after})");
 }
 
@@ -768,7 +772,14 @@ async fn vetoes_archived_slips_and_put_backs_can_all_be_cleared() {
     let b = a + 1;
     t.exec(&format!("INSERT INTO joy_vetoes (activity_id, person) VALUES ({a}, 0), ({a}, 1), ({b}, 1)")).await;
     t.exec(&format!("UPDATE joy_activities SET archived = 1 WHERE id IN ({a}, {b})")).await;
+    // Before joy_peeks, putting a slip back wrote a 'skipped' row into the history, and Kept still
+    // lists those old rows in its "put back" footer. Nothing writes them any more.
     t.exec(&format!("INSERT INTO joy_history (couple_id, activity_id, outcome) VALUES ('{couple}', {a}, 'skipped'), ('{couple}', {b}, 'skipped')")).await;
+    // A put-back made today is a peek: it never reaches that footer.
+    let r = t.post("/api/dates/pick", &rohit, json!({"current": a + 2, "reroll": true, "reason": "not_my_thing"})).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text);
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_peeks").await, 1);
+    assert_eq!(t.get("/api/dates/kept", &rohit).await.json["skipped"].as_array().map(Vec::len), Some(2), "only the old rows");
 
     let r = t.post("/api/dates/slips/vetoes/clear", &neha, json!({})).await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
@@ -781,6 +792,9 @@ async fn vetoes_archived_slips_and_put_backs_can_all_be_cleared() {
     let r = t.post("/api/dates/putbacks/clear", &rohit, json!({})).await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text);
     assert_eq!(t.scalar("SELECT count(*) FROM joy_history WHERE outcome = 'skipped'").await, 0);
+    assert_eq!(t.get("/api/dates/kept", &rohit).await.json["skipped"], json!([]));
+    // Clearing the footer is not forgetting: the peek (and the taste it taught) stays.
+    assert_eq!(t.scalar("SELECT count(*) FROM joy_peeks").await, 1);
 }
 
 // ── a planned date has not happened yet ───────────────────────────────────

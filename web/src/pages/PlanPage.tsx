@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { planApi } from "@/services/api";
@@ -18,11 +18,14 @@ import { InfoTip } from "@/components/ui/info-tip";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
+import { ChipGroup } from "@/components/ui/chips";
+import { Stepper } from "@/components/ui/stepper";
 import { formatINR, formatPercent, paiseToInput, parseAmountOrPercent, toPaise } from "@/utils/money";
 import { ordinal } from "@/utils/dates";
 import { BUCKET_HELP, BUCKET_LABEL, defaultBucket } from "@/utils/buckets";
 import { cn } from "@/utils/cn";
 import { GuidanceCard } from "@/components/feature/GuidanceCard";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 
 const CATEGORIES = ["bills", "gym", "house", "sip", "rd", "subscription", "donation", "entertainment", "other"];
 const BUCKETS: Bucket[] = ["needs", "savings", "wants"];
@@ -59,7 +62,7 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
   };
 
   return (
-    <Card>
+    <Card id="income" className="scroll-mt-24">
       <CardHeader className="pb-4">
         <CardTitle className="text-[32px]">Income</CardTitle>
         <p className="max-w-prose text-sm text-muted-foreground">Your next payday sets the "until" date for Safe to Spend.</p>
@@ -220,7 +223,7 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
   };
 
   return (
-    <Card>
+    <Card id="fixed" className="scroll-mt-24">
       <CardHeader className="pb-4">
         <CardTitle className="text-[32px]">Fixed payments</CardTitle>
         <p className="max-w-prose text-sm text-muted-foreground">
@@ -261,13 +264,15 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
           </label>
           {!f.yearly && (
             <div className="field col-span-full">
-              <Label htmlFor="cm-every">Repeats</Label>
-              <Select id="cm-every" value={f.every} onChange={(e) => setF({ ...f, every: e.target.value })}>
-                <option value="1">Every month</option>
-                {Array.from({ length: 10 }, (_, i) => i + 2).map((n) => (
-                  <option key={n} value={n}>Every {n} months</option>
-                ))}
-              </Select>
+              <Label id="cm-every-label">Repeats</Label>
+              <Stepper
+                label="Repeats every how many months"
+                value={Number(f.every)}
+                min={1}
+                max={11}
+                onChange={(n) => setF({ ...f, every: String(n) })}
+                format={(n) => (n === 1 ? "Every month" : `Every ${n} months`)}
+              />
               {Number(f.every) > 1 && (
                 <>
                   <Label htmlFor="cm-next-due" className="mt-3">Next due month (empty = this month)</Label>
@@ -283,31 +288,35 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
           )}
           {f.yearly && (
             <div className="field col-span-full">
-              <Label htmlFor="cm-due-month">Due month (leave empty if you don't remember)</Label>
-              <Select id="cm-due-month" value={f.dueMonth} onChange={(e) => setF({ ...f, dueMonth: e.target.value })}>
-                <option value="">Not sure yet</option>
-                {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-              </Select>
+              <Label id="cm-due-label">Due month (leave empty if you don't remember)</Label>
+              <ChipGroup
+                label="Due month"
+                value={f.dueMonth}
+                onChange={(v) => setF({ ...f, dueMonth: v })}
+                options={[{ value: "", label: "Not sure" }, ...MONTHS.map((m, i) => ({ value: String(i + 1), label: m }))]}
+              />
             </div>
           )}
           <div className="field">
-            <Label htmlFor="cm-category">Category</Label>
-            <Select
-              id="cm-category"
+            <Label id="cm-category-label">Category</Label>
+            <ChipGroup
+              label="Category"
               value={f.category}
-              onChange={(e) => setF({ ...f, category: e.target.value, bucket: defaultBucket(e.target.value) })}
-            >
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </Select>
+              onChange={(c) => setF({ ...f, category: c, bucket: defaultBucket(c) })}
+              options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+            />
           </div>
           <div className="field">
             <div className="flex items-center gap-1.5">
-              <Label htmlFor="cm-bucket">Counts toward</Label>
+              <Label id="cm-bucket-label">Counts toward</Label>
               <InfoTip text={BUCKET_HELP[f.bucket]} />
             </div>
-            <Select id="cm-bucket" value={f.bucket} onChange={(e) => setF({ ...f, bucket: e.target.value as Bucket })}>
-              {BUCKETS.map((b) => <option key={b} value={b}>{BUCKET_LABEL[b]}</option>)}
-            </Select>
+            <ChipGroup
+              label="Counts toward"
+              value={f.bucket}
+              onChange={(b) => setF({ ...f, bucket: b })}
+              options={BUCKETS.map((b) => ({ value: b, label: BUCKET_LABEL[b] }))}
+            />
           </div>
           <div className="field col-span-full">
             <div className="flex items-center gap-1.5">
@@ -532,31 +541,80 @@ export function SettingsSection() {
   );
 }
 
+const SECTIONS = [
+  { id: "month", label: "This month" },
+  { id: "afford", label: "Can I afford it?" },
+  { id: "bills", label: "Bills" },
+  { id: "goals", label: "Goals" },
+  { id: "income", label: "Income" },
+  { id: "fixed", label: "Fixed payments" },
+] as const;
+type SectionId = (typeof SECTIONS)[number]["id"];
+const isSection = (v: string): v is SectionId => SECTIONS.some((s) => s.id === v);
+
+/**
+ * The Budget page used to stack six forms into one 4,500px scroll. Now one section shows at a time,
+ * picked from a bar that sticks to the top. The section lives in the URL hash, so /plan#afford, back
+ * and refresh all still land where you were.
+ */
 export default function PlanPage() {
   const { data: accounts = [] } = useAccounts();
+  const { data: incomes } = useIncomes();
+  const { data: commitments } = useCommitments();
   const { hash } = useLocation();
+  const navigate = useNavigate();
+  const wanted = decodeURIComponent(hash.slice(1));
+  const active: SectionId = isSection(wanted) ? wanted : "month";
 
-  // Links such as /plan#afford or /plan#bills scroll to that section once the page is up.
-  useEffect(() => {
-    if (!hash) return;
-    document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [hash]);
+  const counts: Partial<Record<SectionId, number>> = { income: incomes?.length, fixed: commitments?.length };
+  const pick = (id: SectionId) => {
+    window.scrollTo?.({ top: 0 });
+    navigate({ hash: id === "month" ? "" : `#${id}` }, { replace: true, viewTransition: true });
+  };
 
   return (
     <div className="min-h-screen text-foreground">
       <Header />
       <main className="page page-narrow">
-        <div className="mb-6 md:mb-8">
+        <div className="mb-4 md:mb-6">
           <h1 className="page-title">Budget</h1>
           <p className="page-sub">This month's plan: what to set aside, what's due, and what you can afford.</p>
         </div>
+
+        <nav
+          aria-label="Budget sections"
+          className="sticky top-0 z-30 -mx-4 mb-6 border-b border-border bg-background/90 px-4 backdrop-blur md:-mx-0 md:px-0"
+        >
+          <ScrollFade watch={active}>
+            {SECTIONS.map((s) => {
+              const on = s.id === active;
+              const n = counts[s.id];
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  aria-current={on ? "true" : undefined}
+                  onClick={() => pick(s.id)}
+                  className={cn(
+                    "inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    on ? "bg-foreground font-medium text-background" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {s.label}
+                  {n ? <span className={cn("text-xs tabular-nums", on ? "opacity-70" : "text-muted-foreground")}>{n}</span> : null}
+                </button>
+              );
+            })}
+          </ScrollFade>
+        </nav>
+
         <div className="stack">
-          <GuidanceCard />
-          <AffordPanel />
-          <BillsPanel />
-          <GoalsPanel />
-          <IncomeSection accounts={accounts} />
-          <CommitmentsSection accounts={accounts} />
+          {active === "month" && <GuidanceCard />}
+          {active === "afford" && <AffordPanel />}
+          {active === "bills" && <BillsPanel />}
+          {active === "goals" && <GoalsPanel />}
+          {active === "income" && <IncomeSection accounts={accounts} />}
+          {active === "fixed" && <CommitmentsSection accounts={accounts} />}
           <p className="text-sm text-muted-foreground">
             Pay day, buffers and how the pots split are in{" "}
             <Link to="/account" className="underline underline-offset-4">Settings › Budget settings</Link>.

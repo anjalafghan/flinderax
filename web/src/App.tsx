@@ -4,6 +4,7 @@ import { RouteBoundary } from '@/components/ui/route-boundary'
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import { TabBar } from './components/layout/Header'
+import { PageSkeleton } from './components/ui/skeleton'
 import { useAuth } from './context/AuthContext'
 
 // Lazy load pages for code splitting
@@ -35,13 +36,6 @@ const WeddingPage = lazy(() => import('./pages/WeddingPage'))
 // Toasts are rare and sonner is ~35 KB, so its Toaster is a lazy chunk, not part of the shell.
 const Toaster = lazy(() => import('sonner').then((m) => ({ default: m.Toaster })))
 
-// Simple loading fallback
-const PageLoader = () => (
-  <div className="flex h-screen items-center justify-center">
-    <div className="text-muted-foreground">Loading...</div>
-  </div>
-)
-
 function App() {
   const { isAuthenticated } = useAuth()
   useOutbox(isAuthenticated)
@@ -52,7 +46,7 @@ function App() {
   return (
     <>
       <div className={showTabs ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0' : undefined}>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route
             path="/auth"

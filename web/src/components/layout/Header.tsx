@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ClipboardCheck, Heart, Route, Settings, Sun, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 
 interface Tab {
   to: string;
@@ -96,7 +97,8 @@ export function SubTabs() {
   if (!group) return null;
   return (
     <nav aria-label={group.label} className="mt-6">
-      <div className="-mx-4 flex gap-6 overflow-x-auto border-b border-border px-4 [scrollbar-width:none] md:mx-0 md:gap-8 md:px-0 [&::-webkit-scrollbar]:hidden">
+      <div className="-mx-4 border-b border-border md:mx-0">
+      <ScrollFade watch={pathname} className="gap-6 px-4 py-0 md:gap-8 md:px-0">
         {group.items.map((t) => {
           const on = subtabOn(t, pathname);
           return (
@@ -108,7 +110,7 @@ export function SubTabs() {
               aria-current={on ? "page" : undefined}
               className={cn(
                 "relative inline-flex min-h-11 shrink-0 items-center whitespace-nowrap text-sm no-underline transition-colors",
-                "after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-foreground after:transition-transform after:origin-left",
+                "after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-foreground after:transition-transform after:origin-left",
                 on ? "font-medium text-foreground after:scale-x-100" : "text-muted-foreground after:scale-x-0 hover:text-foreground",
               )}
             >
@@ -116,6 +118,7 @@ export function SubTabs() {
             </Link>
           );
         })}
+      </ScrollFade>
       </div>
     </nav>
   );
@@ -130,7 +133,7 @@ export function Header() {
   return (
     <header className="relative z-50 mx-auto w-full max-w-[1040px] px-4 pt-7 md:px-6">
       <div className="flex items-center justify-between gap-4">
-        <Link to="/" className="wordmark text-[34px] leading-none no-underline" aria-label="joy, today">
+        <Link to="/" className="wordmark inline-flex min-h-11 min-w-11 items-center text-[34px] leading-none no-underline" aria-label="joy, today">
           joy
         </Link>
 

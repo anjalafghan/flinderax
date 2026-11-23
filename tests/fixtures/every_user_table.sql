@@ -1,0 +1,52 @@
+-- One row in every table `GET /api/export` reads for a person, so the export -> import round-trip
+-- in tests/auth_integration.rs loads each of them back. `{U}` is the user's id. A new user table
+-- joins export::USER_TABLES and gets a row here; the test fails on any exported table left empty.
+-- One-row-per-person tables use OR REPLACE: the test may already have made that row through the API.
+INSERT INTO accounts (account_id, user_id, name, kind, balance_paise, role, institution, last_4_digits) VALUES ('rt-acc', '{U}', 'HDFC', 'bank', 5000000, 'spending', 'HDFC', '1234');
+INSERT INTO accounts (account_id, user_id, name, kind, balance_paise, interest_bps, maturity_date, renewal, payout_account_id) VALUES ('rt-fd', '{U}', 'FD', 'fd', 10000000, 725, '2027-03-01', 'payout', 'rt-acc');
+INSERT INTO balance_history (account_id, balance_paise, recorded_at) VALUES ('rt-acc', 4900000, '2026-10-01 09:00:00');
+INSERT INTO cards (card_id, user_id, card_name, card_bank, card_primary_color, card_secondary_color, last_4_digits, statement_day, due_day, credit_limit_paise, pay_from_account_id) VALUES ('rt-card', '{U}', 'Visa', 'HDFC', 1, 2, '9876', 5, 25, 20000000, 'rt-acc');
+INSERT INTO card_snapshots (snapshot_id, card_id, total_due_paise, outstanding_paise, unbilled_spent_paise, is_starting) VALUES ('rt-snap', 'rt-card', 120000, 150000, 30000, 1);
+INSERT INTO card_emis (emi_id, card_id, label, monthly_paise, remaining_principal_paise, months_left, as_of_month) VALUES ('rt-emi', 'rt-card', 'Phone', 500000, 3000000, 6, '2026-11');
+INSERT INTO income_sources (income_id, user_id, label, amount_paise, day_of_month, account_id) VALUES ('rt-inc', '{U}', 'Salary', 15000000, 1, 'rt-acc');
+INSERT INTO commitments (commitment_id, user_id, label, amount_paise, day_of_month, account_id, category, bucket, frequency, every_months, first_month, tax_section) VALUES ('rt-perfume', '{U}', 'Perfume', 600000, 10, 'rt-acc', 'shopping', 'wants', 'monthly', 4, '2026-09', NULL);
+INSERT INTO commitments (commitment_id, user_id, label, amount_paise, day_of_month, account_id, frequency, due_month, tax_section) VALUES ('rt-lic', '{U}', 'LIC', 2400000, 15, 'rt-acc', 'yearly', 3, '80C');
+INSERT INTO moves (move_id, user_id, kind, move_key, amount_paise, mode, from_account_id, to_account_id, idempotency_key) VALUES ('rt-move', '{U}', 'allocation', '2026-11', 100000, 'moved', 'rt-acc', 'rt-fd', 'rt-idem');
+INSERT INTO card_events (transaction_id, card_id, total_due_input_paise) VALUES ('rt-ev', 'rt-card', 120000);
+INSERT INTO card_running_state (card_id, last_total_due_paise, last_delta_paise) VALUES ('rt-card', 120000, 20000);
+INSERT INTO pending_charges (charge_id, card_id, label, amount_paise) VALUES ('rt-charge', 'rt-card', 'Hotel hold', 250000);
+INSERT INTO auto_postings (user_id, source_kind, source_id, account_id, occurs_on, label, amount_paise) VALUES ('{U}', 'income', 'rt-inc', 'rt-acc', '2026-11-01', 'Salary', 15000000);
+INSERT INTO dismissed_recurring (user_id, merchant) VALUES ('{U}', 'gym');
+INSERT INTO statement_imports (import_id, user_id, account_id, first_date, last_date, rows, opening_paise, closing_paise, chain_ok) VALUES ('rt-imp', '{U}', 'rt-acc', '2026-10-01', '2026-10-31', 42, 4000000, 4900000, 1);
+INSERT INTO statement_profiles (user_id, signature, mapping_json, label) VALUES ('{U}', 'date|narration|amount', '{"date":0}', 'HDFC savings');
+INSERT INTO tax_entries (entry_id, user_id, fy, section, label, amount_paise) VALUES ('rt-tax', '{U}', '2026-27', '80D', 'Health cover', 2500000);
+INSERT OR REPLACE INTO life_profiles (user_id, profile_json) VALUES ('{U}', '{"wedding":true}');
+INSERT INTO life_choices (choice_id, user_id, label, choice_json, in_plan) VALUES ('rt-choice', '{U}', 'Switch jobs', '{"take_home":1}', 1);
+INSERT OR REPLACE INTO education_plan (user_id, child_birth_year, stages_json, inflation_bps, return_bps, corpus_paise) VALUES ('{U}', 2028, '[{"name":"College","start_age":18,"today_cost_paise":150000000}]', 1000, 1100, 2500000);
+INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, merchant, category, card_id, last4, source, raw_text, dedupe_key, category_locked, rrn, on_statement) VALUES ('rt-txn', '{U}', '2026-11-02', 'debit', 25000, 'Chai', 'food', 'rt-card', '9876', 'sms', 'Rs 250 spent at Chai', 'rt-dedupe', 1, '123456789012', 1);
+INSERT INTO merchant_rules (user_id, pattern, category, hits) VALUES ('{U}', 'lakeside grill', 'dates', 3);
+INSERT INTO goals (goal_id, user_id, name, kind, target_paise, target_date, priority, account_id) VALUES ('rt-goal', '{U}', 'Wedding', 'custom', 300000000, '2027-12-01', 1, 'rt-fd');
+INSERT INTO goal_contributions (goal_id, amount_paise, on_day, note) VALUES ('rt-goal', 500000, '2026-11-03', 'bonus');
+INSERT OR REPLACE INTO user_settings (user_id, week_start, recovery_months, spending_paise, allocation_day, holder_names, eating_out_cap_paise) VALUES ('{U}', 1, 6, 4000000, 2, 'Rohit Sharma', 600000);
+INSERT INTO checkins (checkin_id, user_id, done_on, period_start, period_end, summary_json, forecast_json) VALUES ('rt-check', '{U}', '2026-11-08', '2026-11-01', '2026-11-07', '{"spent":1}', '{"left":2}');
+INSERT INTO diet_habits (habit_id, user_id, label, preset_key, target_days, sort) VALUES ('rt-habit', '{U}', 'Home cooked dinner', 'home_dinner', 5, 1);
+INSERT INTO diet_weeks (user_id, week_start, feel, note, prep_hours_x10) VALUES ('{U}', '2026-11-02', 4, 'good week', 35);
+INSERT INTO diet_week_habits (user_id, week_start, habit_id, days_hit) VALUES ('{U}', '2026-11-02', 'rt-habit', 4);
+INSERT INTO health_marks (mark_id, user_id, kind, measured_on, value_x10, note) VALUES ('rt-mark', '{U}', 'weight', '2026-11-04', 725, 'morning');
+INSERT INTO people (person_id, user_id, name, circle, every_days, last_contact_on, note) VALUES ('rt-mum', '{U}', 'Mum', 'family', 7, '2026-11-01', 'call on Sundays');
+INSERT INTO person_dates (date_id, user_id, person_id, kind, label, month, day, year, remind_days, gift_budget_paise) VALUES ('rt-bday', '{U}', 'rt-mum', 'birthday', '', 3, 14, 1965, 7, 300000);
+INSERT INTO touches (touch_id, user_id, person_id, on_day, kind, cost_paise, note) VALUES ('rt-touch', '{U}', 'rt-mum', '2026-11-01', 'visit', 40000, 'lunch');
+INSERT INTO gifts (gift_id, user_id, person_id, date_id, for_year, status, title, amount_paise, on_day, txn_id) VALUES ('rt-gift', '{U}', 'rt-mum', 'rt-bday', 2027, 'bought', 'Saree', 250000, '2026-11-02', 'rt-txn');
+INSERT INTO gift_seasons (season_id, user_id, label, month, budget_paise) VALUES ('rt-diwali', '{U}', 'Diwali', 10, 1000000);
+INSERT INTO job_leads (lead_id, user_id, company, role, stage, take_home_paise, next_step, next_on, note, updated_on) VALUES ('rt-lead', '{U}', 'Acme', 'Engineer', 'interview', 18000000, 'Second round', '2026-11-20', '', '2026-11-05');
+INSERT INTO unrecognized_alerts (alert_id, user_id, text, source) VALUES ('rt-alert', '{U}', 'Your a/c was debited by something', 'sms');
+INSERT OR REPLACE INTO whatif_scenarios (user_id, drafts_json) VALUES ('{U}', '[{"id":"d1"}]');
+INSERT INTO followups (followup_id, user_id, person_id, text, due_on) VALUES ('rt-follow', '{U}', 'rt-mum', 'Send the photos', '2026-11-10');
+INSERT INTO person_facts (fact_id, user_id, person_id, text) VALUES ('rt-fact', '{U}', 'rt-mum', 'Loves jasmine');
+INSERT INTO rewards (reward_id, user_id, name, cost_paise, trigger_kind, goal_id, goal_pct) VALUES ('rt-reward', '{U}', 'Weekend away', 1500000, 'goal', 'rt-goal', 25);
+INSERT INTO reward_claims (reward_id, user_id, cost_paise, claimed_on, from_wallet) VALUES ('rt-reward', '{U}', 1500000, '2026-11-06', 1);
+INSERT OR REPLACE INTO reward_settings (user_id, monthly_cap_paise, fund_since) VALUES ('{U}', 200000, '2026-06');
+INSERT INTO reward_months (user_id, month, score_bps, earned_paise, saved_paise, payout_paise, detail_json, settled_on) VALUES ('{U}', '2026-10', 7200, 144000, 900000, 144000, '{"money":8000}', '2026-11-01');
+INSERT INTO planned_outflows (outflow_id, user_id, label, on_day, amount_paise, direction, kind, yearly) VALUES ('rt-out', '{U}', 'Car insurance', '2027-02-10', 1800000, 'out', 'premium', 1);
+INSERT INTO activity_log (user_id, kind, day, ref_id, points) VALUES ('{U}', 'checkin', '2026-11-08', '2026-11-08', 1);
+INSERT INTO analyses (analysis_id, user_id, title, body, source, created_on) VALUES ('rt-analysis', '{U}', 'October', 'Spent less on food.', 'claude', '2026-11-02');
