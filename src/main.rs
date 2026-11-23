@@ -75,6 +75,10 @@ async fn main() -> Result<(), sqlx::Error> {
         .connect_with(sqlite_options(&database_url)?)
         .await?;
     sqlx::migrate!().run(&pool).await?;
+    match joy::handlers::account::backfill_alert_snapshots(&pool).await {
+        Ok(n) => info!("Balance snapshots from past alerts: {n}"),
+        Err(e) => tracing::warn!("Balance snapshot backfill failed: {}", e.1),
+    }
     optimize(&pool).await;
     info!("Database connected successfully");
 
