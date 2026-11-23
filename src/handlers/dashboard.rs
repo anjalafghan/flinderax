@@ -170,7 +170,17 @@ pub async fn summary(
     crate::housekeeping::daily_once(&state.db, today).await;
     autopost::apply(&state.db, &user_id, today).await?;
     let input = load_input(&state.db, &user_id, today).await?;
-    Ok(Json(planner::compute(&input)))
+    let mut summary = planner::compute(&input);
+    // A bank balance that does not add up to the recorded money is worth a nudge. Never fatal.
+    match crate::handlers::reconcile::load_report(&state.db, &user_id, today).await {
+        Ok(report) => {
+            for text in report.accounts.iter().filter_map(crate::planner::reconcile::headline) {
+                summary.actions.push(planner::Action { text, severity: "warn", ledger: None });
+            }
+        }
+        Err(_) => tracing::warn!("reconcile check for the dashboard failed"),
+    }
+    Ok(Json(summary))
 }
 
 #[derive(Deserialize)]

@@ -67,12 +67,15 @@ pub fn not_found(msg: impl Into<String>) -> AppError {
 
 /// Today's date for planning. Bank cycles are local, so the offset is configurable
 /// (`JOY_UTC_OFFSET_MINUTES`, default +330 = IST; the old `FLINDERAX_UTC_OFFSET_MINUTES` still works).
-pub fn today_local() -> time::Date {
-    let minutes: i64 = ["JOY_UTC_OFFSET_MINUTES", "FLINDERAX_UTC_OFFSET_MINUTES"]
+pub fn utc_offset_minutes() -> i64 {
+    ["JOY_UTC_OFFSET_MINUTES", "FLINDERAX_UTC_OFFSET_MINUTES"]
         .iter()
         .find_map(|k| std::env::var(k).ok().and_then(|v| v.parse().ok()))
-        .unwrap_or(330);
-    (OffsetDateTime::now_utc() + Duration::minutes(minutes)).date()
+        .unwrap_or(330)
+}
+
+pub fn today_local() -> time::Date {
+    (OffsetDateTime::now_utc() + Duration::minutes(utc_offset_minutes())).date()
 }
 
 pub fn validate_day(day: i64, what: &str) -> Result<(), AppError> {
