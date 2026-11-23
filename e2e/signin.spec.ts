@@ -28,8 +28,17 @@ test("a wrong password stays on the sign-in screen with a message", async ({ pag
 
 test("signing out ends the session", async ({ page, context }) => {
   const name = await newUser(page, "signout");
-  await page.evaluate(() => localStorage.removeItem("token"));
-  await context.clearCookies();
+  await page.goto("/account");
+  // The cookie is HttpOnly, so only the server can clear it: this goes through the app's own button.
+  const [res] = await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith("/api/common/logout")),
+    page.getByRole("button", { name: "Sign out", exact: true }).click(),
+  ]);
+  expect(res.ok()).toBe(true);
+  await expect(page).toHaveURL(/\/auth/);
+  expect((await context.cookies()).find((c) => c.name === "joy_session"), "the session cookie is gone").toBeUndefined();
+  expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
+  // Coming back later still lands on sign-in, and signing in again works.
   await page.goto("/");
   await expect(page).toHaveURL(/\/auth/);
   await signIn(page, name);

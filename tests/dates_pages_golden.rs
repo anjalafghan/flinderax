@@ -100,12 +100,13 @@ async fn seed(t: &T) -> (String, String) {
     for (a, day, cols, vals) in kept {
         t.exec(&format!("INSERT INTO joy_history (couple_id, activity_id, outcome, picked_at, {cols}) VALUES ('{c}', {}, 'did_it', unixepoch('{day} 12:00:00'), {vals})", ids[a])).await;
     }
-    // Planned (booked) in the past, a sealed surprise only Rohit drew, a revealed one, one passed over, one in the future.
+    // Planned (booked) in the past, a sealed surprise only Rohit drew, a revealed one and one in the future (one more is passed over, below).
     t.exec(&format!("INSERT INTO joy_history (couple_id, activity_id, outcome, picked_at, planned_at, rating) VALUES ('{c}', {}, 'did_it', unixepoch('2025-04-01 12:00:00'), unixepoch('2025-05-20 12:00:00'), 4)", ids[4])).await;
     t.exec(&format!("INSERT INTO joy_history (couple_id, activity_id, outcome, picked_at, surprise, revealed, drawn_by, rating) VALUES ('{c}', {}, 'did_it', unixepoch('2025-12-12 12:00:00'), 1, 0, 0, 5)", ids[5])).await;
     t.exec(&format!("INSERT INTO joy_history (couple_id, activity_id, outcome, picked_at, surprise, revealed, drawn_by, rating) VALUES ('{c}', {}, 'did_it', unixepoch('2025-12-20 12:00:00'), 1, 1, 1, 4)", ids[6])).await;
     t.exec(&format!("INSERT INTO joy_history (couple_id, activity_id, outcome, picked_at, planned_at) VALUES ('{c}', {}, 'did_it', unixepoch('2025-06-01 12:00:00'), unixepoch('2099-01-05 12:00:00'))", ids[7])).await;
-    t.exec(&format!("INSERT INTO joy_history (couple_id, activity_id, outcome, picked_at) VALUES ('{c}', {}, 'passed', unixepoch('2025-07-01 12:00:00'))", ids[7])).await;
+    // Passed over: a put-back is a peek, not a date.
+    t.exec(&format!("INSERT INTO joy_peeks (couple_id, activity_id, who, reason, at) VALUES ('{c}', {}, 0, 'not_tonight', unixepoch('2025-07-01 12:00:00'))", ids[7])).await;
     // Photos on the March date (the second is its hero), and the flag.
     let march: i64 = sqlx::query_scalar("SELECT id FROM joy_history WHERE rating = 5 AND note LIKE 'Lovely%'").fetch_one(&t.db).await.unwrap();
     t.exec(&format!("INSERT INTO joy_history_photos (history_id, file) VALUES ({march}, 'a.jpg'), ({march}, 'b.jpg')")).await;

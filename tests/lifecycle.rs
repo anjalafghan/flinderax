@@ -240,7 +240,7 @@ async fn delete_account_removes_their_rows_and_the_couple_folder_when_it_empties
     t.seed(&a.1).await;
     t.seed(&b.1).await;
     // A date with a photo on disk, a memory and a task.
-    t.exec(&format!("INSERT INTO joy_history (id, couple_id, activity_id, outcome) SELECT 9001, '{couple}', id, 'done' FROM joy_activities WHERE couple_id = '{couple}' LIMIT 1")).await;
+    t.exec(&format!("INSERT INTO joy_history (id, couple_id, activity_id, outcome) SELECT 9001, '{couple}', id, 'did_it' FROM joy_activities WHERE couple_id = '{couple}' LIMIT 1")).await;
     t.exec("INSERT INTO joy_memories (history_id, who, line) VALUES (9001, 0, 'the rain')").await;
     let dir = photo_dir(&couple);
     std::fs::create_dir_all(&dir).unwrap();
@@ -286,7 +286,7 @@ async fn export_has_the_new_tables_and_no_secrets() {
     let t = setup().await;
     let (a, _b, couple) = t.couple().await;
     t.seed(&a.1).await;
-    t.exec(&format!("INSERT INTO joy_history (id, couple_id, activity_id, outcome, share_token) SELECT 9002, '{couple}', id, 'done', 'envelope-secret-token' FROM joy_activities WHERE couple_id = '{couple}' LIMIT 1")).await;
+    t.exec(&format!("INSERT INTO joy_history (id, couple_id, activity_id, outcome, share_token) SELECT 9002, '{couple}', id, 'did_it', 'envelope-secret-token' FROM joy_activities WHERE couple_id = '{couple}' LIMIT 1")).await;
     t.exec("INSERT INTO joy_memories (history_id, who, line) VALUES (9002, 0, 'the rain')").await;
 
     let r = t.get("/api/export", &a.2).await;

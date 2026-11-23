@@ -313,13 +313,12 @@ async fn a_surprise_is_hidden_from_the_partner_who_cannot_reveal_or_touch_it() {
     assert!(mine["title"].as_str().unwrap().contains("Prithvi"));
     assert!(mine["surprise_for"].as_str().unwrap().starts_with("neha"));
 
-    // Everything that acts on it is a 403 for Neha; the data stays as it was.
+    // Everything else that acts on it is a 403 for Neha; the data stays as it was.
     for (path, body) in [
         (format!("/api/dates/history/{hid}"), json!({"rating": 1})),
         (format!("/api/dates/history/{hid}/cost"), json!({"actual": "5"})),
         (format!("/api/dates/history/{hid}/line"), json!({"line": "peek"})),
         (format!("/api/dates/history/{hid}/delete"), json!({})),
-        (format!("/api/dates/history/{hid}/photos/{pid}/delete"), json!({})),
         (format!("/api/dates/history/{hid}/plan-b"), json!({})),
         ("/api/dates/history/when".to_string(), json!({"ids": hid, "at": "2080-01-02T19:00"})),
         ("/api/dates/budget/spend".to_string(), json!({"amount": 100, "history_id": hid})),
@@ -330,6 +329,15 @@ async fn a_surprise_is_hidden_from_the_partner_who_cannot_reveal_or_touch_it() {
     }
     let up = t.upload(&format!("/api/dates/history/{hid}/photo"), &neha, &tiny_jpeg()).await;
     assert_eq!(up.status, StatusCode::FORBIDDEN);
+    // Its photos answer as if they weren't there, the same 404 their signed links give.
+    for (path, body) in [
+        (format!("/api/dates/history/{hid}/photos/{pid}/delete"), json!({})),
+        (format!("/api/dates/history/{hid}/hero"), json!({"photo_id": pid})),
+    ] {
+        let r = t.post(&path, &neha, body).await;
+        assert_eq!(r.status, StatusCode::NOT_FOUND, "{path}: {}", r.text);
+    }
+    assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_history_photos WHERE id = {pid}")).await, 1, "the photo stays");
     assert_eq!(t.scalar("SELECT count(*) FROM joy_other_spending").await + t.scalar("SELECT count(*) FROM joy_savings").await, 0);
     assert_eq!(t.scalar(&format!("SELECT count(*) FROM joy_history WHERE id = {hid} AND rating IS NULL")).await, 1);
 

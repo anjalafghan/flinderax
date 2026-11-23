@@ -442,9 +442,11 @@ async fn bills_calendar_and_subscription_suggestions() {
     let (s, b) = authed_post(&app, &t, "/api/plan/commitment/create",
         json!({"label": "Rent", "amount_paise": 1_500_000, "day_of_month": 1})).await;
     assert!(s.is_success(), "{b}");
+    // 40 days hold one or two 1sts of the month, depending on today.
     let bills = authed_get(&app, &t, "/api/bills?days=40").await;
-    assert_eq!(bills["bills"][0]["label"], "Rent");
-    assert_eq!(bills["total_paise"], 1_500_000);
+    let due = bills["bills"].as_array().unwrap();
+    assert!((1..=2).contains(&due.len()) && due.iter().all(|b| b["label"] == "Rent"), "{bills}");
+    assert_eq!(bills["total_paise"], 1_500_000 * due.len() as i64);
 
     // Three Netflix charges a month apart, typed in by hand.
     let today = joy::handlers::common::today_local();
@@ -1119,18 +1121,28 @@ async fn an_export_can_be_loaded_back_and_exports_the_same_again() {
     let (s, b) = authed_post(&app, &t, "/api/ingest/transactions/update", json!({"txn_id": txn_id, "category": "dates", "merchant": "UPI/CORNER CAFE@okaxis"})).await;
     assert_eq!(s, StatusCode::OK, "{b}");
 
-    let before = authed_get(&app, &t, "/api/export").await;
-    assert!(!before["data"]["accounts"].as_array().unwrap().is_empty());
-    let rules = before["data"]["merchant_rules"].as_array().unwrap();
-    assert!(rules.iter().any(|r| r["pattern"] == "corner cafe" && r["category"] == "dates"), "export holds the rule: {rules:?}");
+    let rules = authed_get(&app, &t, "/api/export").await["data"]["merchant_rules"].clone();
+    assert!(rules.as_array().unwrap().iter().any(|r| r["pattern"] == "corner cafe" && r["category"] == "dates"), "export holds the rule: {rules}");
 
-    // Lose it all (and add something that was never in the backup).
-    sqlx::query("DELETE FROM transactions").execute(&db).await.unwrap();
-    sqlx::query("DELETE FROM cards").execute(&db).await.unwrap();
-    sqlx::query("DELETE FROM accounts").execute(&db).await.unwrap();
-    sqlx::query("DELETE FROM whatif_scenarios").execute(&db).await.unwrap();
-    sqlx::query("DELETE FROM education_plan").execute(&db).await.unwrap();
-    sqlx::query("DELETE FROM merchant_rules").execute(&db).await.unwrap();
+    // Plus a row in every other table the export reads, so each one is really loaded back below.
+    let user_id: String = sqlx::query_scalar("SELECT user_id FROM users WHERE user_name = 'restorer'").fetch_one(&db).await.unwrap();
+    let fixture = include_str!("fixtures/every_user_table.sql").replace("{U}", &user_id);
+    for stmt in fixture.split(";\n").map(str::trim).filter(|s| !s.is_empty() && !s.lines().all(|l| l.starts_with("--"))) {
+        sqlx::query(stmt).execute(&db).await.unwrap_or_else(|e| panic!("{e}: {stmt}"));
+    }
+    let before = authed_get(&app, &t, "/api/export").await;
+    let tables = before["data"].as_object().unwrap();
+    let empty: Vec<&String> = tables.iter().filter(|(_, rows)| rows.as_array().is_some_and(Vec::is_empty)).map(|(k, _)| k).collect();
+    assert!(empty.is_empty(), "add a row for these to tests/fixtures/every_user_table.sql: {empty:?}");
+
+    // Lose it all: every table the export read (and add something that was never in the backup).
+    let mut tx = db.begin().await.unwrap();
+    sqlx::query("PRAGMA defer_foreign_keys = ON").execute(&mut *tx).await.unwrap();
+    for key in tables.keys() {
+        let table = if key == "settings" { "user_settings" } else { key.as_str() };
+        sqlx::query(&format!("DELETE FROM {table}")).execute(&mut *tx).await.unwrap();
+    }
+    tx.commit().await.unwrap();
     authed_post(&app, &t, "/api/account/create", json!({"name": "Junk", "kind": "cash", "balance_paise": 1})).await;
 
     let (s, b) = authed_post(&app, &t, "/api/import", before.clone()).await;

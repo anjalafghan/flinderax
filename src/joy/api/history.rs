@@ -78,6 +78,16 @@ async fn open_row(db: &SqlitePool, couple: &str, id: i64, who: Option<usize>) ->
     Ok(row)
 }
 
+/// Like [`open_row`], for actions that name one of the date's photos: a sealed surprise's photos
+/// are a 404 to the partner, the same answer their signed links give.
+async fn open_photo_row(db: &SqlitePool, couple: &str, id: i64, who: Option<usize>) -> Result<HistoryRow, AppError> {
+    let row = row_of(db, couple, id).await?;
+    if sealed_for(&row, who) {
+        return Err(missing());
+    }
+    Ok(row)
+}
+
 fn kept_to(id: i64) -> String {
     format!("/joy/kept#k{id}")
 }
@@ -900,7 +910,7 @@ pub async fn delete_photo(
     Path((id, photo_id)): Path<(i64, i64)>,
 ) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    open_photo_row(&s.db, &j.couple, id, Some(j.who)).await?;
     if let Some(file) = db::remove_photo(&s.db, &j.couple, id, photo_id).await? {
         for path in [photos::date_path(&j.ctx.photos_dir, &file), photos::thumb_path(&j.ctx.photos_dir, &file)].into_iter().flatten() {
             let _ = tokio::fs::remove_file(path).await;
@@ -925,7 +935,7 @@ pub async fn set_hero(
     Json(f): Json<HeroBody>,
 ) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    open_row(&s.db, &j.couple, id, Some(j.who)).await?;
+    open_photo_row(&s.db, &j.couple, id, Some(j.who)).await?;
     let photo_id = match f.photo_id.trim() {
         "" => None,
         p => Some(p.parse::<i64>().map_err(|_| missing())?),
