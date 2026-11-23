@@ -37,6 +37,7 @@ pub mod merchant;
 pub mod merchant_seed;
 pub mod people;
 pub mod projection;
+pub mod reconcile;
 pub mod recurring;
 pub mod reminders;
 pub mod review;
@@ -1220,5 +1221,7 @@ mod life_golden;
 mod afford_golden;
 #[cfg(test)]
 mod insights_golden;
+#[cfg(test)]
+mod reconcile_golden;
 #[cfg(test)]
 mod tests;
