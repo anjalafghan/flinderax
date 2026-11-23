@@ -1813,3 +1813,48 @@ async fn the_education_plan_is_saved_summarised_and_private_over_http() {
     assert_eq!(s, StatusCode::BAD_REQUEST);
     assert_eq!(authed_get(&app, &a, "/api/plan/education").await["summary"]["base"]["monthly_top_up_paise"], mid);
 }
+
+#[tokio::test]
+async fn a_balance_that_does_not_add_up_shows_as_a_gap_until_the_money_is_recorded() {
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.1.31", "reconciler").await;
+    let (s, b) = authed_post(&app, &t, "/api/account/create",
+        json!({"name": "Gapbank", "kind": "bank", "balance_paise": 100, "last_4_digits": "1234"})).await;
+    assert!(s.is_success(), "{b}");
+    let account_id = serde_json::from_str::<Value>(&b).unwrap()["account_id"].as_str().unwrap().to_string();
+    // The balance typed at creation is a snapshot of its own (today); drop it so the two alerts are the newest window.
+    sqlx::query("DELETE FROM balance_snapshots WHERE account_id = ?").bind(&account_id).execute(&db).await.unwrap();
+    let (_, b) = authed_post(&app, &t, "/api/ingest/key/rotate", json!({})).await;
+    let key = serde_json::from_str::<Value>(&b).unwrap()["key"].as_str().unwrap().to_string();
+
+    let today = joy::handlers::common::today_local();
+    let d0 = today - time::Duration::days(10);
+    let mid = today - time::Duration::days(7);
+    let d1 = today - time::Duration::days(4);
+    // A credit on d0 (balance 10,000.00), then a 200.00 debit on d1 that leaves 9,300.00: the
+    // balance fell 700.00 but joy saw only 200.00 go out. A credit on d0 keeps the maths exact:
+    // its day can only add money, so the whole 500.00 is unexplained.
+    let a = format!("Update! INR 1,000.00 deposited in HDFC Bank A/c XX1234 on {d0} for NEFT Cr-ACME CORP. Avl bal INR 10,000.00.");
+    let b = format!("Rs 200.00 debited from A/c XX1234 on {d1} to SWIGGY. Avl bal Rs 9,300.00.");
+    assert_eq!(hook_post(&app, &key, &a).await.1["status"], "created");
+    assert_eq!(hook_post(&app, &key, &b).await.1["status"], "created");
+
+    let find = |v: &Value| v["accounts"].as_array().unwrap().iter().find(|x| x["account_id"] == account_id.as_str()).cloned().unwrap();
+    let r = find(&authed_get(&app, &t, "/api/ingest/reconcile").await);
+    assert_eq!(r["status"], "gap", "{r}");
+    assert_eq!(r["gaps"][0]["direction"], "missing_debit");
+    assert_eq!(r["gaps"][0]["gap_paise"], -50_000);
+
+    let dash = authed_get(&app, &t, "/api/dashboard/summary").await;
+    let hit = dash["actions"].as_array().unwrap().iter().any(|x| x["severity"] == "warn" && x["text"].as_str().unwrap_or("").contains("Gapbank"));
+    assert!(hit, "the dashboard mentions the gap: {dash}");
+
+    // Record the missing 500.00 debit strictly between the two alerts.
+    sqlx::query("INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, account_id, source, dedupe_key, category)
+                 SELECT 'missing1', user_id, ?, 'debit', 50000, ?, 'manual', 'manual:missing1', 'other' FROM users WHERE user_name = 'reconciler'")
+        .bind(mid.to_string()).bind(&account_id).execute(&db).await.unwrap();
+    let r = find(&authed_get(&app, &t, "/api/ingest/reconcile").await);
+    assert_eq!(r["status"], "reconciled", "{r}");
+    let dash = authed_get(&app, &t, "/api/dashboard/summary").await;
+    assert!(!dash["actions"].as_array().unwrap().iter().any(|x| x["text"].as_str().unwrap_or("").contains("Gapbank")), "{dash}");
+}

@@ -3,7 +3,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use crate::handlers::{ingest, payees};
+use crate::handlers::{ingest, payees, reconcile};
 use crate::models::AppState;
 
 pub fn routes(state: AppState) -> Router {
@@ -23,6 +23,7 @@ pub fn routes(state: AppState) -> Router {
         .route("/unrecognized", get(ingest::unrecognized))
         .route("/unrecognized/dismiss", post(ingest::unrecognized_dismiss))
         .route("/summary", get(ingest::summary))
+        .route("/reconcile", get(reconcile::report))
         .route("/rules", get(ingest::rules))
         .route("/rules/delete", post(ingest::rule_delete))
         .route("/rules/clear", post(ingest::rules_clear))

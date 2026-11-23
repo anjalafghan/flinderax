@@ -9,7 +9,7 @@ sealed for you answer 404, and neither partner's quiet marks nor answers are ret
 
 ## Tools
 `money_*`: summary, insights, analytics, forecast, commitments, income, bills, year outflows, goals,
-cards, transactions, month review, check-in, `money_export_all` (the full export), `analyses_list`.
+cards, transactions, month review, check-in, `money_reconcile` (which bank balances moved by money joy never recorded), `money_export_all` (the full export), `analyses_list`.
 `save_analysis` writes a report to the Review page; the prompt `analyse_money` drives a full run. `dates_*`: coming up, jar, slips, packs, kept, regulars,
 year, month, summary, settle. Money is integer paise.
 
