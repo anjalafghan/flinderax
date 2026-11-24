@@ -25,6 +25,7 @@ const DatesApp = lazy(() => import('./joy/DatesApp'))
 const EnvelopePage = lazy(() => import('./joy/pages/EnvelopePage'))
 const ReviewPage = lazy(() => import('./pages/ReviewPage'))
 const LifePage = lazy(() => import('./pages/LifePage'))
+const GlancePage = lazy(() => import('./pages/GlancePage'))
 const CheckInPage = lazy(() => import('./pages/CheckInPage'))
 const HealthPage = lazy(() => import('./pages/HealthPage'))
 const PeoplePage = lazy(() => import('./pages/PeoplePage'))
@@ -86,6 +87,7 @@ function App() {
             <Route path="/wedding/:goalId" element={<WeddingPage />} />
             <Route path="/review" element={<ReviewPage />} />
             <Route path="/life" element={<LifePage />} />
+            <Route path="/glance" element={<GlancePage />} />
             <Route path="/checkin" element={<CheckInPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

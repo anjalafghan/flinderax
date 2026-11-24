@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CircleHelp, CreditCard, Heart, ListFilter, Plus, type LucideIcon } from "lucide-react";
+import { ArrowRight, CircleHelp, CreditCard, Heart, LayoutGrid, ListFilter, Plus, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Header } from "@/components/layout/Header";
@@ -49,6 +49,24 @@ function CardsLine() {
   );
 }
 
+/** The whole picture on one page: money so far, what's ahead, the jar, and the road. */
+function GlanceLine() {
+  return (
+    <Link
+      to="/glance"
+      viewTransition
+      className="flex min-h-[64px] items-center gap-4 rounded-[18px] border border-border px-5 no-underline transition-colors hover:bg-[hsl(var(--chip))]"
+    >
+      <LayoutGrid className="h-[20px] w-[20px] shrink-0" strokeWidth={1.5} aria-hidden />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-[15px] font-medium">Life at a glance</span>
+        <span className="text-[13px] text-muted-foreground">Money, the jar and the road ahead on one page</span>
+      </span>
+      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+    </Link>
+  );
+}
+
 function MoneyDashboard() {
   return (
     <div className="flex min-h-[100dvh] w-full flex-col overflow-x-clip text-foreground transition-colors duration-300">
@@ -78,6 +96,7 @@ function MoneyDashboard() {
         </nav>
 
         <CardsLine />
+        <GlanceLine />
         <InsightsNudge />
 
         <div className="grid w-full items-start gap-6 md:grid-cols-2 [&>section]:mb-0 [&>section]:max-w-none">

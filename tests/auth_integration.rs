@@ -1858,3 +1858,41 @@ async fn a_balance_that_does_not_add_up_shows_as_a_gap_until_the_money_is_record
     let dash = authed_get(&app, &t, "/api/dashboard/summary").await;
     assert!(!dash["actions"].as_array().unwrap().iter().any(|x| x["text"].as_str().unwrap_or("").contains("Gapbank")), "{dash}");
 }
+
+#[tokio::test]
+async fn road_ahead_gathers_life_goals_and_payments_in_date_order() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.0.171", "roadie").await;
+
+    // Nothing dated yet: two prompts, no wedding on the road.
+    let r = authed_get(&app, &t, "/api/plan/road").await;
+    assert_eq!(r["prompts"].as_array().unwrap().len(), 2, "{r}");
+
+    let (st, b) = authed_post(&app, &t, "/api/plan/life/profile", json!({
+        "my_age": 30, "my_take_home_paise": 7_500_000, "wedding_date": "2031-02-14", "wedding_budget_paise": 60_000_000
+    })).await;
+    assert!(st.is_success(), "{st} {b}");
+    let (st, b) = authed_post(&app, &t, "/api/goals/create", json!({
+        "name": "Trip fund", "kind": "custom", "target_paise": 5_000_000, "target_date": "2030-06-01"
+    })).await;
+    assert!(st.is_success(), "{st} {b}");
+    let soon = (joy::handlers::common::today_local() + time::Duration::days(120)).to_string();
+    let (st, b) = authed_post(&app, &t, "/api/year/outflows", json!({
+        "label": "Car insurance", "on_day": soon, "amount_paise": 1_200_000, "kind": "premium"
+    })).await;
+    assert!(st.is_success(), "{st} {b}");
+
+    let r = authed_get(&app, &t, "/api/plan/road").await;
+    assert_eq!(r["prompts"].as_array().unwrap().len(), 1, "only the child is undated: {r}");
+    let ms = r["milestones"].as_array().unwrap();
+    let days: Vec<&str> = ms.iter().map(|m| m["on"].as_str().unwrap()).collect();
+    let mut sorted = days.clone();
+    sorted.sort();
+    assert_eq!(days, sorted, "in date order");
+    let find = |title: &str| ms.iter().find(|m| m["title"] == title).unwrap_or_else(|| panic!("{title} missing: {r}"));
+    assert_eq!(find("Trip fund")["source"], "goal");
+    assert_eq!(find("Car insurance")["area"], "health");
+    let wedding = ms.iter().find(|m| m["source"] == "life" && m["area"] == "family").expect("wedding on the road");
+    assert!(wedding["per_month_paise"].as_i64().unwrap() > 0);
+    assert!(r["pace_all_paise"].as_i64().unwrap() >= wedding["per_month_paise"].as_i64().unwrap());
+}

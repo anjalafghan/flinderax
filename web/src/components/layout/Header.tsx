@@ -23,7 +23,7 @@ interface SubTab {
 const TABS: Tab[] = [
   { to: "/", label: "Today", icon: Sun, prefixes: ["/"] },
   { to: "/money", label: "Money", icon: Wallet, prefixes: ["/money", "/cards", "/accounts", "/spending", "/plan", "/working"] },
-  { to: "/life", label: "Life", icon: Route, prefixes: ["/life", "/wedding", "/year", "/what-if", "/work", "/health"] },
+  { to: "/life", label: "Life", icon: Route, prefixes: ["/life", "/glance", "/wedding", "/year", "/what-if", "/work", "/health"] },
   { to: "/joy", label: "Us", icon: Heart, prefixes: ["/joy", "/people"] },
   { to: "/week", label: "Review", icon: ClipboardCheck, prefixes: ["/week", "/review", "/checkin"] },
 ];
@@ -43,6 +43,7 @@ const SUBTABS: Record<string, { label: string; items: SubTab[] }> = {
   "/life": {
     label: "Life",
     items: [
+      { to: "/glance", label: "At a glance", prefixes: ["/glance"] },
       { to: "/life", label: "Life line", prefixes: ["/life", "/wedding"] },
       { to: "/year", label: "Year ahead", prefixes: ["/year"] },
       { to: "/what-if", label: "What if", prefixes: ["/what-if"] },
