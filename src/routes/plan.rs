@@ -1,5 +1,5 @@
 use axum::{routing::{get, patch, post}, Router};
-use crate::handlers::{education, forecast, guidance, life, lifeline, plan, projection};
+use crate::handlers::{education, forecast, guidance, life, lifeline, plan, projection, road};
 use crate::models::AppState;
 
 pub fn routes(state: AppState) -> Router {
@@ -21,6 +21,7 @@ pub fn routes(state: AppState) -> Router {
         .route("/life", get(life::get))
         .route("/life/profile", post(life::save))
         .route("/life/reset", post(life::reset))
+        .route("/road", get(road::get))
         .route("/forecast", get(forecast::get))
         .route("/education", get(education::get).put(education::put).delete(education::delete))
         .route("/guidance", post(guidance::post))

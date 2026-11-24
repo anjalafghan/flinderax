@@ -42,6 +42,7 @@ pub mod recurring;
 pub mod reminders;
 pub mod review;
 pub mod reward_fund;
+pub mod road;
 pub mod rewards;
 pub mod streaks;
 pub mod activity;
