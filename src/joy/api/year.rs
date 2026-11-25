@@ -422,8 +422,9 @@ fn jar_slips_of(rows: &[YearRow]) -> Vec<JarSlip> {
 async fn month_blots_of(db: &sqlx::SqlitePool, couple: &str, year: i32, ctx: &Ctx, spent: &[i64; 12], standing: Option<i64>) -> Result<Vec<MonthBlot>, AppError> {
     let top = spent.iter().copied().max().unwrap_or(0).max(1);
     let mut blots = vec![];
+    let settled = db::month_budgets(db, couple).await?;
     for (i, sp) in spent.iter().copied().enumerate() {
-        let budget = db::month_budget(db, couple, &format!("{year}-{:02}", i + 1)).await?.map(|(b, c)| b + c).or(standing);
+        let budget = settled.get(&format!("{year}-{:02}", i + 1)).map(|(b, c)| b + c).or(standing);
         let r_px = match (sp, budget) {
             (0, _) => 0.0,
             (sp, Some(b)) => (sp as f64 / b as f64 * 9.0).clamp(3.0, 13.0),

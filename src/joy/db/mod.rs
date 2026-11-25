@@ -1302,6 +1302,15 @@ pub async fn month_budget(db: &SqlitePool, couple: &str, month: &str) -> sqlx::R
         .await
 }
 
+/// Every month the couple has settled: month ("YYYY-MM") -> (base, carry).
+pub async fn month_budgets(db: &SqlitePool, couple: &str) -> sqlx::Result<std::collections::HashMap<String, (i64, i64)>> {
+    let rows: Vec<(String, i64, i64)> = sqlx::query_as("SELECT month, base, carry FROM joy_month_budget WHERE couple_id = ?")
+        .bind(couple)
+        .fetch_all(db)
+        .await?;
+    Ok(rows.into_iter().map(|(m, b, c)| (m, (b, c))).collect())
+}
+
 /// Settle a month's start: rolling over `carry` (0 = start fresh). Pressing twice changes nothing.
 /// True when this call was the one that settled it.
 /// `leftover` ((amount, note) for the savings jar) goes in with it in one transaction, so a failure

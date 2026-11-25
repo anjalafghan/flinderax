@@ -1,12 +1,24 @@
-//! Dates (Joy) as a JSON API. Joy's server logic is kept as it was; only the transport changed:
-//! each Askama template became a `Serialize` view struct, each form post a JSON body, and each
-//! redirect `{"ok": true, "to": "/joy/..."}` (the SPA path the redirect pointed at).
+//! Dates (Joy) as a JSON API: the date jar for a couple. Each handler returns a `Serialize` view
+//! struct, takes a JSON body, and answers a form post with `{"ok": true, "to": "/joy/..."}` (the
+//! SPA path to go to next).
 //!
-//! Part 1 lives in `decide`, `middle`, `wishlist`, `envelope`, plus `dayplan` and `regular`, which
-//! hold the non-handler halves of Joy's modules of the same names (decide and envelope need them).
-//! Parts 2/3 extend those two files with their handlers.
+//! One file per area:
+//! - `decide`: the jar page and the draw (pick, match counts, "it's a date"); also `JarData`, the
+//!   one place that says what can be drawn right now.
+//! - `middle`: "meet in the middle", each partner's private answer for tonight.
+//! - `wishlist`: slips (list, add/edit form, archive, delete, quiet marks, plan straight to a day).
+//! - `history`: kept dates (the list, "did it happen?", reveal, photos, the signed invite and photo).
+//! - `dayplan`: the day-of plan for a kept date (timeline, Plan B, jobs).
+//! - `envelope`: the public, token-addressed page a date is sent as.
+//! - `regular`: standing dates ("Blue Tokai, Tue and Thu") and their nights.
+//! - `year`, `month`: the year in review, read-only.
 //!
-//! SPA paths used in links this module builds:
+//! This file holds what they share: [`Joy`] (the caller's couple, slot and settings), the doors to
+//! a slip by id ([`unsealed`], [`slip`]; see also `db::visible_get` and `db::drawable_get`), the
+//! date and budget labels, and the shared names in `crate::joy::names`. SQL lives in `joy::db`,
+//! the pure draw in `joy::picker`.
+//!
+//! Signed links this module builds (all signed with `DATES_URL_KEY`):
 //! - envelope link (what goes to WhatsApp): `{PUBLIC_URL}/joy/e/{token}`; the SPA page reads
 //!   `GET /api/public/dates/e/{token}`.
 //! - calendar invite: signed `GET /api/dates/history/{id}/invite.ics?who=N&exp=..&sig=..`
@@ -14,7 +26,6 @@
 //! - a regular's night photo: signed over `/api/dates/nights/{id}/photo?v=..` and served, public,
 //!   at `GET /api/public/dates/nights/{id}/photo?v=..&exp=..&sig=..` (see [`regular::public_link`]).
 
-// part 2/3: add `pub mod history; pub mod month; pub mod regular_routes; pub mod year;` etc. here
 pub mod dayplan;
 pub mod decide;
 pub mod envelope;
@@ -550,8 +561,9 @@ pub async fn past_months(db: &SqlitePool, couple: &str, ctx: &Ctx) -> Result<Vec
     let this = jdb::month_offset(db, 0).await?;
     let year = this.get(..4).unwrap_or_default();
     let mut out = vec![];
+    let settled = jdb::month_budgets(db, couple).await?;
     for (month, spent) in jdb::past_months(db, couple).await? {
-        let budget = jdb::month_budget(db, couple, &month).await?.map(|(b, c)| b + c).or(standing);
+        let budget = settled.get(&month).map(|(b, c)| b + c).or(standing);
         out.push(PastMonth {
             label: month_name(&month, year),
             spent: ctx.money(spent),

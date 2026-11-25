@@ -36,6 +36,23 @@ pub async fn regular(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Opt
     sqlx::query_as("SELECT * FROM joy_regulars WHERE couple_id = ? AND id = ? AND active = 1").bind(couple).bind(id).fetch_optional(db).await
 }
 
+/// The active regulars keyed by id, fetched once so a loop over visits needs no query per row.
+async fn regulars_by_id(db: &SqlitePool, couple: &str) -> sqlx::Result<std::collections::HashMap<i64, Regular>> {
+    Ok(regulars(db, couple).await?.into_iter().map(|r| (r.id, r)).collect())
+}
+
+/// How many nights we went, per regular (those never gone to are absent).
+pub async fn went_counts(db: &SqlitePool, couple: &str) -> sqlx::Result<std::collections::HashMap<i64, i64>> {
+    let rows: Vec<(i64, i64)> = sqlx::query_as(
+        "SELECT v.regular_id, count(*) FROM joy_regular_visits v JOIN joy_regulars r ON r.id = v.regular_id
+          WHERE r.couple_id = ? AND v.status = 'went' GROUP BY v.regular_id",
+    )
+    .bind(couple)
+    .fetch_all(db)
+    .await?;
+    Ok(rows.into_iter().collect())
+}
+
 pub async fn regulars(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<Regular>> {
     sqlx::query_as("SELECT * FROM joy_regulars WHERE couple_id = ? AND active = 1 ORDER BY id").bind(couple).fetch_all(db).await
 }
@@ -48,7 +65,10 @@ pub async fn open_nights(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(Reg
         "WITH RECURSIVE d(day) AS (
            SELECT date('now', 'localtime', '-6 days')
            UNION ALL SELECT date(day, '+1 day') FROM d WHERE day < date('now', 'localtime'))
-         SELECT r.id, d.day, strftime('%w', d.day)
+         SELECT r.id, d.day,
+                substr('SunMonTueWedThuFriSat', 1 + 3 * CAST(strftime('%w', d.day) AS INTEGER), 3) || ' ' ||
+                CAST(strftime('%d', d.day) AS INTEGER) || ' ' ||
+                substr('JanFebMarAprMayJunJulAugSepOctNovDec', 1 + 3 * (CAST(strftime('%m', d.day) AS INTEGER) - 1), 3)
            FROM d JOIN joy_regulars r ON r.active = 1 AND r.couple_id = ?
           WHERE d.day >= r.since
             AND instr(',' || r.weekdays || ',', ',' || strftime('%w', d.day) || ',') > 0
@@ -58,21 +78,8 @@ pub async fn open_nights(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(Reg
     .bind(couple)
     .fetch_all(db)
     .await?;
-    let mut out = vec![];
-    for (id, day, _) in rows {
-        if let Some(r) = regular(db, couple, id).await? {
-            let label: String = sqlx::query_scalar(
-                "SELECT substr('SunMonTueWedThuFriSat', 1 + 3 * CAST(strftime('%w', ?1) AS INTEGER), 3) || ' ' ||
-                        CAST(strftime('%d', ?1) AS INTEGER) || ' ' ||
-                        substr('JanFebMarAprMayJunJulAugSepOctNovDec', 1 + 3 * (CAST(strftime('%m', ?1) AS INTEGER) - 1), 3)",
-            )
-            .bind(&day)
-            .fetch_one(db)
-            .await?;
-            out.push((r, day, label));
-        }
-    }
-    Ok(out)
+    let by_id = regulars_by_id(db, couple).await?;
+    Ok(rows.into_iter().filter_map(|(id, day, label)| by_id.get(&id).map(|r| (r.clone(), day, label))).collect())
 }
 
 /// Tonight's answered visits (we went), so the card can say so and offer a photo.
@@ -84,13 +91,8 @@ pub async fn went_today(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(Regu
     .bind(couple)
     .fetch_all(db)
     .await?;
-    let mut out = vec![];
-    for v in visits {
-        if let Some(r) = regular(db, couple, v.regular_id).await? {
-            out.push((r, v));
-        }
-    }
-    Ok(out)
+    let by_id = regulars_by_id(db, couple).await?;
+    Ok(visits.into_iter().filter_map(|v| by_id.get(&v.regular_id).map(|r| (r.clone(), v))).collect())
 }
 
 /// Say whether we went on `day`. `status` is "went" or "skipped"; a blank `place` means the
@@ -279,12 +281,8 @@ pub async fn visits_in_month(db: &SqlitePool, couple: &str, month: &str) -> sqlx
     .bind(month)
     .fetch_all(db)
     .await?;
-    let mut out = vec![];
-    for v in rows {
-        let title = regular(db, couple, v.regular_id).await?.map(|r| r.title).unwrap_or_default();
-        out.push((v, title));
-    }
-    Ok(out)
+    let by_id = regulars_by_id(db, couple).await?;
+    Ok(rows.into_iter().map(|v| { let title = by_id.get(&v.regular_id).map(|r| r.title.clone()).unwrap_or_default(); (v, title) }).collect())
 }
 
 /// The most we could still spend this month if every remaining regular night happened and cost

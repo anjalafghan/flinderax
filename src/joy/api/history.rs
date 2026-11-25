@@ -755,10 +755,10 @@ pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Pa
     db::delete_history(&s.db, &j.couple, id).await?;
     for p in pics {
         if let Some(path) = photos::date_path(&j.ctx.photos_dir, &p.file) {
-            let _ = tokio::fs::remove_file(path).await;
+            photos::remove_file(path).await;
         }
         if let Some(path) = photos::thumb_path(&j.ctx.photos_dir, &p.file) {
-            let _ = tokio::fs::remove_file(path).await;
+            photos::remove_file(path).await;
         }
     }
     Ok(go("/joy/kept"))
@@ -893,7 +893,7 @@ pub async fn upload_photo(
     tokio::fs::write(&path, jpeg).await.map_err(internal)?;
     if db::add_photo(&s.db, &j.couple, id, &file).await?.is_none() {
         // Filled up by the other one of us while this one was going up.
-        let _ = tokio::fs::remove_file(&path).await;
+        photos::remove_file(&path).await;
         return Err(unprocessable(&full_message()));
     }
     Ok(go(kept_to(id)))
@@ -913,7 +913,7 @@ pub async fn delete_photo(
     open_photo_row(&s.db, &j.couple, id, Some(j.who)).await?;
     if let Some(file) = db::remove_photo(&s.db, &j.couple, id, photo_id).await? {
         for path in [photos::date_path(&j.ctx.photos_dir, &file), photos::thumb_path(&j.ctx.photos_dir, &file)].into_iter().flatten() {
-            let _ = tokio::fs::remove_file(path).await;
+            photos::remove_file(path).await;
         }
     }
     Ok(go(kept_to(id)))
