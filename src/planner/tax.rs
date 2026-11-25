@@ -71,10 +71,12 @@ pub fn parse_fy(s: &str) -> Option<i32> {
 }
 
 /// First and last day of the FY.
+/// The year is clamped to the range `time` can represent, so an out-of-range value cannot panic.
 pub fn fy_bounds(start: i32) -> (Date, Date) {
+    let start = start.clamp(-9998, 9998);
     (
-        Date::from_calendar_date(start, Month::April, 1).expect("valid"),
-        Date::from_calendar_date(start + 1, Month::March, 31).expect("valid"),
+        Date::from_calendar_date(start, Month::April, 1).expect("clamped year is valid"),
+        Date::from_calendar_date(start + 1, Month::March, 31).expect("clamped year is valid"),
     )
 }
 
@@ -484,6 +486,9 @@ mod tests {
         assert_eq!(parse_fy("26-27"), None);
         assert_eq!(parse_fy("2099-00"), Some(2099));
         assert_eq!(fy_bounds(2026), (date!(2026 - 04 - 01), date!(2027 - 03 - 31)));
+        // Out-of-range years are clamped, not a panic.
+        let _ = fy_bounds(i32::MAX);
+        let _ = fy_bounds(i32::MIN);
     }
 
     fn sip(day: u8) -> Payment {

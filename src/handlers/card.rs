@@ -193,7 +193,7 @@ pub async fn get_card(
     })?;
 
     Ok(Json(ShowGetCardResponse {
-        card_id: card.card_id.unwrap(),
+        card_id: card.card_id.ok_or_else(|| AppError(StatusCode::INTERNAL_SERVER_ERROR, "card row has no id".into()))?,
         card_name: card.card_name,
         card_bank: card.card_bank,
         card_primary_color: unpack(card.card_primary_color),
@@ -226,8 +226,8 @@ pub async fn get_all_cards(
 
     let cards = cards
         .into_iter()
-        .map(|card| CardListItem {
-            card_id: card.card_id.unwrap(),
+        .map(|card| Ok(CardListItem {
+            card_id: card.card_id.ok_or_else(|| AppError(StatusCode::INTERNAL_SERVER_ERROR, "card row has no id".into()))?,
             card_name: card.card_name,
             card_bank: card.card_bank,
             card_primary_color: card.card_primary_color,
@@ -235,8 +235,8 @@ pub async fn get_all_cards(
             last_total_due: Some(rupees(card.last_total_due_paise)),
             last_delta: Some(rupees(card.last_delta_paise)),
             last_4_digits: card.last_4_digits,
-        })
-        .collect();
+        }))
+        .collect::<Result<Vec<_>, AppError>>()?;
 
     Ok(Json(CardListResponse { cards }))
 }
