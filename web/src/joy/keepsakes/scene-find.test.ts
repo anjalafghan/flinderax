@@ -4,7 +4,14 @@ import path from "node:path";
 import { sceneFor, visitsOf } from "./scene-find";
 import { SCENES } from "./scenes.gen";
 
-const PUBLIC = path.join(import.meta.dir, "..", "..", "..", "public", "keepsakes");
+const PUBLIC = path.join(
+  import.meta.dir,
+  "..",
+  "..",
+  "..",
+  "public",
+  "keepsakes",
+);
 
 describe("sceneFor", () => {
   test("finds a scene by slip title, any case", () => {
@@ -17,7 +24,9 @@ describe("sceneFor", () => {
     expect(sceneFor("blue tokai", 5)?.id).toBe("tokai2");
   });
   test("a title with a name filled in still finds its slip's keepsake", () => {
-    expect(sceneFor("Hindi rap listening session (watch Diya react)")?.id).toBe("hindirap");
+    expect(sceneFor("Hindi rap listening session (watch Diya react)")?.id).toBe(
+      "hindirap",
+    );
   });
   test("slips nobody drew yet have none", () => {
     expect(sceneFor("a slip written tomorrow")).toBeNull();
@@ -31,17 +40,27 @@ describe("the keepsake files", () => {
       const f = path.join(PUBLIC, s.file);
       expect(existsSync(f)).toBe(true);
       const svg = readFileSync(f, "utf8");
-      for (const m of svg.matchAll(/\bid="([^"]+)"/g)) expect(m[1]!.startsWith(s.id + "-")).toBe(true);
+      for (const m of svg.matchAll(/\bid="([^"]+)"/g))
+        expect(m[1]!.startsWith(s.id + "-")).toBe(true);
       expect(svg).not.toMatch(/<script|\son\w+=|javascript:/i);
-      for (const rule of svg.match(/<style>([\s\S]*?)<\/style>/)?.[1]?.split("}") ?? []) {
+      for (const rule of svg
+        .match(/<style>([\s\S]*?)<\/style>/)?.[1]
+        ?.split("}") ?? []) {
         const sel = rule.split("{")[0]!.trim();
-        if (sel && !sel.startsWith("@") && !/^(from|to|\d+%)/.test(sel) && sel.includes(".")) expect(sel).toContain(`ksc-${s.id}`);
+        if (
+          sel &&
+          !sel.startsWith("@") &&
+          !/^(from|to|\d+%)/.test(sel) &&
+          sel.includes(".")
+        )
+          expect(sel).toContain(`ksc-${s.id}`);
       }
     }
   });
   test("ids are unique and every file name carries a content hash", () => {
     expect(new Set(SCENES.map((s) => s.id)).size).toBe(SCENES.length);
-    for (const s of SCENES) expect(s.file).toMatch(new RegExp(`^${s.id}-[0-9a-z]{8}\\.svg$`));
+    for (const s of SCENES)
+      expect(s.file).toMatch(new RegExp(`^${s.id}-[0-9a-z]{8}\\.svg$`));
   });
 });
 

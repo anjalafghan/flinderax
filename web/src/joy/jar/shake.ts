@@ -12,14 +12,27 @@ export interface ShakeState {
   lastJig: number;
 }
 
-export const newShake = (): ShakeState => ({ hits: [], lastDraw: -Infinity, lastJig: -Infinity });
+export const newShake = (): ShakeState => ({
+  hits: [],
+  lastDraw: -Infinity,
+  lastJig: -Infinity,
+});
 
 /** Magnitude of a devicemotion reading, with or without gravity removed. */
 export function magnitude(ev: {
-  acceleration?: { x: number | null; y: number | null; z: number | null } | null;
-  accelerationIncludingGravity?: { x: number | null; y: number | null; z: number | null } | null;
+  acceleration?: {
+    x: number | null;
+    y: number | null;
+    z: number | null;
+  } | null;
+  accelerationIncludingGravity?: {
+    x: number | null;
+    y: number | null;
+    z: number | null;
+  } | null;
 }): number {
-  const a = ev.acceleration && ev.acceleration.x != null ? ev.acceleration : null;
+  const a =
+    ev.acceleration && ev.acceleration.x != null ? ev.acceleration : null;
   const g = ev.accelerationIncludingGravity;
   if (a) return Math.hypot(a.x || 0, a.y || 0, a.z || 0);
   if (g) return Math.abs(Math.hypot(g.x || 0, g.y || 0, g.z || 0) - 9.81);
@@ -27,7 +40,12 @@ export function magnitude(ev: {
 }
 
 /** Feed one reading; says whether to rattle the jar and whether that was the third shake. */
-export function shakeStep(s: ShakeState, mag: number, now: number, busy: boolean): { state: ShakeState; jiggle: number; draw: boolean } {
+export function shakeStep(
+  s: ShakeState,
+  mag: number,
+  now: number,
+  busy: boolean,
+): { state: ShakeState; jiggle: number; draw: boolean } {
   let { hits, lastDraw, lastJig } = s;
   let jiggle = 0;
   let draw = false;

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test";
 
-import { kgLabel, ordersPerWeek, parseTenths, signedKg, todayIso } from "@/services/diet";
+import {
+  kgLabel,
+  ordersPerWeek,
+  parseTenths,
+  signedKg,
+  todayIso,
+} from "@/services/diet";
 
 // Pure helpers only: the wire is tenths of a kilo and whole days, and the text is shown as the user reads it.
 

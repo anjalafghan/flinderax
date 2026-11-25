@@ -1,32 +1,138 @@
 /* Small additions to Joy's regular.css: 44 px targets, the upload progress, and nothing wider than 375 px. */
 .joy {
-  .rs-add, .reg-photo-l { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 1.5px dashed var(--rule); border-radius: 999px; cursor: pointer; color: var(--ink-soft); }
-  .rs-add:focus-within, .reg-photo-l:focus-within { outline: 2px solid var(--stamp); outline-offset: 2px; }
-  .rs-add input, .reg-photo-l input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
-  .rs-add, .reg-photo-l { position: relative; }
-  .reg-else summary { min-height: 44px; }
-  .rs-actions .btn, .reg-done .btn, .reg-actions .btn, .reg-else-form .btn { min-height: 44px; }
-  .rs-grid, .rl-list, .rl-form, .reg { max-width: 100%; }
-  .rs-print img { max-width: 100%; }
-  .rs-night { min-width: 0; }
-  .np-prog { display: grid; gap: 4px; min-width: 140px; font-size: var(--step--1); color: var(--ink-soft); }
-  .np-prog progress { width: 100%; height: 8px; accent-color: var(--stamp); }
-  .np-err { margin: 0; font-size: var(--step--1); color: var(--stamp); }
-  .rl-form input[type="text"], .rl-form input[type="url"], .rl-form input[type="date"] { width: 100%; box-sizing: border-box; }
-  .rl-item { min-height: 44px; }
-  .rs-back-row { display: flex; }
+  .rs-add,
+  .reg-photo-l {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1.5px dashed var(--rule);
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+  .rs-add:focus-within,
+  .reg-photo-l:focus-within {
+    outline: 2px solid var(--stamp);
+    outline-offset: 2px;
+  }
+  .rs-add input,
+  .reg-photo-l input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+  }
+  .rs-add,
+  .reg-photo-l {
+    position: relative;
+  }
+  .reg-else summary {
+    min-height: 44px;
+  }
+  .rs-actions .btn,
+  .reg-done .btn,
+  .reg-actions .btn,
+  .reg-else-form .btn {
+    min-height: 44px;
+  }
+  .rs-grid,
+  .rl-list,
+  .rl-form,
+  .reg {
+    max-width: 100%;
+  }
+  .rs-print img {
+    max-width: 100%;
+  }
+  .rs-night {
+    min-width: 0;
+  }
+  .np-prog {
+    display: grid;
+    gap: 4px;
+    min-width: 140px;
+    font-size: var(--step--1);
+    color: var(--ink-soft);
+  }
+  .np-prog progress {
+    width: 100%;
+    height: 8px;
+    accent-color: var(--stamp);
+  }
+  .np-err {
+    margin: 0;
+    font-size: var(--step--1);
+    color: var(--stamp);
+  }
+  .rl-form input[type="text"],
+  .rl-form input[type="url"],
+  .rl-form input[type="date"] {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .rl-item {
+    min-height: 44px;
+  }
+  .rs-back-row {
+    display: flex;
+  }
 }
 
 /* ── The wallet of loyalty cards (Regulars) and a regular's passport page ──── */
 .joy {
-  .rs-hand { margin: 2px 0 0; font: 700 1.6rem/1 "Caveat", var(--font-hand), cursive; color: var(--ink-soft); rotate: -1.5deg; }
-  .rl-wallet { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 34px 28px; margin: 22px 0 34px; padding: 8px 0 0; list-style: none; }
-  .rl-card { display: block; color: inherit; text-decoration: none; border-radius: 16px; }
-  .rl-card:focus-visible { outline: 2.5px solid var(--stamp); outline-offset: 6px; }
+  .rs-hand {
+    margin: 2px 0 0;
+    font:
+      700 1.6rem/1 "Caveat",
+      var(--font-hand),
+      cursive;
+    color: var(--ink-soft);
+    rotate: -1.5deg;
+  }
+  .rl-wallet {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+    gap: 34px 28px;
+    margin: 22px 0 34px;
+    padding: 8px 0 0;
+    list-style: none;
+  }
+  .rl-card {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 16px;
+  }
+  .rl-card:focus-visible {
+    outline: 2.5px solid var(--stamp);
+    outline-offset: 6px;
+  }
 
-  .pc { position: relative; display: block; rotate: var(--tilt, 0deg); transition: rotate .35s cubic-bezier(.2, .8, .25, 1), translate .35s cubic-bezier(.2, .8, .25, 1); }
-  .rl-card:hover .pc, .rl-card:focus-visible .pc { rotate: 0deg; translate: 0 -6px; }
-  .pc-under { position: absolute; inset: 0; border-radius: 14px; background: var(--paper); filter: brightness(.86); rotate: calc(var(--u) * 2.4deg); translate: calc(var(--u) * 5px) calc(var(--u) * 4px); box-shadow: 0 1px 2px rgba(40, 22, 8, .3); }
+  .pc {
+    position: relative;
+    display: block;
+    rotate: var(--tilt, 0deg);
+    transition:
+      rotate 0.35s cubic-bezier(0.2, 0.8, 0.25, 1),
+      translate 0.35s cubic-bezier(0.2, 0.8, 0.25, 1);
+  }
+  .rl-card:hover .pc,
+  .rl-card:focus-visible .pc {
+    rotate: 0deg;
+    translate: 0 -6px;
+  }
+  .pc-under {
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: var(--paper);
+    filter: brightness(0.86);
+    rotate: calc(var(--u) * 2.4deg);
+    translate: calc(var(--u) * 5px) calc(var(--u) * 4px);
+    box-shadow: 0 1px 2px rgba(40, 22, 8, 0.3);
+  }
   .pc-card {
     position: relative;
     display: grid;
@@ -35,26 +141,114 @@
     border-radius: 14px;
     background: var(--paper);
     color: var(--ink);
-    box-shadow: 0 1px 1px rgba(40, 22, 8, .28), 0 10px 18px -6px rgba(40, 22, 8, .34);
+    box-shadow:
+      0 1px 1px rgba(40, 22, 8, 0.28),
+      0 10px 18px -6px rgba(40, 22, 8, 0.34);
     overflow: hidden;
   }
-  .pc-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 90% at 20% 0%, rgba(255, 255, 255, .22), transparent 55%); mix-blend-mode: soft-light; }
-  .pc-stub { display: grid; place-content: center; gap: 2px; border-right: 2.5px dotted color-mix(in srgb, var(--ink) 40%, transparent); background: var(--accent); color: var(--paper); text-align: center; }
-  .pc-stub span { writing-mode: vertical-rl; rotate: 180deg; font: 700 .7rem/1 var(--font-ui); letter-spacing: .18em; }
-  .pc-stub b { font: 800 1.4rem/1 var(--font-display); }
-  .pc-body { display: grid; align-content: start; gap: 6px; padding: 16px 18px 16px 16px; }
-  .pc-title { font: 600 1.7rem/1 "Fraunces", var(--font-display), serif; font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 60; letter-spacing: -.01em; overflow-wrap: anywhere; }
-  .pc-line { font: 400 .95rem/1.25 "Space Mono", var(--font-ui), monospace; opacity: .8; }
-  .pc-holes { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; margin-top: 10px; }
-  .pc-holes span { aspect-ratio: 1; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, var(--ink) 45%, transparent); }
-  .pc-holes span.is-punched { border: 0; background: radial-gradient(circle at 50% 40%, rgba(0, 0, 0, .55), rgba(0, 0, 0, .3) 60%, rgba(0, 0, 0, .14)); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .5), 0 1px 0 rgba(255, 255, 255, .35); }
-  .pc-full { font: 700 1.15rem/1 "Caveat", var(--font-hand), cursive; color: var(--accent); }
-  .pc-big .pc-card { min-height: 200px; }
-  .pc-big .pc-title { font-size: 2.2rem; }
+  .pc-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      120% 90% at 20% 0%,
+      rgba(255, 255, 255, 0.22),
+      transparent 55%
+    );
+    mix-blend-mode: soft-light;
+  }
+  .pc-stub {
+    display: grid;
+    place-content: center;
+    gap: 2px;
+    border-right: 2.5px dotted color-mix(in srgb, var(--ink) 40%, transparent);
+    background: var(--accent);
+    color: var(--paper);
+    text-align: center;
+  }
+  .pc-stub span {
+    writing-mode: vertical-rl;
+    rotate: 180deg;
+    font: 700 0.7rem/1 var(--font-ui);
+    letter-spacing: 0.18em;
+  }
+  .pc-stub b {
+    font: 800 1.4rem/1 var(--font-display);
+  }
+  .pc-body {
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    padding: 16px 18px 16px 16px;
+  }
+  .pc-title {
+    font:
+      600 1.7rem/1 "Fraunces",
+      var(--font-display),
+      serif;
+    font-variation-settings:
+      "SOFT" 100,
+      "WONK" 1,
+      "opsz" 60;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+  .pc-line {
+    font:
+      400 0.95rem/1.25 "Space Mono",
+      var(--font-ui),
+      monospace;
+    opacity: 0.8;
+  }
+  .pc-holes {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .pc-holes span {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1.5px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+  }
+  .pc-holes span.is-punched {
+    border: 0;
+    background: radial-gradient(
+      circle at 50% 40%,
+      rgba(0, 0, 0, 0.55),
+      rgba(0, 0, 0, 0.3) 60%,
+      rgba(0, 0, 0, 0.14)
+    );
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.5),
+      0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .pc-full {
+    font:
+      700 1.15rem/1 "Caveat",
+      var(--font-hand),
+      cursive;
+    color: var(--accent);
+  }
+  .pc-big .pc-card {
+    min-height: 200px;
+  }
+  .pc-big .pc-title {
+    font-size: 2.2rem;
+  }
 
-  .rs-head-card { grid-template-columns: minmax(0, 1fr); align-items: end; gap: 22px; }
-  .rs-head-pc { max-width: 420px; }
-  .rs-head-card .rs-head-pc { order: -1; }
+  .rs-head-card {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: end;
+    gap: 22px;
+  }
+  .rs-head-pc {
+    max-width: 420px;
+  }
+  .rs-head-card .rs-head-pc {
+    order: -1;
+  }
 
   /* the passport page the nights are stamped on */
   .rs-passport {
@@ -64,16 +258,121 @@
     padding: 34px 26px 30px;
     border-radius: 6px;
     background-color: #f3ead6;
-    background-image: repeating-linear-gradient(0deg, transparent 0 27px, rgba(31, 75, 145, .08) 27px 28px), radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, .5), transparent 60%);
-    box-shadow: inset 0 0 0 1px rgba(60, 40, 15, .12), 0 1px 2px rgba(40, 22, 8, .25), 0 22px 40px -22px rgba(40, 22, 8, .45);
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent 0 27px,
+        rgba(31, 75, 145, 0.08) 27px 28px
+      ),
+      radial-gradient(
+        120% 80% at 50% 0%,
+        rgba(255, 255, 255, 0.5),
+        transparent 60%
+      );
+    box-shadow:
+      inset 0 0 0 1px rgba(60, 40, 15, 0.12),
+      0 1px 2px rgba(40, 22, 8, 0.25),
+      0 22px 40px -22px rgba(40, 22, 8, 0.45);
     color: #2b2433;
   }
-  .rs-passport::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 26px; background: linear-gradient(90deg, rgba(70, 40, 15, .18), transparent); border-radius: 6px 0 0 6px; }
-  .rs-passport .rs-meta { color: #5d5566; font-family: "Caveat", var(--font-hand), cursive; font-size: 1.2rem; font-weight: 700; }
-  .rs-passport .rs-print { background: #fdfcf8; box-shadow: 0 1px 2px rgba(52, 32, 14, .3), 0 6px 12px rgba(52, 32, 14, .18); }
-  .rs-passport .rs-print figcaption { color: #24303a; font-family: "Caveat", var(--font-hand), cursive; }
-  .ns { display: block; width: 116px; height: 116px; rotate: var(--rot); mix-blend-mode: multiply; opacity: .9; }
-  .ns text { font-family: var(--font-ui); }
-  .ns .ns-day { font-family: "Fraunces", var(--font-display), serif; }
-  @media (prefers-reduced-motion: reduce) { .pc { transition: none; } }
+  .rs-passport::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 26px;
+    background: linear-gradient(90deg, rgba(70, 40, 15, 0.18), transparent);
+    border-radius: 6px 0 0 6px;
+  }
+  .rs-passport .rs-meta {
+    color: #5d5566;
+    font-family: "Caveat", var(--font-hand), cursive;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+  .rs-passport .rs-print {
+    background: #fdfcf8;
+    box-shadow:
+      0 1px 2px rgba(52, 32, 14, 0.3),
+      0 6px 12px rgba(52, 32, 14, 0.18);
+  }
+  .rs-passport .rs-print figcaption {
+    color: #24303a;
+    font-family: "Caveat", var(--font-hand), cursive;
+  }
+  .ns {
+    display: block;
+    width: 116px;
+    height: 116px;
+    rotate: var(--rot);
+    mix-blend-mode: multiply;
+    opacity: 0.9;
+  }
+  .ns text {
+    font-family: var(--font-ui);
+  }
+  .ns .ns-day {
+    font-family: "Fraunces", var(--font-display), serif;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pc {
+      transition: none;
+    }
+  }
+}
+/* ── colour pass: a ticket-counter tally and a foil sheen on the punch cards ── */
+.joy {
+  .pc-n {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 2px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--paper);
+    font: 800 1rem/1 var(--font-display);
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--accent) 80%, transparent);
+  }
+  .pc-n small {
+    font-size: 0.75em;
+    font-weight: 700;
+  }
+  .pc-big .pc-n {
+    font-size: 1.3rem;
+  }
+  .pc-title {
+    padding-right: 3.2rem;
+  }
+  .pc-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      115deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.38) 45%,
+      transparent 60%
+    );
+    background-size: 260% 100%;
+    background-position: 120% 0;
+    transition: background-position 900ms var(--ease-out);
+  }
+  @media (hover: hover) {
+    .rl-card:hover .pc-card::before {
+      background-position: -40% 0;
+    }
+  }
+  .rl-card:focus-visible .pc-card::before {
+    background-position: -40% 0;
+  }
+  .rs-title {
+    background: var(--party-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
 }

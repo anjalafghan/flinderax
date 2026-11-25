@@ -1,18 +1,28 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { CalendarHeart, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { rupees, useCheckinStatus, useReminderLink, useResetReminderLink, type CheckinStatus } from "@/services/checkin";
+import {
+  rupees,
+  useCheckinStatus,
+  useReminderLink,
+  useResetReminderLink,
+  type CheckinStatus,
+} from "@/services/checkin";
 import { ResetButton } from "@/components/ui/reset-button";
 import { formatDay } from "@/utils/dates";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const SHOWN_ESTIMATES = 2;
 
 function statusLine(s: CheckinStatus): string {
-  if (s.status === "overdue") return "Your check-in is due. It takes about 20 minutes.";
-  if (s.status === "due_soon") return `Check-in due ${formatDay(s.next_due_on)}.`;
+  if (s.status === "overdue")
+    return "Your check-in is due. It takes about 20 minutes.";
+  if (s.status === "due_soon")
+    return `Check-in due ${formatDay(s.next_due_on)}.`;
   return `Next check-in ${formatDay(s.next_due_on)}.`;
 }
 
@@ -34,7 +44,7 @@ export function CheckInCard() {
 
   if (!data) {
     return isLoading ? (
-      <div className="mt-6 h-40 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading check-in" />
+      <Skeleton className="mt-6 h-40 rounded-[28px]" label="Loading check-in" />
     ) : null;
   }
 
@@ -50,20 +60,45 @@ export function CheckInCard() {
   return (
     <section
       aria-labelledby="checkin-card-title"
-      className="mt-6 flex flex-col gap-6 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10"
+      className="glass mt-6 flex flex-col gap-6 rounded-[28px] px-6 py-8 sm:px-12 sm:py-10"
     >
-      <header className="flex flex-col gap-2">
-        <h2 id="checkin-card-title" className="m-0 font-display text-[32px] leading-none">
-          Quarterly check-in
-        </h2>
-        <p className="m-0 text-sm text-muted-foreground">{statusLine(data)}</p>
+      <header className="flex items-start gap-4">
+        <span
+          aria-hidden
+          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,hsl(var(--c-sky)),hsl(var(--c-grape)))] text-background shadow-[0_10px_24px_-12px_hsl(var(--c-grape))]"
+        >
+          <ClipboardCheck className="h-6 w-6" strokeWidth={1.7} />
+        </span>
+        <div className="flex min-w-0 flex-col gap-2">
+          <h2
+            id="checkin-card-title"
+            className="brand-text m-0 font-display text-[32px] leading-none"
+          >
+            Quarterly check-in
+          </h2>
+          <p
+            className={
+              data.status === "overdue"
+                ? "m-0 self-start rounded-full bg-over-tint px-3 py-1 text-sm font-medium text-over"
+                : data.status === "due_soon"
+                  ? "m-0 self-start rounded-full bg-warn-tint px-3 py-1 text-sm font-medium text-warn"
+                  : "m-0 text-sm text-muted-foreground"
+            }
+          >
+            {statusLine(data)}
+          </p>
+        </div>
       </header>
 
       {estimates.length > 0 && (
         <ul className="ledger">
           {estimates.map((e) => (
-            <li key={e.account_id} className="ledger-row">
-              <span className="text-[15px] font-medium">{`${e.name}: about ${rupees(e.estimate_paise)} (estimate)`}</span>
+            <li key={e.account_id} className="ledger-row gap-3">
+              <span
+                aria-hidden
+                className="h-2.5 w-2.5 shrink-0 rounded-full bg-sky shadow-[0_0_10px_hsl(var(--c-sky))]"
+              />
+              <span className="min-w-0 flex-1 text-[15px] font-medium">{`${e.name}: about ${rupees(e.estimate_paise)} (estimate)`}</span>
             </li>
           ))}
         </ul>
@@ -72,7 +107,7 @@ export function CheckInCard() {
       <div>
         <Link
           to="/checkin"
-          className="inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground no-underline transition-colors hover:bg-primary/90"
+          className="bg-brand-gradient inline-flex min-h-11 items-center rounded-full px-5 text-sm font-semibold no-underline shadow-[0_10px_24px_-12px_hsl(var(--brand))] transition-[transform,box-shadow] hover:-translate-y-px hover:shadow-[0_14px_30px_-12px_hsl(var(--brand))]"
         >
           {data.status === "ok" ? "Open check-in" : "Start check-in"}
         </Link>
@@ -81,7 +116,10 @@ export function CheckInCard() {
       <div className="flex flex-col gap-3">
         {calendarUrl ? (
           <>
-            <label htmlFor="checkin-calendar-url" className="text-sm font-medium">
+            <label
+              htmlFor="checkin-calendar-url"
+              className="text-sm font-medium"
+            >
               Your calendar link
             </label>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -92,7 +130,10 @@ export function CheckInCard() {
                 onFocus={(e) => e.currentTarget.select()}
                 className="font-mono text-[13px]"
               />
-              <Button variant="outline" onClick={() => void copyLink(calendarUrl)}>
+              <Button
+                variant="outline"
+                onClick={() => void copyLink(calendarUrl)}
+              >
                 Copy link
               </Button>
             </div>
@@ -104,14 +145,18 @@ export function CheckInCard() {
                 resetLink.mutate(undefined, {
                   onSuccess: (out) => {
                     setCalendarUrl(out.url);
-                    toast.success("New link ready. The old one no longer works.");
+                    toast.success(
+                      "New link ready. The old one no longer works.",
+                    );
                   },
-                  onError: () => toast.error("Couldn't make a new link. Try again."),
+                  onError: () =>
+                    toast.error("Couldn't make a new link. Try again."),
                 })
               }
             />
             <p className="m-0 text-[13px] text-muted-foreground">
-              Paste this into Google Calendar → Other calendars → From URL, or open it on your iPhone.
+              Paste this into Google Calendar → Other calendars → From URL, or
+              open it on your iPhone.
             </p>
           </>
         ) : (
@@ -121,6 +166,7 @@ export function CheckInCard() {
             onClick={getLink}
             disabled={reminders.isPending}
           >
+            <CalendarHeart className="mr-1.5 h-4 w-4 text-rose" aria-hidden />
             Add reminders to your calendar
           </Button>
         )}

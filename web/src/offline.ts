@@ -7,7 +7,8 @@ import { authHeadersFor } from "@/session";
 const STORE = "joy-outbox-v1";
 
 /** What to tell someone whose write is waiting for a signal. */
-export const QUEUED_NOTE = "No signal: saved on this phone. It will be sent when you are back online.";
+export const QUEUED_NOTE =
+  "No signal: saved on this phone. It will be sent when you are back online.";
 
 export interface Queued {
   key: string;
@@ -39,12 +40,20 @@ export function enqueue(item: Queued) {
 const post = (url: string, body: unknown, key: string) =>
   fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": key, ...authHeadersFor(localStorage.getItem("token")) },
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": key,
+      ...authHeadersFor(localStorage.getItem("token")),
+    },
     body: JSON.stringify(body),
   });
 
 /** Sends a POST. If the network is down it is kept for later. A refusal from the server comes back as the response. */
-export async function sendOrQueue(url: string, body: unknown, label: string): Promise<{ queued: boolean; response?: Response }> {
+export async function sendOrQueue(
+  url: string,
+  body: unknown,
+  label: string,
+): Promise<{ queued: boolean; response?: Response }> {
   const key = crypto.randomUUID();
   try {
     return { queued: false, response: await post(url, body, key) };
@@ -55,7 +64,11 @@ export async function sendOrQueue(url: string, body: unknown, label: string): Pr
 }
 
 /** Sends what is waiting, oldest first. Stops at the first network or server failure; drops (and names) what the server refuses. */
-export async function flush(): Promise<{ sent: number; dropped: string[]; left: number }> {
+export async function flush(): Promise<{
+  sent: number;
+  dropped: string[];
+  left: number;
+}> {
   let queue = loadQueue();
   let sent = 0;
   const dropped: string[] = [];
@@ -77,9 +90,17 @@ export async function flush(): Promise<{ sent: number; dropped: string[]; left: 
 }
 
 /** The line to show after a flush, or nothing when there is nothing to say. */
-export function describeFlush(r: { sent: number; dropped: string[]; left: number }): string | null {
+export function describeFlush(r: {
+  sent: number;
+  dropped: string[];
+  left: number;
+}): string | null {
   if (r.sent === 0 && r.dropped.length === 0) return null;
-  const sent = r.sent > 0 ? `Sent ${r.sent} saved ${r.sent === 1 ? "item" : "items"}.` : "";
-  const lost = r.dropped.length > 0 ? ` Couldn't save: ${r.dropped.join(", ")}.` : "";
+  const sent =
+    r.sent > 0
+      ? `Sent ${r.sent} saved ${r.sent === 1 ? "item" : "items"}.`
+      : "";
+  const lost =
+    r.dropped.length > 0 ? ` Couldn't save: ${r.dropped.join(", ")}.` : "";
   return (sent + lost).trim();
 }

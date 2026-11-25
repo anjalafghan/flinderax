@@ -6,7 +6,12 @@ import { EducationSummary } from "./EducationCard";
 
 afterEach(cleanup);
 
-const scenario = (label: string, top_up: number, infl: number, ret: number): EduScenario => ({
+const scenario = (
+  label: string,
+  top_up: number,
+  infl: number,
+  ret: number,
+): EduScenario => ({
   label,
   inflation_bps: infl,
   return_bps: ret,
@@ -18,24 +23,54 @@ const scenario = (label: string, top_up: number, infl: number, ret: number): Edu
 
 const data = (patch: Partial<EducationOut["summary"]> = {}): EducationOut => ({
   saved: true,
-  plan: { child_birth_year: 2026, stages: [], inflation_bps: 1000, return_bps: 1150, corpus_paise: 0 },
+  plan: {
+    child_birth_year: 2026,
+    stages: [],
+    inflation_bps: 1000,
+    return_bps: 1150,
+    corpus_paise: 0,
+  },
   summary: {
     child_birth_year: 2026,
     child_age: 0,
     corpus_paise: 0,
     stages: [
-      { name: "School", start_age: 5, year: 2031, months_away: 60, today_cost_paise: 3_000_000, future_cost_paise: 4_900_000, started: false },
-      { name: "College", start_age: 18, year: 2044, months_away: 216, today_cost_paise: 15_000_000, future_cost_paise: 82_000_000, started: false },
+      {
+        name: "School",
+        start_age: 5,
+        year: 2031,
+        months_away: 60,
+        today_cost_paise: 3_000_000,
+        future_cost_paise: 4_900_000,
+        started: false,
+      },
+      {
+        name: "College",
+        start_age: 18,
+        year: 2044,
+        months_away: 216,
+        today_cost_paise: 15_000_000,
+        future_cost_paise: 82_000_000,
+        started: false,
+      },
     ],
     low: scenario("Low", 2_500_000, 800, 1350),
     base: scenario("Base", 3_500_000, 1000, 1150),
     high: scenario("High", 5_000_000, 1200, 950),
     nothing_left: false,
-    notes: ["Fee inflation and the return on savings are guesses, not forecasts.", "This is planning arithmetic, not investment advice."],
+    notes: [
+      "Fee inflation and the return on savings are guesses, not forecasts.",
+      "This is planning arithmetic, not investment advice.",
+    ],
     ...patch,
   },
   lifeline: {
-    consequences: { lines: ["No change you would notice."], at_60_change_paise: null, at_end_change_paise: 0, better: false },
+    consequences: {
+      lines: ["No change you would notice."],
+      at_60_change_paise: null,
+      at_end_change_paise: 0,
+      better: false,
+    },
     without_at_end_today_paise: 1,
     with_at_end_today_paise: 1,
     note: "Compared with paying out of savings.",
@@ -72,7 +107,17 @@ describe("EducationSummary", () => {
   test("when every stage has begun there is no top-up to show", () => {
     const d = data({
       nothing_left: true,
-      stages: [{ name: "School", start_age: 5, year: 2020, months_away: -70, today_cost_paise: 3_000_000, future_cost_paise: 3_000_000, started: true }],
+      stages: [
+        {
+          name: "School",
+          start_age: 5,
+          year: 2020,
+          months_away: -70,
+          today_cost_paise: 3_000_000,
+          future_cost_paise: 3_000_000,
+          started: true,
+        },
+      ],
     });
     render(<EducationSummary data={d} />);
     expect(screen.getByText(/nothing left to save for/)).toBeTruthy();

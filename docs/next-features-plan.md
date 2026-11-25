@@ -6,14 +6,14 @@ Written 16 Nov 2026. Goal: features that help the two of us reach the wedding an
 
 I said there was no wedding-specific code. That was too strong. Already in the tree:
 
-| Exists | Where | Gap for our goals |
-|---|---|---|
-| Shared goals with contributions per person, `monthly_needed`, `percent` | `src/planner/couple_goals.rs`, `src/handlers/couple_goals.rs`, `web/src/components/feature/CoupleGoalsCard.tsx` (shown on the Dashboard) | One lump target. No line items, no vendor milestones, no "on track" verdict, no link to real transactions |
-| Bills calendar with yearly sinking funds | `src/planner/bills.rs`, `src/handlers/bills.rs` | Only fixed commitments. One-off or irregular lumpy outflows (insurance, advance tax, wedding advances, FD maturities) are not first-class |
-| "Coming up" timeline (bills, dates, birthdays, follow-ups) | `src/planner/coming.rs` | No goal milestones or tax dates in it |
-| Life line with `Child`, `House`, `BigSpend` choices | `src/planner/lifeline.rs` | No education-cost model, no "top-up needed" answer |
-| Subscriptions and repeat-payment detector | `src/planner/recurring.rs` | Fine as is |
-| Push digests (counts only) | `src/push.rs` | No weekly decision digest |
+| Exists                                                                  | Where                                                                                                                                    | Gap for our goals                                                                                                                         |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared goals with contributions per person, `monthly_needed`, `percent` | `src/planner/couple_goals.rs`, `src/handlers/couple_goals.rs`, `web/src/components/feature/CoupleGoalsCard.tsx` (shown on the Dashboard) | One lump target. No line items, no vendor milestones, no "on track" verdict, no link to real transactions                                 |
+| Bills calendar with yearly sinking funds                                | `src/planner/bills.rs`, `src/handlers/bills.rs`                                                                                          | Only fixed commitments. One-off or irregular lumpy outflows (insurance, advance tax, wedding advances, FD maturities) are not first-class |
+| "Coming up" timeline (bills, dates, birthdays, follow-ups)              | `src/planner/coming.rs`                                                                                                                  | No goal milestones or tax dates in it                                                                                                     |
+| Life line with `Child`, `House`, `BigSpend` choices                     | `src/planner/lifeline.rs`                                                                                                                | No education-cost model, no "top-up needed" answer                                                                                        |
+| Subscriptions and repeat-payment detector                               | `src/planner/recurring.rs`                                                                                                               | Fine as is                                                                                                                                |
+| Push digests (counts only)                                              | `src/push.rs`                                                                                                                            | No weekly decision digest                                                                                                                 |
 
 So the work is closing gaps, not building from scratch. Every item below reuses these modules.
 
@@ -22,11 +22,13 @@ So the work is closing gaps, not building from scratch. Every item below reuses 
 **What it does.** Turn the wedding goal from a single number into a budget: categories (venue, catering, clothes, jewellery, photography, travel, misc), each with an estimate, a quote, what is paid, and dated payment milestones. One verdict line: "On track" or "Short by ₹X by <date>".
 
 **Data (new migration; name it after the newest file, `20261119000022_…` or later, not today's date).**
+
 - `goal_items(item_id, goal_id → couple_goals, name, category, estimate_paise, quote_paise NULL, vendor TEXT, notes, archived)`.
 - `goal_milestones(milestone_id, item_id → goal_items, due_on, amount_paise, paid_on NULL, paid_by NULL, transaction_id NULL)`.
 - All money in paise. Both new tables are user-owned: add to `export::USER_TABLES` parent-before-child, and extend the round-trip test in `tests/auth_integration.rs`.
 
 **Rules (pure, `src/planner/wedding.rs`).**
+
 - `budget_summary(items, milestones, today)`: totals by category, committed vs estimated, paid, remaining.
 - `verdict(goal, saved, upcoming_milestones, monthly_surplus, today)`: for each milestone, can saved plus expected monthly contribution cover it by its date? Returns on-track, tight (within 10%), or short with the gap. Reuse `monthly_needed` and `months_until`.
 - `next_due(milestones, today)` for the timeline.
@@ -37,6 +39,7 @@ So the work is closing gaps, not building from scratch. Every item below reuses 
 **Web.** A Wedding page under the goal (item list grouped by category, milestone list, verdict banner). Reuse `CoupleGoalsCard` as the entry point.
 
 **Integration.**
+
 - Milestones feed `coming.rs` as a new `Kind::Milestone`.
 - Optional: link a paid milestone to a bank-text transaction (same pattern as `20261119000014_date_transaction_link.sql`).
 - Push digest: add "N payments due in 7 days" (count only, never names or amounts).
@@ -48,6 +51,7 @@ So the work is closing gaps, not building from scratch. Every item below reuses 
 **What it does.** A 12-month view of every large known outflow, with each month's safe-to-spend shown after them, so a March premium is visible in January.
 
 **Sources it merges (no new concept, one new input):**
+
 1. Yearly commitments (`bills.rs`, already there).
 2. Wedding milestones (item 1).
 3. Tax dates from `tax.rs` (advance tax instalments, if the user is liable).
@@ -66,6 +70,7 @@ So the work is closing gaps, not building from scratch. Every item below reuses 
 **What it does.** Answers "how much per month for the child's education, and what does that do to everything else?"
 
 **Rules (`src/planner/education.rs`).**
+
 - Inputs: child's birth year (from the existing `Choice::Child`), education start age(s), today's cost estimate in paise, education inflation in basis points (default higher than general inflation, user-editable), expected return in basis points on the matching holdings.
 - Output: future cost at each stage, current corpus earmarked, monthly top-up needed (closed-form SIP formula in integer arithmetic, rounded up; no floats for money).
 - Hook into `lifeline::simulate_with` as an optional earmark so the life line shows the effect of the top-up.
@@ -83,6 +88,7 @@ A single screen (and a push with counts only) listing: unreviewed transactions, 
 ## 5. Merchant categorisation (finish the in-flight work)
 
 The working tree already has `src/merchant_rules.rs`, `src/planner/merchant.rs`, `src/planner/merchant_seed.rs`, migrations `…20` and `…21`, and `docs/ml-plan.md`. Before anything else:
+
 1. Finish and test it, including `tests/sms_fixtures.rs`.
 2. Run `cargo sqlx prepare -- --bin joy` against a scratch database and commit `.sqlx/` (one `.sqlx/query-19ba…json` is currently deleted).
 3. Confirm the new tables are in export or on the `tests/lifecycle.rs` deny list.
@@ -96,14 +102,14 @@ The working tree already has `src/merchant_rules.rs`, `src/planner/merchant.rs`,
 
 ## Order and sizing
 
-| Step | Item | Rough size | Depends on |
-|---|---|---|---|
-| 1 | Item 5: land the merchant work, clean tree | small | none |
-| 2 | Item 6: backup and restore drill | small | none |
-| 3 | Item 1: wedding budget | medium | 1 |
-| 4 | Item 2: annual calendar | medium | 3 (uses milestones), forecast check |
-| 5 | Item 3: education fund | medium | none, but best after 2 |
-| 6 | Item 4: weekly digest | small | 3 and 4 give it content |
+| Step | Item                                       | Rough size | Depends on                          |
+| ---- | ------------------------------------------ | ---------- | ----------------------------------- |
+| 1    | Item 5: land the merchant work, clean tree | small      | none                                |
+| 2    | Item 6: backup and restore drill           | small      | none                                |
+| 3    | Item 1: wedding budget                     | medium     | 1                                   |
+| 4    | Item 2: annual calendar                    | medium     | 3 (uses milestones), forecast check |
+| 5    | Item 3: education fund                     | medium     | none, but best after 2              |
+| 6    | Item 4: weekly digest                      | small      | 3 and 4 give it content             |
 
 Steps 1 and 2 are independent and could run in parallel. 3 to 6 touch overlapping files (`coming.rs`, `export.rs`, migrations) so do them one at a time.
 

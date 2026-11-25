@@ -24,6 +24,7 @@
   storage you control) and keep your own retention there. The token lives in that scheduler's secret
   store and in `fly secrets`, never in the repo. The old S3 backup is gone; `BACKUP_KEY`, `AWS_*` and
   `BUCKET_NAME` are no longer read and can be removed with `fly secrets unset`.
+
 - **By hand.**
 
   ```sh

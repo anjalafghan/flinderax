@@ -4,9 +4,20 @@ import api from "@/services/api";
 export const sessionApi = {
   changePassword: (current_password: string, new_password: string) =>
     api
-      .post<{ access_token: string; expires_at: number; cookie?: boolean }>("/api/common/password", { current_password, new_password })
+      .post<{ access_token: string; expires_at: number; cookie?: boolean }>(
+        "/api/common/password",
+        { current_password, new_password },
+      )
       .then((r) => r.data),
-  logoutEverywhere: () => api.post<{ status: boolean }>("/api/common/logout-everywhere", {}).then((r) => r.data),
+  logoutEverywhere: () =>
+    api
+      .post<{ status: boolean }>("/api/common/logout-everywhere", {})
+      .then((r) => r.data),
   deleteAccount: (password: string) =>
-    api.post<{ status: boolean }>("/api/common/delete-account", { password, confirm: "delete" }).then((r) => r.data),
+    api
+      .post<{ status: boolean }>("/api/common/delete-account", {
+        password,
+        confirm: "delete",
+      })
+      .then((r) => r.data),
 };

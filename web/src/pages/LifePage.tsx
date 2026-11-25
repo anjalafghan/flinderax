@@ -1,10 +1,27 @@
-import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Baby, ChevronDown, GraduationCap, Heart, Shield, Sunset, type LucideIcon } from "lucide-react";
+import {
+  Baby,
+  ChevronDown,
+  GraduationCap,
+  Heart,
+  Shield,
+  Sunset,
+  type LucideIcon,
+} from "lucide-react";
 
 import { ForecastPanel } from "@/components/feature/ForecastPanel";
 import { EducationCard } from "@/components/feature/life/EducationCard";
 import { LifeLine } from "@/components/feature/life/LifeLine";
+import { hue, ink, type Hue } from "@/components/feature/life/hue";
+import { RupeeOdometer } from "@/components/feature/life/flair";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { ResetButton } from "@/components/ui/reset-button";
@@ -23,12 +40,22 @@ import {
 import { forecastKey } from "@/services/forecast";
 import { lifelineKey } from "@/services/lifeline";
 import { formatDay } from "@/utils/dates";
-import { formatINR as formatExact, formatPercent, paiseToInput, toPaise } from "@/utils/money";
+import {
+  formatINR as formatExact,
+  formatPercent,
+  paiseToInput,
+  toPaise,
+} from "@/utils/money";
 
 /** Planning figures in whole rupees: paise are noise on a 20-year horizon. */
 const formatINR = (paise: number) => formatExact(Math.round(paise / 100) * 100);
 import { cn } from "@/utils/cn";
 import { Retry } from "@/components/ui/retry";
+
+// WebGL, so it loads after the page and stays out of its first chunk.
+const HeroParticles = lazy(
+  () => import("@/components/feature/life/HeroParticles"),
+);
 
 // ---------- data ----------
 
@@ -72,13 +99,29 @@ const GOAL_ICON: Record<LifeGoal["key"], LucideIcon> = {
   retirement: Sunset,
 };
 
-const STATUS: Record<LifeGoal["status"], { label: string; tone: "good" | "warn" }> = {
+/** Each goal's colour on the road: wedding rose, child sun, education grape, safety sky, retirement coral. */
+const GOAL_HUE: Record<LifeGoal["key"], Hue> = {
+  emergency: "sky",
+  wedding: "rose",
+  child_birth: "sun",
+  child_education: "grape",
+  retirement: "coral",
+};
+
+const STATUS: Record<
+  LifeGoal["status"],
+  { label: string; tone: "good" | "warn" }
+> = {
   done: { label: "Done", tone: "good" },
   on_track: { label: "On track", tone: "good" },
   needs_more: { label: "Needs more", tone: "warn" },
 };
 
-const MIX_LABEL: Record<LifeGoal["mix"], string> = { debt: "Debt", hybrid: "Hybrid", equity: "Equity" };
+const MIX_LABEL: Record<LifeGoal["mix"], string> = {
+  debt: "Debt",
+  hybrid: "Hybrid",
+  equity: "Equity",
+};
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
@@ -92,7 +135,15 @@ function yearsLabel(n: number): string {
   return n === 1 ? "1 year away" : `${n} years away`;
 }
 
-function Pill({ tone, children, className }: { tone: "good" | "warn" | "over" | "quiet"; children: ReactNode; className?: string }) {
+function Pill({
+  tone,
+  children,
+  className,
+}: {
+  tone: "good" | "warn" | "over" | "quiet";
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
@@ -108,7 +159,13 @@ function Pill({ tone, children, className }: { tone: "good" | "warn" | "over" | 
 
 // ---------- 1. summary ----------
 
-function PlanSummary({ plan, profile }: { plan: LifePlan; profile: LifeProfile }) {
+function PlanSummary({
+  plan,
+  profile,
+}: {
+  plan: LifePlan;
+  profile: LifeProfile;
+}) {
   const m = plan.monthly;
   const myShare = sum(plan.goals.map((g) => g.my_share_paise));
   const partnerShare = sum(plan.goals.map((g) => g.partner_share_paise));
@@ -123,10 +180,13 @@ function PlanSummary({ plan, profile }: { plan: LifePlan; profile: LifeProfile }
     <section
       aria-labelledby="life-plan-title"
       data-fits={m.fits ? "yes" : "no"}
-      className="flex flex-col gap-7 rounded-[28px] border border-border bg-card px-6 pb-8 pt-8 sm:px-12 sm:pb-10 sm:pt-12"
+      className="glass flex flex-col gap-7 rounded-[28px] px-6 pb-8 pt-8 sm:px-12 sm:pb-10 sm:pt-12"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="life-plan-title" className="m-0 text-[15px] font-medium text-muted-foreground">
+        <h2
+          id="life-plan-title"
+          className="m-0 text-[15px] font-semibold text-brand-ink"
+        >
           Your plan
         </h2>
         {pill}
@@ -134,19 +194,55 @@ function PlanSummary({ plan, profile }: { plan: LifePlan; profile: LifeProfile }
 
       <div className="flex flex-col gap-3.5">
         <p className="m-0 font-display text-[48px] font-light leading-[0.95] tracking-[-0.03em] sm:text-[80px]">
-          {formatINR(m.total_step_up_sip_paise)}
-          <span className="ml-2 whitespace-nowrap align-middle text-base font-medium tracking-normal text-muted-foreground">a month</span>
+          <RupeeOdometer
+            paise={m.total_step_up_sip_paise}
+            text={formatINR(m.total_step_up_sip_paise)}
+            className="brand-text"
+          />
+          <span className="ml-2 whitespace-nowrap align-middle text-base font-medium tracking-normal text-muted-foreground">
+            a month
+          </span>
         </p>
         <p className="m-0 text-base text-muted-foreground">
-          To reach every goal below, with SIPs stepping up each year. Your surplus is{" "}
-          <span className="font-medium text-foreground">{formatINR(m.surplus_paise)} a month</span> after expenses.
+          To reach every goal below, with SIPs stepping up each year. Your
+          surplus is{" "}
+          <span className="font-medium text-foreground">
+            {formatINR(m.surplus_paise)} a month
+          </span>{" "}
+          after expenses.
         </p>
+        <SharesBar mine={myShare} partner={partnerShare} />
         <p className="m-0 text-sm text-muted-foreground">
           You {formatINR(myShare)} · Partner {formatINR(partnerShare)} a month
-          {profile.partner_take_home_paise === 0 && " (all on you until a partner income is added)"}
+          {profile.partner_take_home_paise === 0 &&
+            " (all on you until a partner income is added)"}
         </p>
       </div>
     </section>
+  );
+}
+
+/** Who puts in what, as one two-colour bar: you grape, your partner rose. */
+function SharesBar({ mine, partner }: { mine: number; partner: number }) {
+  const total = mine + partner;
+  if (total <= 0) return null;
+  return (
+    <div
+      aria-hidden
+      className="flex h-2.5 w-full max-w-md overflow-hidden rounded-full bg-chip"
+    >
+      <span
+        className="h-full"
+        style={{ width: `${(mine / total) * 100}%`, background: hue("grape") }}
+      />
+      <span
+        className="h-full"
+        style={{
+          width: `${(partner / total) * 100}%`,
+          background: hue("rose"),
+        }}
+      />
+    </div>
   );
 }
 
@@ -155,12 +251,36 @@ function PlanSummary({ plan, profile }: { plan: LifePlan; profile: LifeProfile }
 function GoalRow({ goal }: { goal: LifeGoal }) {
   const Icon = GOAL_ICON[goal.key];
   const st = STATUS[goal.status];
+  const h = GOAL_HUE[goal.key];
+  const funded =
+    goal.future_cost_paise > 0
+      ? Math.min(100, (goal.saved_paise / goal.future_cost_paise) * 100)
+      : 100;
   return (
-    <li className="flex flex-col gap-5 border-t border-border py-7">
+    <li
+      className="relative my-2 flex flex-col gap-5 overflow-hidden rounded-[24px] border px-5 py-6 sm:px-7"
+      style={{
+        borderColor: hue(h, 0.3),
+        background: `linear-gradient(150deg, ${hue(h, 0.13)}, transparent 60%), hsl(var(--card))`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-1.5"
+        style={{ background: hue(h) }}
+      />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3.5">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-chip text-foreground">
-            <Icon className="h-[18px] w-[18px]" strokeWidth={1.6} aria-hidden />
+          <span
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full border"
+            style={{
+              background: `linear-gradient(135deg, ${hue(h, 0.3)}, ${hue(h, 0.12)})`,
+              borderColor: hue(h, 0.5),
+              color: ink(h),
+              boxShadow: `0 6px 16px -8px ${hue(h, 0.7)}`,
+            }}
+          >
+            <Icon className="h-5 w-5" strokeWidth={1.8} aria-hidden />
           </span>
           <div className="min-w-0">
             <h3 className="m-0 text-[17px] font-medium">{goal.label}</h3>
@@ -176,24 +296,44 @@ function GoalRow({ goal }: { goal: LifeGoal }) {
       <div className="grid grid-cols-2 gap-x-5 gap-y-5 sm:grid-cols-3 sm:gap-x-6">
         <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] text-muted-foreground">Cost then</span>
-          <span className="font-display text-xl sm:text-2xl">{formatINR(goal.future_cost_paise)}</span>
-          <span className="text-[13px] text-muted-foreground">{formatINR(goal.today_cost_paise)} today</span>
+          <span className="font-display text-xl sm:text-2xl">
+            {formatINR(goal.future_cost_paise)}
+          </span>
+          <span className="text-[13px] text-muted-foreground">
+            {formatINR(goal.today_cost_paise)} today
+          </span>
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] text-muted-foreground">Saved</span>
-          <span className="font-display text-xl sm:text-2xl">{formatINR(goal.saved_paise)}</span>
+          <span className="font-display text-xl sm:text-2xl">
+            {formatINR(goal.saved_paise)}
+          </span>
           <span className="text-[13px] text-muted-foreground">
-            {goal.gap_paise > 0 ? `${formatINR(goal.gap_paise)} still to go` : "Fully funded"}
+            {goal.gap_paise > 0
+              ? `${formatINR(goal.gap_paise)} still to go`
+              : "Fully funded"}
+          </span>
+          <span
+            aria-hidden
+            className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-chip"
+          >
+            <span
+              className="block h-full rounded-full"
+              style={{ width: `${Math.max(2, funded)}%`, background: hue(h) }}
+            />
           </span>
         </div>
         <div className="col-span-2 flex min-w-0 flex-col gap-1 border-t border-border pt-4 sm:col-span-1 sm:border-t-0 sm:pt-0">
           <span className="text-[13px] text-muted-foreground">A month</span>
-          <span className="font-display text-2xl">{formatINR(goal.step_up_sip_paise)}</span>
+          <span className="font-display text-2xl" style={{ color: ink(h) }}>
+            {formatINR(goal.step_up_sip_paise)}
+          </span>
           <span className="text-[13px] text-muted-foreground">
             First year, stepping up · flat {formatINR(goal.monthly_sip_paise)}
           </span>
           <span className="text-[13px] text-muted-foreground">
-            You {formatINR(goal.my_share_paise)} · Partner {formatINR(goal.partner_share_paise)}
+            You {formatINR(goal.my_share_paise)} · Partner{" "}
+            {formatINR(goal.partner_share_paise)}
           </span>
         </div>
       </div>
@@ -212,15 +352,21 @@ function GoalRow({ goal }: { goal: LifeGoal }) {
 
 function GoalsLedger({ goals }: { goals: LifeGoal[] }) {
   return (
-    <section aria-labelledby="life-goals-title" className="flex w-full flex-col">
+    <section
+      aria-labelledby="life-goals-title"
+      className="flex w-full flex-col"
+    >
       <div className="flex items-baseline justify-between gap-4 pb-1">
-        <h2 id="life-goals-title" className="m-0 font-display text-[32px] leading-none">
+        <h2
+          id="life-goals-title"
+          className="m-0 font-display text-[32px] leading-none brand-text"
+        >
           Goals
         </h2>
         <span className="text-[13px] text-muted-foreground">In date order</span>
       </div>
       {goals.length === 0 ? (
-        <p className="border-t border-border py-7 text-sm text-muted-foreground">No goals yet. Add your details below.</p>
+        <p className="empty-note mt-3">No goals yet. Add your details below.</p>
       ) : (
         <ul className="m-0 list-none p-0">
           {goals.map((g) => (
@@ -234,12 +380,28 @@ function GoalsLedger({ goals }: { goals: LifeGoal[] }) {
 
 // ---------- 4. insurance ----------
 
-function CoverRow({ label, needed, have, gap }: { label: string; needed: number; have: number; gap: number }) {
+function CoverRow({
+  label,
+  needed,
+  have,
+  gap,
+}: {
+  label: string;
+  needed: number;
+  have: number;
+  gap: number;
+}) {
+  const h: Hue = gap > 0 ? "sun" : "mint";
+  const covered = needed > 0 ? Math.min(100, (have / needed) * 100) : 100;
   return (
     <li className="flex flex-col gap-4 border-t border-border py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="m-0 text-[17px] font-medium">{label}</h3>
-        {gap > 0 ? <Pill tone="warn">{formatINR(gap)} short</Pill> : <Pill tone="good">Covered</Pill>}
+        {gap > 0 ? (
+          <Pill tone="warn">{formatINR(gap)} short</Pill>
+        ) : (
+          <Pill tone="good">Covered</Pill>
+        )}
       </div>
       <div className="grid gap-x-6 gap-y-5 sm:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-1">
@@ -255,18 +417,38 @@ function CoverRow({ label, needed, have, gap }: { label: string; needed: number;
           <span className="font-display text-2xl">{formatINR(gap)}</span>
         </div>
       </div>
+      <span
+        aria-hidden
+        className="h-2 w-full overflow-hidden rounded-full bg-chip"
+      >
+        <span
+          className="block h-full rounded-full"
+          style={{
+            width: `${Math.max(2, covered)}%`,
+            background: `linear-gradient(90deg, ${hue(h, 0.7)}, ${hue(h)})`,
+          }}
+        />
+      </span>
     </li>
   );
 }
 
 function Insurance({ insurance }: { insurance: LifePlan["insurance"] }) {
   return (
-    <section aria-labelledby="life-insurance-title" className="flex w-full flex-col">
+    <section
+      aria-labelledby="life-insurance-title"
+      className="flex w-full flex-col"
+    >
       <div className="flex items-baseline justify-between gap-4 pb-1">
-        <h2 id="life-insurance-title" className="m-0 font-display text-[32px] leading-none">
+        <h2
+          id="life-insurance-title"
+          className="m-0 font-display text-[32px] leading-none brand-text"
+        >
           Insurance
         </h2>
-        <span className="text-[13px] text-muted-foreground">Term and health</span>
+        <span className="text-[13px] text-muted-foreground">
+          Term and health
+        </span>
       </div>
       <ul className="m-0 list-none p-0">
         <CoverRow
@@ -297,23 +479,37 @@ function Insurance({ insurance }: { insurance: LifePlan["insurance"] }) {
 
 function Assumptions({ a }: { a: LifePlan["assumptions"] }) {
   return (
-    <section aria-labelledby="life-assumptions-title" className="flex w-full flex-col gap-3">
-      <h2 id="life-assumptions-title" className="m-0 font-display text-[32px] leading-none">
+    <section
+      aria-labelledby="life-assumptions-title"
+      className="flex w-full flex-col gap-3"
+    >
+      <h2
+        id="life-assumptions-title"
+        className="m-0 font-display text-[32px] leading-none brand-text"
+      >
         Assumptions
       </h2>
       <ul className="m-0 list-none space-y-1.5 p-0 text-[13px] text-muted-foreground">
         <li>
-          Inflation a year: general {formatPercent(a.general_inflation_bps)}, education {formatPercent(a.education_inflation_bps)},
-          medical {formatPercent(a.medical_inflation_bps)}, wedding {formatPercent(a.wedding_inflation_bps)}.
+          Inflation a year: general {formatPercent(a.general_inflation_bps)},
+          education {formatPercent(a.education_inflation_bps)}, medical{" "}
+          {formatPercent(a.medical_inflation_bps)}, wedding{" "}
+          {formatPercent(a.wedding_inflation_bps)}.
         </li>
         <li>
-          Returns a year before tax: equity {formatPercent(a.equity_return_bps)}, hybrid {formatPercent(a.hybrid_return_bps)}, debt{" "}
-          {formatPercent(a.debt_return_bps)}. SIPs step up {formatPercent(a.step_up_bps)} a year.
+          Returns a year before tax: equity {formatPercent(a.equity_return_bps)}
+          , hybrid {formatPercent(a.hybrid_return_bps)}, debt{" "}
+          {formatPercent(a.debt_return_bps)}. SIPs step up{" "}
+          {formatPercent(a.step_up_bps)} a year.
         </li>
-        <li>Retirement corpus is sized to withdraw {formatPercent(a.swr_bps)} a year.</li>
+        <li>
+          Retirement corpus is sized to withdraw {formatPercent(a.swr_bps)} a
+          year.
+        </li>
       </ul>
       <p className="m-0 text-[13px] text-muted-foreground">
-        These are planning defaults, not advice. Check them against your own numbers before acting on them.
+        These are planning defaults, not advice. Check them against your own
+        numbers before acting on them.
       </p>
     </section>
   );
@@ -358,7 +554,8 @@ function toDraft(p: LifeProfile): Draft {
     wedding_date: p.wedding_date ?? "",
     wedding_budget: money(p.wedding_budget_paise),
     wedding_saved: money(p.wedding_saved_paise),
-    child_birth_year: p.child_birth_year === null ? "" : String(p.child_birth_year),
+    child_birth_year:
+      p.child_birth_year === null ? "" : String(p.child_birth_year),
     child_education_today: money(p.child_education_today_paise),
     child_saved: money(p.child_saved_paise),
     retirement_age: String(p.retirement_age),
@@ -370,7 +567,8 @@ function toDraft(p: LifeProfile): Draft {
     raise: String((p.raise_bps ?? 800) / 100),
     partner_raise: String((p.partner_raise_bps ?? 800) / 100),
     live_to_age: String(p.live_to_age ?? 90),
-    equity_return: p.equity_return_bps == null ? "" : String(p.equity_return_bps / 100),
+    equity_return:
+      p.equity_return_bps == null ? "" : String(p.equity_return_bps / 100),
     inflation: p.inflation_bps == null ? "" : String(p.inflation_bps / 100),
   };
 }
@@ -383,51 +581,77 @@ function rupees(label: string, text: string, optional = false): number | null {
     return 0;
   }
   const p = toPaise(t);
-  if (p === null || p < 0) throw new Error(`${label}: enter a plain rupee amount, like 25000 or 25,000.50.`);
+  if (p === null || p < 0)
+    throw new Error(
+      `${label}: enter a plain rupee amount, like 25000 or 25,000.50.`,
+    );
   return p;
 }
 
 function whole(label: string, text: string, min: number, max: number): number {
   const n = Number(text.trim());
-  if (!Number.isInteger(n) || n < min || n > max) throw new Error(`${label} must be a whole number from ${min} to ${max}.`);
+  if (!Number.isInteger(n) || n < min || n > max)
+    throw new Error(`${label} must be a whole number from ${min} to ${max}.`);
   return n;
 }
 
 /** A percentage as basis points, or null when left blank (the default is used). */
-function optionalPercent(label: string, text: string, max: number): number | null {
+function optionalPercent(
+  label: string,
+  text: string,
+  max: number,
+): number | null {
   if (text.trim() === "") return null;
   const n = Number(text.trim());
-  if (!Number.isFinite(n) || n < 0 || n > max) throw new Error(`${label} must be between 0 and ${max}.`);
+  if (!Number.isFinite(n) || n < 0 || n > max)
+    throw new Error(`${label} must be between 0 and ${max}.`);
   return Math.round(n * 100);
 }
 
 /** A percentage from 0 to 30, as basis points. */
 function percent(label: string, text: string): number {
   const n = Number(text.trim());
-  if (text.trim() === "" || !Number.isFinite(n) || n < 0 || n > 30) throw new Error(`${label} must be between 0 and 30.`);
+  if (text.trim() === "" || !Number.isFinite(n) || n < 0 || n > 30)
+    throw new Error(`${label} must be between 0 and 30.`);
   return Math.round(n * 100);
 }
 
 function buildProfile(d: Draft): LifeProfile {
   const myAge = whole("Your age", d.my_age, 18, 80);
   const retirementAge = whole("Retirement age", d.retirement_age, 40, 75);
-  if (retirementAge <= myAge) throw new Error("Retirement age must be after your age.");
-  const partnerAge = d.partner_age.trim() === "" ? null : whole("Partner's age", d.partner_age, 18, 80);
-  const childYear = d.child_birth_year.trim() === "" ? null : whole("Child's birth year", d.child_birth_year, 1950, 2200);
+  if (retirementAge <= myAge)
+    throw new Error("Retirement age must be after your age.");
+  const partnerAge =
+    d.partner_age.trim() === ""
+      ? null
+      : whole("Partner's age", d.partner_age, 18, 80);
+  const childYear =
+    d.child_birth_year.trim() === ""
+      ? null
+      : whole("Child's birth year", d.child_birth_year, 1950, 2200);
   return {
     my_age: myAge,
     partner_age: partnerAge,
     my_take_home_paise: rupees("Your take-home", d.my_take_home) ?? 0,
-    partner_take_home_paise: rupees("Partner's take-home", d.partner_take_home) ?? 0,
-    monthly_expenses_paise: rupees("Monthly expenses", d.monthly_expenses, true),
+    partner_take_home_paise:
+      rupees("Partner's take-home", d.partner_take_home) ?? 0,
+    monthly_expenses_paise: rupees(
+      "Monthly expenses",
+      d.monthly_expenses,
+      true,
+    ),
     wedding_date: d.wedding_date || null,
-    wedding_budget_paise: d.wedding_date ? rupees("Wedding budget", d.wedding_budget, true) : null,
+    wedding_budget_paise: d.wedding_date
+      ? rupees("Wedding budget", d.wedding_budget, true)
+      : null,
     wedding_saved_paise: rupees("Saved for the wedding", d.wedding_saved) ?? 0,
     child_birth_year: childYear,
-    child_education_today_paise: rupees("Education cost today", d.child_education_today) ?? 0,
+    child_education_today_paise:
+      rupees("Education cost today", d.child_education_today) ?? 0,
     child_saved_paise: rupees("Saved for education", d.child_saved) ?? 0,
     retirement_age: retirementAge,
-    retirement_saved_paise: rupees("Saved for retirement", d.retirement_saved) ?? 0,
+    retirement_saved_paise:
+      rupees("Saved for retirement", d.retirement_saved) ?? 0,
     emergency_saved_paise: rupees("Emergency savings", d.emergency_saved) ?? 0,
     term_cover_paise: rupees("Term life cover", d.term_cover) ?? 0,
     health_cover_paise: rupees("Health cover", d.health_cover) ?? 0,
@@ -457,7 +681,11 @@ function Field({
     <div className={cn("field", className)}>
       <Label htmlFor={id}>{label}</Label>
       {children}
-      {hint && <p className="m-0 text-[13px] leading-snug text-muted-foreground">{hint}</p>}
+      {hint && (
+        <p className="m-0 text-[13px] leading-snug text-muted-foreground">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
@@ -466,13 +694,21 @@ function Field({
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <fieldset className="m-0 min-w-0 border-0 p-0">
-      <legend className="mb-4 p-0 text-sm font-medium text-foreground">{title}</legend>
+      <legend className="mb-4 p-0 text-sm font-medium text-foreground">
+        {title}
+      </legend>
       <div className="form-grid">{children}</div>
     </fieldset>
   );
 }
 
-function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean }) {
+function ProfileForm({
+  profile,
+  saved,
+}: {
+  profile: LifeProfile;
+  saved: boolean;
+}) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(profile));
   const [error, setError] = useState<string | null>(null);
   const save = useSaveLife();
@@ -489,43 +725,93 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
     try {
       next = buildProfile(draft);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Check the details and try again.");
+      setError(
+        err instanceof Error ? err.message : "Check the details and try again.",
+      );
       return;
     }
     setError(null);
     save.mutate(next, {
-      onError: (err) => setError(err instanceof Error ? err.message : "Couldn't save. Try again."),
+      onError: (err) =>
+        setError(
+          err instanceof Error ? err.message : "Couldn't save. Try again.",
+        ),
     });
   };
 
-  const moneyField = (k: keyof Draft, id: string, label: string, hint?: string, className?: string) => (
+  const moneyField = (
+    k: keyof Draft,
+    id: string,
+    label: string,
+    hint?: string,
+    className?: string,
+  ) => (
     <Field id={id} label={label} hint={hint} className={className}>
       <MoneyInput id={id} value={draft[k]} onChange={set(k)} />
     </Field>
   );
 
   return (
-    <details open={!saved} className="group rounded-[28px] border border-border bg-card">
+    <details
+      open={!saved}
+      className="glass group rounded-[28px]"
+    >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-6 md:px-8">
         <span className="flex flex-col gap-1.5">
-          <span className="font-display text-[32px] leading-none">Your details</span>
+          <span className="font-display text-[32px] leading-none">
+            Your details
+          </span>
           <span className="text-[13px] text-muted-foreground">
-            {saved ? "Saved. Change anything here and the plan updates." : "Fill these in to see your plan."}
+            {saved
+              ? "Saved. Change anything here and the plan updates."
+              : "Fill these in to see your plan."}
           </span>
         </span>
-        <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+        <ChevronDown
+          className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+          aria-hidden
+        />
       </summary>
 
-      <form onSubmit={submit} noValidate className="grid gap-8 px-6 pb-8 md:px-8">
+      <form
+        onSubmit={submit}
+        noValidate
+        className="grid gap-8 px-6 pb-8 md:px-8"
+      >
         <Group title="You two">
           <Field id="my_age" label="Your age">
-            <Input id="my_age" type="number" inputMode="numeric" min={18} max={80} value={draft.my_age} onChange={set("my_age")} />
+            <Input
+              id="my_age"
+              type="number"
+              inputMode="numeric"
+              min={18}
+              max={80}
+              value={draft.my_age}
+              onChange={set("my_age")}
+            />
           </Field>
           <Field id="partner_age" label="Partner's age" hint="Optional.">
-            <Input id="partner_age" type="number" inputMode="numeric" min={18} max={80} value={draft.partner_age} onChange={set("partner_age")} />
+            <Input
+              id="partner_age"
+              type="number"
+              inputMode="numeric"
+              min={18}
+              max={80}
+              value={draft.partner_age}
+              onChange={set("partner_age")}
+            />
           </Field>
-          {moneyField("my_take_home", "my_take_home", "Your take-home a month (₹)")}
-          {moneyField("partner_take_home", "partner_take_home", "Partner's take-home a month (₹)", "Leave blank if there is no partner income.")}
+          {moneyField(
+            "my_take_home",
+            "my_take_home",
+            "Your take-home a month (₹)",
+          )}
+          {moneyField(
+            "partner_take_home",
+            "partner_take_home",
+            "Partner's take-home a month (₹)",
+            "Leave blank if there is no partner income.",
+          )}
           {moneyField(
             "monthly_expenses",
             "monthly_expenses",
@@ -536,51 +822,158 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
         </Group>
 
         <Group title="Wedding">
-          <Field id="wedding_date" label="Wedding date" hint="Leave blank if there is no wedding goal.">
-            <Input id="wedding_date" type="date" value={draft.wedding_date} onChange={set("wedding_date")} />
+          <Field
+            id="wedding_date"
+            label="Wedding date"
+            hint="Leave blank if there is no wedding goal."
+          >
+            <Input
+              id="wedding_date"
+              type="date"
+              value={draft.wedding_date}
+              onChange={set("wedding_date")}
+            />
           </Field>
-          {moneyField("wedding_budget", "wedding_budget", "Wedding budget, in today's rupees (₹)", "Blank uses ₹25,00,000.")}
-          {moneyField("wedding_saved", "wedding_saved", "Already saved for the wedding (₹)")}
+          {moneyField(
+            "wedding_budget",
+            "wedding_budget",
+            "Wedding budget, in today's rupees (₹)",
+            "Blank uses ₹25,00,000.",
+          )}
+          {moneyField(
+            "wedding_saved",
+            "wedding_saved",
+            "Already saved for the wedding (₹)",
+          )}
         </Group>
 
         <Group title="Child">
-          <Field id="child_birth_year" label="Child's birth year" hint="Leave blank if there is no child goal.">
-            <Input id="child_birth_year" type="number" inputMode="numeric" min={1950} max={2200} value={draft.child_birth_year} onChange={set("child_birth_year")} />
+          <Field
+            id="child_birth_year"
+            label="Child's birth year"
+            hint="Leave blank if there is no child goal."
+          >
+            <Input
+              id="child_birth_year"
+              type="number"
+              inputMode="numeric"
+              min={1950}
+              max={2200}
+              value={draft.child_birth_year}
+              onChange={set("child_birth_year")}
+            />
           </Field>
-          {moneyField("child_education_today", "child_education_today", "Education cost, UG + PG, today (₹)")}
-          {moneyField("child_saved", "child_saved", "Already saved for education (₹)")}
+          {moneyField(
+            "child_education_today",
+            "child_education_today",
+            "Education cost, UG + PG, today (₹)",
+          )}
+          {moneyField(
+            "child_saved",
+            "child_saved",
+            "Already saved for education (₹)",
+          )}
         </Group>
 
         <Group title="Retirement">
           <Field id="retirement_age" label="Retirement age">
-            <Input id="retirement_age" type="number" inputMode="numeric" min={40} max={75} value={draft.retirement_age} onChange={set("retirement_age")} />
+            <Input
+              id="retirement_age"
+              type="number"
+              inputMode="numeric"
+              min={40}
+              max={75}
+              value={draft.retirement_age}
+              onChange={set("retirement_age")}
+            />
           </Field>
-          {moneyField("retirement_saved", "retirement_saved", "Already saved for retirement (₹)", "EPF, PPF, NPS and earmarked mutual funds.")}
+          {moneyField(
+            "retirement_saved",
+            "retirement_saved",
+            "Already saved for retirement (₹)",
+            "EPF, PPF, NPS and earmarked mutual funds.",
+          )}
         </Group>
 
         <Group title="The long run">
-          <Field id="raise" label="Your yearly raise (%)" hint="Inflation is taken as 6%, so 8 is a real raise of 2.">
-            <Input id="raise" inputMode="decimal" value={draft.raise} onChange={set("raise")} />
+          <Field
+            id="raise"
+            label="Your yearly raise (%)"
+            hint="Inflation is taken as 6%, so 8 is a real raise of 2."
+          >
+            <Input
+              id="raise"
+              inputMode="decimal"
+              value={draft.raise}
+              onChange={set("raise")}
+            />
           </Field>
           <Field id="partner_raise" label="Partner's yearly raise (%)">
-            <Input id="partner_raise" inputMode="decimal" value={draft.partner_raise} onChange={set("partner_raise")} />
+            <Input
+              id="partner_raise"
+              inputMode="decimal"
+              value={draft.partner_raise}
+              onChange={set("partner_raise")}
+            />
           </Field>
-          <Field id="equity_return" label="Expected yearly return on investments (%)" hint="Blank uses 11.5. The life line also shows what 2 points lower and higher would do.">
-            <Input id="equity_return" inputMode="decimal" value={draft.equity_return} onChange={set("equity_return")} />
+          <Field
+            id="equity_return"
+            label="Expected yearly return on investments (%)"
+            hint="Blank uses 11.5. The life line also shows what 2 points lower and higher would do."
+          >
+            <Input
+              id="equity_return"
+              inputMode="decimal"
+              value={draft.equity_return}
+              onChange={set("equity_return")}
+            />
           </Field>
-          <Field id="inflation" label="Yearly inflation (%)" hint="Blank uses 6.">
-            <Input id="inflation" inputMode="decimal" value={draft.inflation} onChange={set("inflation")} />
+          <Field
+            id="inflation"
+            label="Yearly inflation (%)"
+            hint="Blank uses 6."
+          >
+            <Input
+              id="inflation"
+              inputMode="decimal"
+              value={draft.inflation}
+              onChange={set("inflation")}
+            />
           </Field>
-          <Field id="live_to_age" label="Plan to age" hint="The life line runs to this age.">
-            <Input id="live_to_age" type="number" inputMode="numeric" min={60} max={110} value={draft.live_to_age} onChange={set("live_to_age")} />
+          <Field
+            id="live_to_age"
+            label="Plan to age"
+            hint="The life line runs to this age."
+          >
+            <Input
+              id="live_to_age"
+              type="number"
+              inputMode="numeric"
+              min={60}
+              max={110}
+              value={draft.live_to_age}
+              onChange={set("live_to_age")}
+            />
           </Field>
         </Group>
 
         <Group title="Safety net">
-          {moneyField("emergency_saved", "emergency_saved", "Emergency savings (₹)")}
+          {moneyField(
+            "emergency_saved",
+            "emergency_saved",
+            "Emergency savings (₹)",
+          )}
           {moneyField("loans", "loans", "Outstanding loans (₹)")}
-          {moneyField("term_cover", "term_cover", "Existing term life cover, both (₹)")}
-          {moneyField("health_cover", "health_cover", "Existing family health cover (₹)")}
+          {moneyField(
+            "term_cover",
+            "term_cover",
+            "Existing term life cover, both (₹)",
+          )}
+          {moneyField(
+            "health_cover",
+            "health_cover",
+            "Existing family health cover (₹)",
+          )}
         </Group>
 
         {error && (
@@ -600,7 +993,14 @@ function ProfileForm({ profile, saved }: { profile: LifeProfile; saved: boolean 
             label="Reset to defaults"
             disabled={reset.isPending}
             confirm="Forget your saved details and go back to the placeholder numbers?"
-            onReset={() => reset.mutate(undefined, { onSuccess: (out) => { setDraft(toDraft(out.profile)); setError(null); } })}
+            onReset={() =>
+              reset.mutate(undefined, {
+                onSuccess: (out) => {
+                  setDraft(toDraft(out.profile));
+                  setError(null);
+                },
+              })
+            }
           />
           <Button type="submit" disabled={save.isPending}>
             {save.isPending ? "Saving..." : "Save details"}
@@ -620,15 +1020,35 @@ export default function LifePage() {
     <div className="min-h-screen text-foreground">
       <Header />
       <main className="page page-narrow stack">
-        <div>
+        <div className="relative isolate py-2">
+          <Suspense fallback={null}>
+            <HeroParticles count={70} />
+          </Suspense>
           <h1 className="page-title">Life line</h1>
-          <p className="page-sub">Your money from now to 90, and what each choice does to it.</p>
+          <p className="page-sub">
+            Your money from now to 90, and what each choice does to it.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2" aria-hidden>
+            <span className="pill pill-rose">Wedding</span>
+            <span className="pill pill-sun">A child</span>
+            <span className="pill pill-mint">Home</span>
+            <span className="pill pill-sky">Work</span>
+            <span className="pill pill-grape">Later life</span>
+          </div>
         </div>
 
-        {isLoading && <div className="h-64 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading your life plan" />}
+        {isLoading && (
+          <div
+            className="h-64 animate-pulse rounded-[28px] bg-muted/40"
+            aria-label="Loading your life plan"
+          />
+        )}
 
         {isError && !data && (
-          <Retry message="Couldn't load your life plan." onRetry={() => void refetch()} />
+          <Retry
+            message="Couldn't load your life plan."
+            onRetry={() => void refetch()}
+          />
         )}
 
         <LifeLine />
@@ -639,8 +1059,13 @@ export default function LifePage() {
           <>
             <ProfileForm profile={data.profile} saved={data.saved} />
             <div className="pt-4">
-              <h2 className="m-0 font-display text-[32px] leading-none">The goals inside it</h2>
-              <p className="page-sub">What each goal needs a month, and whether your surplus covers it.</p>
+              <h2 className="m-0 font-display text-[32px] leading-none brand-text">
+                The goals inside it
+              </h2>
+              <p className="page-sub">
+                What each goal needs a month, and whether your surplus covers
+                it.
+              </p>
             </div>
             <ForecastPanel />
             <PlanSummary plan={data.plan} profile={data.profile} />

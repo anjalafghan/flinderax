@@ -48,14 +48,44 @@ export default function DatesApp() {
         </a>
         <Gate>
           <main id="main" tabIndex={-1}>
-            <Suspense fallback={<p className="loading" role="status">Loading…</p>}>
+            <Suspense
+              fallback={
+                <p className="loading" role="status">
+                  Loading…
+                </p>
+              }
+            >
               <Routes>
                 <Route index element={<JarIndex />} />
-                <Route path="slips" element={<div className="p-slips"><SlipsPage /></div>} />
-                <Route path="slips/new" element={<div className="p-slips"><SlipFormPage /></div>} />
-                <Route path="slips/:id" element={<div className="p-slips"><SlipFormPage /></div>} />
+                <Route
+                  path="slips"
+                  element={
+                    <div className="p-slips">
+                      <SlipsPage />
+                    </div>
+                  }
+                />
+                <Route
+                  path="slips/new"
+                  element={
+                    <div className="p-slips">
+                      <SlipFormPage />
+                    </div>
+                  }
+                />
+                <Route
+                  path="slips/:id"
+                  element={
+                    <div className="p-slips">
+                      <SlipFormPage />
+                    </div>
+                  }
+                />
                 <Route path="middle" element={<MiddlePage />} />
-                <Route path="settings" element={<Navigate to="/account" replace />} />
+                <Route
+                  path="settings"
+                  element={<Navigate to="/account" replace />}
+                />
                 <Route path="kept" element={<KeptPage />} />
                 <Route path="museum" element={<MuseumPage />} />
                 <Route path="regulars" element={<RegularsPage />} />

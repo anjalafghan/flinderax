@@ -197,9 +197,17 @@ export const jarApi = {
     return post<PickCard>(`${BASE}/accept/${id}`, body);
   },
   /** Swap to (or back from) Plan B. Answers with the refreshed plan. */
-  planB: (historyId: number) => post<DayPlan | null>(`${BASE}/history/${historyId}/plan-b`, {}),
+  planB: (historyId: number) =>
+    post<DayPlan | null>(`${BASE}/history/${historyId}/plan-b`, {}),
   /** Tick (or untick) one of my own jobs. 403 if it was dealt to my partner. Answers with the refreshed plan. */
-  taskDone: (taskId: number, done: boolean) => post<DayPlan | null>(`${BASE}/tasks/${taskId}/done`, { done: done ? "1" : "0" }),
+  taskDone: (taskId: number, done: boolean) =>
+    post<DayPlan | null>(`${BASE}/tasks/${taskId}/done`, {
+      done: done ? "1" : "0",
+    }),
   /** Put a day on a date that is already kept (`ids` is the comma-separated history ids). */
-  when: (ids: string, at: string) => post<{ label: string; ics_url: string; partner: string }>(`${BASE}/history/when`, { ids, at }),
+  when: (ids: string, at: string) =>
+    post<{ label: string; ics_url: string; partner: string }>(
+      `${BASE}/history/when`,
+      { ids, at },
+    ),
 };

@@ -1,6 +1,7 @@
 import { RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/utils/cn";
 
 interface Props {
   onReset: () => void;
@@ -13,20 +14,29 @@ interface Props {
 }
 
 /** One look for every Reset / Clear / Revert button, so they are easy to find and read the same everywhere. */
-export function ResetButton({ onReset, label = "Reset", disabled, confirm, className }: Props) {
+export function ResetButton({
+  onReset,
+  label = "Reset",
+  disabled,
+  confirm,
+  className,
+}: Props) {
   return (
     <Button
       type="button"
       variant="ghost"
       size="sm"
-      className={className}
+      className={cn("group text-brand-ink hover:bg-brand-tint", className)}
       disabled={disabled}
       onClick={() => {
         if (confirm && !window.confirm(confirm)) return;
         onReset();
       }}
     >
-      <RotateCcw className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+      <RotateCcw
+        className="mr-1.5 h-3.5 w-3.5 transition-transform duration-300 group-hover:-rotate-180"
+        aria-hidden
+      />
       {label}
     </Button>
   );

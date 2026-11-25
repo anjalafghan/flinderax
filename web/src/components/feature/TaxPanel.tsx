@@ -38,7 +38,15 @@ import {
 
 // ---------- regime ----------
 
-function RegimeBox({ name, tax, better }: { name: string; tax: number; better: boolean }) {
+function RegimeBox({
+  name,
+  tax,
+  better,
+}: {
+  name: string;
+  tax: number;
+  better: boolean;
+}) {
   return (
     <div
       className={cn(
@@ -48,7 +56,9 @@ function RegimeBox({ name, tax, better }: { name: string; tax: number; better: b
     >
       <p className="text-xs text-muted-foreground">
         {name}
-        {better && <span className="ml-1 font-semibold text-good">· better</span>}
+        {better && (
+          <span className="ml-1 font-semibold text-good">· better</span>
+        )}
       </p>
       <p className="text-lg font-bold tabular-nums">{formatINR(tax)}</p>
       <p className="text-xs text-muted-foreground">tax</p>
@@ -60,7 +70,10 @@ function RegimeBox({ name, tax, better }: { name: string; tax: number; better: b
 const wholeUp = (paise: number) => formatINR(Math.ceil(paise / 100) * 100);
 
 function breakEvenCopy(regime: TaxRegime): string {
-  const { break_even_deductions_paise: breakEven, deductions_needed_paise: needed } = regime;
+  const {
+    break_even_deductions_paise: breakEven,
+    deductions_needed_paise: needed,
+  } = regime;
   if (breakEven == null || needed == null) {
     return "New regime wins at any deduction level for this salary.";
   }
@@ -74,13 +87,25 @@ function RegimeCard({ regime }: { regime: TaxRegime }) {
   return (
     <Card>
       <CardContent className="space-y-4 p-5 md:p-6">
-        <p className="text-xl font-bold leading-snug sm:text-2xl">{regimeHeadline(regime)}</p>
+        <p className="text-xl font-bold leading-snug sm:text-2xl">
+          {regimeHeadline(regime)}
+        </p>
         <div className="flex gap-3">
-          <RegimeBox name="Old regime" tax={regime.old_tax_paise} better={regime.better === "old"} />
-          <RegimeBox name="New regime" tax={regime.new_tax_paise} better={regime.better === "new"} />
+          <RegimeBox
+            name="Old regime"
+            tax={regime.old_tax_paise}
+            better={regime.better === "old"}
+          />
+          <RegimeBox
+            name="New regime"
+            tax={regime.new_tax_paise}
+            better={regime.better === "new"}
+          />
         </div>
         <p className="text-sm leading-snug">{breakEvenCopy(regime)}</p>
-        <p className="text-xs leading-snug text-muted-foreground">{regime.note}</p>
+        <p className="text-xs leading-snug text-muted-foreground">
+          {regime.note}
+        </p>
       </CardContent>
     </Card>
   );
@@ -89,18 +114,31 @@ function RegimeCard({ regime }: { regime: TaxRegime }) {
 // ---------- long-term equity gains ----------
 
 function LtcgCard({ ltcg }: { ltcg: TaxLtcg }) {
-  const usedPct = ltcg.exemption_paise > 0 ? Math.min(100, (ltcg.used_paise / ltcg.exemption_paise) * 100) : 0;
+  const usedPct =
+    ltcg.exemption_paise > 0
+      ? Math.min(100, (ltcg.used_paise / ltcg.exemption_paise) * 100)
+      : 0;
   return (
     <Card>
       <CardContent className="space-y-3 p-5 md:p-6 text-sm">
         <div className="flex items-baseline justify-between gap-4">
           <p className="font-semibold">Tax-free equity gains</p>
-          <p className="shrink-0 font-semibold tabular-nums">{formatINR(ltcg.left_paise)} left</p>
+          <p className="shrink-0 font-semibold tabular-nums">
+            {formatINR(ltcg.left_paise)} left
+          </p>
         </div>
-        <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
-          <div className="h-full bg-primary" style={{ width: `${usedPct}%` }} />
+        <div
+          className="flex h-2 w-full overflow-hidden rounded-full bg-muted"
+          aria-hidden
+        >
+          <div
+            className="h-full bg-gradient-to-r from-sky to-grape"
+            style={{ width: `${usedPct}%` }}
+          />
         </div>
-        <p className="text-xs leading-snug text-muted-foreground">{ltcg.note}</p>
+        <p className="text-xs leading-snug text-muted-foreground">
+          {ltcg.note}
+        </p>
       </CardContent>
     </Card>
   );
@@ -109,31 +147,54 @@ function LtcgCard({ ltcg }: { ltcg: TaxLtcg }) {
 // ---------- sections ----------
 
 function SectionRow({ row }: { row: TaxSectionRow }) {
-  const bar = stackedWidths(row.claimed_paise, row.projected_paise, row.limit_paise);
+  const bar = stackedWidths(
+    row.claimed_paise,
+    row.projected_paise,
+    row.limit_paise,
+  );
   return (
     <li className="space-y-2 border-t border-border py-4 text-sm first:border-t-0 first:pt-1">
       <div className="flex items-baseline justify-between gap-4">
-        <span className="min-w-0 truncate font-medium">{sectionLabel(row.section)}</span>
+        <span className="min-w-0 truncate font-medium">
+          {sectionLabel(row.section)}
+        </span>
         <span className="shrink-0 tabular-nums">
           <span className="font-semibold">{formatINR(row.claimed_paise)}</span>
           {row.limit_paise !== null && (
-            <span className="text-muted-foreground"> of {formatINR(row.limit_paise)}</span>
+            <span className="text-muted-foreground">
+              {" "}
+              of {formatINR(row.limit_paise)}
+            </span>
           )}
         </span>
       </div>
       {row.limit_paise !== null && (
         <>
-          <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
-            <div className="h-full bg-primary" style={{ width: `${bar.claimed}%` }} />
-            <div className="h-full bg-primary/30" style={{ width: `${bar.projected}%` }} />
+          <div
+            className="flex h-2 w-full overflow-hidden rounded-full bg-muted"
+            aria-hidden
+          >
+            <div
+              className="h-full bg-gradient-to-r from-mint to-teal"
+              style={{ width: `${bar.claimed}%` }}
+            />
+            <div
+              className="h-full bg-[repeating-linear-gradient(135deg,hsl(var(--c-sky)/0.5)_0_4px,hsl(var(--c-sky)/0.25)_4px_8px)]"
+              style={{ width: `${bar.projected}%` }}
+            />
           </div>
           <p className="text-xs leading-snug text-muted-foreground">
-            {row.left_paise !== null && row.left_paise > 0 ? `${formatINR(row.left_paise)} left` : "Limit used up"}
-            {row.projected_paise > 0 && ` · ${formatINR(row.projected_paise)} more to come`}
+            {row.left_paise !== null && row.left_paise > 0
+              ? `${formatINR(row.left_paise)} left`
+              : "Limit used up"}
+            {row.projected_paise > 0 &&
+              ` · ${formatINR(row.projected_paise)} more to come`}
           </p>
         </>
       )}
-      {row.note && <p className="text-xs leading-snug text-muted-foreground">{row.note}</p>}
+      {row.note && (
+        <p className="text-xs leading-snug text-muted-foreground">{row.note}</p>
+      )}
     </li>
   );
 }
@@ -147,7 +208,9 @@ function CommitmentRow({ c }: { c: TaxCommitment }) {
     <li className="flex flex-col gap-3 border-t border-border py-4 text-sm first:border-t-0 first:pt-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <p className="truncate font-medium">{c.label}</p>
-        <p className="text-xs text-muted-foreground tabular-nums">{formatINR(total)} this year</p>
+        <p className="text-xs text-muted-foreground tabular-nums">
+          {formatINR(total)} this year
+        </p>
       </div>
       <Select
         aria-label={`Tax section for ${c.label}`}
@@ -157,7 +220,8 @@ function CommitmentRow({ c }: { c: TaxCommitment }) {
         onChange={(e) =>
           setSection.mutate({
             commitment_id: c.commitment_id,
-            tax_section: e.target.value === "" ? null : (e.target.value as TaxSectionId),
+            tax_section:
+              e.target.value === "" ? null : (e.target.value as TaxSectionId),
           })
         }
       >
@@ -201,7 +265,11 @@ function AddDeductionForm() {
     <form onSubmit={submit} className="form-grid" noValidate>
       <div className="field">
         <Label htmlFor="tax-section">Section</Label>
-        <Select id="tax-section" value={section} onChange={(e) => setSection(e.target.value as TaxSectionId)}>
+        <Select
+          id="tax-section"
+          value={section}
+          onChange={(e) => setSection(e.target.value as TaxSectionId)}
+        >
           {TAX_SECTION_IDS.map((id) => (
             <option key={id} value={id}>
               {sectionLabel(id)}
@@ -211,7 +279,11 @@ function AddDeductionForm() {
       </div>
       <div className="field">
         <Label htmlFor="tax-amount">Amount</Label>
-        <MoneyInput id="tax-amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <MoneyInput
+          id="tax-amount"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
       </div>
       <div className="field col-span-full">
         <Label htmlFor="tax-label">What is it</Label>
@@ -222,7 +294,11 @@ function AddDeductionForm() {
           placeholder="e.g. PPF deposit"
         />
       </div>
-      {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="col-span-full text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <div className="form-actions">
         <ResetButton
           label="Clear"
@@ -244,40 +320,48 @@ function AddDeductionForm() {
 function DeductionList({ entries, fy }: { entries: TaxEntry[]; fy: string }) {
   const del = useDeleteTaxEntry();
   const clearAll = useClearTaxEntries();
-  if (entries.length === 0) return <p className="empty-note">No deductions added yet.</p>;
+  if (entries.length === 0)
+    return <p className="empty-note">No deductions added yet.</p>;
   return (
     <>
-    <ul className="ledger">
-      {entries.map((e) => (
-        <li key={e.entry_id} className="ledger-row text-sm">
-          <div className="min-w-0">
-            <p className="truncate font-medium" title={e.label}>{e.label}</p>
-            <p className="text-[13px] text-muted-foreground">{sectionLabel(e.section)}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <p className="font-display text-lg tabular-nums">{formatINR(e.amount_paise)}</p>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              aria-label={`Delete ${e.label}`}
-              disabled={del.isPending}
-              onClick={() => {
-                if (window.confirm(`Remove "${e.label}"?`)) del.mutate(e.entry_id);
-              }}
-            >
-              <Trash2 className="h-4 w-4" aria-hidden />
-            </Button>
-          </div>
-        </li>
-      ))}
-    </ul>
-    <ResetButton
-      label="Reset: clear all deductions"
-      disabled={clearAll.isPending}
-      confirm="Remove every deduction you added for this financial year? This cannot be undone."
-      onReset={() => clearAll.mutate(fy)}
-    />
+      <ul className="ledger">
+        {entries.map((e) => (
+          <li key={e.entry_id} className="ledger-row text-sm">
+            <div className="min-w-0">
+              <p className="truncate font-medium" title={e.label}>
+                {e.label}
+              </p>
+              <p className="text-[13px] text-muted-foreground">
+                {sectionLabel(e.section)}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <p className="font-display text-lg tabular-nums">
+                {formatINR(e.amount_paise)}
+              </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                aria-label={`Delete ${e.label}`}
+                disabled={del.isPending}
+                onClick={() => {
+                  if (window.confirm(`Remove "${e.label}"?`))
+                    del.mutate(e.entry_id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <ResetButton
+        label="Reset: clear all deductions"
+        disabled={clearAll.isPending}
+        confirm="Remove every deduction you added for this financial year? This cannot be undone."
+        onReset={() => clearAll.mutate(fy)}
+      />
     </>
   );
 }
@@ -291,16 +375,24 @@ export function TaxPanel() {
   return (
     <section aria-label="Tax" className="stack glass rounded-[28px] p-6 md:p-8">
       <div className="space-y-2">
-        <h2 className="font-display text-[32px] leading-none">Tax (India)</h2>
+        <h2 className="font-display brand-text text-[32px] leading-none">
+          Tax (India)
+        </h2>
         <p className="text-sm text-muted-foreground">
-          {tax ? `${fyLabel(tax.fy)} · April to March` : "Deductions and the regime comparison for this year."}
+          {tax
+            ? `${fyLabel(tax.fy)} · April to March`
+            : "Deductions and the regime comparison for this year."}
         </p>
       </div>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Working out your tax…</p>}
+      {isLoading && (
+        <p className="text-sm text-muted-foreground">Working out your tax…</p>
+      )}
       {isError && (
         <p role="alert" className="text-sm text-destructive">
-          {error instanceof Error && error.message ? error.message : "Couldn't load your tax summary."}
+          {error instanceof Error && error.message
+            ? error.message
+            : "Couldn't load your tax summary."}
         </p>
       )}
 
@@ -315,9 +407,13 @@ export function TaxPanel() {
               <CardContent className="flex items-center justify-between gap-4 p-5 md:p-6 text-sm">
                 <div className="min-w-0">
                   <p className="font-semibold">{reminder.text}</p>
-                  <p className="text-xs text-muted-foreground">{reminder.date}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {reminder.date}
+                  </p>
                 </div>
-                <p className="shrink-0 font-semibold tabular-nums">{daysLeftLabel(reminder.days_left)}</p>
+                <p className="pill pill-sun shrink-0 font-semibold tabular-nums">
+                  {daysLeftLabel(reminder.days_left)}
+                </p>
               </CardContent>
             </Card>
           )}
@@ -352,8 +448,10 @@ export function TaxPanel() {
 
           {tax.interest_income_paise > 0 && (
             <p className="text-sm">
-              <span className="font-semibold tabular-nums">{formatINR(tax.interest_income_paise)}</span> interest
-              earned this FY — it's taxable.
+              <span className="font-semibold tabular-nums">
+                {formatINR(tax.interest_income_paise)}
+              </span>{" "}
+              interest earned this FY — it's taxable.
             </p>
           )}
         </>

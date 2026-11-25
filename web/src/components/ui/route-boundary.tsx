@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { LifeBuoy } from "lucide-react";
 import { Button } from "./button";
 
 interface Props {
@@ -23,16 +24,35 @@ export class RouteBoundary extends Component<Props, { failed: boolean }> {
   }
 
   componentDidUpdate(prev: Props) {
-    if (this.state.failed && prev.resetKey !== this.props.resetKey) this.setState({ failed: false });
+    if (this.state.failed && prev.resetKey !== this.props.resetKey)
+      this.setState({ failed: false });
   }
 
   render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <div role="alert" className="page flex flex-col items-start gap-3">
-        <h2 className="font-display text-2xl">This page hit a problem</h2>
-        <p className="text-muted-foreground">The rest of the app still works. You can try again or go somewhere else.</p>
-        <Button onClick={() => this.setState({ failed: false })}>Try again</Button>
+      <div className="page">
+        <div
+          role="alert"
+          className="glass flex flex-col items-start gap-3 rounded-[28px] p-6 sm:p-8"
+        >
+          <span
+            aria-hidden
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-coral/30 to-sun/30 text-coral"
+          >
+            <LifeBuoy className="h-6 w-6" strokeWidth={1.8} />
+          </span>
+          <h2 className="brand-text font-display text-2xl">
+            This page hit a problem
+          </h2>
+          <p className="text-muted-foreground">
+            The rest of the app still works. You can try again or go somewhere
+            else.
+          </p>
+          <Button onClick={() => this.setState({ failed: false })}>
+            Try again
+          </Button>
+        </div>
       </div>
     );
   }

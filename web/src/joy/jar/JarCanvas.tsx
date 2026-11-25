@@ -3,7 +3,13 @@
 // The jar: Joy's SVG glass with a canvas of slips inside it. The simulation itself is physics.ts
 // (pure); this component owns the canvas, the animation loop and the colours. The loop only runs
 // while something moves and the tab is visible.
-import { useEffect, useImperativeHandle, useRef, type Ref, type RefObject } from "react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  type Ref,
+  type RefObject,
+} from "react";
 import {
   assign,
   dropIn as dropPart,
@@ -30,7 +36,10 @@ import { reduced } from "./motion";
 export interface JarHandle {
   jostle: (strength: number) => void;
   /** Lift a slip out of the pile; says where it was (jar units) so it can fly from there. */
-  takeOut: (id: number, setting: string) => { x: number; y: number; a: number; setting: string } | null;
+  takeOut: (
+    id: number,
+    setting: string,
+  ) => { x: number; y: number; a: number; setting: string } | null;
   dropIn: (id: number) => void;
   /** The jar's mouth and scale, in viewport pixels. */
   mouth: () => { x: number; y: number; s: number } | null;
@@ -70,7 +79,16 @@ const JAR_STYLE = { width: "auto" } as const;
 
 const TINTS = ["home", "apart", "local", "day_trip", "travel"] as const;
 
-export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy, elRef, handle }: Props) {
+export default function JarCanvas({
+  slips,
+  matchIds,
+  total,
+  rainy,
+  couple,
+  busy,
+  elRef,
+  handle,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sim = useRef({
     parts: [] as Part[],
@@ -93,8 +111,13 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
     const canvas = canvasRef.current;
     if (!canvas) return;
     // The tokens live on .joy (not :root), and dark mode is Flinderax's .dark class.
+    // They are hsl() and color-mix(), so let the browser resolve each one to plain rgb first.
     const cs = getComputedStyle(canvas);
-    const g = (n: string) => parseColor(cs.getPropertyValue(n));
+    const probe = document.createElement("span");
+    probe.style.display = "none";
+    canvas.parentElement?.appendChild(probe);
+    const g = (n: string) =>
+      resolveColor(probe, n) ?? parseColor(cs.getPropertyValue(n));
     sim.current.colors = {
       dark: !!canvas.closest(".dark"),
       paper: g("--paper"),
@@ -103,6 +126,7 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
       ink: g("--ink"),
       tint: Object.fromEntries(TINTS.map((t) => [t, g(`--tint-${t}`)])),
     };
+    probe.remove();
   };
 
   const render = () => {
@@ -117,7 +141,9 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
     ctx.save();
     ctx.clip(INSIDE());
     // greyed-out slips sit behind, the ones that fit come forward
-    const order = parts.filter((p) => !p.out).sort((a, b) => Number(a.dim < 0.5) - Number(b.dim < 0.5) || a.ty - b.ty);
+    const order = parts
+      .filter((p) => !p.out)
+      .sort((a, b) => Number(a.dim < 0.5) - Number(b.dim < 0.5) || a.ty - b.ty);
     for (const p of order) drawSlip(ctx, p, c);
     ctx.restore();
   };
@@ -140,7 +166,12 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
 
   const settle = (animate: boolean) => {
     const s = sim.current;
-    assign(s.parts, s.slots, { matchSet: s.matchSet, rainy: rainyRef.current, animate, reduced: reduced() });
+    assign(s.parts, s.slots, {
+      matchSet: s.matchSet,
+      rainy: rainyRef.current,
+      animate,
+      reduced: reduced(),
+    });
     kick();
   };
 
@@ -152,41 +183,46 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
     return { x: r.left + x * s, y: r.top + y * s, s };
   };
 
-  useImperativeHandle(handle, () => ({
-    jostle(k) {
-      if (reduced()) return;
-      jostleParts(sim.current.parts, k);
-      kick();
-    },
-    takeOut(id, setting) {
-      const at = takePart(sim.current.parts, id, setting);
-      if (at) settle(true);
-      return at;
-    },
-    dropIn(id) {
-      const s = sim.current;
-      if (dropPart(s.parts, id, s.shown, reduced())) settle(true);
-    },
-    mouth: () => at(MOUTH.x, MOUTH.y),
-    at,
-    shake() {
-      const el = elRef.current;
-      if (!el || reduced()) return;
-      el.classList.remove("is-shaking", "is-nudged");
-      void el.offsetWidth;
-      el.classList.add("is-shaking");
-      setTimeout(() => el.classList.remove("is-shaking"), 400);
-      jostleParts(sim.current.parts, 1);
-      kick();
-      setTimeout(() => {
-        jostleParts(sim.current.parts, 0.5);
+  useImperativeHandle(
+    handle,
+    () => ({
+      jostle(k) {
+        if (reduced()) return;
+        jostleParts(sim.current.parts, k);
         kick();
-      }, 170);
-    },
-    openLid(open) {
-      elRef.current?.classList.toggle("is-open", open && !reduced());
-    },
-  }), []); // eslint-disable-line react-hooks/exhaustive-deps
+      },
+      takeOut(id, setting) {
+        const at = takePart(sim.current.parts, id, setting);
+        if (at) settle(true);
+        return at;
+      },
+      dropIn(id) {
+        const s = sim.current;
+        if (dropPart(s.parts, id, s.shown, reduced())) settle(true);
+      },
+      mouth: () => at(MOUTH.x, MOUTH.y),
+      at,
+      shake() {
+        const el = elRef.current;
+        if (!el || reduced()) return;
+        el.classList.remove("is-shaking", "is-nudged");
+        void el.offsetWidth;
+        el.classList.add("is-shaking");
+        setTimeout(() => el.classList.remove("is-shaking"), 400);
+        jostleParts(sim.current.parts, 1);
+        kick();
+        setTimeout(() => {
+          jostleParts(sim.current.parts, 0.5);
+          kick();
+        }, 170);
+      },
+      openLid(open) {
+        elRef.current?.classList.toggle("is-open", open && !reduced());
+      },
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   /* ── build the pile when the slips arrive ──────────────── */
   useEffect(() => {
@@ -197,7 +233,12 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
     s.matchSet = null;
     s.first = true;
     readColors();
-    assign(s.parts, s.slots, { matchSet: null, rainy: rainyRef.current, animate: false, reduced: reduced() });
+    assign(s.parts, s.slots, {
+      matchSet: null,
+      rainy: rainyRef.current,
+      animate: false,
+      reduced: reduced(),
+    });
     // initial: slips settle in with a small drop, top ones last
     if (!reduced()) {
       for (const p of s.parts) {
@@ -219,7 +260,10 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
   useEffect(() => {
     const s = sim.current;
     s.matchSet = matchIds ? new Set(matchIds) : null;
-    elRef.current?.style.setProperty("--lit", String(matchIds && total ? (matchIds.length / total).toFixed(3) : 1));
+    elRef.current?.style.setProperty(
+      "--lit",
+      String(matchIds && total ? (matchIds.length / total).toFixed(3) : 1),
+    );
     if (s.first) {
       s.first = false;
       if (!matchIds) return;
@@ -258,7 +302,10 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
       readColors();
       render();
     });
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    mo.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
     const rm = matchMedia("(prefers-reduced-motion: reduce)");
     const onRm = () => settle(false);
     rm.addEventListener("change", onRm);
@@ -282,7 +329,15 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
   };
 
   return (
-    <div className={`jar${rainy ? " is-rainy" : ""}`} id="jar" ref={elRef} aria-hidden="true" data-total={total} onPointerDown={nudge} style={JAR_STYLE}>
+    <div
+      className={`jar${rainy ? " is-rainy" : ""}`}
+      id="jar"
+      ref={elRef}
+      aria-hidden="true"
+      data-total={total}
+      onPointerDown={nudge}
+      style={JAR_STYLE}
+    >
       <svg className="jar-back" viewBox="0 0 240 300" focusable="false">
         <defs>
           <radialGradient id="lantern" cx="50%" cy="56%" r="50%">
@@ -294,7 +349,10 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
         <g className="lantern">
           <ellipse cx="120" cy="196" rx="118" ry="104" fill="url(#lantern)" />
         </g>
-        <path className="glass-fill" d="M72 56v14c0 10-8 14-22 18-20 6-28 16-28 34v140c0 18 10 28 28 28h140c18 0 28-10 28-28V122c0-18-8-28-28-34-14-4-22-8-22-18V56z" />
+        <path
+          className="glass-fill"
+          d="M72 56v14c0 10-8 14-22 18-20 6-28 16-28 34v140c0 18 10 28 28 28h140c18 0 28-10 28-28V122c0-18-8-28-28-34-14-4-22-8-22-18V56z"
+        />
         <path className="glass-back-rim" d="M28 276q92 9 184 0" />
       </svg>
 
@@ -319,17 +377,31 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
           <circle cx="96" cy="140" r="4.7" style={ff("5.8s", "-4.4s")} />
           <circle cx="168" cy="250" r="5.1" style={ff("6.8s", "-.9s")} />
         </g>
-        <path className="glass-base" d="M24 268c2 12 11 20 26 20h140c15 0 24-8 26-20q-96 12-192 0z" />
+        <path
+          className="glass-base"
+          d="M24 268c2 12 11 20 26 20h140c15 0 24-8 26-20q-96 12-192 0z"
+        />
         <path className="glass-floor" d="M26 274q94 10 188 0" />
-        <path className="glass-edge" d="M72 56v14c0 10-8 14-22 18-20 6-28 16-28 34v140c0 18 10 28 28 28h140c18 0 28-10 28-28V122c0-18-8-28-28-34-14-4-22-8-22-18V56" />
+        <path
+          className="glass-edge"
+          d="M72 56v14c0 10-8 14-22 18-20 6-28 16-28 34v140c0 18 10 28 28 28h140c18 0 28-10 28-28V122c0-18-8-28-28-34-14-4-22-8-22-18V56"
+        />
         <path className="hl hl-1" d="M33 132c-1 40-1 86 1 122" />
         <path className="hl hl-2" d="M42 148v34" />
         <path className="hl hl-3" d="M58 96c-12 4-19 10-22 20" />
         <path className="hl hl-4" d="M209 140c1 30 1 70-1 104" />
         {rainy && (
           <g className="rain-glass">
-            <path className="trickle" d="M188 132c.6 14-.8 26 .4 40" style={ff("9s", "-2s")} />
-            <path className="trickle" d="M52 176c-.5 12 .6 22-.2 34" style={ff("11s", "-6s")} />
+            <path
+              className="trickle"
+              d="M188 132c.6 14-.8 26 .4 40"
+              style={ff("9s", "-2s")}
+            />
+            <path
+              className="trickle"
+              d="M52 176c-.5 12 .6 22-.2 34"
+              style={ff("11s", "-6s")}
+            />
             <g className="beads">
               <path d="M44 140c2 3 3 4.6 3 6a3 3 0 0 1-6 0c0-1.4 1-3 3-6z" />
               <path d="M196 196c1.6 2.4 2.4 3.6 2.4 4.8a2.4 2.4 0 0 1-4.8 0c0-1.2.8-2.4 2.4-4.8z" />
@@ -343,12 +415,25 @@ export default function JarCanvas({ slips, matchIds, total, rainy, couple, busy,
         )}
         <rect className="rim" x="66" y="52" width="108" height="9" rx="4" />
         <g className="j-lid">
-          <rect className="j-lid-body" x="62" y="28" width="116" height="26" rx="6" />
-          <path className="j-lid-ridges" d="M74 33v17M84 33v17M94 33v17M104 33v17M114 33v17M124 33v17M134 33v17M144 33v17M154 33v17M164 33v17" />
+          <rect
+            className="j-lid-body"
+            x="62"
+            y="28"
+            width="116"
+            height="26"
+            rx="6"
+          />
+          <path
+            className="j-lid-ridges"
+            d="M74 33v17M84 33v17M94 33v17M104 33v17M114 33v17M124 33v17M134 33v17M144 33v17M154 33v17M164 33v17"
+          />
           <path className="lid-shine" d="M68 32.5h104" />
         </g>
         <g className="label" transform="rotate(-4 120 128)">
-          <path className="tape" d="M64 116l3 3-2 3 2 3-2 3 2 3-3 3h112l-2-3 3-3-3-3 3-3-3-3 2-3z" />
+          <path
+            className="tape"
+            d="M64 116l3 3-2 3 2 3-2 3 2 3-3 3h112l-2-3 3-3-3-3 3-3-3-3 2-3z"
+          />
           <text className="label-text" x="120" y="132" textAnchor="middle">
             {couple}
           </text>
@@ -363,16 +448,47 @@ function ff(d: string, o: string) {
   return { "--d": d, "--o": o } as React.CSSProperties;
 }
 
+let pixel: CanvasRenderingContext2D | null | undefined;
+/** A colour token as rgba, painted onto a 1px canvas. Null where there is no 2D canvas (tests). */
+function resolveColor(probe: HTMLElement, name: string): RGBA | null {
+  try {
+    if (pixel === undefined)
+      pixel = document
+        .createElement("canvas")
+        .getContext("2d", { willReadFrequently: true });
+    if (!pixel) return null;
+    probe.style.color = `var(${name})`;
+    const color = getComputedStyle(probe).color;
+    if (!color) return null;
+    pixel.clearRect(0, 0, 1, 1);
+    pixel.fillStyle = "#000";
+    pixel.fillStyle = color;
+    pixel.fillRect(0, 0, 1, 1);
+    const [r, g, b] = pixel.getImageData(0, 0, 1, 1).data;
+    return [r, g, b, 1];
+  } catch {
+    return null;
+  }
+}
+
 let inside: Path2D | null = null;
 const INSIDE = () =>
-  (inside ??= new Path2D("M76 60v10c0 12-10 17-25 21-18 5-25 14-25 31v140c0 15 8 24 24 24h140c16 0 24-9 24-24V122c0-17-7-26-25-31-15-4-25-9-25-21V60z"));
+  (inside ??= new Path2D(
+    "M76 60v10c0 12-10 17-25 21-18 5-25 14-25 31v140c0 15 8 24 24 24h140c16 0 24-9 24-24V122c0-17-7-26-25-31-15-4-25-9-25-21V60z",
+  ));
 
 function drawSlip(ctx: CanvasRenderingContext2D, p: Part, C: Colors) {
   const t = C.tint[p.setting] || C.tint.local;
-  const grey = C.dark ? mix(t, C.paper, 0.62) : mix(mix(t, C.paper2, 0.82), C.ink, 0.04);
+  const grey = C.dark
+    ? mix(t, C.paper, 0.62)
+    : mix(mix(t, C.paper2, 0.82), C.ink, 0.04);
   let body = mix(t, grey, p.dim);
   if (C.dark) body = mix(body, [255, 200, 130], 0.2 * (1 - p.dim)); // slips catch the lantern light
-  const flap = mix(body, C.dark ? C.ink : C.slip, (C.dark ? 0.12 : 0.5) * (1 - p.dim * 0.6));
+  const flap = mix(
+    body,
+    C.dark ? C.ink : C.slip,
+    (C.dark ? 0.12 : 0.5) * (1 - p.dim * 0.6),
+  );
   const alpha = 1 - 0.3 * p.dim;
   ctx.save();
   ctx.translate(p.x, p.y);
@@ -405,4 +521,3 @@ function drawSlip(ctx: CanvasRenderingContext2D, p: Part, C: Colors) {
   }
   ctx.restore();
 }
-

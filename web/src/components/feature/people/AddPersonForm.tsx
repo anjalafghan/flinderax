@@ -6,8 +6,20 @@ import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { NAME_MAX, NOTE, PANEL, SECTION_TITLE, SHORT_NOTE_MAX, errorMessage } from "@/components/feature/people/ui";
-import { CIRCLES, createPerson, usePeopleMutation, type Circle } from "@/services/people";
+import {
+  NAME_MAX,
+  NOTE,
+  PANEL,
+  SECTION_TITLE,
+  SHORT_NOTE_MAX,
+  errorMessage,
+} from "@/components/feature/people/ui";
+import {
+  CIRCLES,
+  createPerson,
+  usePeopleMutation,
+  type Circle,
+} from "@/services/people";
 
 /** Add someone to the circle. Only a name is needed; a catch-up rhythm is optional. */
 export function AddPersonForm() {
@@ -51,11 +63,20 @@ export function AddPersonForm() {
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${id}-name`}>Name</Label>
-          <Input id={`${id}-name`} maxLength={NAME_MAX} value={name} onChange={(e) => setName(e.target.value)} />
+          <Input
+            id={`${id}-name`}
+            maxLength={NAME_MAX}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${id}-circle`}>Circle</Label>
-          <Select id={`${id}-circle`} value={circle} onChange={(e) => setCircle(e.target.value as Circle)}>
+          <Select
+            id={`${id}-circle`}
+            value={circle}
+            onChange={(e) => setCircle(e.target.value as Circle)}
+          >
             {CIRCLES.map((c) => (
               <option key={c.key} value={c.key}>
                 {c.label}
@@ -64,7 +85,9 @@ export function AddPersonForm() {
           </Select>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${id}-weeks`}>Catch up every (weeks, optional)</Label>
+          <Label htmlFor={`${id}-weeks`}>
+            Catch up every (weeks, optional)
+          </Label>
           <Input
             id={`${id}-weeks`}
             type="number"
@@ -77,7 +100,12 @@ export function AddPersonForm() {
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${id}-note`}>Note (optional)</Label>
-          <Input id={`${id}-note`} maxLength={SHORT_NOTE_MAX} value={note} onChange={(e) => setNote(e.target.value)} />
+          <Input
+            id={`${id}-note`}
+            maxLength={SHORT_NOTE_MAX}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
         </div>
         <div className="sm:col-span-2">
           <Button type="submit" disabled={add.isPending}>

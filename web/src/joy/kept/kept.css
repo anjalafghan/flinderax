@@ -1,51 +1,188 @@
 /* Only what the React port needs on top of Joy's kept.css. */
-.joy .k-slip:focus-visible { outline: 2px solid var(--stamp); outline-offset: 6px; }
-.joy .k-title:focus, .joy #k-empty-h:focus, .joy #k-budget:focus, .joy .k-savings-h:focus, .joy .k-budget-form ul:focus { outline: none; }
-.joy .k-title:focus-visible, .joy #k-budget:focus-visible, .joy #k-spend-list:focus-visible, .joy #k-saving-list:focus-visible { outline: 2px solid var(--stamp); outline-offset: 4px; }
-.joy .k-budget-edit ul[tabindex="-1"]:focus { outline: none; }
+.joy .k-slip:focus-visible {
+  outline: 2px solid var(--stamp);
+  outline-offset: 6px;
+}
+.joy .k-title:focus,
+.joy #k-empty-h:focus,
+.joy #k-budget:focus,
+.joy .k-savings-h:focus,
+.joy .k-budget-form ul:focus {
+  outline: none;
+}
+.joy .k-title:focus-visible,
+.joy #k-budget:focus-visible,
+.joy #k-spend-list:focus-visible,
+.joy #k-saving-list:focus-visible {
+  outline: 2px solid var(--stamp);
+  outline-offset: 4px;
+}
+.joy .k-budget-edit ul[tabindex="-1"]:focus {
+  outline: none;
+}
 /* 44px targets for the small actions Joy left to the browser */
-.joy .k-budget-edit li .k-btn { min-height: 44px; }
-.joy .k-book, .joy .k-head { max-width: 100%; overflow-wrap: anywhere; }
-.joy .k-photo-status[data-tone="err"] { flex-basis: 100%; }
+.joy .k-budget-edit li .k-btn {
+  min-height: 44px;
+}
+.joy .k-book,
+.joy .k-head {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.joy .k-photo-status[data-tone="err"] {
+  flex-basis: 100%;
+}
 
 /* More photos of the same date: small prints under the cover. */
 .joy .k-photo-strip {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px;
-  width: min(100%, 300px); margin: 14px auto 4px; padding: 0; list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+  width: min(100%, 300px);
+  margin: 14px auto 4px;
+  padding: 0;
+  list-style: none;
 }
-.joy .k-photo-strip li { padding: 5px 5px 12px; background: var(--slip); box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 16%, transparent); }
-.joy .k-photo-strip li:nth-child(odd) { transform: rotate(-1.5deg); }
-.joy .k-photo-strip li:nth-child(even) { transform: rotate(1.2deg); }
-.joy .k-photo-strip a { display: block; }
-.joy .k-photo-strip img, .joy .k-photo-strip .k-dev {
-  display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: var(--paper-2);
+.joy .k-photo-strip li {
+  padding: 5px 5px 12px;
+  background: var(--slip);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 16%, transparent);
 }
-.joy .k-photo-strip .k-dev { font-size: .9rem; }
+.joy .k-photo-strip li:nth-child(odd) {
+  transform: rotate(-1.5deg);
+}
+.joy .k-photo-strip li:nth-child(even) {
+  transform: rotate(1.2deg);
+}
+.joy .k-photo-strip a {
+  display: block;
+}
+.joy .k-photo-strip img,
+.joy .k-photo-strip .k-dev {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--paper-2);
+}
+.joy .k-photo-strip .k-dev {
+  font-size: 0.9rem;
+}
 /* Choosing which photo to remove. */
-.joy .k-photo-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; margin: 8px 0; padding: 0; list-style: none; }
-.joy .k-photo-pick li { display: grid; gap: 6px; justify-items: stretch; }
-.joy .k-photo-pick img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: var(--paper-2); }
-.joy .k-photo-pick .k-btn { min-height: 44px; }
-.joy .k-hero-now { display: grid; place-items: center; min-height: 44px; font-size: var(--step--1); font-weight: 650; color: var(--ink); border: 1.5px dashed var(--rule); border-radius: 999px; }
+.joy .k-photo-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 12px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+.joy .k-photo-pick li {
+  display: grid;
+  gap: 6px;
+  justify-items: stretch;
+}
+.joy .k-photo-pick img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--paper-2);
+}
+.joy .k-photo-pick .k-btn {
+  min-height: 44px;
+}
+.joy .k-hero-now {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  font-size: var(--step--1);
+  font-weight: 650;
+  color: var(--ink);
+  border: 1.5px dashed var(--rule);
+  border-radius: 999px;
+}
 
 /* Field captions, photo tip, "More" tools, money section, add-a-date. */
-.joy .k-field-cap { display: block; margin: 10px 0 4px; font-size: var(--step--1); font-weight: 650; }
-.joy .k-photo-tip { margin: 8px 0 0; text-align: center; font-size: var(--step--1); color: var(--ink-soft); }
-.joy .k-photo-tip a { display: inline-block; min-height: 44px; line-height: 44px; }
-.joy .k-more > summary { cursor: pointer; }
-.joy .k-more[open] > summary { margin-bottom: 8px; }
-.joy .k-add { margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.joy .k-add .btn { min-height: 44px; }
-.joy .k-money-sec { margin: 40px 0 24px; padding-top: 16px; border-top: 1px dashed var(--ink-soft); }
-.joy .k-money-sec > h2 { margin: 0 0 8px; }
-.joy .k-month-open { display: inline-block; white-space: nowrap; margin-left: 10px; min-height: 44px; line-height: 44px; font-size: var(--step--1); font-weight: 650; text-decoration: underline; }
+.joy .k-field-cap {
+  display: block;
+  margin: 10px 0 4px;
+  font-size: var(--step--1);
+  font-weight: 650;
+}
+.joy .k-photo-tip {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+.joy .k-photo-tip a {
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+}
+.joy .k-more > summary {
+  cursor: pointer;
+}
+.joy .k-more[open] > summary {
+  margin-bottom: 8px;
+}
+.joy .k-add {
+  margin: 14px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.joy .k-add .btn {
+  min-height: 44px;
+}
+.joy .k-money-sec {
+  margin: 40px 0 24px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--ink-soft);
+}
+.joy .k-money-sec > h2 {
+  margin: 0 0 8px;
+}
+.joy .k-month-open {
+  display: inline-block;
+  white-space: nowrap;
+  margin-left: 10px;
+  min-height: 44px;
+  line-height: 44px;
+  font-size: var(--step--1);
+  font-weight: 650;
+  text-decoration: underline;
+}
 
 /* The header's "+ Add a date we had" button opens this fold, so its own summary line only shows
    once it is open (to close it again). */
-.joy #k-add:not([open]) > summary { display: none; }
+.joy #k-add:not([open]) > summary {
+  display: none;
+}
 /* Mark a day: a roomy name, one-tap ideas, the optional bits folded away. */
-.joy .k-budget-form .k-add-title { width: 100%; max-width: 22rem; }
-.joy .k-add-ideas { margin: 8px 0 12px; }
-.joy .k-add-ideas .btn[aria-pressed="true"] { text-decoration: underline; text-decoration-color: var(--stamp); text-underline-offset: 4px; }
-.joy .k-add-more { margin: 12px 0; }
-.joy .k-add-more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--ink-soft); }
+.joy .k-budget-form .k-add-title {
+  width: 100%;
+  max-width: 22rem;
+}
+.joy .k-add-ideas {
+  margin: 8px 0 12px;
+}
+.joy .k-add-ideas .btn[aria-pressed="true"] {
+  text-decoration: underline;
+  text-decoration-color: var(--stamp);
+  text-underline-offset: 4px;
+}
+.joy .k-add-more {
+  margin: 12px 0;
+}
+.joy .k-add-more > summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--ink-soft);
+}

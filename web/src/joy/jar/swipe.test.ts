@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { axisDecision, dragPose, FOLLOW, MOST, shown, swipeOutcome, YES } from "./swipe";
+import {
+  axisDecision,
+  dragPose,
+  FOLLOW,
+  MOST,
+  shown,
+  swipeOutcome,
+  YES,
+} from "./swipe";
 
 const both = { canYes: true, canBack: true, vx: 0 };
 
@@ -18,8 +26,12 @@ describe("swipe commit threshold", () => {
     expect(swipeOutcome({ ...both, dx: 60, vx: 0.2 })).toBe("none");
   });
   test("a direction with no button behind it never commits", () => {
-    expect(swipeOutcome({ canYes: false, canBack: true, dx: 300, vx: 1 })).toBe("none");
-    expect(swipeOutcome({ canYes: true, canBack: false, dx: -300, vx: -1 })).toBe("none");
+    expect(swipeOutcome({ canYes: false, canBack: true, dx: 300, vx: 1 })).toBe(
+      "none",
+    );
+    expect(
+      swipeOutcome({ canYes: true, canBack: false, dx: -300, vx: -1 }),
+    ).toBe("none");
   });
   test("a cancelled drag does nothing", () => {
     expect(swipeOutcome({ ...both, dx: 300, cancelled: true })).toBe("none");

@@ -25,13 +25,16 @@ export function toScenarioItem(d: ScenarioDraft): ScenarioItem | null {
   if (amount === null || amount <= 0 || !ISO.test(d.start)) return null;
   const isDeposit = d.kind !== "one_off";
   const tenure = Number(d.tenure);
-  if (isDeposit && !(Number.isInteger(tenure) && tenure >= 1 && tenure <= 120)) return null;
+  if (isDeposit && !(Number.isInteger(tenure) && tenure >= 1 && tenure <= 120))
+    return null;
   const rate = d.rate.trim() ? Number(d.rate) : 0;
   if (isDeposit && !(rate >= 0 && rate <= 30)) return null;
   const target = d.target.trim() ? toPaise(d.target) : null;
   if (d.target.trim() && (target === null || target <= 0)) return null;
   return {
-    name: d.name.trim() || (d.kind === "rd" ? "RD" : d.kind === "fd" ? "FD" : "One-off"),
+    name:
+      d.name.trim() ||
+      (d.kind === "rd" ? "RD" : d.kind === "fd" ? "FD" : "One-off"),
     kind: d.kind,
     amount_paise: amount,
     start: d.start,
@@ -41,7 +44,8 @@ export function toScenarioItem(d: ScenarioDraft): ScenarioItem | null {
     payout_to: isDeposit && d.payoutTo ? d.payoutTo : null,
     renewal: d.kind === "fd" ? d.renewal : null,
     target_paise: target,
-    target_date: target !== null && ISO.test(d.targetDate) ? d.targetDate : null,
+    target_date:
+      target !== null && ISO.test(d.targetDate) ? d.targetDate : null,
   };
 }
 
@@ -52,10 +56,14 @@ export function defaultStart(now: Date = new Date()): string {
   return `${y}-${String(m + 1).padStart(2, "0")}-10`;
 }
 
-export function newDraft(kind: ScenarioKind = "rd", now: Date = new Date()): ScenarioDraft {
+export function newDraft(
+  kind: ScenarioKind = "rd",
+  now: Date = new Date(),
+): ScenarioDraft {
   return {
     id: Math.random().toString(36).slice(2),
-    name: kind === "rd" ? "Wedding RD" : kind === "fd" ? "New FD" : "One-off spend",
+    name:
+      kind === "rd" ? "Wedding RD" : kind === "fd" ? "New FD" : "One-off spend",
     kind,
     amount: kind === "rd" ? "10000" : "",
     start: defaultStart(now),

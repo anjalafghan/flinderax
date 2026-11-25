@@ -36,7 +36,9 @@ export function paiseToInput(paise: number): string {
   const abs = Math.abs(paise);
   const rupeesPart = Math.floor(abs / 100);
   const frac = abs % 100;
-  return frac === 0 ? `${sign}${rupeesPart}` : `${sign}${rupeesPart}.${String(frac).padStart(2, "0").replace(/0$/, "")}`;
+  return frac === 0
+    ? `${sign}${rupeesPart}`
+    : `${sign}${rupeesPart}.${String(frac).padStart(2, "0").replace(/0$/, "")}`;
 }
 
 /** 4_520_000 -> "₹45.2k", 12_345_600 -> "₹1.2L", 150_000_000 -> "₹15L", for chart axes. */
@@ -67,10 +69,14 @@ export function parseAmountOrPercent(text: string): AmountOrPercent {
     const num = t.slice(0, -1).trim();
     if (!/^\d{1,3}(\.\d{1,2})?$/.test(num)) return { kind: "invalid" };
     const bps = Math.round(Number(num) * 100);
-    return bps >= 0 && bps <= 10_000 ? { kind: "percent", bps } : { kind: "invalid" };
+    return bps >= 0 && bps <= 10_000
+      ? { kind: "percent", bps }
+      : { kind: "invalid" };
   }
   const paise = toPaise(t);
-  return paise === null || paise < 0 ? { kind: "invalid" } : { kind: "amount", paise };
+  return paise === null || paise < 0
+    ? { kind: "invalid" }
+    : { kind: "amount", paise };
 }
 
 /** 2500 -> "25%", 2250 -> "22.5%". */

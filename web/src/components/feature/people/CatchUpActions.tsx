@@ -5,7 +5,13 @@ import { CaughtUpButton } from "@/components/feature/people/CaughtUpButton";
 import { LogTouchForm } from "@/components/feature/people/LogTouchForm";
 
 /** "Caught up" in one tap, or log it another way in a panel that opens below. */
-export function CatchUpActions({ personId, name }: { personId: string; name: string }) {
+export function CatchUpActions({
+  personId,
+  name,
+}: {
+  personId: string;
+  name: string;
+}) {
   const panelId = useId();
   const [logging, setLogging] = useState(false);
   return (

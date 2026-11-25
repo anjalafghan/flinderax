@@ -17,7 +17,11 @@ export const NUDGE_FROM_PCT = 80;
  * Not a feature of the server: just arithmetic on what is left. A date roughly every week, at
  * least one, at most three; the ceiling is what's left shared between them, rounded down to ₹50.
  */
-export function nudgeFor(budgetPaise: number | null | undefined, spentPaise: number, daysLeft: number): Nudge | null {
+export function nudgeFor(
+  budgetPaise: number | null | undefined,
+  spentPaise: number,
+  daysLeft: number,
+): Nudge | null {
   if (!budgetPaise || budgetPaise <= 0 || spentPaise < 0) return null;
   const pct = Math.floor((spentPaise / budgetPaise) * 100);
   if (pct < NUDGE_FROM_PCT) return null;
@@ -25,12 +29,24 @@ export function nudgeFor(budgetPaise: number | null | undefined, spentPaise: num
   const left = Math.max(0, budgetPaise - spentPaise);
   const head = `Dates at ${pct}% with ${days} ${days === 1 ? "day" : "days"} left`;
   if (left === 0) {
-    return { pct, daysLeft: days, dates: 1, perDatePaise: 0, text: `${head}: the month's budget is spent, so keep the next date free` };
+    return {
+      pct,
+      daysLeft: days,
+      dates: 1,
+      perDatePaise: 0,
+      text: `${head}: the month's budget is spent, so keep the next date free`,
+    };
   }
   const dates = Math.min(3, Math.max(1, Math.ceil(days / 7)));
   const perDatePaise = Math.floor(left / dates / 5000) * 5000;
   if (perDatePaise <= 0) {
-    return { pct, daysLeft: days, dates: 1, perDatePaise: 0, text: `${head}: only ${rupees(left)} is left, so keep the next date free` };
+    return {
+      pct,
+      daysLeft: days,
+      dates: 1,
+      perDatePaise: 0,
+      text: `${head}: only ${rupees(left)} is left, so keep the next date free`,
+    };
   }
   const text =
     dates === 1

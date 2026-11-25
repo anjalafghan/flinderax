@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
-import { bpsToText, buildEduPlan, percentToBps, stageWhen, toEduDraft, type EduDraft, type EduPlan } from "./education";
+import {
+  bpsToText,
+  buildEduPlan,
+  percentToBps,
+  stageWhen,
+  toEduDraft,
+  type EduDraft,
+  type EduPlan,
+} from "./education";
 
 const plan: EduPlan = {
   child_birth_year: 2026,
@@ -13,7 +21,10 @@ const plan: EduPlan = {
   corpus_paise: 0,
 };
 
-const draft = (patch: Partial<EduDraft> = {}): EduDraft => ({ ...toEduDraft(plan), ...patch });
+const draft = (patch: Partial<EduDraft> = {}): EduDraft => ({
+  ...toEduDraft(plan),
+  ...patch,
+});
 
 describe("education form", () => {
   test("a plan survives a trip through the form without float drift", () => {
@@ -23,7 +34,12 @@ describe("education form", () => {
   });
 
   test("rupees become paise through toPaise and a blank corpus is zero", () => {
-    const out = buildEduPlan(draft({ corpus: "2,50,000.5", stages: [{ name: "College", start_age: "18", cost: "₹1,50,000" }] }));
+    const out = buildEduPlan(
+      draft({
+        corpus: "2,50,000.5",
+        stages: [{ name: "College", start_age: "18", cost: "₹1,50,000" }],
+      }),
+    );
     expect(out.corpus_paise).toBe(25_000_050);
     expect(out.stages[0]?.today_cost_paise).toBe(15_000_000);
     expect(buildEduPlan(draft({ corpus: "  " })).corpus_paise).toBe(0);
@@ -39,12 +55,30 @@ describe("education form", () => {
   });
 
   test("bad input says what is wrong", () => {
-    expect(() => buildEduPlan(draft({ stages: [] }))).toThrow("at least one stage");
-    expect(() => buildEduPlan(draft({ stages: [{ name: " ", start_age: "5", cost: "1" }] }))).toThrow("needs a name");
-    expect(() => buildEduPlan(draft({ stages: [{ name: "A", start_age: "5", cost: "lots" }] }))).toThrow("plain rupee amount");
-    expect(() => buildEduPlan(draft({ stages: [{ name: "A", start_age: "50", cost: "1" }] }))).toThrow("starting age");
-    expect(() => buildEduPlan(draft({ corpus: "-5" }))).toThrow("Already set aside");
-    expect(() => buildEduPlan(draft({ child_birth_year: "20x6" }))).toThrow("Birth year");
+    expect(() => buildEduPlan(draft({ stages: [] }))).toThrow(
+      "at least one stage",
+    );
+    expect(() =>
+      buildEduPlan(
+        draft({ stages: [{ name: " ", start_age: "5", cost: "1" }] }),
+      ),
+    ).toThrow("needs a name");
+    expect(() =>
+      buildEduPlan(
+        draft({ stages: [{ name: "A", start_age: "5", cost: "lots" }] }),
+      ),
+    ).toThrow("plain rupee amount");
+    expect(() =>
+      buildEduPlan(
+        draft({ stages: [{ name: "A", start_age: "50", cost: "1" }] }),
+      ),
+    ).toThrow("starting age");
+    expect(() => buildEduPlan(draft({ corpus: "-5" }))).toThrow(
+      "Already set aside",
+    );
+    expect(() => buildEduPlan(draft({ child_birth_year: "20x6" }))).toThrow(
+      "Birth year",
+    );
   });
 
   test("a stage says when it is due or that it has begun", () => {

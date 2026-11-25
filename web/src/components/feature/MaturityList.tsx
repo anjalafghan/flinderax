@@ -13,19 +13,24 @@ export function MaturityList({ items }: { items: HistoryMaturity[] }) {
   if (items.length === 0) return null;
   return (
     <section aria-label="Upcoming maturities" className="space-y-4">
-      <h2 className="font-display text-[32px] leading-none tracking-tight">Upcoming maturities</h2>
+      <h2 className="font-display brand-text text-[32px] leading-none tracking-tight">
+        Upcoming maturities
+      </h2>
       <ul className="ledger glass rounded-[28px] px-5 md:px-6">
         {items.map((m) => (
           <li key={m.account_id} className="ledger-row text-sm">
             <div className="min-w-0">
               <p className="truncate font-medium">
-                {m.name} <span className="text-xs font-normal uppercase text-muted-foreground">{m.kind}</span>
+                {m.name}{" "}
+                <span className="pill pill-grape uppercase">{m.kind}</span>
               </p>
               <p className="text-xs text-muted-foreground">
                 {formatDay(m.maturity_date)} · {inDays(m.days_left)}
               </p>
             </div>
-            <span className="shrink-0 font-semibold tabular-nums">{formatINR(m.balance_paise)}</span>
+            <span className="shrink-0 font-semibold tabular-nums text-brand-ink">
+              {formatINR(m.balance_paise)}
+            </span>
           </li>
         ))}
       </ul>

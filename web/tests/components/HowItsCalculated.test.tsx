@@ -8,9 +8,24 @@ describe("HowItsCalculated", () => {
     render(
       <HowItsCalculated
         lines={[
-          { label: "Cash in spendable accounts", amount_paise: 11_216_099, note: null, total: false },
-          { label: "Card bills already spent", amount_paise: -7_953_818, note: "keep aside", total: false },
-          { label: "Cash you can spend", amount_paise: -1_737_719, note: null, total: true },
+          {
+            label: "Cash in spendable accounts",
+            amount_paise: 11_216_099,
+            note: null,
+            total: false,
+          },
+          {
+            label: "Card bills already spent",
+            amount_paise: -7_953_818,
+            note: "keep aside",
+            total: false,
+          },
+          {
+            label: "Cash you can spend",
+            amount_paise: -1_737_719,
+            note: null,
+            total: true,
+          },
         ]}
       />,
     );

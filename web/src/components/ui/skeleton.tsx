@@ -1,8 +1,31 @@
 import { cn } from "@/utils/cn";
 
-/** A shimmering block (the shimmer is in index.css for anything with animate-pulse and bg-muted). */
-export function Skeleton({ className, width }: { className?: string; width?: number }) {
-  return <div aria-hidden style={width ? { width } : undefined} className={cn("animate-pulse rounded-2xl bg-muted/40", className)} />;
+/** The section-tinted shimmer: a wash of the tab's colour with a brighter band sweeping across. */
+const SHIMMER =
+  "rounded-2xl [animation:shimmer_1.6s_linear_infinite] [background-color:hsl(var(--brand-tint))] [background-image:linear-gradient(100deg,transparent_25%,hsl(var(--brand)/0.16)_45%,hsl(var(--brand-2)/0.16)_55%,transparent_75%)] [background-size:200%_100%]";
+
+/**
+ * A shimmering block in the section's colour. Give it a `label` when it stands in for a whole card,
+ * so it is announced as loading; without one it is hidden from assistive tech.
+ */
+export function Skeleton({
+  className,
+  width,
+  label,
+}: {
+  className?: string;
+  width?: number;
+  label?: string;
+}) {
+  return (
+    <div
+      aria-hidden={label ? undefined : true}
+      aria-label={label}
+      aria-busy={label ? true : undefined}
+      style={width ? { width } : undefined}
+      className={cn(SHIMMER, className)}
+    />
+  );
 }
 
 /**
@@ -12,7 +35,12 @@ export function Skeleton({ className, width }: { className?: string; width?: num
  */
 export function PageSkeleton() {
   return (
-    <div role="status" aria-busy="true" aria-label="Loading" className="min-h-screen [animation:skeleton-in_.25s_ease_.18s_both]">
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label="Loading"
+      className="min-h-screen [animation:skeleton-in_.25s_ease_.18s_both]"
+    >
       <div className="mx-auto w-full max-w-[1040px] px-4 pt-7 md:px-6">
         <div className="flex items-center justify-between">
           <Skeleton className="h-9 w-16 rounded-xl" />

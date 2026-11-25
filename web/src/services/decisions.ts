@@ -14,4 +14,11 @@ export interface Decision {
 export const decisionsKey = ["decisions"] as const;
 
 export const useDecisions = () =>
-  useQuery({ queryKey: decisionsKey, queryFn: () => api.get<{ items: Decision[] }>("/api/decisions").then((r) => r.data.items), retry: 1 });
+  useQuery({
+    queryKey: decisionsKey,
+    queryFn: () =>
+      api
+        .get<{ items: Decision[] }>("/api/decisions")
+        .then((r) => r.data.items),
+    retry: 1,
+  });

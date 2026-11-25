@@ -37,7 +37,9 @@ const EditCardModal = lazy(() =>
 );
 
 const formatINR = (amount: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
+    amount,
+  );
 
 export default function CardDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -66,7 +68,11 @@ export default function CardDetailsPage() {
     queryKey: ["history", id],
     queryFn: async () => {
       const res = await api.post<{
-        histories: { transaction_id: string; total_due_input: number; timestamp: string }[];
+        histories: {
+          transaction_id: string;
+          total_due_input: number;
+          timestamp: string;
+        }[];
       }>("/api/card/history", { card_id: id });
       return res.data.histories;
     },
@@ -143,7 +149,11 @@ export default function CardDetailsPage() {
       <div className="page stack">
         {/* Header Actions */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button variant="ghost" className="pl-0" onClick={() => navigate("/cards")}>
+          <Button
+            variant="ghost"
+            className="pl-0"
+            onClick={() => navigate("/cards")}
+          >
             <ArrowLeft className="mr-2 h-4 w-4" /> Cards
           </Button>
           <div className="flex flex-wrap gap-2">
@@ -182,7 +192,15 @@ export default function CardDetailsPage() {
         <div className="grid gap-6 md:gap-8 md:grid-cols-[1.2fr_1fr]">
           {/* Left Column: Card Visual & Actions */}
           <div className="flex flex-col gap-4">
-            <div className="flex justify-center transition-all md:p-6">
+            <div className="relative flex justify-center transition-all md:p-6">
+              {/* A soft glow in the card's own colours */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-[10%] inset-y-[15%] rounded-full opacity-50 blur-3xl"
+                style={{
+                  background: `linear-gradient(110deg, rgb(${card.card_primary_color.join(",")}), rgb(${card.card_secondary_color.join(",")}))`,
+                }}
+              />
               <CreditCard
                 id={card.card_id}
                 name={card.card_name}
@@ -199,7 +217,9 @@ export default function CardDetailsPage() {
             <Button
               className="w-full sm:w-auto"
               onClick={() =>
-                document.getElementById("snapshot-form")?.scrollIntoView({ behavior: "smooth", block: "center" })
+                document
+                  .getElementById("snapshot-form")
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" })
               }
             >
               Update from bank app
@@ -209,11 +229,15 @@ export default function CardDetailsPage() {
           {/* Right Column: History */}
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-[24px]">Transaction history</CardTitle>
+              <CardTitle className="text-[24px]">
+                <span className="brand-text">Transaction history</span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {historyQuery.isLoading ? (
-                <p className="animate-pulse text-sm text-muted-foreground">Loading history...</p>
+                <p className="animate-pulse text-sm text-muted-foreground">
+                  Loading history...
+                </p>
               ) : historyQuery.data && historyQuery.data.length > 0 ? (
                 <ul className="ledger">
                   {(() => {
@@ -232,9 +256,26 @@ export default function CardDetailsPage() {
                       const delta = tx.total_due_input - previousAmount;
 
                       return (
-                        <li key={tx.transaction_id} className="ledger-row text-sm">
-                          <div className="min-w-0">
-                            <p className="font-display text-lg">{formatINR(tx.total_due_input)}</p>
+                        <li
+                          key={tx.transaction_id}
+                          className="ledger-row text-sm"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "h-3 w-3 shrink-0 rounded-full ring-4",
+                                delta > 0
+                                  ? "bg-coral ring-coral/20"
+                                  : delta < 0
+                                    ? "bg-mint ring-mint/20"
+                                    : "bg-sky ring-sky/20",
+                              )}
+                            />
+                            <div className="min-w-0">
+                            <p className="font-display text-lg">
+                              {formatINR(tx.total_due_input)}
+                            </p>
                             <p className="text-[13px] leading-snug text-muted-foreground">
                               {new Date(tx.timestamp).toLocaleDateString(
                                 undefined,
@@ -246,6 +287,7 @@ export default function CardDetailsPage() {
                                 minute: "2-digit",
                               })}
                             </p>
+                            </div>
                           </div>
 
                           <div className="flex shrink-0 items-center gap-2">
@@ -277,8 +319,12 @@ export default function CardDetailsPage() {
                               className="h-9 w-9"
                               aria-label="Delete transaction"
                               onClick={() => {
-                                if (window.confirm("Delete this transaction?")) {
-                                  deleteTransactionMutation.mutate(tx.transaction_id);
+                                if (
+                                  window.confirm("Delete this transaction?")
+                                ) {
+                                  deleteTransactionMutation.mutate(
+                                    tx.transaction_id,
+                                  );
                                 }
                               }}
                             >
@@ -301,9 +347,15 @@ export default function CardDetailsPage() {
           <>
             <div className="grid gap-6 md:gap-8 md:grid-cols-2">
               <CardBreakdownPanel breakdown={breakdownQuery.data} />
-              <CardSnapshotForm cardId={card.card_id} isFirst={breakdownQuery.data.last_updated === null} />
+              <CardSnapshotForm
+                cardId={card.card_id}
+                isFirst={breakdownQuery.data.last_updated === null}
+              />
             </div>
-            <CardLoansSection cardId={card.card_id} breakdown={breakdownQuery.data} />
+            <CardLoansSection
+              cardId={card.card_id}
+              breakdown={breakdownQuery.data}
+            />
           </>
         )}
 

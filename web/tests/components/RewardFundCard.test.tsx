@@ -7,7 +7,9 @@ import { RewardFundCard } from "@/components/feature/RewardFundCard";
 import type { AreaScore, FundOut } from "@/services/rewards";
 
 // Synthetic data only.
-const area = (o: Partial<AreaScore> & Pick<AreaScore, "area" | "label">): AreaScore => ({
+const area = (
+  o: Partial<AreaScore> & Pick<AreaScore, "area" | "label">,
+): AreaScore => ({
   weight_bps: 2000,
   raw: 10,
   target: 20,
@@ -27,8 +29,21 @@ const fund: FundOut = {
     days_left: 10,
     score: {
       areas: [
-        area({ area: "money", label: "Money", weight_bps: 4000, raw: 70, target: 66, score_bps: 10000 }),
-        area({ area: "health", label: "Health", raw: 0, score_bps: 0, tip: "Log this week's diet habits." }),
+        area({
+          area: "money",
+          label: "Money",
+          weight_bps: 4000,
+          raw: 70,
+          target: 66,
+          score_bps: 10000,
+        }),
+        area({
+          area: "health",
+          label: "Health",
+          raw: 0,
+          score_bps: 0,
+          tip: "Log this week's diet habits.",
+        }),
         area({ area: "relationships", label: "Relationships" }),
         area({ area: "future", label: "Future" }),
       ],
@@ -40,11 +55,22 @@ const fund: FundOut = {
       focus: "health",
     },
   },
-  months: [{ month: "2026-10", score_bps: 8000, earned_paise: 160000, saved_paise: 100000, payout_paise: 100000, detail: null }],
+  months: [
+    {
+      month: "2026-10",
+      score_bps: 8000,
+      earned_paise: 160000,
+      saved_paise: 100000,
+      payout_paise: 100000,
+      detail: null,
+    },
+  ],
 };
 
 function view() {
-  const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  });
   qc.setQueryData(["rewards", "fund"], fund);
   return render(
     <QueryClientProvider client={qc}>
@@ -64,6 +90,10 @@ describe("reward fund card", () => {
     expect(screen.getByText(/nothing is saved yet/)).toBeTruthy();
     expect(screen.getByText("10 days left")).toBeTruthy();
     expect(screen.getByText("Past months (1)")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Spend it on a treat" }).getAttribute("href")).toBe("/cards#rewards");
+    expect(
+      screen
+        .getByRole("link", { name: "Spend it on a treat" })
+        .getAttribute("href"),
+    ).toBe("/cards#rewards");
   });
 });

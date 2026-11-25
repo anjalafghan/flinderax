@@ -66,8 +66,19 @@ export interface Budget {
     unscheduled_paise: number;
     overdue_paise: number;
   };
-  verdict: { status: VerdictStatus; gap_paise: number; by: string | null; line: string };
-  next_due: { milestone_id: string; item_name: string; due_on: string; amount_paise: number; days_away: number } | null;
+  verdict: {
+    status: VerdictStatus;
+    gap_paise: number;
+    by: string | null;
+    line: string;
+  };
+  next_due: {
+    milestone_id: string;
+    item_name: string;
+    due_on: string;
+    amount_paise: number;
+    days_away: number;
+  } | null;
 }
 
 export interface ItemInput {
@@ -79,30 +90,63 @@ export interface ItemInput {
   notes: string;
 }
 
-export const budgetKey = (goalId: string) => ["wedding-budget", goalId] as const;
+export const budgetKey = (goalId: string) =>
+  ["wedding-budget", goalId] as const;
 
 const base = (goalId: string) => `/api/couple-goals/${goalId}`;
 type Ok = { status: boolean };
 
 export const weddingApi = {
-  get: (goalId: string) => api.get<Budget>(`${base(goalId)}/budget`).then((r) => r.data),
-  addItem: (goalId: string, i: ItemInput) => api.post<Ok>(`${base(goalId)}/items`, i).then((r) => r.data),
-  updateItem: (goalId: string, itemId: string, i: ItemInput) => api.post<Ok>(`${base(goalId)}/items/${itemId}`, i).then((r) => r.data),
-  removeItem: (goalId: string, itemId: string) => api.post<Ok>(`${base(goalId)}/items/${itemId}/delete`, {}).then((r) => r.data),
-  addMilestone: (goalId: string, itemId: string, m: { due_on: string | null; amount_paise: number }) =>
-    api.post<Ok>(`${base(goalId)}/items/${itemId}/milestones`, m).then((r) => r.data),
-  removeMilestone: (goalId: string, milestoneId: string) => api.post<Ok>(`${base(goalId)}/milestones/${milestoneId}/delete`, {}).then((r) => r.data),
-  unpay: (goalId: string, milestoneId: string) => api.post<Ok>(`${base(goalId)}/milestones/${milestoneId}/unpay`, {}).then((r) => r.data),
+  get: (goalId: string) =>
+    api.get<Budget>(`${base(goalId)}/budget`).then((r) => r.data),
+  addItem: (goalId: string, i: ItemInput) =>
+    api.post<Ok>(`${base(goalId)}/items`, i).then((r) => r.data),
+  updateItem: (goalId: string, itemId: string, i: ItemInput) =>
+    api.post<Ok>(`${base(goalId)}/items/${itemId}`, i).then((r) => r.data),
+  removeItem: (goalId: string, itemId: string) =>
+    api
+      .post<Ok>(`${base(goalId)}/items/${itemId}/delete`, {})
+      .then((r) => r.data),
+  addMilestone: (
+    goalId: string,
+    itemId: string,
+    m: { due_on: string | null; amount_paise: number },
+  ) =>
+    api
+      .post<Ok>(`${base(goalId)}/items/${itemId}/milestones`, m)
+      .then((r) => r.data),
+  removeMilestone: (goalId: string, milestoneId: string) =>
+    api
+      .post<Ok>(`${base(goalId)}/milestones/${milestoneId}/delete`, {})
+      .then((r) => r.data),
+  unpay: (goalId: string, milestoneId: string) =>
+    api
+      .post<Ok>(`${base(goalId)}/milestones/${milestoneId}/unpay`, {})
+      .then((r) => r.data),
   /** Marks a payment made. Works with no signal: kept on the phone and sent later (`queued`), done once however often it is sent. */
-  pay: async (goalId: string, milestoneId: string, label: string): Promise<{ queued: boolean }> => {
-    const r = await sendOrQueue(`${base(goalId)}/milestones/${milestoneId}/pay`, { idempotency_key: crypto.randomUUID() }, label);
+  pay: async (
+    goalId: string,
+    milestoneId: string,
+    label: string,
+  ): Promise<{ queued: boolean }> => {
+    const r = await sendOrQueue(
+      `${base(goalId)}/milestones/${milestoneId}/pay`,
+      { idempotency_key: crypto.randomUUID() },
+      label,
+    );
     if (r.queued || !r.response) return { queued: true };
     if (r.response.status === 401) {
       clearSession();
       window.location.href = "/auth";
       throw new Error("Please sign in again.");
     }
-    if (!r.response.ok) throw new Error(errorMessageOf(await r.response.text().catch(() => ""), r.response.status));
+    if (!r.response.ok)
+      throw new Error(
+        errorMessageOf(
+          await r.response.text().catch(() => ""),
+          r.response.status,
+        ),
+      );
     return { queued: false };
   },
 };

@@ -29,7 +29,7 @@ A private life-planning app for one household: money (Flinderax) plus the date j
 ## How the draw and the history work (read before touching slips)
 
 - Putting a slip back is unlimited. Each one is a row in `joy_peeks` (optional reason; only `not_my_thing` teaches taste), never in `joy_history`.
-- A kept date is `joy_history.outcome = 'did_it'` from the moment it is kept, but it only *counts* once its day has passed (`times_done` is derived in `db::COLS`). `last_done_at` includes planned dates so a booked slip is not drawn again. "Did it happen?" (`POST /history/{id}/happened`) confirms or cancels (`outcome = 'cancelled'`).
+- A kept date is `joy_history.outcome = 'did_it'` from the moment it is kept, but it only _counts_ once its day has passed (`times_done` is derived in `db::COLS`). `last_done_at` includes planned dates so a booked slip is not drawn again. "Did it happen?" (`POST /history/{id}/happened`) confirms or cancels (`outcome = 'cancelled'`).
 - A slip can be kept or planned only through `db::drawable_get` (not archived, not passed on, not sealed).
 - Envelope links expire (`share_expires_at`); `unshare` clears them.
 - Money-changing POSTs accept an `idempotency_key` (moves do now); add it to new ones.

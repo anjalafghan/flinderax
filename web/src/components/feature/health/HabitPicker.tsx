@@ -13,7 +13,8 @@ import {
   type NewHabit,
 } from "@/services/diet";
 
-const SECTION = "flex flex-col gap-6 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10";
+const SECTION =
+  "relative flex flex-col gap-6 overflow-hidden rounded-[28px] border border-[hsl(var(--c-grape)/0.35)] bg-[linear-gradient(160deg,hsl(var(--c-grape)/0.13),transparent_55%),hsl(var(--card))] px-6 py-8 sm:px-12 sm:py-10";
 const MAX_HABITS = 5;
 const DAYS = [1, 2, 3, 4, 5, 6, 7];
 
@@ -27,10 +28,13 @@ export function HabitPicker({ overview }: { overview: DietOverview }) {
   const [error, setError] = useState<string | null>(null);
 
   const active = overview.habits.filter((h) => h.active);
-  const presets = overview.presets.filter((p) => !active.some((h) => h.preset_key === p.key));
+  const presets = overview.presets.filter(
+    (p) => !active.some((h) => h.preset_key === p.key),
+  );
   const full = active.length >= MAX_HABITS;
 
-  const onError = (e: Error) => toast.error(e.message || "Couldn't save that. Try again.");
+  const onError = (e: Error) =>
+    toast.error(e.message || "Couldn't save that. Try again.");
 
   const addHabit = (input: NewHabit) => {
     setError(null);
@@ -54,7 +58,18 @@ export function HabitPicker({ overview }: { overview: DietOverview }) {
   return (
     <section aria-labelledby="health-habits-title" className={SECTION}>
       <div className="flex flex-col gap-2">
-        <h2 id="health-habits-title" className="m-0 font-display text-[32px] leading-none">
+        <h2
+          id="health-habits-title"
+          className="m-0 flex items-center gap-3 font-display text-[32px] leading-none"
+        >
+          <span
+            aria-hidden
+            className="h-3.5 w-3.5 shrink-0 rounded-full"
+            style={{
+              background: "hsl(var(--c-grape))",
+              boxShadow: "0 0 0 4px hsl(var(--c-grape) / 0.22)",
+            }}
+          />
           Your habits
         </h2>
         <p className="m-0 text-sm text-muted-foreground">
@@ -68,14 +83,25 @@ export function HabitPicker({ overview }: { overview: DietOverview }) {
             <li key={h.id} className="ledger-row flex-wrap">
               <span className="text-[15px] font-medium">{h.label}</span>
               <span className="flex flex-wrap items-center gap-3">
-                <Label htmlFor={`habit-target-${h.id}`} className="text-[13px] text-muted-foreground">
+                <Label
+                  htmlFor={`habit-target-${h.id}`}
+                  className="text-[13px] text-muted-foreground"
+                >
                   Days a week
                 </Label>
                 <Select
                   id={`habit-target-${h.id}`}
                   className="h-11 w-20"
                   value={String(h.target_days)}
-                  onChange={(e) => update.mutate({ id: h.id, patch: { target_days: Number(e.target.value) } }, { onError })}
+                  onChange={(e) =>
+                    update.mutate(
+                      {
+                        id: h.id,
+                        patch: { target_days: Number(e.target.value) },
+                      },
+                      { onError },
+                    )
+                  }
                 >
                   {DAYS.map((d) => (
                     <option key={d} value={d}>
@@ -89,7 +115,8 @@ export function HabitPicker({ overview }: { overview: DietOverview }) {
                   aria-label={`Stop tracking ${h.label}`}
                   onClick={() =>
                     remove.mutate(h.id, {
-                      onSuccess: () => toast.success(`Stopped tracking ${h.label}.`),
+                      onSuccess: () =>
+                        toast.success(`Stopped tracking ${h.label}.`),
                       onError,
                     })
                   }
@@ -103,12 +130,16 @@ export function HabitPicker({ overview }: { overview: DietOverview }) {
       )}
 
       {full ? (
-        <p className="empty-note m-0">You can track up to five at a time. Stop one to add another.</p>
+        <p className="empty-note m-0">
+          You can track up to five at a time. Stop one to add another.
+        </p>
       ) : (
         <>
           {presets.length > 0 && (
             <div className="flex flex-col gap-3">
-              <h3 className="m-0 text-[15px] font-medium">Start from one of these</h3>
+              <h3 className="m-0 text-[15px] font-medium">
+                Start from one of these
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {presets.map((p) => (
                   <Button
@@ -116,7 +147,13 @@ export function HabitPicker({ overview }: { overview: DietOverview }) {
                     variant="outline"
                     className="h-11"
                     disabled={add.isPending}
-                    onClick={() => addHabit({ label: p.label, preset_key: p.key, target_days: p.target_days })}
+                    onClick={() =>
+                      addHabit({
+                        label: p.label,
+                        preset_key: p.key,
+                        target_days: p.target_days,
+                      })
+                    }
                   >
                     {`${p.label}, ${p.target_days} days`}
                   </Button>
@@ -144,7 +181,11 @@ export function HabitPicker({ overview }: { overview: DietOverview }) {
             </div>
             <div className="field">
               <Label htmlFor="habit-custom-target">Days a week</Label>
-              <Select id="habit-custom-target" value={target} onChange={(e) => setTarget(e.target.value)}>
+              <Select
+                id="habit-custom-target"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+              >
                 {DAYS.map((d) => (
                   <option key={d} value={d}>
                     {d}
@@ -154,7 +195,10 @@ export function HabitPicker({ overview }: { overview: DietOverview }) {
             </div>
             <div className="form-actions">
               {error && (
-                <p role="alert" className="m-0 mr-auto text-sm text-destructive">
+                <p
+                  role="alert"
+                  className="m-0 mr-auto text-sm text-destructive"
+                >
                   {error}
                 </p>
               )}

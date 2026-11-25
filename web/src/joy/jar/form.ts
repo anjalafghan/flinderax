@@ -49,7 +49,17 @@ export const EMPTY_FILTERS: Filters = {
   fresh: "",
 };
 
-const SCALARS = ["when", "start", "budget", "max_duration", "tag", "energy", "max_km", "from", "fresh"] as const;
+const SCALARS = [
+  "when",
+  "start",
+  "budget",
+  "max_duration",
+  "tag",
+  "energy",
+  "max_km",
+  "from",
+  "fresh",
+] as const;
 
 /** Drop the empty fields; the server treats missing and empty alike. */
 export function compact(form: PickForm): PickForm {
@@ -75,20 +85,34 @@ export function filtersToForm(f: Filters, middle = false): PickForm {
 
 /** Tap a place to circle it, tap again to un-circle it. */
 export function toggleSetting(settings: string[], value: string): string[] {
-  return settings.includes(value) ? settings.filter((s) => s !== value) : [...settings, value];
+  return settings.includes(value)
+    ? settings.filter((s) => s !== value)
+    : [...settings, value];
 }
 
 /** Tap "office" or "home" again to go back to the usual start. */
-export function toggleStart(current: Filters["start"], value: "office" | "home"): Filters["start"] {
+export function toggleStart(
+  current: Filters["start"],
+  value: "office" | "home",
+): Filters["start"] {
   return current === value ? "" : value;
 }
 
 /** The server's `state` is the kept filters plus where the draw has got to, WITHOUT reroll/veto set. */
-export const putBackForm = (state: PickForm, reason?: PutBackReason): PickForm =>
-  compact({ ...state, reroll: "1", veto: "", reason: PUT_BACK_REASONS.some((r) => r.value === reason) ? reason : "" });
+export const putBackForm = (
+  state: PickForm,
+  reason?: PutBackReason,
+): PickForm =>
+  compact({
+    ...state,
+    reroll: "1",
+    veto: "",
+    reason: PUT_BACK_REASONS.some((r) => r.value === reason) ? reason : "",
+  });
 
 /** The optional one-tap why. Only "not my thing" teaches the jar what you like. */
-export type PutBackReason = "not_tonight" | "too_far" | "too_pricey" | "not_my_thing";
+export type PutBackReason =
+  "not_tonight" | "too_far" | "too_pricey" | "not_my_thing";
 export const PUT_BACK_REASONS: { value: PutBackReason; label: string }[] = [
   { value: "not_tonight", label: "Not tonight" },
   { value: "too_far", label: "Too far" },
@@ -96,13 +120,16 @@ export const PUT_BACK_REASONS: { value: PutBackReason; label: string }[] = [
   { value: "not_my_thing", label: "Not my thing" },
 ];
 /** "Not for me": out of the draw for both of us; there is no limit on putting back. */
-export const vetoForm = (state: PickForm): PickForm => compact({ ...state, veto: "1", reroll: "" });
+export const vetoForm = (state: PickForm): PickForm =>
+  compact({ ...state, veto: "1", reroll: "" });
 
 /** The sentence after a relax: write the loosened filters back so it tells the truth. */
 export function applyRelax(f: Filters, relax: PickForm): Filters {
   const next: Filters = { ...f };
   for (const k of SCALARS) {
-    if (k === "start") next.start = relax.start === "office" || relax.start === "home" ? relax.start : "";
+    if (k === "start")
+      next.start =
+        relax.start === "office" || relax.start === "home" ? relax.start : "";
     else next[k] = relax[k] ?? "";
   }
   next.settings = relax.settings ?? [];
@@ -111,4 +138,7 @@ export function applyRelax(f: Filters, relax: PickForm): Filters {
 
 /** Today as Joy stamps it ("14 · 10 · 2026") when the server didn't say. */
 export const stampDate = (server: string, now = new Date()) =>
-  server || [now.getDate(), now.getMonth() + 1, now.getFullYear()].map((n) => String(n).padStart(2, "0")).join(" · ");
+  server ||
+  [now.getDate(), now.getMonth() + 1, now.getFullYear()]
+    .map((n) => String(n).padStart(2, "0"))
+    .join(" · ");

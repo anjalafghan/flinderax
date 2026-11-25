@@ -180,5 +180,9 @@ export const yearKeys = {
 };
 
 export const getYearGo = () => get<Go>(`${BASE}/year`);
-export const getYear = (y: string) => get<YearView>(`${BASE}/year/${encodeURIComponent(y)}`);
-export const getMonth = (y: string, m: string) => get<MonthView>(`${BASE}/year/${encodeURIComponent(y)}/${encodeURIComponent(m)}`);
+export const getYear = (y: string) =>
+  get<YearView>(`${BASE}/year/${encodeURIComponent(y)}`);
+export const getMonth = (y: string, m: string) =>
+  get<MonthView>(
+    `${BASE}/year/${encodeURIComponent(y)}/${encodeURIComponent(m)}`,
+  );

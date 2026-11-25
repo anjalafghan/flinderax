@@ -14,7 +14,10 @@ export const uniqueName = (prefix: string) => `${prefix}${counter++}`;
  */
 export async function register(page: Page, name: string) {
   await page.goto("/auth");
-  await page.getByRole("button", { name: "Register", exact: true }).first().click();
+  await page
+    .getByRole("button", { name: "Register", exact: true })
+    .first()
+    .click();
   await page.locator("#reg-username").fill(name);
   await page.locator("#reg-code").fill(SIGNUP_CODE);
   await page.locator("#reg-password").fill(PASSWORD);
@@ -31,7 +34,10 @@ export async function register(page: Page, name: string) {
 /** Registers and stays signed in, the way a person does. */
 export async function registerAndStay(page: Page, name: string) {
   await page.goto("/auth");
-  await page.getByRole("button", { name: "Register", exact: true }).first().click();
+  await page
+    .getByRole("button", { name: "Register", exact: true })
+    .first()
+    .click();
   await page.locator("#reg-username").fill(name);
   await page.locator("#reg-code").fill(SIGNUP_CODE);
   await page.locator("#reg-password").fill(PASSWORD);
@@ -41,7 +47,10 @@ export async function registerAndStay(page: Page, name: string) {
 
 export async function signIn(page: Page, name: string) {
   await page.goto("/auth");
-  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await page
+    .getByRole("button", { name: "Login", exact: true })
+    .first()
+    .click();
   await page.locator("#username").fill(name);
   await page.locator("#password").fill(PASSWORD);
   await page.locator("form:visible button[type=submit]").click();
@@ -62,7 +71,9 @@ export async function startJarWithSlip(page: Page, title: string, cost = "0") {
   await page.getByRole("button", { name: "Continue" }).click();
   await page.goto("/joy/slips/new");
   await page.getByRole("textbox", { name: "The idea" }).fill(title);
-  await page.getByRole("spinbutton", { name: "Cost for both of us" }).fill(cost);
+  await page
+    .getByRole("spinbutton", { name: "Cost for both of us" })
+    .fill(cost);
   await page.locator("#save-btn").click();
   await expect(page).toHaveURL(/\/joy\/slips$/);
 }

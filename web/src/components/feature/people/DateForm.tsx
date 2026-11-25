@@ -7,7 +7,15 @@ import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
 import { MONTH_NAMES, errorMessage } from "@/components/feature/people/ui";
-import { addDate, localDay, updateDate, usePeopleMutation, KIND_LABEL, type DateKind, type PersonDate } from "@/services/people";
+import {
+  addDate,
+  localDay,
+  updateDate,
+  usePeopleMutation,
+  KIND_LABEL,
+  type DateKind,
+  type PersonDate,
+} from "@/services/people";
 import { paiseToInput, toPaise } from "@/utils/money";
 
 const KINDS: DateKind[] = ["birthday", "anniversary", "remembrance", "other"];
@@ -24,8 +32,9 @@ export function DateForm({
   onDone: () => void;
 }) {
   const id = useId();
-  const save = usePeopleMutation((v: { dateId?: string; input: Parameters<typeof addDate>[1] }) =>
-    v.dateId ? updateDate(v.dateId, v.input) : addDate(personId, v.input),
+  const save = usePeopleMutation(
+    (v: { dateId?: string; input: Parameters<typeof addDate>[1] }) =>
+      v.dateId ? updateDate(v.dateId, v.input) : addDate(personId, v.input),
   );
   const today = localDay().split("-");
   const [kind, setKind] = useState<DateKind>(initial?.kind ?? "birthday");
@@ -34,7 +43,11 @@ export function DateForm({
   const [day, setDay] = useState(initial?.day ?? Number(today[2]));
   const [year, setYear] = useState(initial?.year ? String(initial.year) : "");
   const [remind, setRemind] = useState(String(initial?.remind_days ?? 7));
-  const [budget, setBudget] = useState(initial?.gift_budget_paise != null ? paiseToInput(initial.gift_budget_paise) : "");
+  const [budget, setBudget] = useState(
+    initial?.gift_budget_paise != null
+      ? paiseToInput(initial.gift_budget_paise)
+      : "",
+  );
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -43,7 +56,13 @@ export function DateForm({
       toast.error("Remind me up to 60 days ahead.");
       return;
     }
-    const input: Parameters<typeof addDate>[1] = { kind, label: label.trim(), month, day, remind_days: remindDays };
+    const input: Parameters<typeof addDate>[1] = {
+      kind,
+      label: label.trim(),
+      month,
+      day,
+      remind_days: remindDays,
+    };
     if (year.trim() !== "") input.year = Number(year);
     if (budget.trim() === "") {
       input.gift_budget_paise = null;
@@ -68,10 +87,18 @@ export function DateForm({
   };
 
   return (
-    <form onSubmit={submit} aria-label={initial ? "Edit date" : "Add a date"} className="grid gap-4 sm:grid-cols-2">
+    <form
+      onSubmit={submit}
+      aria-label={initial ? "Edit date" : "Add a date"}
+      className="grid gap-4 sm:grid-cols-2"
+    >
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-kind`}>What is it?</Label>
-        <Select id={`${id}-kind`} value={kind} onChange={(e) => setKind(e.target.value as DateKind)}>
+        <Select
+          id={`${id}-kind`}
+          value={kind}
+          onChange={(e) => setKind(e.target.value as DateKind)}
+        >
           {KINDS.map((k) => (
             <option key={k} value={k}>
               {KIND_LABEL[k]}
@@ -81,11 +108,21 @@ export function DateForm({
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-label`}>Name it (optional)</Label>
-        <Input id={`${id}-label`} maxLength={40} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Diwali" />
+        <Input
+          id={`${id}-label`}
+          maxLength={40}
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Diwali"
+        />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-month`}>Month</Label>
-        <Select id={`${id}-month`} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+        <Select
+          id={`${id}-month`}
+          value={month}
+          onChange={(e) => setMonth(Number(e.target.value))}
+        >
           {MONTH_NAMES.map((name, i) => (
             <option key={name} value={i + 1}>
               {name}
@@ -95,7 +132,11 @@ export function DateForm({
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-day`}>Day</Label>
-        <Select id={`${id}-day`} value={day} onChange={(e) => setDay(Number(e.target.value))}>
+        <Select
+          id={`${id}-day`}
+          value={day}
+          onChange={(e) => setDay(Number(e.target.value))}
+        >
           {DAYS.map((d) => (
             <option key={d} value={d}>
               {d}
@@ -129,7 +170,11 @@ export function DateForm({
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-budget`}>Gift budget (₹, optional)</Label>
-        <MoneyInput id={`${id}-budget`} value={budget} onChange={(e) => setBudget(e.target.value)} />
+        <MoneyInput
+          id={`${id}-budget`}
+          value={budget}
+          onChange={(e) => setBudget(e.target.value)}
+        />
       </div>
       <div className="flex flex-wrap gap-2 sm:col-span-2">
         <Button type="submit" disabled={save.isPending}>

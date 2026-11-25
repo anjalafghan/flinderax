@@ -19,15 +19,24 @@ export default function WorkingPage() {
       <Header />
       <main className="page">
         <div className="mb-6 md:mb-8">
-          <Link to="/" className="mb-3 inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            to="/"
+            className="mb-3 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Today
           </Link>
           <h1 className="page-title">The working</h1>
-          <p className="page-sub">How the dashboard number is made, step by step.</p>
+          <p className="page-sub">
+            How the dashboard number is made, step by step.
+          </p>
         </div>
 
-        {isLoading && <div className="h-40 animate-pulse rounded-[28px] bg-muted/40" />}
-        {isError && <p className="text-destructive">Couldn't load the working.</p>}
+        {isLoading && (
+          <div className="h-40 animate-pulse rounded-[28px] bg-muted/40" />
+        )}
+        {isError && (
+          <p className="text-destructive">Couldn't load the working.</p>
+        )}
 
         {data && (
           <div className="stack">
@@ -37,11 +46,18 @@ export default function WorkingPage() {
               <div className="stack">
                 <BudgetSplit budget={data.budget} spending={data.spending} />
                 {data.next_period && (
-                  <section aria-label="Next period" className="glass rounded-[28px] p-6 text-sm md:p-8">
-                    <p className="font-medium">Heads-up: {data.next_period.label}</p>
+                  <section
+                    aria-label="Next period"
+                    className="glass rounded-[28px] p-6 text-sm md:p-8"
+                  >
+                    <p className="font-medium">
+                      Heads-up: {data.next_period.label}
+                    </p>
                     <p className="mt-2 max-w-prose leading-snug text-muted-foreground">
-                      {formatINR(data.next_period.income_paise)} arrives, and {formatINR(data.next_period.committed_paise)} of
-                      fixed payments are already due after it, leaving {formatINR(data.next_period.left_paise)}.
+                      {formatINR(data.next_period.income_paise)} arrives, and{" "}
+                      {formatINR(data.next_period.committed_paise)} of fixed
+                      payments are already due after it, leaving{" "}
+                      {formatINR(data.next_period.left_paise)}.
                     </p>
                   </section>
                 )}

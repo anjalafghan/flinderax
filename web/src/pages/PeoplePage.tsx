@@ -20,14 +20,23 @@ export default function PeoplePage() {
       <main className="page page-narrow stack">
         <header>
           <h1 className="page-title">Circle</h1>
-          <p className="page-sub">The people who matter, their dates, and a nudge when it's been a while.</p>
+          <p className="page-sub">
+            The people who matter, their dates, and a nudge when it's been a
+            while.
+          </p>
         </header>
 
         {people.isLoading && (
-          <div className="h-48 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading your circle" />
+          <div
+            className="h-48 animate-pulse rounded-[28px] bg-muted/40"
+            aria-label="Loading your circle"
+          />
         )}
         {people.isError && !data && (
-          <Retry message="Couldn't load your circle." onRetry={() => void people.refetch()} />
+          <Retry
+            message="Couldn't load your circle."
+            onRetry={() => void people.refetch()}
+          />
         )}
 
         {data && (

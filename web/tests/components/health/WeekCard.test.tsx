@@ -3,7 +3,12 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 
 import { WeekCard } from "@/components/feature/health/WeekCard";
-import { jsonResponse, overview, renderWithProviders, stubFetch } from "./fixture";
+import {
+  jsonResponse,
+  overview,
+  renderWithProviders,
+  stubFetch,
+} from "./fixture";
 
 describe("WeekCard", () => {
   afterEach(() => {
@@ -21,11 +26,17 @@ describe("WeekCard", () => {
   });
 
   it("shows a toast with the server's message when a save fails", async () => {
-    stubFetch(() => Promise.resolve(new Response("Pick a day between 0 and 7.", { status: 422 })));
+    stubFetch(() =>
+      Promise.resolve(
+        new Response("Pick a day between 0 and 7.", { status: 422 }),
+      ),
+    );
     const error = spyOn(toast, "error");
     renderWithProviders(<WeekCard overview={overview} />);
     fireEvent.click(screen.getByRole("button", { name: "Save week" }));
-    await waitFor(() => expect(error).toHaveBeenCalledWith("Pick a day between 0 and 7."));
+    await waitFor(() =>
+      expect(error).toHaveBeenCalledWith("Pick a day between 0 and 7."),
+    );
   });
 
   it("sends the feel as null when Skip is chosen", async () => {

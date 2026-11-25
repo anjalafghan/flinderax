@@ -2,7 +2,14 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCouple, keys } from "../api";
-import { createRegular, getRegulars, regKeys, restoreRegular, type DayBox, type StoppedItem } from "../regulars/api";
+import {
+  createRegular,
+  getRegulars,
+  regKeys,
+  restoreRegular,
+  type DayBox,
+  type StoppedItem,
+} from "../regulars/api";
 import { apiMessage, newRegularBody, nightsWord } from "../regulars/days";
 import { mapGoTo } from "../paths";
 import { ErrorState } from "../components/ErrorState";
@@ -12,7 +19,12 @@ import "../regulars/regulars.css";
 
 export default function RegularsPage() {
   const q = useQuery({ queryKey: regKeys.list, queryFn: getRegulars });
-  if (q.isPending) return <p className="loading" role="status">Opening our regular nights…</p>;
+  if (q.isPending)
+    return (
+      <p className="loading" role="status">
+        Opening our regular nights…
+      </p>
+    );
   if (q.isError) {
     return (
       <ErrorState message={errText(q.error)} onRetry={() => void q.refetch()} />
@@ -22,12 +34,19 @@ export default function RegularsPage() {
   return (
     <>
       <nav className="m-top" aria-label="Back">
-        <Link className="m-back" to="/joy/kept"><span aria-hidden="true">←</span> Kept</Link>
+        <Link className="m-back" to="/joy/kept">
+          <span aria-hidden="true">←</span> Kept
+        </Link>
       </nav>
       <header className="rs-head">
         <h1 className="rs-title">Our regular nights</h1>
-        <p className="rs-hand" aria-hidden="true">a hole punched for every night we went</p>
-        <p className="rs-sub">Places we go on the same days. On those evenings the jar asks if we went.</p>
+        <p className="rs-hand" aria-hidden="true">
+          a hole punched for every night we went
+        </p>
+        <p className="rs-sub">
+          Places we go on the same days. On those evenings the jar asks if we
+          went.
+        </p>
       </header>
 
       {items.length === 0 ? (
@@ -36,8 +55,17 @@ export default function RegularsPage() {
         <ul className="rl-wallet">
           {items.map((i) => (
             <li key={i.id}>
-              <Link className="rl-card" to={`/joy/regulars/${i.id}`} aria-label={`${i.title}: ${i.days}, ${i.usual} a night, ${i.count} ${nightsWord(i.count)} so far${i.place ? `, ${i.place}` : ""}`}>
-                <PunchCard id={i.id} title={i.title} line={`${i.days}${i.usual ? `, about ${i.usual}` : ""}`} count={i.count} />
+              <Link
+                className="rl-card"
+                to={`/joy/regulars/${i.id}`}
+                aria-label={`${i.title}: ${i.days}, ${i.usual} a night, ${i.count} ${nightsWord(i.count)} so far${i.place ? `, ${i.place}` : ""}`}
+              >
+                <PunchCard
+                  id={i.id}
+                  title={i.title}
+                  line={`${i.days}${i.usual ? `, about ${i.usual}` : ""}`}
+                  count={i.count}
+                />
               </Link>
             </li>
           ))}
@@ -74,7 +102,12 @@ function StoppedList({ stopped }: { stopped: StoppedItem[] }) {
           <li key={s.id}>
             <span className="rl-item">
               <strong>{s.title}</strong>
-              <button type="button" className="btn" disabled={busy} onClick={() => restore(s.id)}>
+              <button
+                type="button"
+                className="btn"
+                disabled={busy}
+                onClick={() => restore(s.id)}
+              >
                 Reset: track it again
               </button>
             </span>
@@ -93,15 +126,26 @@ function AddForm({ days }: { days: DayBox[] }) {
   const [title, setTitle] = useState("");
   const [place, setPlace] = useState("");
   const [maps, setMaps] = useState("");
-  const [picked, setPicked] = useState<number[]>(() => days.filter((d) => d.checked).map((d) => d.value));
+  const [picked, setPicked] = useState<number[]>(() =>
+    days.filter((d) => d.checked).map((d) => d.value),
+  );
   const [cost, setCost] = useState("");
   const [since, setSince] = useState("");
   const [error, setError] = useState("");
-  const currency = useQuery({ queryKey: keys.couple, queryFn: getCouple }).data?.currency ?? "";
+  const currency =
+    useQuery({ queryKey: keys.couple, queryFn: getCouple }).data?.currency ??
+    "";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { body, error: msg } = newRegularBody({ title, place, maps_url: maps, days: picked, cost, since });
+    const { body, error: msg } = newRegularBody({
+      title,
+      place,
+      maps_url: maps,
+      days: picked,
+      cost,
+      since,
+    });
     if (!body) {
       setError(msg);
       return;
@@ -121,18 +165,46 @@ function AddForm({ days }: { days: DayBox[] }) {
   return (
     <form className="rl-form" onSubmit={submit} noValidate>
       <h2 className="reg-h">Add a regular</h2>
-      {error && <p className="rs-error" role="alert">{error}</p>}
+      {error && (
+        <p className="rs-error" role="alert">
+          {error}
+        </p>
+      )}
       <label>
         Name
-        <input name="title" type="text" maxLength={60} required autoComplete="off" placeholder="Blue Tokai" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input
+          name="title"
+          type="text"
+          maxLength={60}
+          required
+          autoComplete="off"
+          placeholder="Blue Tokai"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
       </label>
       <label>
         Place
-        <input name="place" type="text" maxLength={120} autoComplete="off" placeholder="Blue Tokai Coffee Roasters, Goregaon East" value={place} onChange={(e) => setPlace(e.target.value)} />
+        <input
+          name="place"
+          type="text"
+          maxLength={120}
+          autoComplete="off"
+          placeholder="Blue Tokai Coffee Roasters, Goregaon East"
+          value={place}
+          onChange={(e) => setPlace(e.target.value)}
+        />
       </label>
       <label>
         Maps link
-        <input name="maps_url" type="url" autoComplete="off" placeholder="https://maps.app.goo.gl/…" value={maps} onChange={(e) => setMaps(e.target.value)} />
+        <input
+          name="maps_url"
+          type="url"
+          autoComplete="off"
+          placeholder="https://maps.app.goo.gl/…"
+          value={maps}
+          onChange={(e) => setMaps(e.target.value)}
+        />
       </label>
       <fieldset className="rl-days">
         <legend>Which days</legend>
@@ -143,23 +215,48 @@ function AddForm({ days }: { days: DayBox[] }) {
               name="days"
               value={d.value}
               checked={picked.includes(d.value)}
-              onChange={(e) => setPicked((p) => (e.target.checked ? [...p, d.value] : p.filter((v) => v !== d.value)))}
+              onChange={(e) =>
+                setPicked((p) =>
+                  e.target.checked
+                    ? [...p, d.value]
+                    : p.filter((v) => v !== d.value),
+                )
+              }
             />
             <span>{d.label}</span>
           </label>
         ))}
       </fieldset>
       <label>
-        Usual spend a night {currency && <span className="opt">in {currency}</span>}
-        <input name="cost" type="text" inputMode="numeric" autoComplete="off" placeholder="e.g. 300" value={cost} onChange={(e) => setCost(e.target.value)} />
+        Usual spend a night{" "}
+        {currency && <span className="opt">in {currency}</span>}
+        <input
+          name="cost"
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="e.g. 300"
+          value={cost}
+          onChange={(e) => setCost(e.target.value)}
+        />
         <small>Optional. It fills in when you tap Went.</small>
       </label>
       <label>
         Counting from
-        <input name="since" type="date" value={since} onChange={(e) => setSince(e.target.value)} />
-        <small>Blank is today. Pick an earlier day to be asked about nights you've missed this week.</small>
+        <input
+          name="since"
+          type="date"
+          value={since}
+          onChange={(e) => setSince(e.target.value)}
+        />
+        <small>
+          Blank is today. Pick an earlier day to be asked about nights you've
+          missed this week.
+        </small>
       </label>
-      <button className="btn btn-stamp" type="submit" disabled={busy}>Add it</button>
+      <button className="btn btn-stamp" type="submit" disabled={busy}>
+        Add it
+      </button>
       <button
         type="button"
         className="btn"

@@ -91,14 +91,20 @@ describe("months", () => {
 
 describe("signedAmount", () => {
   it("shows debits as money out and credits as money in", () => {
-    expect(signedAmount({ direction: "debit", amount_paise: 125000 })).toBe("−₹1,250");
-    expect(signedAmount({ direction: "credit", amount_paise: 50 })).toBe("+₹0.50");
+    expect(signedAmount({ direction: "debit", amount_paise: 125000 })).toBe(
+      "−₹1,250",
+    );
+    expect(signedAmount({ direction: "credit", amount_paise: 50 })).toBe(
+      "+₹0.50",
+    );
   });
 });
 
 describe("sourceDetail and sourceLabel", () => {
   it("combines the source name and last 4 digits when both are known", () => {
-    expect(sourceDetail("HDFC Credit Card", "1234")).toBe("HDFC Credit Card ••1234");
+    expect(sourceDetail("HDFC Credit Card", "1234")).toBe(
+      "HDFC Credit Card ••1234",
+    );
     expect(sourceDetail("HDFC Savings", null)).toBe("HDFC Savings");
     expect(sourceDetail(null, "9876")).toBe("••9876");
     expect(sourceDetail(null, null)).toBeNull();
@@ -131,17 +137,27 @@ describe("suggestCategory", () => {
   ];
 
   it("picks the category you used most for the same merchant, ignoring case and spaces", () => {
-    expect(suggestCategory({ merchant: "SWIGGY", direction: "debit" }, history)).toBe("food");
+    expect(
+      suggestCategory({ merchant: "SWIGGY", direction: "debit" }, history),
+    ).toBe("food");
   });
 
   it("keeps debits and credits apart", () => {
-    expect(suggestCategory({ merchant: "Swiggy", direction: "credit" }, history)).toBe("refund");
+    expect(
+      suggestCategory({ merchant: "Swiggy", direction: "credit" }, history),
+    ).toBe("refund");
   });
 
   it("does not guess without history, or for a missing merchant, or from uncategorised rows", () => {
-    expect(suggestCategory({ merchant: "Ola", direction: "debit" }, history)).toBeNull();
-    expect(suggestCategory({ merchant: "Zomato", direction: "debit" }, history)).toBeNull();
-    expect(suggestCategory({ merchant: null, direction: "debit" }, history)).toBeNull();
+    expect(
+      suggestCategory({ merchant: "Ola", direction: "debit" }, history),
+    ).toBeNull();
+    expect(
+      suggestCategory({ merchant: "Zomato", direction: "debit" }, history),
+    ).toBeNull();
+    expect(
+      suggestCategory({ merchant: null, direction: "debit" }, history),
+    ).toBeNull();
   });
 });
 
@@ -153,7 +169,16 @@ describe("topCategories", () => {
       { category: "health", direction: "debit" },
       { category: "uncategorized", direction: "debit" },
     ];
-    expect(topCategories(rows, "debit", 4)).toEqual(["fuel", "health", "food", "groceries"]);
-    expect(topCategories([], "credit", 3)).toEqual(["income", "refund", "transfer"]);
+    expect(topCategories(rows, "debit", 4)).toEqual([
+      "fuel",
+      "health",
+      "food",
+      "groceries",
+    ]);
+    expect(topCategories([], "credit", 3)).toEqual([
+      "income",
+      "refund",
+      "transfer",
+    ]);
   });
 });

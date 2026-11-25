@@ -1,7 +1,15 @@
 // Regulars: weekday labels, form payloads and error text. Pure.
 import { ApiError } from "../api";
 
-export const WEEKDAY_PLURALS = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"] as const;
+export const WEEKDAY_PLURALS = [
+  "Sundays",
+  "Mondays",
+  "Tuesdays",
+  "Wednesdays",
+  "Thursdays",
+  "Fridays",
+  "Saturdays",
+] as const;
 
 /** "2,4" -> "Tuesdays and Thursdays" (same as the server's weekdays_label). */
 export function weekdaysLabel(weekdays: string): string {
@@ -54,16 +62,30 @@ export interface NewRegularBody {
 }
 
 /** Checks the add form the way the server will; the second member is a message to show, or "". */
-export function newRegularBody(f: NewRegularForm): { body: NewRegularBody | null; error: string } {
+export function newRegularBody(f: NewRegularForm): {
+  body: NewRegularBody | null;
+  error: string;
+} {
   const title = f.title.trim().slice(0, 60);
   if (!title) return { body: null, error: "Give it a name." };
   const days = cleanDays(f.days);
   if (days.length === 0) return { body: null, error: "Pick at least one day." };
   const cost = parseRupees(f.cost);
-  if (cost === null) return { body: null, error: "The usual spend should be a number, like 300." };
+  if (cost === null)
+    return {
+      body: null,
+      error: "The usual spend should be a number, like 300.",
+    };
   const maps = f.maps_url.trim();
   return {
-    body: { title, place: f.place.trim().slice(0, 120), maps_url: /^https?:\/\//i.test(maps) ? maps : "", days, cost, since: f.since },
+    body: {
+      title,
+      place: f.place.trim().slice(0, 120),
+      maps_url: /^https?:\/\//i.test(maps) ? maps : "",
+      days,
+      cost,
+      since: f.since,
+    },
     error: "",
   };
 }
@@ -76,19 +98,36 @@ export interface WentBody {
 }
 
 /** One-tap "Went": blank amount and place mean the regular's usual. */
-export const wentUsual = (day: string, back = ""): WentBody => ({ day, amount: "", place: "", back });
+export const wentUsual = (day: string, back = ""): WentBody => ({
+  day,
+  amount: "",
+  place: "",
+  back,
+});
 
 /** "Somewhere else, or a different amount". null amount means what was typed isn't a number. */
-export function wentElse(day: string, place: string, amount: string, back = ""): { body: WentBody | null; error: string } {
+export function wentElse(
+  day: string,
+  place: string,
+  amount: string,
+  back = "",
+): { body: WentBody | null; error: string } {
   const a = parseRupees(amount);
-  if (a === null) return { body: null, error: "Spent should be a number, like 300." };
-  return { body: { day, amount: a, place: place.trim().slice(0, 80), back }, error: "" };
+  if (a === null)
+    return { body: null, error: "Spent should be a number, like 300." };
+  return {
+    body: { day, amount: a, place: place.trim().slice(0, 80), back },
+    error: "",
+  };
 }
 
 export const skipBody = (day: string, back = "") => ({ day, back });
 
 /** The server's 422 is `{error}`; anything else falls back to the text it sent, or a plain line. */
-export function apiMessage(e: unknown, fallback = "That didn’t work. Try again."): string {
+export function apiMessage(
+  e: unknown,
+  fallback = "That didn’t work. Try again.",
+): string {
   if (e instanceof ApiError) {
     const d = e.data as { error?: unknown } | null;
     if (d && typeof d.error === "string" && d.error) return d.error;
@@ -98,7 +137,6 @@ export function apiMessage(e: unknown, fallback = "That didn’t work. Try again
   if (e instanceof TypeError) return "No connection. Try again in a moment.";
   return fallback;
 }
-
 
 /** "1 night" / "3 nights" */
 export const nightsWord = (n: number) => (n === 1 ? "night" : "nights");

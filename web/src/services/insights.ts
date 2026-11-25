@@ -60,7 +60,9 @@ export interface InsightsOut {
   spend_to_payday: SpendToPayday | null;
 }
 
-export const getInsights = () => api.get<InsightsOut>("/api/dashboard/insights").then((r) => r.data);
+export const getInsights = () =>
+  api.get<InsightsOut>("/api/dashboard/insights").then((r) => r.data);
 
 /** Insights are derived from every transaction, so they refresh with the rest of the planner data. */
-export const useInsights = () => useQuery({ queryKey: ["insights"], queryFn: getInsights, retry: 1 });
+export const useInsights = () =>
+  useQuery({ queryKey: ["insights"], queryFn: getInsights, retry: 1 });

@@ -55,13 +55,19 @@ export interface Slot {
 export type Rand = () => number;
 
 export const insetAt = (y: number) =>
-  y <= CORNER_Y ? 0 : CORNER_R - Math.sqrt(Math.max(0, CORNER_R * CORNER_R - (y - CORNER_Y) ** 2));
+  y <= CORNER_Y
+    ? 0
+    : CORNER_R -
+      Math.sqrt(Math.max(0, CORNER_R * CORNER_R - (y - CORNER_Y) ** 2));
 
 /** Deterministic RNG so the pile looks the same every visit. */
-export const rng = (seed: number): Rand => () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
+export const rng =
+  (seed: number): Rand =>
+  () =>
+    (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
 
 export const hash = (n: number) => {
-  n = (n ^ 61) ^ (n >>> 16);
+  n = n ^ 61 ^ (n >>> 16);
   n = (n + (n << 3)) >>> 0;
   n ^= n >>> 4;
   n = Math.imul(n, 0x27d4eb2d) >>> 0;
@@ -82,10 +88,18 @@ export function makeSlots(n: number): Slot[] {
     const rowSlots: Slot[] = [];
     for (let i = 0; i < count; i++) {
       const shift = row % 2 ? step * 0.45 : 0;
-      let x = (count > 1 ? left + i * step + shift - step * 0.22 : (left + right) / 2) + (r() - 0.5) * 7;
+      let x =
+        (count > 1
+          ? left + i * step + shift - step * 0.22
+          : (left + right) / 2) +
+        (r() - 0.5) * 7;
       x = Math.min(right, Math.max(left, x));
       const steep = r() < 0.18;
-      rowSlots.push({ x, y: y + (r() - 0.5) * 4, a: (r() - 0.5) * (steep ? 1.6 : 0.7) });
+      rowSlots.push({
+        x,
+        y: y + (r() - 0.5) * 4,
+        a: (r() - 0.5) * (steep ? 1.6 : 0.7),
+      });
     }
     for (let i = rowSlots.length - 1; i > 0; i--) {
       const j = (r() * (i + 1)) | 0;
@@ -98,7 +112,9 @@ export function makeSlots(n: number): Slot[] {
 
 /** The slips we simulate: all of them, or a stable sample of CAP when the jar is big. */
 export function sample(slips: SlipInfo[]): SlipInfo[] {
-  return slips.length > CAP ? [...slips].sort((a, b) => hash(a.id) - hash(b.id)).slice(0, CAP) : slips;
+  return slips.length > CAP
+    ? [...slips].sort((a, b) => hash(a.id) - hash(b.id)).slice(0, CAP)
+    : slips;
 }
 
 export function makeParts(shown: SlipInfo[]): Part[] {
@@ -107,8 +123,22 @@ export function makeParts(shown: SlipInfo[]): Part[] {
     setting: s.setting,
     outdoor: !!s.outdoor,
     rank: hash(s.id * 7 + 3),
-    x: 0, y: 0, a: 0, vx: 0, vy: 0, va: 0, tx: 0, ty: 0, ta: 0,
-    dim: 0, dimT: 0, delay: 0, k: 120, c: 14, out: false, falling: false,
+    x: 0,
+    y: 0,
+    a: 0,
+    vx: 0,
+    vy: 0,
+    va: 0,
+    tx: 0,
+    ty: 0,
+    ta: 0,
+    dim: 0,
+    dimT: 0,
+    delay: 0,
+    k: 120,
+    c: 14,
+    out: false,
+    falling: false,
     scribble: hash(s.id) % 3,
     subFor: null,
   }));
@@ -131,9 +161,22 @@ export interface AssignOpts {
 export function assign(parts: Part[], slots: Slot[], o: AssignOpts) {
   const rand = o.rand ?? Math.random;
   const inJar = parts.filter((p) => !p.out);
-  const fits = (p: Part) => !o.matchSet || o.matchSet.has(p.id) || (p.subFor != null && o.matchSet.has(p.subFor));
-  const cozy = (p: Part) => (!o.rainy ? 0 : p.setting === "home" || p.setting === "apart" ? 1 : p.outdoor ? -1 : 0);
-  inJar.sort((a, b) => Number(fits(a)) - Number(fits(b)) || cozy(a) - cozy(b) || a.rank - b.rank);
+  const fits = (p: Part) =>
+    !o.matchSet ||
+    o.matchSet.has(p.id) ||
+    (p.subFor != null && o.matchSet.has(p.subFor));
+  const cozy = (p: Part) =>
+    !o.rainy
+      ? 0
+      : p.setting === "home" || p.setting === "apart"
+        ? 1
+        : p.outdoor
+          ? -1
+          : 0;
+  inJar.sort(
+    (a, b) =>
+      Number(fits(a)) - Number(fits(b)) || cozy(a) - cozy(b) || a.rank - b.rank,
+  );
   inJar.forEach((p, i) => {
     const s = slots[i];
     const was = p.dimT;
@@ -178,11 +221,17 @@ export function jostle(parts: Part[], strength = 1, rand: Rand = Math.random) {
 }
 
 /** Lift a slip out of the jar: the drawn one if we simulate it, else the top slip that fits. */
-export function takeOut(parts: Part[], id: number, setting?: string): { x: number; y: number; a: number; setting: string } | null {
+export function takeOut(
+  parts: Part[],
+  id: number,
+  setting?: string,
+): { x: number; y: number; a: number; setting: string } | null {
   let p = parts.find((q) => !q.out && (q.id === id || q.subFor === id));
   if (!p) {
     const fit = parts.filter((q) => !q.out && q.dimT === 0);
-    p = (fit.length ? fit : parts.filter((q) => !q.out)).sort((a, b) => a.y - b.y)[0];
+    p = (fit.length ? fit : parts.filter((q) => !q.out)).sort(
+      (a, b) => a.y - b.y,
+    )[0];
     if (p) {
       p.subFor = id;
       p.setting = setting || p.setting;
@@ -194,8 +243,16 @@ export function takeOut(parts: Part[], id: number, setting?: string): { x: numbe
 }
 
 /** Drop a slip back in through the mouth. `shown` restores the colour of a stand-in. */
-export function dropIn(parts: Part[], id: number, shown: SlipInfo[], reducedMotion: boolean, rand: Rand = Math.random): boolean {
-  const p = parts.find((q) => q.out && (q.id === id || q.subFor === id)) || parts.find((q) => q.out);
+export function dropIn(
+  parts: Part[],
+  id: number,
+  shown: SlipInfo[],
+  reducedMotion: boolean,
+  rand: Rand = Math.random,
+): boolean {
+  const p =
+    parts.find((q) => q.out && (q.id === id || q.subFor === id)) ||
+    parts.find((q) => q.out);
   if (!p) return false;
   p.out = false;
   if (p.subFor != null && p.id !== id) {
@@ -217,13 +274,18 @@ export function dropIn(parts: Part[], id: number, shown: SlipInfo[], reducedMoti
  * One physics tick. Returns true while anything is still moving, so the caller can stop its
  * animation loop when the jar has settled.
  */
-export function step(parts: Part[], dt: number, reducedMotion: boolean): boolean {
+export function step(
+  parts: Part[],
+  dt: number,
+  reducedMotion: boolean,
+): boolean {
   let busy = false;
   const dimRate = reducedMotion ? dt / 0.15 : dt * 5;
   for (const p of parts) {
     if (p.out) continue;
     if (Math.abs(p.dimT - p.dim) > 0.002) {
-      p.dim += Math.sign(p.dimT - p.dim) * Math.min(Math.abs(p.dimT - p.dim), dimRate);
+      p.dim +=
+        Math.sign(p.dimT - p.dim) * Math.min(Math.abs(p.dimT - p.dim), dimRate);
       busy = true;
     } else p.dim = p.dimT;
     if (reducedMotion) {
@@ -264,7 +326,12 @@ export function step(parts: Part[], dt: number, reducedMotion: boolean): boolean
       p.y = FLOOR - 4;
       p.vy = Math.min(0, p.vy);
     }
-    if (Math.abs(p.vx) + Math.abs(p.vy) > 1.5 || Math.abs(p.va) > 0.05 || Math.abs(p.tx - p.x) + Math.abs(p.ty - p.y) > 0.3) busy = true;
+    if (
+      Math.abs(p.vx) + Math.abs(p.vy) > 1.5 ||
+      Math.abs(p.va) > 0.05 ||
+      Math.abs(p.tx - p.x) + Math.abs(p.ty - p.y) > 0.3
+    )
+      busy = true;
     else {
       p.x = p.tx;
       p.y = p.ty;
@@ -282,11 +349,27 @@ export function parseColor(s: string): RGBA {
   s = (s || "").trim();
   if (s[0] === "#") {
     let h = s.slice(1);
-    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), 1];
+    if (h.length === 3)
+      h = h
+        .split("")
+        .map((c) => c + c)
+        .join("");
+    return [
+      parseInt(h.slice(0, 2), 16),
+      parseInt(h.slice(2, 4), 16),
+      parseInt(h.slice(4, 6), 16),
+      1,
+    ];
   }
   const m = s.match(/[\d.]+/g);
-  return m && m.length >= 3 ? [+m[0], +m[1], +m[2], m[3] != null ? +m[3] : 1] : [128, 128, 128, 1];
+  return m && m.length >= 3
+    ? [+m[0], +m[1], +m[2], m[3] != null ? +m[3] : 1]
+    : [128, 128, 128, 1];
 }
-export const mix = (a: number[], b: number[], t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-export const rgba = (c: number[], a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+export const mix = (a: number[], b: number[], t: number): RGB => [
+  a[0] + (b[0] - a[0]) * t,
+  a[1] + (b[1] - a[1]) * t,
+  a[2] + (b[2] - a[2]) * t,
+];
+export const rgba = (c: number[], a = 1) =>
+  `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;

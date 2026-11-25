@@ -3,7 +3,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { PhotoViewer } from "@/joy/components/PhotoViewer";
 import { stepTo } from "@/joy/components/viewer";
 
-const photos = [1, 2, 3].map((n) => ({ url: `/p/${n}.jpg`, alt: `Photo ${n} of 3 from Picnic`, caption: "Picnic · 14 Mar" }));
+const photos = [1, 2, 3].map((n) => ({
+  url: `/p/${n}.jpg`,
+  alt: `Photo ${n} of 3 from Picnic`,
+  caption: "Picnic · 14 Mar",
+}));
 
 describe("stepTo", () => {
   it("wraps round at both ends", () => {
@@ -22,18 +26,31 @@ describe("PhotoViewer", () => {
 
   it("opens on the photo clicked and steps through all of them with the buttons and arrow keys", () => {
     render(<PhotoViewer photos={photos} start={1} onClose={() => {}} />);
-    expect(screen.getByRole("img", { hidden: true })).toHaveAttribute("src", "/p/2.jpg");
+    expect(screen.getByRole("img", { hidden: true })).toHaveAttribute(
+      "src",
+      "/p/2.jpg",
+    );
     expect(screen.getByText("2 of 3")).toBeInTheDocument();
     expect(screen.getByText("Picnic · 14 Mar")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Next photo", hidden: true }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Next photo", hidden: true }),
+    );
     expect(screen.getByText("3 of 3")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Next photo", hidden: true }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Next photo", hidden: true }),
+    );
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
 
-    fireEvent.keyDown(screen.getByRole("button", { name: "Close photos", hidden: true }), { key: "ArrowLeft" });
+    fireEvent.keyDown(
+      screen.getByRole("button", { name: "Close photos", hidden: true }),
+      { key: "ArrowLeft" },
+    );
     expect(screen.getByText("3 of 3")).toBeInTheDocument();
-    expect(screen.getByRole("img", { hidden: true })).toHaveAttribute("src", "/p/3.jpg");
+    expect(screen.getByRole("img", { hidden: true })).toHaveAttribute(
+      "src",
+      "/p/3.jpg",
+    );
   });
 
   it("moves on a sideways swipe", () => {
@@ -48,8 +65,12 @@ describe("PhotoViewer", () => {
   });
 
   it("has no arrows or count for a single photo", () => {
-    render(<PhotoViewer photos={photos.slice(0, 1)} start={0} onClose={() => {}} />);
-    expect(screen.queryByRole("button", { name: "Next photo", hidden: true })).toBeNull();
+    render(
+      <PhotoViewer photos={photos.slice(0, 1)} start={0} onClose={() => {}} />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Next photo", hidden: true }),
+    ).toBeNull();
     expect(screen.queryByText("1 of 1")).toBeNull();
   });
 });

@@ -15,7 +15,13 @@ interface ChipGroupProps<T extends string> {
  * A short, single-choice list shown as tappable pills: every option visible, one tap, no dropdown.
  * A radio group underneath, so the arrow keys move between pills and Tab leaves the group.
  */
-export function ChipGroup<T extends string>({ label, value, onChange, options, className }: ChipGroupProps<T>) {
+export function ChipGroup<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+  className,
+}: ChipGroupProps<T>) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const move = (from: number, step: number) => {
     const i = (from + step + options.length) % options.length;
@@ -23,7 +29,11 @@ export function ChipGroup<T extends string>({ label, value, onChange, options, c
     refs.current[i]?.focus();
   };
   return (
-    <div role="radiogroup" aria-label={label} className={cn("flex flex-wrap gap-2", className)}>
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn("flex flex-wrap gap-2", className)}
+    >
       {options.map((o, i) => {
         const on = o.value === value;
         return (
@@ -48,7 +58,9 @@ export function ChipGroup<T extends string>({ label, value, onChange, options, c
             }}
             className={cn(
               "inline-flex min-h-11 items-center rounded-full border px-4 text-sm capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              on ? "border-foreground bg-foreground font-medium text-background" : "border-border text-muted-foreground hover:text-foreground",
+              on
+                ? "border-transparent bg-[linear-gradient(110deg,hsl(var(--brand)),hsl(var(--brand-2)))] font-medium text-brand-fg shadow-[0_6px_16px_-8px_hsl(var(--brand)/.8)]"
+                : "border-brand/25 text-muted-foreground hover:border-brand/50 hover:bg-brand-tint hover:text-brand-ink",
             )}
           >
             {o.label}

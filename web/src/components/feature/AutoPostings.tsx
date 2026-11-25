@@ -4,19 +4,31 @@ import { formatINR } from "@/utils/money";
 import { cn } from "@/utils/cn";
 
 /** The most recent balance changes the server made on your behalf. Shown only when auto-update is on. */
-export function AutoPostings({ items, enabled }: { items: HistoryAutoPosting[]; enabled: boolean }) {
+export function AutoPostings({
+  items,
+  enabled,
+}: {
+  items: HistoryAutoPosting[];
+  enabled: boolean;
+}) {
   if (!enabled || items.length === 0) return null;
   return (
     <section aria-label="Auto-updated balances" className="space-y-4">
       <div className="space-y-1">
-        <h2 className="font-display text-[32px] leading-none tracking-tight">Auto-updated balances</h2>
+        <h2 className="font-display brand-text text-[32px] leading-none tracking-tight">
+          Auto-updated balances
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Salary and fixed payments are added to your balances on their dates. Turn this off in Plan settings.
+          Salary and fixed payments are added to your balances on their dates.
+          Turn this off in Plan settings.
         </p>
       </div>
       <ul className="ledger glass rounded-[28px] px-5 md:px-6">
         {items.map((p, i) => (
-          <li key={`${p.occurs_on}-${p.label}-${i}`} className="ledger-row text-sm">
+          <li
+            key={`${p.occurs_on}-${p.label}-${i}`}
+            className="ledger-row text-sm"
+          >
             <div className="min-w-0">
               <p className="truncate font-medium">{p.label}</p>
               <p className="text-xs text-muted-foreground">
@@ -25,8 +37,8 @@ export function AutoPostings({ items, enabled }: { items: HistoryAutoPosting[]; 
             </div>
             <span
               className={cn(
-                "shrink-0 font-semibold tabular-nums",
-                p.amount_paise >= 0 ? "text-good" : "text-foreground",
+                "pill shrink-0 font-semibold tabular-nums",
+                p.amount_paise >= 0 ? "pill-mint" : "pill-coral",
               )}
             >
               {p.amount_paise >= 0 ? "+" : "−"}

@@ -29,8 +29,10 @@ export interface FormState {
   added_by: string;
 }
 
-const selected = (opts: Opt[], fallback = ""): string => opts.find((o) => o.selected)?.value ?? fallback;
-const ticked = (opts: Opt[]): string[] => opts.filter((o) => o.selected).map((o) => o.value);
+const selected = (opts: Opt[], fallback = ""): string =>
+  opts.find((o) => o.selected)?.value ?? fallback;
+const ticked = (opts: Opt[]): string[] =>
+  opts.filter((o) => o.selected).map((o) => o.value);
 
 export function formToState(v: FormView): FormState {
   return {
@@ -98,9 +100,12 @@ export function toPayload(s: FormState): SlipBody {
 
 /** Which field an error message is about, so it can be marked invalid and focused. */
 /** The server asks before saving a second slip with the same title. */
-export const isDuplicateWarning = (error: string): boolean => error.includes("already in the jar");
+export const isDuplicateWarning = (error: string): boolean =>
+  error.includes("already in the jar");
 
-export function errorField(error: string): "title" | "est_cost" | "location" | "hours" | null {
+export function errorField(
+  error: string,
+): "title" | "est_cost" | "location" | "hours" | null {
   if (!error) return null;
   if (error.includes("name")) return "title";
   if (error.includes("cost")) return "est_cost";

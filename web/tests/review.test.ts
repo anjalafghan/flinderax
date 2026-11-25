@@ -64,13 +64,34 @@ describe("tax helpers", () => {
 
   it("headlines the cheaper regime", () => {
     expect(
-      regimeHeadline({ old_tax_paise: 100000, new_tax_paise: 50000, better: "new", note: "", break_even_deductions_paise: null, deductions_needed_paise: null }),
+      regimeHeadline({
+        old_tax_paise: 100000,
+        new_tax_paise: 50000,
+        better: "new",
+        note: "",
+        break_even_deductions_paise: null,
+        deductions_needed_paise: null,
+      }),
     ).toBe("New regime saves you ₹500");
     expect(
-      regimeHeadline({ old_tax_paise: 40000, new_tax_paise: 90000, better: "old", note: "", break_even_deductions_paise: null, deductions_needed_paise: null }),
+      regimeHeadline({
+        old_tax_paise: 40000,
+        new_tax_paise: 90000,
+        better: "old",
+        note: "",
+        break_even_deductions_paise: null,
+        deductions_needed_paise: null,
+      }),
     ).toBe("Old regime saves you ₹500");
     expect(
-      regimeHeadline({ old_tax_paise: 7000, new_tax_paise: 7000, better: "old", note: "", break_even_deductions_paise: null, deductions_needed_paise: null }),
+      regimeHeadline({
+        old_tax_paise: 7000,
+        new_tax_paise: 7000,
+        better: "old",
+        note: "",
+        break_even_deductions_paise: null,
+        deductions_needed_paise: null,
+      }),
     ).toBe("Both regimes come to the same tax");
   });
 
@@ -86,13 +107,22 @@ describe("tax helpers", () => {
       { date: "2026-11-15", text: "soon", days_left: 7 },
     ];
     expect(nextReminder(reminders)?.text).toBe("soon");
-    expect(nextReminder([{ date: "2026-10-01", text: "old", days_left: -1 }])).toBeNull();
+    expect(
+      nextReminder([{ date: "2026-10-01", text: "old", days_left: -1 }]),
+    ).toBeNull();
   });
 
   it("names every section and offers them in order", () => {
     expect(sectionLabel("80CCD1B")).toBe("80CCD(1B) NPS");
     expect(sectionLabel("24B")).toBe("Home loan interest");
-    expect(TAX_SECTION_IDS).toEqual(["80C", "80CCD1B", "80D", "HRA", "24B", "other"]);
+    expect(TAX_SECTION_IDS).toEqual([
+      "80C",
+      "80CCD1B",
+      "80D",
+      "HRA",
+      "24B",
+      "other",
+    ]);
   });
 
   it("explains why a deduction cannot be saved", () => {

@@ -1,24 +1,74 @@
 import { describe, expect, test } from "bun:test";
-import { applyRelax, compact, EMPTY_FILTERS, filtersToForm, PUT_BACK_REASONS, putBackForm, stampDate, toggleSetting, toggleStart, vetoForm } from "./form";
+import {
+  applyRelax,
+  compact,
+  EMPTY_FILTERS,
+  filtersToForm,
+  PUT_BACK_REASONS,
+  putBackForm,
+  stampDate,
+  toggleSetting,
+  toggleStart,
+  vetoForm,
+} from "./form";
 
 describe("form serialisation", () => {
   test("an empty sentence only says when", () => {
-    expect(filtersToForm({ ...EMPTY_FILTERS, when: "2026-11-05" })).toEqual({ when: "2026-11-05" });
+    expect(filtersToForm({ ...EMPTY_FILTERS, when: "2026-11-05" })).toEqual({
+      when: "2026-11-05",
+    });
     expect(filtersToForm(EMPTY_FILTERS)).toEqual({});
-    expect(filtersToForm({ ...EMPTY_FILTERS, fresh: "1" })).toEqual({ fresh: "1" });
+    expect(filtersToForm({ ...EMPTY_FILTERS, fresh: "1" })).toEqual({
+      fresh: "1",
+    });
     // From the middle, the server works the filters out itself; "something new" is not sent.
-    expect(filtersToForm({ ...EMPTY_FILTERS, fresh: "1" }, true)).toEqual({ middle: "1" });
+    expect(filtersToForm({ ...EMPTY_FILTERS, fresh: "1" }, true)).toEqual({
+      middle: "1",
+    });
   });
   test("filled blanks go over as strings, places as a list", () => {
-    const f = { ...EMPTY_FILTERS, when: "any", start: "office" as const, budget: " 2000 ", max_duration: "half_day", settings: ["home", "local"], tag: "cozy", energy: "low", max_km: "30", from: "1" };
-    expect(filtersToForm(f)).toEqual({ when: "any", start: "office", budget: "2000", max_duration: "half_day", settings: ["home", "local"], tag: "cozy", energy: "low", max_km: "30", from: "1" });
+    const f = {
+      ...EMPTY_FILTERS,
+      when: "any",
+      start: "office" as const,
+      budget: " 2000 ",
+      max_duration: "half_day",
+      settings: ["home", "local"],
+      tag: "cozy",
+      energy: "low",
+      max_km: "30",
+      from: "1",
+    };
+    expect(filtersToForm(f)).toEqual({
+      when: "any",
+      start: "office",
+      budget: "2000",
+      max_duration: "half_day",
+      settings: ["home", "local"],
+      tag: "cozy",
+      energy: "low",
+      max_km: "30",
+      from: "1",
+    });
   });
   test("drawing from the middle sends only that, and when/start", () => {
-    const f = { ...EMPTY_FILTERS, when: "2026-11-05", budget: "500", tag: "cozy", start: "home" as const };
-    expect(filtersToForm(f, true)).toEqual({ middle: "1", when: "2026-11-05", start: "home" });
+    const f = {
+      ...EMPTY_FILTERS,
+      when: "2026-11-05",
+      budget: "500",
+      tag: "cozy",
+      start: "home" as const,
+    };
+    expect(filtersToForm(f, true)).toEqual({
+      middle: "1",
+      when: "2026-11-05",
+      start: "home",
+    });
   });
   test("compact drops empties and blank list items", () => {
-    expect(compact({ budget: "", tag: "x", settings: ["", ""] })).toEqual({ tag: "x" });
+    expect(compact({ budget: "", tag: "x", settings: ["", ""] })).toEqual({
+      tag: "x",
+    });
   });
   test("tapping a place circles it; tapping again un-circles it", () => {
     expect(toggleSetting(["home"], "local")).toEqual(["home", "local"]);
@@ -31,17 +81,35 @@ describe("form serialisation", () => {
 
 describe("put back, veto and relax", () => {
   // The server's `state` is the kept filters plus where the draw has got to, WITHOUT reroll/veto.
-  const state = { when: "2026-11-05", budget: "1500", settings: ["home"], excluded: "4,9", current: "9" };
+  const state = {
+    when: "2026-11-05",
+    budget: "1500",
+    settings: ["home"],
+    excluded: "4,9",
+    current: "9",
+  };
   test("put back is the server's state plus reroll=1", () => {
     expect(putBackForm(state)).toEqual({ ...state, reroll: "1" });
   });
   test("put back can say why, and only with a reason the server knows", () => {
-    expect(putBackForm(state, "too_far")).toEqual({ ...state, reroll: "1", reason: "too_far" });
+    expect(putBackForm(state, "too_far")).toEqual({
+      ...state,
+      reroll: "1",
+      reason: "too_far",
+    });
     expect(putBackForm(state, "nonsense" as never).reason).toBeUndefined();
-    expect(PUT_BACK_REASONS.map((r) => r.value)).toEqual(["not_tonight", "too_far", "too_pricey", "not_my_thing"]);
+    expect(PUT_BACK_REASONS.map((r) => r.value)).toEqual([
+      "not_tonight",
+      "too_far",
+      "too_pricey",
+      "not_my_thing",
+    ]);
   });
   test("veto is the state plus veto=1 and no reroll", () => {
-    expect(vetoForm({ ...state, reroll: "1" })).toEqual({ ...state, veto: "1" });
+    expect(vetoForm({ ...state, reroll: "1" })).toEqual({
+      ...state,
+      veto: "1",
+    });
     expect(vetoForm(state).reroll).toBeUndefined();
   });
   test("neither mutates the card's state", () => {
@@ -51,8 +119,18 @@ describe("put back, veto and relax", () => {
     expect(state).toEqual(copy);
   });
   test("relaxing writes the loosened filters back into the sentence", () => {
-    const f = { ...EMPTY_FILTERS, when: "2026-11-05", budget: "500", settings: ["home"], tag: "cozy" };
-    const next = applyRelax(f, { when: "any", budget: "800", settings: ["home", "local"] });
+    const f = {
+      ...EMPTY_FILTERS,
+      when: "2026-11-05",
+      budget: "500",
+      settings: ["home"],
+      tag: "cozy",
+    };
+    const next = applyRelax(f, {
+      when: "any",
+      budget: "800",
+      settings: ["home", "local"],
+    });
     expect(next.budget).toBe("800");
     expect(next.when).toBe("any");
     expect(next.settings).toEqual(["home", "local"]);

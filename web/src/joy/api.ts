@@ -263,17 +263,26 @@ function parse(text: string): unknown {
   }
 }
 
-export async function request<T>(method: "GET" | "POST", url: string, body?: unknown, { auth = true }: Options = {}): Promise<T> {
+export async function request<T>(
+  method: "GET" | "POST",
+  url: string,
+  body?: unknown,
+  { auth = true }: Options = {},
+): Promise<T> {
   const res = await fetch(url, {
     method,
-    headers: { "Content-Type": "application/json", ...(auth ? authHeaders() : {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? authHeaders() : {}),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   adoptRenewedToken(res);
   if (res.status === 401 && auth) return toLogin<T>();
   const text = await res.text().catch(() => "");
   const data = parse(text);
-  if (!res.ok) throw new ApiError(res.status, errorMessageOf(text, res.status), data);
+  if (!res.ok)
+    throw new ApiError(res.status, errorMessageOf(text, res.status), data);
   return data as T;
 }
 
@@ -283,7 +292,8 @@ async function readAnswer<T>(res: Response): Promise<T> {
   if (res.status === 401) return toLogin<T>();
   const text = await res.text().catch(() => "");
   const data = parse(text);
-  if (!res.ok) throw new ApiError(res.status, errorMessageOf(text, res.status), data);
+  if (!res.ok)
+    throw new ApiError(res.status, errorMessageOf(text, res.status), data);
   return data as T;
 }
 
@@ -291,14 +301,20 @@ async function readAnswer<T>(res: Response): Promise<T> {
  * A POST that survives having no signal: sent with an Idempotency-Key, and kept on the phone to be
  * sent later if the network is down. `queued` tells the page it has not happened yet.
  */
-export async function postKeyed<T>(url: string, body: unknown, label: string): Promise<T | { queued: true }> {
+export async function postKeyed<T>(
+  url: string,
+  body: unknown,
+  label: string,
+): Promise<T | { queued: true }> {
   const r = await sendOrQueue(url, body, label);
   if (r.queued || !r.response) return { queued: true };
   return readAnswer<T>(r.response);
 }
 
-export const get = <T>(url: string, o?: Options) => request<T>("GET", url, undefined, o);
-export const post = <T>(url: string, body: unknown = {}) => request<T>("POST", url, body);
+export const get = <T>(url: string, o?: Options) =>
+  request<T>("GET", url, undefined, o);
+export const post = <T>(url: string, body: unknown = {}) =>
+  request<T>("POST", url, body);
 
 export interface UploadOptions {
   /** Bytes sent so far and the total, as XHR reports them. */
@@ -308,11 +324,16 @@ export interface UploadOptions {
 }
 
 /** Multipart POST over XHR, because fetch cannot report upload progress. Resolves with the parsed body (null when there is none). */
-export function upload<T>(url: string, form: FormData, { onProgress, failMessage }: UploadOptions = {}): Promise<T> {
+export function upload<T>(
+  url: string,
+  form: FormData,
+  { onProgress, failMessage }: UploadOptions = {},
+): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
-    for (const [k, v] of Object.entries(authHeaders())) xhr.setRequestHeader(k, v);
+    for (const [k, v] of Object.entries(authHeaders()))
+      xhr.setRequestHeader(k, v);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress?.(e.loaded, e.total);
     };
@@ -325,7 +346,16 @@ export function upload<T>(url: string, form: FormData, { onProgress, failMessage
       const text = xhr.responseText.trim();
       const data = parse(text);
       if (xhr.status >= 200 && xhr.status < 300) resolve(data as T);
-      else reject(new ApiError(xhr.status, failMessage ? failMessage(xhr.status, text) : errorMessageOf(text, xhr.status), data));
+      else
+        reject(
+          new ApiError(
+            xhr.status,
+            failMessage
+              ? failMessage(xhr.status, text)
+              : errorMessageOf(text, xhr.status),
+            data,
+          ),
+        );
     };
     xhr.send(form);
   });
@@ -345,61 +375,109 @@ export const keys = {
 // ---- couple ----
 export const getCouple = () => get<CoupleStatus>("/api/couple");
 /** Starts Dates with no slips in the jar; the couple adds starter packs (or writes their own). */
-export const createCouple = () => post<{ status: boolean }>("/api/couple/create", { packs: [] });
+export const createCouple = () =>
+  post<{ status: boolean }>("/api/couple/create", { packs: [] });
 export const inviteCode = () => post<Invite>("/api/couple/invite");
-export const joinCouple = (code: string) => post<{ status: boolean }>("/api/couple/join", { code });
+export const joinCouple = (code: string) =>
+  post<{ status: boolean }>("/api/couple/join", { code });
 export const leaveCouple = () => post<{ status: boolean }>("/api/couple/leave");
 
 // ---- slips ----
 export const getSlips = () => get<WishlistView>("/api/dates/slips");
-export const getSlipForm = (id: string | null) => get<FormView>(id ? `/api/dates/slips/${id}` : "/api/dates/slips/new");
+export const getSlipForm = (id: string | null) =>
+  get<FormView>(id ? `/api/dates/slips/${id}` : "/api/dates/slips/new");
 
 /** A save is either accepted (Go) or refused with the form echoed back and `error` set. */
-export type SaveResult = { ok: true; go: Go & { filled?: string[]; queued?: boolean } } | { ok: false; form: FormView };
+export type SaveResult =
+  | { ok: true; go: Go & { filled?: string[]; queued?: boolean } }
+  | { ok: false; form: FormView };
 
-export async function saveSlip(id: string | null, body: SlipBody): Promise<SaveResult> {
+export async function saveSlip(
+  id: string | null,
+  body: SlipBody,
+): Promise<SaveResult> {
   try {
     // A new slip can be written with no signal; editing one needs it (the form has to be loaded anyway).
     if (!id) {
-      const r = await postKeyed<Go & { filled?: string[] }>("/api/dates/slips", body, `Slip: ${body.title}`);
-      return { ok: true, go: "queued" in r ? { ok: true, to: "/joy/slips", queued: true } : r };
+      const r = await postKeyed<Go & { filled?: string[] }>(
+        "/api/dates/slips",
+        body,
+        `Slip: ${body.title}`,
+      );
+      return {
+        ok: true,
+        go: "queued" in r ? { ok: true, to: "/joy/slips", queued: true } : r,
+      };
     }
-    return { ok: true, go: await post<Go & { filled?: string[] }>(`/api/dates/slips/${id}`, body) };
+    return {
+      ok: true,
+      go: await post<Go & { filled?: string[] }>(
+        `/api/dates/slips/${id}`,
+        body,
+      ),
+    };
   } catch (e) {
-    if (e instanceof ApiError && e.status === 422 && e.data && typeof (e.data as FormView).error === "string") {
+    if (
+      e instanceof ApiError &&
+      e.status === 422 &&
+      e.data &&
+      typeof (e.data as FormView).error === "string"
+    ) {
       return { ok: false, form: e.data as FormView };
     }
     throw e;
   }
 }
 
-export const archiveSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/archive`);
-export const restoreSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/restore`);
-export const deleteSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/delete`);
-export const wantSlip = (id: number, level: "" | "want" | "fine" | "no") => post<Go>(`/api/dates/slips/${id}/want`, { level });
-export const unvetoSlip = (id: number) => post<Go>(`/api/dates/slips/${id}/unveto`);
+export const archiveSlip = (id: number) =>
+  post<Go>(`/api/dates/slips/${id}/archive`);
+export const restoreSlip = (id: number) =>
+  post<Go>(`/api/dates/slips/${id}/restore`);
+export const deleteSlip = (id: number) =>
+  post<Go>(`/api/dates/slips/${id}/delete`);
+export const wantSlip = (id: number, level: "" | "want" | "fine" | "no") =>
+  post<Go>(`/api/dates/slips/${id}/want`, { level });
+export const unvetoSlip = (id: number) =>
+  post<Go>(`/api/dates/slips/${id}/unveto`);
 export const clearVetoes = () => post<Go>("/api/dates/slips/vetoes/clear");
 export const restoreAllSlips = () => post<Go>("/api/dates/slips/restore-all");
 export const clearPutbacks = () => post<Go>("/api/dates/putbacks/clear");
-export const planSlip = (id: number, at: string) => post<SlipPlanned>(`/api/dates/slips/${id}/plan`, { at });
+export const planSlip = (id: number, at: string) =>
+  post<SlipPlanned>(`/api/dates/slips/${id}/plan`, { at });
 
 // ---- jar (the page here only needs tonight's "meet in the middle" part) ----
 export const getJarMiddle = () => get<{ middle: MiddleView }>("/api/dates/jar");
-export const checkIn = async (body: MiddleBody): Promise<Go & { queued?: boolean }> => {
+export const checkIn = async (
+  body: MiddleBody,
+): Promise<Go & { queued?: boolean }> => {
   const r = await postKeyed<Go>("/api/dates/middle", body, "Check-in");
   return "queued" in r ? { ok: true, to: "/joy/middle", queued: true } : r;
 };
 
 // ---- envelope (public) ----
 export const getEnvelope = (token: string) =>
-  get<EnvelopeView>(`/api/public/dates/e/${encodeURIComponent(token)}`, { auth: false });
+  get<EnvelopeView>(`/api/public/dates/e/${encodeURIComponent(token)}`, {
+    auth: false,
+  });
 
 // ---- money ----
 export const getSummary = () => get<JoySummary>("/api/joy/summary");
-export const setPartnerShare = (partner_paise: number) => post<{ status: boolean }>("/api/joy/partner", { partner_paise });
-export const resetPartnerShare = () => post<{ status: boolean }>("/api/joy/partner/reset");
+export const setPartnerShare = (partner_paise: number) =>
+  post<{ status: boolean }>("/api/joy/partner", { partner_paise });
+export const resetPartnerShare = () =>
+  post<{ status: boolean }>("/api/joy/partner/reset");
 export const getSettle = () => get<SettleOut>("/api/joy/settle");
-export const deleteSettlement = (id: number) => post<{ status: boolean }>("/api/joy/settle/delete", { id });
-export const clearSettlements = () => post<{ status: boolean; removed: number }>("/api/joy/settle/clear");
-export const recordSettlement = (you_paid: boolean, amount_paise: number, note?: string) =>
-  post<{ status: boolean }>("/api/joy/settle", { you_paid, amount_paise, note });
+export const deleteSettlement = (id: number) =>
+  post<{ status: boolean }>("/api/joy/settle/delete", { id });
+export const clearSettlements = () =>
+  post<{ status: boolean; removed: number }>("/api/joy/settle/clear");
+export const recordSettlement = (
+  you_paid: boolean,
+  amount_paise: number,
+  note?: string,
+) =>
+  post<{ status: boolean }>("/api/joy/settle", {
+    you_paid,
+    amount_paise,
+    note,
+  });

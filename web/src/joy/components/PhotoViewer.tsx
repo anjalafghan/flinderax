@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+  type RefObject,
+} from "react";
 import { stepTo } from "./viewer";
 import "./photo-viewer.css";
 
@@ -18,7 +25,15 @@ const SWIPE_PX = 40;
  * them, Escape or the close button shuts it. Native <dialog>, so focus stays inside while open.
  * `start` null means closed.
  */
-export function PhotoViewer({ photos, start, onClose }: { photos: ViewerPhoto[]; start: number | null; onClose: () => void }) {
+export function PhotoViewer({
+  photos,
+  start,
+  onClose,
+}: {
+  photos: ViewerPhoto[];
+  start: number | null;
+  onClose: () => void;
+}) {
   const dlg = useRef<HTMLDialogElement>(null);
   const open = start !== null && photos.length > 0;
 
@@ -35,12 +50,27 @@ export function PhotoViewer({ photos, start, onClose }: { photos: ViewerPhoto[];
 
   return (
     <dialog ref={dlg} className="pv" aria-label="Photos" onClose={onClose}>
-      {open && <Body key={start} photos={photos} start={Math.min(start, photos.length - 1)} dlg={dlg} />}
+      {open && (
+        <Body
+          key={start}
+          photos={photos}
+          start={Math.min(start, photos.length - 1)}
+          dlg={dlg}
+        />
+      )}
     </dialog>
   );
 }
 
-function Body({ photos, start, dlg }: { photos: ViewerPhoto[]; start: number; dlg: RefObject<HTMLDialogElement | null> }) {
+function Body({
+  photos,
+  start,
+  dlg,
+}: {
+  photos: ViewerPhoto[];
+  start: number;
+  dlg: RefObject<HTMLDialogElement | null>;
+}) {
   const [i, setI] = useState(start);
   const closeBtn = useRef<HTMLButtonElement>(null);
   const touch = useRef<number | null>(null);
@@ -85,20 +115,41 @@ function Body({ photos, start, dlg }: { photos: ViewerPhoto[]; start: number; dl
         <span className="pv-count" aria-live="polite">
           {n > 1 ? `${i + 1} of ${n}` : ""}
         </span>
-        <button ref={closeBtn} type="button" className="pv-btn" onClick={() => dlg.current?.close()} aria-label="Close photos">
+        <button
+          ref={closeBtn}
+          type="button"
+          className="pv-btn"
+          onClick={() => dlg.current?.close()}
+          aria-label="Close photos"
+        >
           ✕
         </button>
       </div>
-      <figure className="pv-fig" onPointerDown={down} onPointerUp={up} onPointerCancel={() => (touch.current = null)}>
+      <figure
+        className="pv-fig"
+        onPointerDown={down}
+        onPointerUp={up}
+        onPointerCancel={() => (touch.current = null)}
+      >
         <img src={p.url} alt={p.alt} className="pv-img" draggable={false} />
         {p.caption && <figcaption className="pv-cap">{p.caption}</figcaption>}
       </figure>
       {n > 1 && (
         <div className="pv-nav">
-          <button type="button" className="pv-btn" onClick={() => go(-1)} aria-label="Previous photo">
+          <button
+            type="button"
+            className="pv-btn"
+            onClick={() => go(-1)}
+            aria-label="Previous photo"
+          >
             ‹
           </button>
-          <button type="button" className="pv-btn" onClick={() => go(1)} aria-label="Next photo">
+          <button
+            type="button"
+            className="pv-btn"
+            onClick={() => go(1)}
+            aria-label="Next photo"
+          >
             ›
           </button>
         </div>

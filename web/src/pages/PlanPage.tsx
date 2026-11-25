@@ -123,7 +123,9 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
   return (
     <Card id="income" className="scroll-mt-24">
       <CardHeader className="pb-4">
-        <CardTitle className="text-[32px]">Income</CardTitle>
+        <CardTitle className="text-[32px]">
+          <span className="brand-text">Income</span>
+        </CardTitle>
         <p className="max-w-prose text-sm text-muted-foreground">
           Your next payday sets the "until" date for Safe to Spend.
         </p>
@@ -132,7 +134,12 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
         <ul className="ledger">
           {incomes?.map((i: Income) => (
             <li key={i.income_id} className="ledger-row">
-              <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  aria-hidden
+                  className="h-9 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-mint to-teal"
+                />
+                <div className="min-w-0">
                 <p className="truncate text-[15px] font-medium" title={i.label}>
                   {i.label}
                 </p>
@@ -140,6 +147,7 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
                   {formatINR(i.amount_paise)} on the {ordinal(i.day_of_month)},
                   into {accountName(accounts, i.account_id)}
                 </p>
+                </div>
               </div>
               <Button
                 variant="ghost"
@@ -257,7 +265,20 @@ function CommitmentRow({
     <li
       className={cn("ledger-row flex-wrap text-sm", !c.active && "opacity-60")}
     >
-      <div className="min-w-0">
+      <div className="flex min-w-0 items-center gap-3">
+        {/* Needs sky, spending coral, savings mint, as in the monthly split. */}
+        <span
+          aria-hidden
+          className={cn(
+            "h-9 w-1.5 shrink-0 rounded-full bg-gradient-to-b",
+            c.bucket === "savings"
+              ? "from-mint to-teal"
+              : c.bucket === "wants"
+                ? "from-sun to-coral"
+                : "from-sky to-teal",
+          )}
+        />
+        <div className="min-w-0">
         <p className="truncate text-[15px] font-medium" title={c.label}>
           {c.label}
         </p>
@@ -274,6 +295,7 @@ function CommitmentRow({
           {c.start_month && ` · from ${c.start_month}`}
           {c.end_month && ` · until ${c.end_month}`}
         </p>
+        </div>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1">
         <Select
@@ -473,7 +495,9 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
   return (
     <Card id="fixed" className="scroll-mt-24">
       <CardHeader className="pb-4">
-        <CardTitle className="text-[32px]">Fixed payments</CardTitle>
+        <CardTitle className="text-[32px]">
+          <span className="brand-text">Fixed payments</span>
+        </CardTitle>
         <p className="max-w-prose text-sm text-muted-foreground">
           Anything paid on a fixed day: SIPs, house, phone and internet, gym,
           subscriptions, an RD instalment. Yearly bills are set aside a twelfth
@@ -540,7 +564,7 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
           <label className="col-span-full flex items-start gap-3 text-sm">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 accent-foreground"
+              className="mt-0.5 h-4 w-4 accent-brand"
               checked={f.yearly}
               onChange={(e) => setF({ ...f, yearly: e.target.checked })}
             />
@@ -810,7 +834,9 @@ export function SettingsSection() {
   return (
     <Card>
       <CardHeader className="pb-4">
-        <CardTitle className="text-[32px]">Budget</CardTitle>
+        <CardTitle className="text-[32px]">
+          <span className="brand-text">Budget</span>
+        </CardTitle>
         <p className="max-w-prose text-sm text-muted-foreground">
           Needs are your listed bills. You set how much to spend each month;
           everything left over is savings.
@@ -915,7 +941,7 @@ export function SettingsSection() {
             <input
               id="auto-post"
               type="checkbox"
-              className="mt-0.5 h-4 w-4 accent-foreground"
+              className="mt-0.5 h-4 w-4 accent-brand"
               checked={autoPost}
               onChange={(e) => setAutoPost(e.target.checked)}
             />
@@ -1024,8 +1050,8 @@ export default function PlanPage() {
                   className={cn(
                     "inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     on
-                      ? "bg-foreground font-medium text-background"
-                      : "text-muted-foreground hover:text-foreground",
+                      ? "bg-brand-gradient font-medium shadow-[0_8px_18px_-10px_hsl(var(--brand)/0.8)]"
+                      : "text-muted-foreground hover:bg-brand-tint hover:text-brand-ink",
                   )}
                 >
                   {s.label}

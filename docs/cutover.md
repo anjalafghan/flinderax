@@ -6,6 +6,7 @@ are **never modified**. The merged app uses a new file (`/data/joy-app.db`) and 
 `/data/joy-photos`, so rolling back is just redeploying Joy's last image.
 
 Rehearsed on copies of both production databases (8 Nov 2026):
+
 - every migration applied cleanly and `PRAGMA foreign_key_check` came back clean
 - the Joy import matched field for field: 333 slips, 50 dates, 22 pairs, the memory line, the regular, the budget, ₹5,670 for October, envelope tokens, and a byte-identical photo
 - the existing cards survived
@@ -15,12 +16,12 @@ working folder: `fly deploy` uploads the folder as it is.
 
 ## 0. Before
 
-| Check | Command |
-|---|---|
-| Local copy of Joy's data | `joy/data/prod-backup-2026-11-08/` (sha256 of joy.db `9f6787…`) |
-| Fresh Fly snapshots | `fly volumes snapshots create <vol> -a joy-jar` and the same for `-a flinderax` |
-| You know which Joy person you are | `PERSON_A` → `--as a`, `PERSON_B` → `--as b` |
-| Nobody uses Joy or Flinderax during the move | ~10 minutes |
+| Check                                        | Command                                                                         |
+| -------------------------------------------- | ------------------------------------------------------------------------------- |
+| Local copy of Joy's data                     | `joy/data/prod-backup-2026-11-08/` (sha256 of joy.db `9f6787…`)                 |
+| Fresh Fly snapshots                          | `fly volumes snapshots create <vol> -a joy-jar` and the same for `-a flinderax` |
+| You know which Joy person you are            | `PERSON_A` → `--as a`, `PERSON_B` → `--as b`                                    |
+| Nobody uses Joy or Flinderax during the move | ~10 minutes                                                                     |
 
 ## 1. Put Flinderax's database on Joy's volume
 

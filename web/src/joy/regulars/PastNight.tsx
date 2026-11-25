@@ -5,14 +5,24 @@ import { regKeys, wentTo } from "./api";
 import { apiMessage, parseRupees } from "./days";
 
 /** Log a night we went to on any day that has passed: it becomes a kept date on that day. */
-export function PastNight({ regularId, usualRaw }: { regularId: number; usualRaw: string }) {
+export function PastNight({
+  regularId,
+  usualRaw,
+}: {
+  regularId: number;
+  usualRaw: string;
+}) {
   const qc = useQueryClient();
   const { busy, run } = useBusy();
   const [day, setDay] = useState("");
   const [amount, setAmount] = useState(usualRaw);
   const [error, setError] = useState("");
   const today = new Date().toLocaleDateString("en-CA");
-  const reset = () => { setDay(""); setAmount(usualRaw); setError(""); };
+  const reset = () => {
+    setDay("");
+    setAmount(usualRaw);
+    setError("");
+  };
   return (
     <form
       className="rl-form"
@@ -26,7 +36,12 @@ export function PastNight({ regularId, usualRaw }: { regularId: number; usualRaw
           setError("");
           try {
             await wentTo(regularId, { day, amount: a, place: "", back: "" });
-            await Promise.all([qc.invalidateQueries({ queryKey: ["joy"] }), qc.invalidateQueries({ queryKey: regKeys.spread(String(regularId)) })]);
+            await Promise.all([
+              qc.invalidateQueries({ queryKey: ["joy"] }),
+              qc.invalidateQueries({
+                queryKey: regKeys.spread(String(regularId)),
+              }),
+            ]);
             reset();
           } catch (err) {
             setError(apiMessage(err));
@@ -35,17 +50,37 @@ export function PastNight({ regularId, usualRaw }: { regularId: number; usualRaw
       }}
     >
       <h2 className="reg-h">Log a night we missed</h2>
-      {error && <p className="rs-error" role="alert">{error}</p>}
+      {error && (
+        <p className="rs-error" role="alert">
+          {error}
+        </p>
+      )}
       <label>
         The day
-        <input type="date" min="2000-01-01" max={today} value={day} onChange={(e) => setDay(e.target.value)} />
+        <input
+          type="date"
+          min="2000-01-01"
+          max={today}
+          value={day}
+          onChange={(e) => setDay(e.target.value)}
+        />
       </label>
       <label>
         Spent
-        <input type="text" inputMode="numeric" autoComplete="off" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <input
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
       </label>
-      <button type="submit" className="btn btn-ink" disabled={busy}>Add to Kept</button>{" "}
-      <button type="button" className="btn btn-quiet" onClick={reset}>Reset</button>
+      <button type="submit" className="btn btn-ink" disabled={busy}>
+        Add to Kept
+      </button>{" "}
+      <button type="button" className="btn btn-quiet" onClick={reset}>
+        Reset
+      </button>
     </form>
   );
 }

@@ -5,5 +5,8 @@ declare module "bun:test" {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface Matchers<T> extends TestingLibraryMatchers<unknown, T> {}
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  interface AsymmetricMatchers extends TestingLibraryMatchers<unknown, unknown> {}
+  interface AsymmetricMatchers extends TestingLibraryMatchers<
+    unknown,
+    unknown
+  > {}
 }

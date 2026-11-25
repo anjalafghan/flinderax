@@ -8,7 +8,9 @@ import type { Reward, RewardsOut } from "@/services/rewards";
 import { forGoal, forStreak, triggerLabel } from "@/utils/rewards";
 
 // Synthetic data only.
-const reward = (o: Partial<Reward> & { reward_id: string; name: string }): Reward => ({
+const reward = (
+  o: Partial<Reward> & { reward_id: string; name: string },
+): Reward => ({
   cost_paise: 50000,
   trigger_kind: "goal",
   goal_id: "g1",
@@ -23,10 +25,32 @@ const reward = (o: Partial<Reward> & { reward_id: string; name: string }): Rewar
 const out: RewardsOut = {
   rewards: [
     reward({ reward_id: "a", name: "Dinner out", state: "earned" }),
-    reward({ reward_id: "b", name: "New book", goal_pct: 50, state: "claimed", claimed_on: "2026-11-03" }),
-    reward({ reward_id: "c", name: "Cake", trigger_kind: "streak", goal_id: null, goal_pct: null, streak_kind: "logging", streak_target: 7, cost_paise: 0 }),
+    reward({
+      reward_id: "b",
+      name: "New book",
+      goal_pct: 50,
+      state: "claimed",
+      claimed_on: "2026-11-03",
+    }),
+    reward({
+      reward_id: "c",
+      name: "Cake",
+      trigger_kind: "streak",
+      goal_id: null,
+      goal_pct: null,
+      streak_kind: "logging",
+      streak_target: 7,
+      cost_paise: 0,
+    }),
   ],
-  history: [{ reward_id: "b", name: "New book", cost_paise: 50000, claimed_on: "2026-11-03" }],
+  history: [
+    {
+      reward_id: "b",
+      name: "New book",
+      cost_paise: 50000,
+      claimed_on: "2026-11-03",
+    },
+  ],
   monthly_cap_paise: 100000,
   spent_this_month_paise: 50000,
   cap_left_paise: 50000,
@@ -34,10 +58,28 @@ const out: RewardsOut = {
 };
 
 function withData(ui: React.ReactElement, data: RewardsOut = out) {
-  const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  });
   qc.setQueryData(["rewards"], data);
-  qc.setQueryData(["rewards", "suggestions"], [{ name: "A back massage", cost_paise: 150000, note: "x" }, { name: "Buy something I've been wanting", cost_paise: 230000, note: "y" }]);
-  qc.setQueryData(["goals"], { goals: [{ id: "g1", name: "Trip" }], available_paise: 0, unallocated_paise: 0, months_covered_tenths: null, emergency_suggested_paise: null });
+  qc.setQueryData(
+    ["rewards", "suggestions"],
+    [
+      { name: "A back massage", cost_paise: 150000, note: "x" },
+      {
+        name: "Buy something I've been wanting",
+        cost_paise: 230000,
+        note: "y",
+      },
+    ],
+  );
+  qc.setQueryData(["goals"], {
+    goals: [{ id: "g1", name: "Trip" }],
+    available_paise: 0,
+    unallocated_paise: 0,
+    months_covered_tenths: null,
+    emergency_suggested_paise: null,
+  });
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
@@ -49,13 +91,20 @@ describe("rewards", () => {
   });
 
   it("picks out the rewards that hang on a goal or a streak", () => {
-    expect(forGoal(out.rewards, "g1").map((r) => r.name)).toEqual(["Dinner out", "New book"]);
+    expect(forGoal(out.rewards, "g1").map((r) => r.name)).toEqual([
+      "Dinner out",
+      "New book",
+    ]);
     expect(forGoal(out.rewards, "other")).toEqual([]);
-    expect(forStreak(out.rewards, "logging").map((r) => r.name)).toEqual(["Cake"]);
+    expect(forStreak(out.rewards, "logging").map((r) => r.name)).toEqual([
+      "Cake",
+    ]);
   });
 
   it("shows earned, claimed and locked tags, and nothing when there are none", () => {
-    const { unmount } = withData(<RewardChips rewards={out.rewards} goalName="Trip" />);
+    const { unmount } = withData(
+      <RewardChips rewards={out.rewards} goalName="Trip" />,
+    );
     expect(screen.getByText("Dinner out: earned")).toBeTruthy();
     expect(screen.getByText("New book: claimed")).toBeTruthy();
     expect(screen.getByText("Cake: locked")).toBeTruthy();
@@ -66,7 +115,9 @@ describe("rewards", () => {
 
   it("lists rewards with a claim button only on the earned one, plus the budget and history", () => {
     withData(<RewardsPanel />);
-    expect(screen.getAllByRole("button", { name: /Buy it from the wallet/ })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button", { name: /Buy it from the wallet/ }),
+    ).toHaveLength(1);
     expect(screen.getByText("In your reward wallet")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Undo claim" })).toBeTruthy();
     expect(screen.getByText(/claimed this month/)).toHaveTextContent("₹500");
@@ -76,14 +127,22 @@ describe("rewards", () => {
 
   it("an earned treat the wallet can't cover yet says how much more it needs", () => {
     withData(<RewardsPanel />, { ...out, wallet_paise: 20000 });
-    expect(screen.queryByRole("button", { name: /Buy it from the wallet/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Buy it from the wallet/ }),
+    ).toBeNull();
     expect(screen.getByText(/more in the wallet/)).toHaveTextContent("₹300");
   });
 
   it("offers ideas, and picking one fills the form with its name and cost", () => {
     withData(<RewardsPanel />);
-    fireEvent.click(screen.getByRole("button", { name: /Buy something I've been wanting/ }));
-    expect((screen.getByLabelText("The treat") as HTMLInputElement).value).toBe("Buy something I've been wanting");
-    expect((screen.getByLabelText(/What it costs/) as HTMLInputElement).value).toBe("2300");
+    fireEvent.click(
+      screen.getByRole("button", { name: /Buy something I've been wanting/ }),
+    );
+    expect((screen.getByLabelText("The treat") as HTMLInputElement).value).toBe(
+      "Buy something I've been wanting",
+    );
+    expect(
+      (screen.getByLabelText(/What it costs/) as HTMLInputElement).value,
+    ).toBe("2300");
   });
 });

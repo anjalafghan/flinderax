@@ -1,7 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { clearSettlements, deleteSettlement, getCouple, getSettle, getSummary, inviteCode, keys, leaveCouple, recordSettlement, resetPartnerShare, setPartnerShare, type Invite } from "../api";
+import {
+  clearSettlements,
+  deleteSettlement,
+  getCouple,
+  getSettle,
+  getSummary,
+  inviteCode,
+  keys,
+  leaveCouple,
+  recordSettlement,
+  resetPartnerShare,
+  setPartnerShare,
+  type Invite,
+} from "../api";
 import { CodeCard } from "../components/CodeCard";
 import { useStateFrom } from "../components/useStateFrom";
 import { ErrorState } from "../components/ErrorState";
@@ -11,8 +24,19 @@ import { rupees, standing, toPaise } from "../money";
 /** Your partner, who covers what, settling up, and leaving: shown inside the app's one Settings page. */
 export function DatesSettingsCards() {
   const couple = useQuery({ queryKey: keys.couple, queryFn: getCouple });
-  if (couple.isPending) return <p className="loading" role="status">Opening settings…</p>;
-  if (couple.isError) return <ErrorState message={errText(couple.error)} onRetry={() => void couple.refetch()} />;
+  if (couple.isPending)
+    return (
+      <p className="loading" role="status">
+        Opening settings…
+      </p>
+    );
+  if (couple.isError)
+    return (
+      <ErrorState
+        message={errText(couple.error)}
+        onRetry={() => void couple.refetch()}
+      />
+    );
   const c = couple.data;
   if (!c.in_couple) return null;
   return (
@@ -27,7 +51,13 @@ export function DatesSettingsCards() {
 
 export default DatesSettingsCards;
 
-function PartnerCard({ name, waiting }: { name: string | null; waiting: boolean }) {
+function PartnerCard({
+  name,
+  waiting,
+}: {
+  name: string | null;
+  waiting: boolean;
+}) {
   const [invite, setInvite] = useState<Invite | null>(null);
   const [err, setErr] = useState("");
   const { busy, run } = useBusy();
@@ -51,7 +81,12 @@ function PartnerCard({ name, waiting }: { name: string | null; waiting: boolean 
             <CodeCard invite={invite} />
           ) : (
             <div className="set-row">
-              <button type="button" className="btn btn-stamp" disabled={busy} onClick={() => void getCode()}>
+              <button
+                type="button"
+                className="btn btn-stamp"
+                disabled={busy}
+                onClick={() => void getCode()}
+              >
                 Get a code to share
               </button>
             </div>
@@ -63,16 +98,29 @@ function PartnerCard({ name, waiting }: { name: string | null; waiting: boolean 
           Dates is shared with <strong>{name}</strong>.
         </p>
       )}
-      {err && <p className="set-msg set-err" role="alert">{err}</p>}
+      {err && (
+        <p className="set-msg set-err" role="alert">
+          {err}
+        </p>
+      )}
     </section>
   );
 }
 
-function CoversCard({ partner, currency }: { partner: string | null; currency: string }) {
+function CoversCard({
+  partner,
+  currency,
+}: {
+  partner: string | null;
+  currency: string;
+}) {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: keys.summary, queryFn: getSummary });
   const loaded = q.data?.partner_paise;
-  const [val, setVal] = useStateFrom(loaded !== undefined ? String(Math.round(loaded / 100)) : "", [loaded]);
+  const [val, setVal] = useStateFrom(
+    loaded !== undefined ? String(Math.round(loaded / 100)) : "",
+    [loaded],
+  );
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const { busy, run } = useBusy();
@@ -90,7 +138,10 @@ function CoversCard({ partner, currency }: { partner: string | null; currency: s
       setMsg("");
       try {
         await setPartnerShare(paise);
-        await Promise.all([qc.invalidateQueries({ queryKey: keys.summary }), qc.invalidateQueries({ queryKey: keys.settle })]);
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: keys.summary }),
+          qc.invalidateQueries({ queryKey: keys.settle }),
+        ]);
         setMsg("Saved.");
       } catch (er) {
         setErr(errText(er));
@@ -105,7 +156,10 @@ function CoversCard({ partner, currency }: { partner: string | null; currency: s
       setMsg("");
       try {
         await resetPartnerShare();
-        await Promise.all([qc.invalidateQueries({ queryKey: keys.summary }), qc.invalidateQueries({ queryKey: keys.settle })]);
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: keys.summary }),
+          qc.invalidateQueries({ queryKey: keys.settle }),
+        ]);
         setMsg("Back to the default: half the monthly budget.");
       } catch (er) {
         setErr(errText(er));
@@ -119,7 +173,9 @@ function CoversCard({ partner, currency }: { partner: string | null; currency: s
       <div className="field">
         <label htmlFor="covers">Amount each month</label>
         <div className="money">
-          <span className="money-sign" aria-hidden="true">{currency}</span>
+          <span className="money-sign" aria-hidden="true">
+            {currency}
+          </span>
           <input
             id="covers"
             className="set-input"
@@ -133,11 +189,25 @@ function CoversCard({ partner, currency }: { partner: string | null; currency: s
             aria-describedby="covers-hint"
           />
         </div>
-        <p className="hint soft" id="covers-hint">The rest of the monthly budget is yours. This sets your share when you settle up.</p>
+        <p className="hint soft" id="covers-hint">
+          The rest of the monthly budget is yours. This sets your share when you
+          settle up.
+        </p>
       </div>
       <div className="set-row">
-        <button type="submit" className="btn btn-stamp" disabled={busy || q.isPending}>Save</button>
-        <button type="button" className="btn" disabled={busy || q.isPending} onClick={useDefault}>
+        <button
+          type="submit"
+          className="btn btn-stamp"
+          disabled={busy || q.isPending}
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={busy || q.isPending}
+          onClick={useDefault}
+        >
           Use the default
         </button>
         <button
@@ -145,7 +215,9 @@ function CoversCard({ partner, currency }: { partner: string | null; currency: s
           className="btn"
           disabled={busy || q.isPending || loaded === undefined}
           onClick={() => {
-            setVal(loaded !== undefined ? String(Math.round(loaded / 100)) : "");
+            setVal(
+              loaded !== undefined ? String(Math.round(loaded / 100)) : "",
+            );
             setMsg("");
             setErr("");
           }}
@@ -153,17 +225,34 @@ function CoversCard({ partner, currency }: { partner: string | null; currency: s
           Revert
         </button>
       </div>
-      <p className="set-msg" role="status">{msg}</p>
-      {err && <p className="set-msg set-err" role="alert">{err}</p>}
+      <p className="set-msg" role="status">
+        {msg}
+      </p>
+      {err && (
+        <p className="set-msg set-err" role="alert">
+          {err}
+        </p>
+      )}
     </form>
   );
 }
 
-function SettleCard({ partner, currency }: { partner: string | null; currency: string }) {
+function SettleCard({
+  partner,
+  currency,
+}: {
+  partner: string | null;
+  currency: string;
+}) {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: keys.settle, queryFn: getSettle });
   const balance = q.data?.balance_paise;
-  const [amount, setAmount] = useStateFrom(balance !== undefined && balance !== 0 ? String(Math.abs(balance) / 100) : "", [balance]);
+  const [amount, setAmount] = useStateFrom(
+    balance !== undefined && balance !== 0
+      ? String(Math.abs(balance) / 100)
+      : "",
+    [balance],
+  );
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
   const { busy, run } = useBusy();
@@ -181,7 +270,11 @@ function SettleCard({ partner, currency }: { partner: string | null; currency: s
       try {
         await recordSettlement(youPaid, paise);
         await qc.invalidateQueries({ queryKey: keys.settle });
-        setMsg(youPaid ? `Noted: you paid ${partner ?? "them"} back ${rupees(paise, currency)}.` : `Noted: ${partner ?? "they"} paid you back ${rupees(paise, currency)}.`);
+        setMsg(
+          youPaid
+            ? `Noted: you paid ${partner ?? "them"} back ${rupees(paise, currency)}.`
+            : `Noted: ${partner ?? "they"} paid you back ${rupees(paise, currency)}.`,
+        );
       } catch (e) {
         setErr(errText(e));
       }
@@ -203,7 +296,12 @@ function SettleCard({ partner, currency }: { partner: string | null; currency: s
   };
 
   const clearAll = () => {
-    if (!window.confirm("Start settling up from scratch? Every repayment you have noted will be removed.")) return;
+    if (
+      !window.confirm(
+        "Start settling up from scratch? Every repayment you have noted will be removed.",
+      )
+    )
+      return;
     void run(async () => {
       setErr("");
       setMsg("");
@@ -220,46 +318,110 @@ function SettleCard({ partner, currency }: { partner: string | null; currency: s
   return (
     <section className="set-card" aria-labelledby="settle-h">
       <h2 id="settle-h">Settle up</h2>
-      {q.isPending && <p className="soft" role="status">Counting…</p>}
-      {q.isError && <ErrorState message={errText(q.error)} onRetry={() => void q.refetch()} />}
+      {q.isPending && (
+        <p className="soft" role="status">
+          Counting…
+        </p>
+      )}
+      {q.isError && (
+        <ErrorState
+          message={errText(q.error)}
+          onRetry={() => void q.refetch()}
+        />
+      )}
       {q.data && (
         <>
-          <p className="settle-big" role="status">{standing(q.data.balance_paise, currency).text}</p>
+          <p className="settle-big" role="status">
+            {standing(q.data.balance_paise, currency).text}
+          </p>
           <p className="soft">
-            You paid {rupees(q.data.you_paid_paise, currency)}, {partner ?? "your partner"} paid {rupees(q.data.partner_paid_paise, currency)}. Your share is {Math.round(q.data.your_share_bps / 100)}%.
+            You paid {rupees(q.data.you_paid_paise, currency)},{" "}
+            {partner ?? "your partner"} paid{" "}
+            {rupees(q.data.partner_paid_paise, currency)}. Your share is{" "}
+            {Math.round(q.data.your_share_bps / 100)}%.
           </p>
           <div className="field">
             <label htmlFor="settle-amt">Amount paid back</label>
             <div className="money">
-              <span className="money-sign" aria-hidden="true">{currency}</span>
-              <input id="settle-amt" className="set-input" type="number" inputMode="decimal" min={0} step="any" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <span className="money-sign" aria-hidden="true">
+                {currency}
+              </span>
+              <input
+                id="settle-amt"
+                className="set-input"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="any"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
             </div>
           </div>
           <div className="set-row">
-            <button type="button" className="btn" disabled={busy} onClick={() => record(false)}>They paid me back</button>
-            <button type="button" className="btn" disabled={busy} onClick={() => record(true)}>I paid them back</button>
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() => record(false)}
+            >
+              They paid me back
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() => record(true)}
+            >
+              I paid them back
+            </button>
           </div>
-          <p className="set-msg" role="status">{msg}</p>
-          {err && <p className="set-msg set-err" role="alert">{err}</p>}
+          <p className="set-msg" role="status">
+            {msg}
+          </p>
+          {err && (
+            <p className="set-msg set-err" role="alert">
+              {err}
+            </p>
+          )}
           {q.data.settlements.length > 0 && (
             <>
-              <h3 className="soft" style={{ fontSize: "var(--step--1)" }}>Paid back so far</h3>
+              <h3 className="soft" style={{ fontSize: "var(--step--1)" }}>
+                Paid back so far
+              </h3>
               <ul className="settle-list">
                 {q.data.settlements.map((s) => (
                   <li key={s.id}>
                     <span>
-                      {s.payer_is_you ? "You paid back" : `${partner ?? "They"} paid back`} {rupees(s.amount_paise, currency)}
+                      {s.payer_is_you
+                        ? "You paid back"
+                        : `${partner ?? "They"} paid back`}{" "}
+                      {rupees(s.amount_paise, currency)}
                       {s.note ? `, ${s.note}` : ""}
                     </span>
                     <span className="soft">{s.on_day}</span>
-                    <button type="button" className="btn" disabled={busy} onClick={() => window.confirm("Remove this repayment?") && removeOne(s.id)} aria-label={`Remove the repayment of ${rupees(s.amount_paise, currency)} on ${s.on_day}`}>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={busy}
+                      onClick={() =>
+                        window.confirm("Remove this repayment?") &&
+                        removeOne(s.id)
+                      }
+                      aria-label={`Remove the repayment of ${rupees(s.amount_paise, currency)} on ${s.on_day}`}
+                    >
                       Remove
                     </button>
                   </li>
                 ))}
               </ul>
               <div className="set-row">
-                <button type="button" className="btn" disabled={busy} onClick={clearAll}>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={busy}
+                  onClick={clearAll}
+                >
                   Reset: clear all repayments
                 </button>
               </div>
@@ -290,32 +452,72 @@ function LeaveCard({ partner }: { partner: string | null }) {
       }
     });
   return (
-    <section className="set-card set-leave" aria-labelledby="leave-h" style={{ marginTop: "var(--space-8, 3rem)", borderTop: "2px dashed currentColor" }}>
+    <section
+      className="set-card set-leave"
+      aria-labelledby="leave-h"
+      style={{
+        marginTop: "var(--space-8, 3rem)",
+        borderTop: "2px dashed currentColor",
+      }}
+    >
       <h2 id="leave-h">Leave</h2>
-      <p className="soft">Not something you need often. Leaving asks you to confirm first.</p>
+      <p className="soft">
+        Not something you need often. Leaving asks you to confirm first.
+      </p>
       {!open ? (
         <div className="set-row">
-          <button type="button" className="btn" aria-expanded="false" aria-controls="leave-box" onClick={() => setOpen(true)}>
+          <button
+            type="button"
+            className="btn"
+            aria-expanded="false"
+            aria-controls="leave-box"
+            onClick={() => setOpen(true)}
+          >
             Leave our jar…
           </button>
         </div>
       ) : (
-        <div className="leave-box" id="leave-box" role="group" aria-labelledby="leave-h">
+        <div
+          className="leave-box"
+          id="leave-box"
+          role="group"
+          aria-labelledby="leave-h"
+        >
           <p>
-            <strong>This can’t be undone from here.</strong> Your place in the jar empties and you lose access to the slips, kept dates and settle-up history.
-            {partner ? ` ${partner} keeps everything.` : ""} If nobody is left, Dates and everything in it is deleted for good. To come back you will need a new code from your partner.
+            <strong>This can’t be undone from here.</strong> Your place in the
+            jar empties and you lose access to the slips, kept dates and
+            settle-up history.
+            {partner ? ` ${partner} keeps everything.` : ""} If nobody is left,
+            Dates and everything in it is deleted for good. To come back you
+            will need a new code from your partner.
           </p>
           <div className="set-row">
-            <button type="button" className="btn btn-danger" disabled={busy} onClick={() => void leave()}>
-              {partner ? `Leave and give ${partner} the jar` : "Yes, leave Dates"}
+            <button
+              type="button"
+              className="btn btn-danger"
+              disabled={busy}
+              onClick={() => void leave()}
+            >
+              {partner
+                ? `Leave and give ${partner} the jar`
+                : "Yes, leave Dates"}
             </button>
-            <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => setOpen(false)}>
+            <button
+              type="button"
+              className="btn btn-quiet"
+              disabled={busy}
+              onClick={() => setOpen(false)}
+            >
               Keep it
             </button>
           </div>
         </div>
       )}
-      {err && <p className="set-msg set-err" role="alert">{err}</p>}
+      {err && (
+        <p className="set-msg set-err" role="alert">
+          {err}
+        </p>
+      )}
     </section>
   );
 }

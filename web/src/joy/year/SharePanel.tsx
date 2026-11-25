@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { drawData, MAX_PHOTOS, shareControls, type ShareData } from "./layout";
 import { makePicture } from "./paint";
 
-const canDraw = () => typeof HTMLCanvasElement !== "undefined" && "toBlob" in HTMLCanvasElement.prototype;
+const canDraw = () =>
+  typeof HTMLCanvasElement !== "undefined" &&
+  "toBlob" in HTMLCanvasElement.prototype;
 
 interface Props {
   data: ShareData;
@@ -33,7 +35,12 @@ export function SharePanel({ data, ticked, hasWall, say }: Props) {
   const saveLink = useRef<HTMLAnchorElement>(null);
   const lock = useRef(false);
 
-  useEffect(() => () => { if (url.current) URL.revokeObjectURL(url.current); }, []);
+  useEffect(
+    () => () => {
+      if (url.current) URL.revokeObjectURL(url.current);
+    },
+    [],
+  );
 
   if (!canDraw()) return null; // no picture without toBlob; the page stays readable
 
@@ -43,13 +50,18 @@ export function SharePanel({ data, ticked, hasWall, say }: Props) {
     setBusy(true);
     setStatus("Making our picture…");
     try {
-      const f = await makePicture(drawData(data, { places, spent, photos: ticked }));
+      const f = await makePicture(
+        drawData(data, { places, spent, photos: ticked }),
+      );
       if (url.current) URL.revokeObjectURL(url.current);
       url.current = URL.createObjectURL(f);
       file.current = f;
       let can = false;
       try {
-        can = typeof navigator.share === "function" && typeof navigator.canShare === "function" && navigator.canShare({ files: [f] });
+        can =
+          typeof navigator.share === "function" &&
+          typeof navigator.canShare === "function" &&
+          navigator.canShare({ files: [f] });
       } catch {
         can = false;
       }
@@ -63,7 +75,9 @@ export function SharePanel({ data, ticked, hasWall, say }: Props) {
         if (typeof d.showModal === "function") d.showModal();
         else d.setAttribute("open", "");
       }
-      requestAnimationFrame(() => (can ? sendBtn.current : saveLink.current)?.focus());
+      requestAnimationFrame(() =>
+        (can ? sendBtn.current : saveLink.current)?.focus(),
+      );
     } catch {
       setStatus("The picture didn't come out this time. Try once more?");
     } finally {
@@ -92,7 +106,8 @@ export function SharePanel({ data, ticked, hasWall, say }: Props) {
     p.then(
       () => close(),
       (err: unknown) => {
-        if (!(err && (err as { name?: string }).name === "AbortError")) fallback();
+        if (!(err && (err as { name?: string }).name === "AbortError"))
+          fallback();
       },
     );
   };
@@ -121,29 +136,64 @@ export function SharePanel({ data, ticked, hasWall, say }: Props) {
             <p className="y-postcard-k">Post card · a keepsake</p>
             <h2 id="y-share-h">Make our picture</h2>
             <p className="y-share-lead">
-              A keepsake of our {data.year} to share or keep. It says “us” and never our names, notes or homes. Places, money and photos only go in if you tick them.
+              A keepsake of our {data.year} to share or keep. It says “us” and
+              never our names, notes or homes. Places, money and photos only go
+              in if you tick them.
             </p>
           </div>
           <div className="y-postcard-addr">
             <fieldset className="y-opts">
-              <legend className="visually-hidden">What goes in the picture</legend>
+              <legend className="visually-hidden">
+                What goes in the picture
+              </legend>
               {ctl.places && (
                 <label className="y-opt">
-                  <input type="checkbox" id="y-opt-places" checked={places} onChange={(e) => setPlaces(e.target.checked)} /> Show where we went
+                  <input
+                    type="checkbox"
+                    id="y-opt-places"
+                    checked={places}
+                    onChange={(e) => setPlaces(e.target.checked)}
+                  />{" "}
+                  Show where we went
                 </label>
               )}
               {ctl.spent && (
                 <label className="y-opt">
-                  <input type="checkbox" id="y-opt-spent" checked={spent} onChange={(e) => setSpent(e.target.checked)} /> Show what we spent
+                  <input
+                    type="checkbox"
+                    id="y-opt-spent"
+                    checked={spent}
+                    onChange={(e) => setSpent(e.target.checked)}
+                  />{" "}
+                  Show what we spent
                 </label>
               )}
-              {hasWall && <p className="y-opt-note">Photos: tick “include in picture” on the wall above (up to {MAX_PHOTOS}).</p>}
+              {hasWall && (
+                <p className="y-opt-note">
+                  Photos: tick “include in picture” on the wall above (up to{" "}
+                  {MAX_PHOTOS}).
+                </p>
+              )}
             </fieldset>
             <div className="y-make-row">
-              <button ref={makeBtn} type="button" className="y-make" id="y-make" disabled={busy} onClick={() => void make()}>
+              <button
+                ref={makeBtn}
+                type="button"
+                className="y-make"
+                id="y-make"
+                disabled={busy}
+                onClick={() => void make()}
+              >
                 Make our picture
               </button>
-              <p className="y-status" id="y-status" role="status" aria-live="polite">{status || say}</p>
+              <p
+                className="y-status"
+                id="y-status"
+                role="status"
+                aria-live="polite"
+              >
+                {status || say}
+              </p>
             </div>
           </div>
         </div>
@@ -162,19 +212,44 @@ export function SharePanel({ data, ticked, hasWall, say }: Props) {
         <div className="y-sheet-in">
           <h2 id="y-sheet-h">Our {data.year}, ready</h2>
           <div className="y-preview-wrap">
-            {preview && <img className="y-preview" id="y-preview" src={preview} alt={`Preview of the picture of our ${data.year}`} />}
+            {preview && (
+              <img
+                className="y-preview"
+                id="y-preview"
+                src={preview}
+                alt={`Preview of the picture of our ${data.year}`}
+              />
+            )}
           </div>
           <div className="y-sheet-acts">
-            <button ref={sendBtn} type="button" className="btn btn-stamp" id="y-send" hidden={!canShare} onClick={send}>
+            <button
+              ref={sendBtn}
+              type="button"
+              className="btn btn-stamp"
+              id="y-send"
+              hidden={!canShare}
+              onClick={send}
+            >
               Share
             </button>
             <p className="y-save" id="y-save" hidden={!showSave}>
-              <a ref={saveLink} className="btn" id="y-save-link" download={fileName || `our-${data.year}.png`} href={preview || "#"}>
+              <a
+                ref={saveLink}
+                className="btn"
+                id="y-save-link"
+                download={fileName || `our-${data.year}.png`}
+                href={preview || "#"}
+              >
                 Save image
               </a>{" "}
               <span className="soft">or long-press the picture to save it</span>
             </p>
-            <button type="button" className="btn btn-quiet" id="y-close" onClick={close}>
+            <button
+              type="button"
+              className="btn btn-quiet"
+              id="y-close"
+              onClick={close}
+            >
               Close
             </button>
           </div>

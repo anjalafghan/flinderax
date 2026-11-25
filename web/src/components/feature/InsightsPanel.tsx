@@ -3,12 +3,30 @@ import { Copy, Receipt, TrendingUp, Undo2, Wallet, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { useInsights, type InsightRefund, type InsightsOut } from "@/services/insights";
+import {
+  useInsights,
+  type InsightRefund,
+  type InsightsOut,
+} from "@/services/insights";
 import { formatDay } from "@/utils/dates";
 import { formatINR } from "@/utils/money";
 import { cn } from "@/utils/cn";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 /** "2026-03" -> "Mar 2026". */
 function monthYear(ym: string): string {
@@ -27,7 +45,10 @@ const RAIL_LABEL: Record<InsightRefund["rail"], string> = {
   unknown: "UPI payment",
 };
 
-const IMPACT_TONE: Record<InsightsOut["health"]["actions"][number]["impact"], string> = {
+const IMPACT_TONE: Record<
+  InsightsOut["health"]["actions"][number]["impact"],
+  string
+> = {
   high: "tone-over",
   medium: "tone-warn",
   low: "tone-quiet",
@@ -40,7 +61,11 @@ function healthTone(score: number): "good" | "warn" | "over" {
   return "over";
 }
 
-const HEALTH_LABEL = { good: "Healthy", warn: "Watch", over: "Needs attention" } as const;
+const HEALTH_LABEL = {
+  good: "Healthy",
+  warn: "Watch",
+  over: "Needs attention",
+} as const;
 
 /** No signal at all: nothing flagged and no health inputs. */
 function isEmpty(d: InsightsOut): boolean {
@@ -56,7 +81,13 @@ function isEmpty(d: InsightsOut): boolean {
   );
 }
 
-function Pill({ className, children }: { className?: string; children: ReactNode }) {
+function Pill({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <span
       className={cn(
@@ -69,13 +100,49 @@ function Pill({ className, children }: { className?: string; children: ReactNode
   );
 }
 
-function Stat({ label, value, unit }: { label: string; value: string; unit?: string }) {
+/** A round icon in its section's colour: refunds sky, charges coral, duplicates sun, unusual grape, payday mint. */
+function SectionIcon({ c, children }: { c: string; children: ReactNode }) {
   return (
-    <div className="flex min-w-[120px] flex-1 flex-col gap-1">
-      <span className="text-[13px] text-muted-foreground">{label}</span>
-      <span className="font-display text-[32px] leading-none">
+    <span
+      aria-hidden
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-background [&>svg]:h-[18px] [&>svg]:w-[18px]"
+      style={{
+        background: `hsl(var(--c-${c}))`,
+        boxShadow: `0 8px 18px -8px hsl(var(--c-${c}))`,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  unit,
+  c,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  c: string;
+}) {
+  return (
+    <div
+      className="flex min-w-[120px] flex-1 flex-col gap-1 rounded-2xl px-3.5 py-3"
+      style={{ background: `hsl(var(--c-${c}) / 0.12)` }}
+    >
+      <span className="text-[13px] font-medium text-muted-foreground">
+        {label}
+      </span>
+      <span
+        className="font-display text-[32px] leading-none"
+        style={{ color: `hsl(var(--c-${c}))` }}
+      >
         {value}
-        {unit && <span className="ml-1 text-sm text-muted-foreground">{unit}</span>}
+        {unit && (
+          <span className="ml-1 text-sm text-muted-foreground">{unit}</span>
+        )}
       </span>
     </div>
   );
@@ -88,30 +155,55 @@ function HealthSection({ health }: { health: InsightsOut["health"] }) {
     <section aria-labelledby="insights-health" className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-baseline gap-3">
-          <h3 id="insights-health" className="m-0 font-display text-[24px] leading-tight">
+          <h3
+            id="insights-health"
+            className="m-0 font-display text-[24px] leading-tight"
+          >
             Health
           </h3>
         </div>
-        <span className={cn("inline-flex min-h-8 items-center rounded-full px-3.5 text-sm font-semibold", `tone-${tone}`)}>
+        <span
+          className={cn(
+            "inline-flex min-h-8 items-center rounded-full px-3.5 text-sm font-semibold",
+            `tone-${tone}`,
+          )}
+        >
           {HEALTH_LABEL[tone]}
         </span>
       </div>
 
       <div className="flex flex-wrap items-end gap-x-8 gap-y-5">
-        <p className="m-0 flex items-baseline gap-2 font-display text-[96px] leading-[0.9] tracking-[-0.03em]">
+        <p
+          className="m-0 flex items-baseline gap-2 font-display text-[96px] leading-[0.9] tracking-[-0.03em]"
+          style={{
+            color: `hsl(var(--${tone}))`,
+            textShadow: `0 0 40px hsl(var(--${tone}) / 0.35)`,
+          }}
+        >
           {health.score}
           <span className="text-2xl text-muted-foreground">/100</span>
         </p>
         <div className="flex flex-1 flex-wrap gap-x-6 gap-y-5">
           <Stat
+            c="mint"
             label="Savings rate"
-            value={health.savings_rate_bps === null ? "—" : `${Math.round(health.savings_rate_bps / 100)}%`}
+            value={
+              health.savings_rate_bps === null
+                ? "—"
+                : `${Math.round(health.savings_rate_bps / 100)}%`
+            }
           />
           <Stat
+            c="sky"
             label="Emergency months"
-            value={health.emergency_months_tenths === null ? "—" : (health.emergency_months_tenths / 10).toFixed(1)}
+            value={
+              health.emergency_months_tenths === null
+                ? "—"
+                : (health.emergency_months_tenths / 10).toFixed(1)
+            }
           />
           <Stat
+            c="grape"
             label="Income"
             value={cv === null ? "—" : cv < 1500 ? "steady" : "variable"}
           />
@@ -122,7 +214,9 @@ function HealthSection({ health }: { health: InsightsOut["health"] }) {
         <ol className="ledger">
           {health.actions.map((a) => (
             <li key={a.text} className="ledger-row items-start">
-              <span className="min-w-0 flex-1 text-[15px] leading-snug">{a.text}</span>
+              <span className="min-w-0 flex-1 text-[15px] leading-snug">
+                {a.text}
+              </span>
               <Pill className={IMPACT_TONE[a.impact]}>{a.impact} impact</Pill>
             </li>
           ))}
@@ -135,28 +229,38 @@ function HealthSection({ health }: { health: InsightsOut["health"] }) {
 function RefundsSection({ refunds }: { refunds: InsightRefund[] }) {
   return (
     <section aria-labelledby="insights-refunds" className="flex flex-col gap-4">
-      <h3 id="insights-refunds" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
-        <Undo2 className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
+      <h3
+        id="insights-refunds"
+        className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight"
+      >
+        <SectionIcon c="sky">
+          <Undo2 strokeWidth={1.8} />
+        </SectionIcon>
         Failed UPI refunds owed
       </h3>
       <p className="m-0 text-[13px] leading-snug text-muted-foreground">
-        RBI requires failed UPI debits to be reversed within a day (to a person) or five days (to a merchant); after that
-        the bank owes ₹100 a day.
+        RBI requires failed UPI debits to be reversed within a day (to a person)
+        or five days (to a merchant); after that the bank owes ₹100 a day.
       </p>
       <ul className="ledger">
         {refunds.map((r) => (
           <li key={r.txn_id} className="ledger-row flex-wrap gap-x-5 gap-y-2">
             <span className="flex min-w-0 flex-auto flex-col gap-0.5">
-              <span className="truncate text-base font-medium" title={r.merchant ?? "Unknown payee"}>
+              <span
+                className="truncate text-base font-medium"
+                title={r.merchant ?? "Unknown payee"}
+              >
                 {r.merchant ?? "Unknown payee"}
               </span>
               <span className="text-[13px] text-muted-foreground">
-                {formatINR(r.amount_paise)} · {RAIL_LABEL[r.rail]} · debited {formatDay(r.occurred_on)}
+                {formatINR(r.amount_paise)} · {RAIL_LABEL[r.rail]} · debited{" "}
+                {formatDay(r.occurred_on)}
               </span>
             </span>
             {r.status === "overdue" ? (
               <Pill className="tone-over">
-                {plural(r.days_overdue, "day")} late · bank owes {rupees(r.compensation_paise)}
+                {plural(r.days_overdue, "day")} late · bank owes{" "}
+                {rupees(r.compensation_paise)}
               </Pill>
             ) : (
               <Pill className="tone-quiet">Due {formatDay(r.due_by)}</Pill>
@@ -172,21 +276,36 @@ function ChargesSection({ charges }: { charges: InsightsOut["charges"] }) {
   return (
     <section aria-labelledby="insights-charges" className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-4">
-        <h3 id="insights-charges" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
-          <Receipt className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
+        <h3
+          id="insights-charges"
+          className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight"
+        >
+          <SectionIcon c="coral">
+            <Receipt strokeWidth={1.8} />
+          </SectionIcon>
           Charges &amp; fees
         </h3>
-        <span className="font-display text-2xl">{formatINR(charges.last_12m_paise)}</span>
+        <span className="font-display text-2xl text-[hsl(var(--foreground))] dark:text-coral">
+          {formatINR(charges.last_12m_paise)}
+        </span>
       </div>
-      <p className="m-0 text-[13px] leading-snug text-muted-foreground">Bank charges and fees in the last 12 months.</p>
+      <p className="m-0 text-[13px] leading-snug text-muted-foreground">
+        Bank charges and fees in the last 12 months.
+      </p>
       <ul className="ledger">
         {charges.items.map((c) => (
           <li key={c.label} className="ledger-row">
             <span className="text-[15px]">
               {c.label}
-              {c.count > 1 && <span className="ml-2 text-[13px] text-muted-foreground">×{c.count}</span>}
+              {c.count > 1 && (
+                <span className="ml-2 text-[13px] text-muted-foreground">
+                  ×{c.count}
+                </span>
+              )}
             </span>
-            <span className="font-display text-xl">{formatINR(c.amount_paise)}</span>
+            <span className="font-display text-xl">
+              {formatINR(c.amount_paise)}
+            </span>
           </li>
         ))}
       </ul>
@@ -194,25 +313,45 @@ function ChargesSection({ charges }: { charges: InsightsOut["charges"] }) {
   );
 }
 
-function DuplicatesSection({ duplicates }: { duplicates: InsightsOut["duplicates"] }) {
+function DuplicatesSection({
+  duplicates,
+}: {
+  duplicates: InsightsOut["duplicates"];
+}) {
   return (
-    <section aria-labelledby="insights-duplicates" className="flex flex-col gap-4">
-      <h3 id="insights-duplicates" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
-        <Copy className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
+    <section
+      aria-labelledby="insights-duplicates"
+      className="flex flex-col gap-4"
+    >
+      <h3
+        id="insights-duplicates"
+        className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight"
+      >
+        <SectionIcon c="sun">
+          <Copy strokeWidth={1.8} />
+        </SectionIcon>
         Possible duplicate charges
       </h3>
       <ul className="ledger">
         {duplicates.map((d) => (
-          <li key={`${d.merchant}-${d.occurred_on}-${d.amount_paise}`} className="ledger-row gap-5">
+          <li
+            key={`${d.merchant}-${d.occurred_on}-${d.amount_paise}`}
+            className="ledger-row gap-5"
+          >
             <span className="flex min-w-0 flex-auto flex-col gap-0.5">
-              <span className="truncate text-base font-medium" title={d.merchant}>
+              <span
+                className="truncate text-base font-medium"
+                title={d.merchant}
+              >
                 {d.merchant}
               </span>
               <span className="text-[13px] text-muted-foreground">
                 {plural(d.count, "charge")} on {formatDay(d.occurred_on)}
               </span>
             </span>
-            <span className="font-display text-2xl">{formatINR(d.amount_paise)}</span>
+            <span className="font-display text-2xl">
+              {formatINR(d.amount_paise)}
+            </span>
           </li>
         ))}
       </ul>
@@ -223,8 +362,13 @@ function DuplicatesSection({ duplicates }: { duplicates: InsightsOut["duplicates
 function UnusualSection({ unusual }: { unusual: InsightsOut["unusual"] }) {
   return (
     <section aria-labelledby="insights-unusual" className="flex flex-col gap-4">
-      <h3 id="insights-unusual" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
-        <TrendingUp className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
+      <h3
+        id="insights-unusual"
+        className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight"
+      >
+        <SectionIcon c="grape">
+          <TrendingUp strokeWidth={1.8} />
+        </SectionIcon>
         Unusual months
       </h3>
       <ul className="ledger">
@@ -240,11 +384,20 @@ function UnusualSection({ unusual }: { unusual: InsightsOut["unusual"] }) {
   );
 }
 
-function PaydaySection({ p }: { p: NonNullable<InsightsOut["spend_to_payday"]> }) {
+function PaydaySection({
+  p,
+}: {
+  p: NonNullable<InsightsOut["spend_to_payday"]>;
+}) {
   return (
     <section aria-labelledby="insights-payday" className="flex flex-col gap-4">
-      <h3 id="insights-payday" className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight">
-        <Wallet className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
+      <h3
+        id="insights-payday"
+        className="m-0 flex items-center gap-2.5 font-display text-[24px] leading-tight"
+      >
+        <SectionIcon c="mint">
+          <Wallet strokeWidth={1.8} />
+        </SectionIcon>
         Spending to payday
       </h3>
       <p className="m-0 text-[15px] leading-snug">
@@ -259,11 +412,13 @@ export function InsightsPanel() {
   const { data, isLoading, isError, refetch } = useInsights();
 
   if (isLoading) {
-    return <div className="h-64 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading insights" />;
+    return (
+      <Skeleton className="h-64 rounded-[28px]" label="Loading insights" />
+    );
   }
   if (isError || !data) {
     return (
-      <div className="rounded-[28px] border border-dashed border-border bg-card/30 p-6 text-center text-sm text-muted-foreground">
+      <div className="rounded-[28px] border border-dashed border-brand/40 bg-brand-tint p-6 text-center text-sm text-brand-ink">
         Couldn't load your insights.{" "}
         <Button variant="link" className="h-auto p-0" onClick={() => refetch()}>
           Try again
@@ -275,25 +430,35 @@ export function InsightsPanel() {
   return (
     <section
       aria-labelledby="insights-title"
-      className="flex flex-col gap-12 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10"
+      className="glass flex flex-col gap-12 rounded-[28px] px-6 py-8 sm:px-12 sm:py-10"
     >
       <header className="flex flex-col gap-2">
-        <h2 id="insights-title" className="m-0 font-display text-[32px] leading-none">
+        <h2
+          id="insights-title"
+          className="brand-text m-0 font-display text-[32px] leading-none"
+        >
           Insights
         </h2>
-        <p className="m-0 text-sm text-muted-foreground">What your transactions say</p>
+        <p className="m-0 text-sm text-muted-foreground">
+          What your transactions say
+        </p>
       </header>
 
       {isEmpty(data) ? (
         <p className="empty-note">
-          Not enough transactions yet. Import a statement or forward bank alerts to see insights.
+          Not enough transactions yet. Import a statement or forward bank alerts
+          to see insights.
         </p>
       ) : (
         <>
           <HealthSection health={data.health} />
           {data.refunds.length > 0 && <RefundsSection refunds={data.refunds} />}
-          {data.charges.last_12m_paise > 0 && <ChargesSection charges={data.charges} />}
-          {data.duplicates.length > 0 && <DuplicatesSection duplicates={data.duplicates} />}
+          {data.charges.last_12m_paise > 0 && (
+            <ChargesSection charges={data.charges} />
+          )}
+          {data.duplicates.length > 0 && (
+            <DuplicatesSection duplicates={data.duplicates} />
+          )}
           {data.unusual.length > 0 && <UnusualSection unusual={data.unusual} />}
           {data.spend_to_payday && <PaydaySection p={data.spend_to_payday} />}
         </>
@@ -316,10 +481,17 @@ export function InsightsNudge() {
     return (
       <div className="tone-over mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] px-5 py-3.5">
         <span className="flex items-center gap-2.5 text-sm font-medium">
-          <Clock className="h-[18px] w-[18px] shrink-0" strokeWidth={1.6} aria-hidden />
+          <Clock
+            className="h-[18px] w-[18px] shrink-0"
+            strokeWidth={1.6}
+            aria-hidden
+          />
           {`${plural(overdue.length, "failed UPI refund")} overdue · bank owes ${rupees(owed)}`}
         </span>
-        <Link to="/money" className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground no-underline">
+        <Link
+          to="/money"
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground no-underline"
+        >
           See insights
         </Link>
       </div>
@@ -329,9 +501,19 @@ export function InsightsNudge() {
   const p = data.spend_to_payday;
   if (p) {
     return (
-      <p className="m-0 mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-        <span>{`Between ${rupees(p.p10_paise)} and ${rupees(p.p90_paise)} likely to go before payday in ${plural(p.days, "day")}.`}</span>
-        <Link to="/money" className="inline-flex min-h-11 items-center font-medium text-foreground no-underline">
+      <p className="m-0 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-mint/30 bg-[linear-gradient(110deg,hsl(var(--c-mint)/0.14),hsl(var(--c-sky)/0.08))] px-5 text-sm">
+        <span className="flex items-center gap-2.5 py-2">
+          <Wallet
+            className="h-[18px] w-[18px] shrink-0 text-[hsl(var(--foreground))] dark:text-mint"
+            strokeWidth={1.6}
+            aria-hidden
+          />
+          {`Between ${rupees(p.p10_paise)} and ${rupees(p.p90_paise)} likely to go before payday in ${plural(p.days, "day")}.`}
+        </span>
+        <Link
+          to="/money"
+          className="inline-flex min-h-11 items-center font-semibold text-brand-ink no-underline"
+        >
           Insights
         </Link>
       </p>

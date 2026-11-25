@@ -4,16 +4,34 @@ import { errorMessage, NOTE } from "@/components/feature/people/ui";
 import { Button } from "@/components/ui/button";
 import { ResetButton } from "@/components/ui/reset-button";
 import { rupees } from "@/services/checkin";
-import { clearTouches, deleteTouch, TOUCH_LABEL, usePeopleMutation, type Touch } from "@/services/people";
+import {
+  clearTouches,
+  deleteTouch,
+  TOUCH_LABEL,
+  usePeopleMutation,
+  type Touch,
+} from "@/services/people";
 import { formatDay } from "@/utils/dates";
 
 /** The last twenty catch-ups, newest first. A mistake can be deleted. */
-export function PersonTouches({ touches, personId }: { touches: Touch[]; personId: string }) {
+export function PersonTouches({
+  touches,
+  personId,
+}: {
+  touches: Touch[];
+  personId: string;
+}) {
   const remove = usePeopleMutation(deleteTouch);
   const clearAll = usePeopleMutation(clearTouches);
   return (
-    <section aria-labelledby="person-touches-title" className="flex flex-col gap-5">
-      <h2 id="person-touches-title" className="m-0 font-display text-[32px] leading-none">
+    <section
+      aria-labelledby="person-touches-title"
+      className="flex flex-col gap-5"
+    >
+      <h2
+        id="person-touches-title"
+        className="m-0 font-display text-[32px] leading-none"
+      >
         Catch-ups
       </h2>
       {touches.length > 0 ? (
@@ -23,7 +41,12 @@ export function PersonTouches({ touches, personId }: { touches: Touch[]; personI
               <span className="flex min-w-0 flex-col gap-1">
                 <span className="text-[15px] font-medium">{`${TOUCH_LABEL[t.kind]} · ${formatDay(t.on_day)}`}</span>
                 <span className="text-[13px] text-muted-foreground">
-                  {[t.cost_paise !== null ? `Cost ${rupees(t.cost_paise)}` : "", t.note].filter(Boolean).join(" · ") || "No note"}
+                  {[
+                    t.cost_paise !== null ? `Cost ${rupees(t.cost_paise)}` : "",
+                    t.note,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "No note"}
                 </span>
               </span>
               <Button

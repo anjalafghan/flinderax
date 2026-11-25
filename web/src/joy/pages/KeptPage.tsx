@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
+import Counter from "@/components/bits/Counter";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Go } from "../api";
@@ -9,7 +17,15 @@ import { Budget, CustomDateFold } from "../kept/Budget";
 import { useFold } from "../kept/useFold";
 import { KeptContext, type FinishOptions, type KeptCtx } from "../kept/ctx";
 import { Defs } from "../kept/Defs";
-import { dateWord, flatIds, isoToday, moveFor, sinceLabel, splitTo, stepIndex } from "../kept/helpers";
+import {
+  dateWord,
+  flatIds,
+  isoToday,
+  moveFor,
+  sinceLabel,
+  splitTo,
+  stepIndex,
+} from "../kept/helpers";
 import { behavior, nextFrame, useDealIn } from "../kept/motion";
 import { SealedSlip, Slip } from "../kept/Slip";
 import { sceneFor, visitsOf } from "../keepsakes/scene-find";
@@ -28,7 +44,10 @@ function focusTo(selector: string, center = false) {
   const el = document.querySelector<HTMLElement>(selector);
   if (!el) return;
   el.focus({ preventScroll: true });
-  el.scrollIntoView({ block: center ? "center" : "nearest", behavior: behavior() });
+  el.scrollIntoView({
+    block: center ? "center" : "nearest",
+    behavior: behavior(),
+  });
 }
 
 export default function KeptPage() {
@@ -39,12 +58,18 @@ export default function KeptPage() {
   const [revealed, setRevealed] = useState<number | null>(null);
   const book = useRef<HTMLDivElement>(null);
   const handled = useRef("");
-  const addFold = useFold(false, () => requestAnimationFrame(() => document.getElementById("custom-title")?.focus()));
+  const addFold = useFold(false, () =>
+    requestAnimationFrame(() =>
+      document.getElementById("custom-title")?.focus(),
+    ),
+  );
   const { setOpen: setAddOpen } = addFold;
   const openAdd = useCallback(() => {
     setAddOpen(true);
     requestAnimationFrame(() => {
-      document.getElementById("k-add")?.scrollIntoView({ block: "center", behavior: behavior() });
+      document
+        .getElementById("k-add")
+        ?.scrollIntoView({ block: "center", behavior: behavior() });
       document.getElementById("custom-title")?.focus({ preventScroll: true });
     });
   }, [setAddOpen]);
@@ -60,7 +85,8 @@ export default function KeptPage() {
     async (focus?: string) => {
       await qc.invalidateQueries({ queryKey: keptKey });
       await nextFrame();
-      if (focus) focusTo(focus, focus.startsWith("#k") && /^#k\d+$/.test(focus));
+      if (focus)
+        focusTo(focus, focus.startsWith("#k") && /^#k\d+$/.test(focus));
     },
     [qc],
   );
@@ -82,7 +108,13 @@ export default function KeptPage() {
   );
 
   const ctx = useMemo<KeptCtx>(
-    () => ({ currency: q.data?.currency ?? "₹", finish, refresh, revealed, setRevealed }),
+    () => ({
+      currency: q.data?.currency ?? "₹",
+      finish,
+      refresh,
+      revealed,
+      setRevealed,
+    }),
     [q.data?.currency, finish, refresh, revealed],
   );
 
@@ -90,9 +122,13 @@ export default function KeptPage() {
   const dealt = useDealIn(book, months);
   // Each date that has happened gets its own illustrated keepsake, when one was drawn for that slip.
   const scenes = useMemo(() => {
-    const done = (months ?? []).flatMap((m) => m.items).filter((h) => !h.sealed && h.day && h.day <= isoToday());
+    const done = (months ?? [])
+      .flatMap((m) => m.items)
+      .filter((h) => !h.sealed && h.day && h.day <= isoToday());
     const visits = visitsOf(done);
-    return new Map(done.map((h) => [h.id, sceneFor(h.title, visits.get(h.id))] as const));
+    return new Map(
+      done.map((h) => [h.id, sceneFor(h.title, visits.get(h.id))] as const),
+    );
   }, [months]);
 
   // Landing on #k12 / #k-savings brings that into view once, after the data is there.
@@ -104,7 +140,8 @@ export default function KeptPage() {
       return;
     }
     const sel = hashSelector(hash);
-    if (sel && !/^#(k-)?budget$/.test(hash)) requestAnimationFrame(() => focusTo(sel, /^#k\d+$/.test(sel)));
+    if (sel && !/^#(k-)?budget$/.test(hash))
+      requestAnimationFrame(() => focusTo(sel, /^#k\d+$/.test(sel)));
   }, [q.data, hash, openAdd]);
 
   // The book is a list of slips: j/k anywhere in it, arrows and Home/End once a slip has focus.
@@ -112,7 +149,8 @@ export default function KeptPage() {
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.metaKey || e.ctrlKey || e.altKey || e.nativeEvent.isComposing) return;
     const t = e.target as HTMLElement;
-    if (t.closest("input, textarea, select, summary, [contenteditable='true']")) return;
+    if (t.closest("input, textarea, select, summary, [contenteditable='true']"))
+      return;
     const slip = t.closest<HTMLElement>(".k-slip");
     const move = moveFor(e.key, t.classList.contains("k-slip"));
     if (!move) return;
@@ -123,12 +161,21 @@ export default function KeptPage() {
     focusTo(`#k${ids[next]}`, true);
   };
 
-  if (q.isPending) return <p className="loading" role="status">Opening the keepsake box…</p>;
+  if (q.isPending)
+    return (
+      <p className="loading" role="status">
+        Opening the keepsake box…
+      </p>
+    );
   if (q.isError) {
     return (
       <div className="k-page">
-        <p className="kind-error" role="alert">{errText(q.error)}</p>
-        <button type="button" className="btn" onClick={() => void q.refetch()}>Try again</button>
+        <p className="kind-error" role="alert">
+          {errText(q.error)}
+        </p>
+        <button type="button" className="btn" onClick={() => void q.refetch()}>
+          Try again
+        </button>
       </div>
     );
   }
@@ -147,7 +194,15 @@ export default function KeptPage() {
           {v.kept > 0 && (
             <>
               <h1 className="k-title" id="k-title" tabIndex={-1}>
-                <span className="k-count">{v.kept}</span> <span className="k-count-word">{dateWord(v.kept)} kept</span>
+                <span className="k-count">
+                  <Counter
+                    value={v.kept}
+                    fontSize="1em"
+                    duration={1}
+                    intro
+                  />
+                </span>{" "}
+                <span className="k-count-word">{dateWord(v.kept)} kept</span>
               </h1>
               {first && <p className="k-since">Together, since {first}.</p>}
               <p className="k-margin hand" aria-hidden="true">
@@ -156,11 +211,11 @@ export default function KeptPage() {
             </>
           )}
           {merged.length > 0 && (
-          <p className="k-add">
-            <button type="button" className="btn" onClick={openAdd}>
-              + Mark a day
-            </button>
-          </p>
+            <p className="k-add">
+              <button type="button" className="btn" onClick={openAdd}>
+                + Mark a day
+              </button>
+            </p>
           )}
           {v.kept > 0 && (
             <p className="k-year">
@@ -190,11 +245,16 @@ export default function KeptPage() {
               <h1 id="k-empty-h" className="k-empty-h" tabIndex={-1}>
                 Nothing kept yet.
               </h1>
-              <p className="k-empty-p">The jar’s waiting. Draw a slip, say yes, and it lands here with its stamp.</p>
+              <p className="k-empty-p">
+                The jar’s waiting. Draw a slip, say yes, and it lands here with
+                its stamp.
+              </p>
               <Link className="btn btn-stamp" to="/joy">
                 Go to the jar
               </Link>
-              <p className="k-empty-p">Just met, or already had some great days? Mark one.</p>
+              <p className="k-empty-p">
+                Just met, or already had some great days? Mark one.
+              </p>
               <button type="button" className="btn" onClick={openAdd}>
                 Mark a day
               </button>
@@ -206,11 +266,25 @@ export default function KeptPage() {
         ) : (
           <>
             <p className="visually-hidden" id="k-keys">
-              Press J or K to move between dates. With a date focused, the arrow keys, Home and End also move.
+              Press J or K to move between dates. With a date focused, the arrow
+              keys, Home and End also move.
             </p>
-            <div ref={book} className="k-book" id="k-book" role="group" aria-label="Kept dates" aria-describedby="k-keys" onKeyDown={onKey}>
+            <div
+              ref={book}
+              className="k-book"
+              id="k-book"
+              role="group"
+              aria-label="Kept dates"
+              aria-describedby="k-keys"
+              onKeyDown={onKey}
+            >
               {merged.map((m, mi) => (
-                <section key={m.label + mi} className="k-month" aria-labelledby={`k-m${mi + 1}`} style={{ "--m": mi } as React.CSSProperties}>
+                <section
+                  key={m.label + mi}
+                  className="k-month"
+                  aria-labelledby={`k-m${mi + 1}`}
+                  style={{ "--m": mi } as React.CSSProperties}
+                >
                   <h2 className="k-month-h" id={`k-m${mi + 1}`}>
                     <Link className="k-month-a" to={m.href}>
                       {m.label}
@@ -218,12 +292,28 @@ export default function KeptPage() {
                     <span className="k-month-n hand" aria-hidden="true">
                       {m.items.length} {dateWord(m.items.length)}
                     </span>
-                    <Link className="k-month-open" to={m.href} tabIndex={-1} aria-hidden="true">
+                    <Link
+                      className="k-month-open"
+                      to={m.href}
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    >
                       Open →
                     </Link>
                   </h2>
                   <ol className="k-spread" role="list">
-                    {m.items.map((h, i) => (h.sealed ? <SealedSlip key={h.id} h={h} index={i} /> : <Slip key={h.id} h={h} index={i} scene={scenes.get(h.id) ?? null} />))}
+                    {m.items.map((h, i) =>
+                      h.sealed ? (
+                        <SealedSlip key={h.id} h={h} index={i} />
+                      ) : (
+                        <Slip
+                          key={h.id}
+                          h={h}
+                          index={i}
+                          scene={scenes.get(h.id) ?? null}
+                        />
+                      ),
+                    )}
                   </ol>
                 </section>
               ))}
@@ -237,7 +327,10 @@ export default function KeptPage() {
               <span className="k-foot-mark" aria-hidden="true">
                 *
               </span>
-              {v.skipped.length === 1 ? "One slip was drawn and put back" : `${v.skipped.length} slips were drawn and put back`}, no harm done.
+              {v.skipped.length === 1
+                ? "One slip was drawn and put back"
+                : `${v.skipped.length} slips were drawn and put back`}
+              , no harm done.
             </p>
             <p>
               <button

@@ -1,7 +1,9 @@
 import { expect, test } from "./fixtures";
 import { newUser } from "./helpers";
 
-test("add a transaction by hand and see it counted in this month's spending", async ({ page }) => {
+test("add a transaction by hand and see it counted in this month's spending", async ({
+  page,
+}) => {
   await newUser(page, "money");
   await page.goto("/spending");
   await expect(page.getByText("No spending yet this month.")).toBeVisible();

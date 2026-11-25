@@ -4,7 +4,15 @@
 //   bun build.ts           one-off production build (minified, console dropped, .br/.gz copies)
 //   bun build.ts --watch   rebuild on change (dev); open pages reload themselves after each rebuild
 import { HEAD_EXTRAS } from "./head-extras";
-import { copyFile, cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  cp,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { existsSync, watch } from "node:fs";
 import { brotliCompressSync, constants as zlib } from "node:zlib";
 import path from "node:path";
@@ -55,7 +63,10 @@ function joyFontsPlugin(): BunPlugin {
     name: "joy-fonts",
     setup(build) {
       // Left as-is in the css, copied to dist/joy-fonts by copyReferencedFonts.
-      build.onResolve({ filter: /^\/joy-fonts\// }, ({ path: p }) => ({ path: p, external: true }));
+      build.onResolve({ filter: /^\/joy-fonts\// }, ({ path: p }) => ({
+        path: p,
+        external: true,
+      }));
       build.onLoad({ filter: JOY_CSS_FILTER }, async ({ path: file }) => ({
         loader: "css",
         contents: (await readFile(file, "utf8")).replace(
@@ -72,9 +83,15 @@ function shellFontsPlugin(): BunPlugin {
   return {
     name: "shell-fonts",
     setup(build) {
-      build.onResolve({ filter: /JetBrainsMono\.woff2$/ }, () => ({ path: "/fonts/JetBrainsMono.woff2", external: true }));
+      build.onResolve({ filter: /JetBrainsMono\.woff2$/ }, () => ({
+        path: "/fonts/JetBrainsMono.woff2",
+        external: true,
+      }));
       // Newsreader and Figtree (@font-face in index.css): same, root-relative and left as-is.
-      build.onResolve({ filter: /^\/fonts\// }, ({ path: p }) => ({ path: p, external: true }));
+      build.onResolve({ filter: /^\/fonts\// }, ({ path: p }) => ({
+        path: p,
+        external: true,
+      }));
     },
   };
 }
@@ -94,19 +111,26 @@ async function buildJoyCss(): Promise<string> {
       {
         name: "joy-virtual-entry",
         setup(build) {
-          build.onResolve({ filter: /__joy-css-entry__/ }, () => ({ path: VIRTUAL_JOY_ENTRY, namespace: "joy-entry" }));
+          build.onResolve({ filter: /__joy-css-entry__/ }, () => ({
+            path: VIRTUAL_JOY_ENTRY,
+            namespace: "joy-entry",
+          }));
           build.onLoad({ filter: /.*/, namespace: "joy-entry" }, () => ({
             loader: "js",
-            contents: JOY_CSS_ENTRY.map((f) => `import ${JSON.stringify(path.join(root, f))};`).join("\n"),
+            contents: JOY_CSS_ENTRY.map(
+              (f) => `import ${JSON.stringify(path.join(root, f))};`,
+            ).join("\n"),
           }));
         },
       },
     ],
   });
-  if (!result.success) throw new AggregateError(result.logs, "joy css build failed");
+  if (!result.success)
+    throw new AggregateError(result.logs, "joy css build failed");
   const css = result.outputs.find((o) => o.path.endsWith(".css"));
   if (!css) throw new Error("joy css build emitted no stylesheet");
-  for (const o of result.outputs) if (o.path.endsWith(".js")) await rm(o.path, { force: true });
+  for (const o of result.outputs)
+    if (o.path.endsWith(".js")) await rm(o.path, { force: true });
   return "/" + path.basename(css.path);
 }
 
@@ -117,19 +141,28 @@ const FONT_DIRS: Record<string, string> = {
 };
 
 /** Self-hosted Newsreader/Figtree woff2 files come from these npm packages rather than src/fonts. */
-const PACKAGE_FONT_DIRS = ["newsreader", "figtree"].map((n) => path.join(root, "node_modules", "@fontsource-variable", n, "files"));
+const PACKAGE_FONT_DIRS = ["newsreader", "figtree"].map((n) =>
+  path.join(root, "node_modules", "@fontsource-variable", n, "files"),
+);
 
 /** Copies only the fonts the emitted css really references (unused woff2 files stay out of dist). */
 async function copyReferencedFonts(dir: string) {
-  const css = (await readdir(dir, { recursive: true })).filter((f) => f.endsWith(".css"));
+  const css = (await readdir(dir, { recursive: true })).filter((f) =>
+    f.endsWith(".css"),
+  );
   for (const f of css) {
     const text = await readFile(path.join(dir, f), "utf8");
-    for (const m of text.matchAll(/url\(["']?\/(joy-fonts|fonts)\/([^"')]+)["']?\)/g)) {
+    for (const m of text.matchAll(
+      /url\(["']?\/(joy-fonts|fonts)\/([^"')]+)["']?\)/g,
+    )) {
       const [, group, name] = m;
       await mkdir(path.join(dir, group!), { recursive: true });
       let src = path.join(FONT_DIRS[group!]!, name!);
       if (group === "fonts" && !(await Bun.file(src).exists())) {
-        src = PACKAGE_FONT_DIRS.map((d) => path.join(d, name!)).find((f) => existsSync(f)) ?? src;
+        src =
+          PACKAGE_FONT_DIRS.map((d) => path.join(d, name!)).find((f) =>
+            existsSync(f),
+          ) ?? src;
       }
       await copyFile(src, path.join(dir, group!, name!));
     }
@@ -142,14 +175,19 @@ function joyStylesheetPlugin(href: string): BunPlugin {
   return {
     name: "joy-stylesheet",
     setup(build) {
-      build.onLoad({ filter: JOY_CSS_FILTER }, () => ({ loader: "js", contents: loader }));
+      build.onLoad({ filter: JOY_CSS_FILTER }, () => ({
+        loader: "js",
+        contents: loader,
+      }));
     },
   };
 }
 
 /** Gzip and brotli copies of every text asset, so the server can send them without compressing. */
 async function precompress(dir: string): Promise<number> {
-  const files = (await readdir(dir, { recursive: true })).filter((f) => /\.(js|css|html|svg)$/.test(f));
+  const files = (await readdir(dir, { recursive: true })).filter((f) =>
+    /\.(js|css|html|svg)$/.test(f),
+  );
   await Promise.all(
     files.map(async (f) => {
       const file = path.join(dir, f);
@@ -158,7 +196,10 @@ async function precompress(dir: string): Promise<number> {
       await writeFile(
         `${file}.br`,
         brotliCompressSync(buf, {
-          params: { [zlib.BROTLI_PARAM_QUALITY]: 11, [zlib.BROTLI_PARAM_SIZE_HINT]: buf.length },
+          params: {
+            [zlib.BROTLI_PARAM_QUALITY]: 11,
+            [zlib.BROTLI_PARAM_SIZE_HINT]: buf.length,
+          },
         }),
       );
     }),
@@ -200,7 +241,11 @@ async function build(): Promise<boolean> {
     // Production drops console calls (dev keeps them for the watch loop).
     ...(isWatch ? {} : { drop: ["console", "debugger"] }),
     plugins: [joyStylesheetPlugin(joyHref), shellFontsPlugin(), tailwind],
-    define: { "process.env.NODE_ENV": JSON.stringify(isWatch ? "development" : "production") },
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(
+        isWatch ? "development" : "production",
+      ),
+    },
   });
   if (!result.success) {
     for (const log of result.logs) console.error(log);
@@ -209,21 +254,31 @@ async function build(): Promise<boolean> {
   await cp(path.join(root, "public"), outdir, { recursive: true });
   // pdf.js reads statement PDFs in a worker. The CSP only allows workers from our own origin, so the
   // worker file is served from the app, not a CDN. It is only fetched when someone uploads a PDF.
-  await copyFile(Bun.resolveSync("pdfjs-dist/build/pdf.worker.min.mjs", root), path.join(outdir, "pdf-worker.mjs"));
+  await copyFile(
+    Bun.resolveSync("pdfjs-dist/build/pdf.worker.min.mjs", root),
+    path.join(outdir, "pdf-worker.mjs"),
+  );
   await copyReferencedFonts(outdir);
   const indexPath = path.join(outdir, "index.html");
   // The install tags are added here, not written in index.html: the bundler would try to resolve
   // their absolute paths as source files and fail the build.
-  const html = (await readFile(indexPath, "utf8")).replace("</head>", `${HEAD_EXTRAS}</head>`);
+  const html = (await readFile(indexPath, "utf8")).replace(
+    "</head>",
+    `${HEAD_EXTRAS}</head>`,
+  );
   const devTag = isWatch ? `<script src="/dev-reload.js" defer></script>` : "";
-  const finalHtml = html.replace("</head>", `${devTag}</head>`).replaceAll("__SITE_URL__", siteUrl);
+  const finalHtml = html
+    .replace("</head>", `${devTag}</head>`)
+    .replaceAll("__SITE_URL__", siteUrl);
   await writeFile(indexPath, await inlineShellCss(outdir, finalHtml));
   if (isWatch) {
     await writeFile(path.join(outdir, "dev-reload.js"), DEV_RELOAD_JS);
     await writeFile(path.join(outdir, "dev-build.txt"), String(Date.now()));
   }
   if (!isWatch) await precompress(outdir);
-  console.log(`built web/dist in ${(performance.now() - started).toFixed(0)}ms`);
+  console.log(
+    `built web/dist in ${(performance.now() - started).toFixed(0)}ms`,
+  );
   return true;
 }
 

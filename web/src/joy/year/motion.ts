@@ -1,22 +1,34 @@
 // Small entrances done with the Web Animations API, skipped for prefers-reduced-motion.
 import { dealParams } from "./layout";
 
-export const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+export const reduced = () =>
+  typeof matchMedia === "function" &&
+  matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Polaroids dealt onto the wall at seeded angles, one after another. */
 export function dealIn(root: ParentNode, seed: number): void {
   if (reduced()) return;
-  root.querySelectorAll<HTMLElement>(".y-photos > .y-polaroid").forEach((el, i) => {
-    if (typeof el.animate !== "function") return;
-    const { rot, dx, delay } = dealParams(seed, i);
-    el.animate(
-      [
-        { transform: `translate(${dx}px, -90px) rotate(${rot}deg) scale(1.08)`, opacity: 0 },
-        { transform: "none", opacity: 1 },
-      ],
-      { duration: 560, delay, easing: "cubic-bezier(.2,.8,.25,1.15)", fill: "backwards" },
-    );
-  });
+  root
+    .querySelectorAll<HTMLElement>(".y-photos > .y-polaroid")
+    .forEach((el, i) => {
+      if (typeof el.animate !== "function") return;
+      const { rot, dx, delay } = dealParams(seed, i);
+      el.animate(
+        [
+          {
+            transform: `translate(${dx}px, -90px) rotate(${rot}deg) scale(1.08)`,
+            opacity: 0,
+          },
+          { transform: "none", opacity: 1 },
+        ],
+        {
+          duration: 560,
+          delay,
+          easing: "cubic-bezier(.2,.8,.25,1.15)",
+          fill: "backwards",
+        },
+      );
+    });
 }
 
 /** A slip per date drops into the jar's mouth. */
@@ -24,12 +36,18 @@ export function dropSlips(root: ParentNode): void {
   if (reduced()) return;
   root.querySelectorAll<SVGGElement>(".y-jar-slip").forEach((g, i) => {
     if (typeof g.animate !== "function") return;
-    g.animate([{ translate: "0 -230px", opacity: 0 }, { translate: "0 0", opacity: 1 }], {
-      duration: 520,
-      delay: 450 + i * 110,
-      easing: "cubic-bezier(.3,.7,.3,1.15)",
-      fill: "backwards",
-    });
+    g.animate(
+      [
+        { translate: "0 -230px", opacity: 0 },
+        { translate: "0 0", opacity: 1 },
+      ],
+      {
+        duration: 520,
+        delay: 450 + i * 110,
+        easing: "cubic-bezier(.3,.7,.3,1.15)",
+        fill: "backwards",
+      },
+    );
   });
 }
 
@@ -43,7 +61,12 @@ export function pressStickers(root: ParentNode): void {
         { scale: "0", opacity: 0 },
         { scale: "1", opacity: 1 },
       ],
-      { duration: 340, delay: 180 + i * 55, easing: "cubic-bezier(.3,.6,.3,1.4)", fill: "backwards" },
+      {
+        duration: 340,
+        delay: 180 + i * 55,
+        easing: "cubic-bezier(.3,.6,.3,1.4)",
+        fill: "backwards",
+      },
     );
   });
 }
@@ -52,7 +75,8 @@ export type Turn = "next" | "prev";
 
 /** The month sheet turns like a page: it swings away from the spine, the next one swings in. */
 export function turnOut(sheet: HTMLElement, dir: Turn): Promise<void> {
-  if (reduced() || typeof sheet.animate !== "function") return Promise.resolve();
+  if (reduced() || typeof sheet.animate !== "function")
+    return Promise.resolve();
   const a = sheet.animate(
     [
       { transform: "rotateY(0)", opacity: 1 },

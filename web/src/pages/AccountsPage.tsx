@@ -2,8 +2,18 @@ import { useState } from "react";
 import { Lock, LockOpen, Trash2 } from "lucide-react";
 
 import { accountApi } from "@/services/api";
-import type { Account, AccountKind, AccountRole, Renewal } from "@/services/types";
-import { keys, useAccounts, useDashboardHistory, usePlannerMutation } from "@/hooks/usePlanner";
+import type {
+  Account,
+  AccountKind,
+  AccountRole,
+  Renewal,
+} from "@/services/types";
+import {
+  keys,
+  useAccounts,
+  useDashboardHistory,
+  usePlannerMutation,
+} from "@/hooks/usePlanner";
 import { MaturityList } from "@/components/feature/MaturityList";
 import { AutoPostings } from "@/components/feature/AutoPostings";
 import { Header } from "@/components/layout/Header";
@@ -18,6 +28,22 @@ import { Select } from "@/components/ui/select";
 import { daysAgo, formatDay } from "@/utils/dates";
 import { formatINR, paiseToInput, toPaise } from "@/utils/money";
 import { cn } from "@/utils/cn";
+import { Banknote, Landmark, PiggyBank, Repeat } from "lucide-react";
+import { MoneyCounter } from "@/components/feature/MoneyCounter";
+import { partyColor, type PartyColor } from "@/utils/categoryColors";
+
+/** Each kind of account wears its own colour and icon. */
+const KIND_LOOK: Record<AccountKind, { color: PartyColor; Icon: typeof Lock }> = {
+  bank: { color: "sky", Icon: Landmark },
+  cash: { color: "sun", Icon: Banknote },
+  fd: { color: "grape", Icon: PiggyBank },
+  rd: { color: "berry", Icon: Repeat },
+};
+const ROLE_PILL: Record<AccountRole, string> = {
+  spending: "pill pill-coral",
+  reserve: "pill pill-sky",
+  other: "",
+};
 
 const KIND_LABEL: Record<AccountKind, string> = {
   bank: "Bank account",
@@ -30,7 +56,11 @@ const ROLE_LABEL: Record<AccountRole, string> = {
   reserve: "Reserve (savings, card bills, needs)",
   other: "Other",
 };
-const ROLE_SHORT: Record<AccountRole, string> = { spending: "Spending", reserve: "Reserve", other: "" };
+const ROLE_SHORT: Record<AccountRole, string> = {
+  spending: "Spending",
+  reserve: "Reserve",
+  other: "",
+};
 const RENEWAL_LABEL: Record<Renewal, string> = {
   payout: "Pay out principal + interest at maturity",
   renew_principal: "Renew the principal, pay out the interest",
@@ -47,23 +77,34 @@ const parseLast4 = (v: string): string | null | undefined => {
 const LAST4_ERROR = "Last 4 digits must be exactly 4 numbers.";
 
 /** Role, where an FD is held, rate, maturity and what happens when it matures. */
-function AccountDetails({ account, accounts }: { account: Account; accounts: Account[] }) {
+function AccountDetails({
+  account,
+  accounts,
+}: {
+  account: Account;
+  accounts: Account[];
+}) {
   const isDeposit = account.kind === "fd" || account.kind === "rd";
   const [role, setRole] = useState<AccountRole>(account.role);
   const [institution, setInstitution] = useState(account.institution ?? "");
-  const [rate, setRate] = useState(account.interest_bps == null ? "" : String(account.interest_bps / 100));
+  const [rate, setRate] = useState(
+    account.interest_bps == null ? "" : String(account.interest_bps / 100),
+  );
   const [maturity, setMaturity] = useState(account.maturity_date ?? "");
   const [renewal, setRenewal] = useState<Renewal>(account.renewal);
   const [payout, setPayout] = useState(account.payout_account_id ?? "");
   const [last4, setLast4] = useState(account.last_4_digits ?? "");
   const [error, setError] = useState<string | null>(null);
-  const save = usePlannerMutation(accountApi.update, [keys.accounts], { success: "Saved" });
+  const save = usePlannerMutation(accountApi.update, [keys.accounts], {
+    success: "Saved",
+  });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const pct = rate.trim() ? Number(rate) : null;
     const digits = parseLast4(last4);
-    if (pct !== null && !(pct >= 0)) return setError("Interest rate must be a number.");
+    if (pct !== null && !(pct >= 0))
+      return setError("Interest rate must be a number.");
     if (digits === undefined) return setError(LAST4_ERROR);
     setError(null);
     save.mutate({
@@ -81,7 +122,9 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
     });
   };
 
-  const others = accounts.filter((a) => a.account_id !== account.account_id && !a.locked);
+  const others = accounts.filter(
+    (a) => a.account_id !== account.account_id && !a.locked,
+  );
   return (
     <details className="border-t border-border pt-3 text-sm">
       <summary className="cursor-pointer font-medium">Details</summary>
@@ -89,20 +132,39 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
         {!isDeposit && (
           <div className="field col-span-full">
             <div className="flex items-center gap-1.5">
-              <Label htmlFor={`role-${account.account_id}`}>What is it for?</Label>
+              <Label htmlFor={`role-${account.account_id}`}>
+                What is it for?
+              </Label>
               <InfoTip text="Spending account: salary lands here and the SIP debits from here, so what's left is your spending pot. Reserve: your savings, which pay card bills and needs." />
             </div>
-            <Select id={`role-${account.account_id}`} value={role} onChange={(e) => setRole(e.target.value as AccountRole)}>
-              {(Object.keys(ROLE_LABEL) as AccountRole[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+            <Select
+              id={`role-${account.account_id}`}
+              value={role}
+              onChange={(e) => setRole(e.target.value as AccountRole)}
+            >
+              {(Object.keys(ROLE_LABEL) as AccountRole[]).map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </option>
+              ))}
             </Select>
           </div>
         )}
         <div className="field">
-          <Label htmlFor={`inst-${account.account_id}`}>{isDeposit ? "Where is it held?" : "Bank / branch (optional)"}</Label>
-          <Input id={`inst-${account.account_id}`} value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="e.g. SBI, Post Office" />
+          <Label htmlFor={`inst-${account.account_id}`}>
+            {isDeposit ? "Where is it held?" : "Bank / branch (optional)"}
+          </Label>
+          <Input
+            id={`inst-${account.account_id}`}
+            value={institution}
+            onChange={(e) => setInstitution(e.target.value)}
+            placeholder="e.g. SBI, Post Office"
+          />
         </div>
         <div className="field">
-          <Label htmlFor={`l4-${account.account_id}`}>Last 4 digits of account (optional)</Label>
+          <Label htmlFor={`l4-${account.account_id}`}>
+            Last 4 digits of account (optional)
+          </Label>
           <Input
             id={`l4-${account.account_id}`}
             inputMode="numeric"
@@ -115,39 +177,78 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
         {isDeposit && (
           <>
             <div className="field">
-              <Label htmlFor={`rate-${account.account_id}`}>Interest rate %</Label>
-              <Input id={`rate-${account.account_id}`} inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="6.35" />
+              <Label htmlFor={`rate-${account.account_id}`}>
+                Interest rate %
+              </Label>
+              <Input
+                id={`rate-${account.account_id}`}
+                inputMode="decimal"
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+                placeholder="6.35"
+              />
             </div>
             <div className="field">
               <Label htmlFor={`mat-${account.account_id}`}>Matures on</Label>
-              <Input id={`mat-${account.account_id}`} type="date" value={maturity} onChange={(e) => setMaturity(e.target.value)} />
+              <Input
+                id={`mat-${account.account_id}`}
+                type="date"
+                value={maturity}
+                onChange={(e) => setMaturity(e.target.value)}
+              />
             </div>
             <div className="field">
               <div className="flex items-center gap-1.5">
                 <Label htmlFor={`ren-${account.account_id}`}>At maturity</Label>
                 <InfoTip text="Used in the projections. Interest compounds quarterly, the usual convention for Indian FDs and RDs." />
               </div>
-              <Select id={`ren-${account.account_id}`} value={renewal} onChange={(e) => setRenewal(e.target.value as Renewal)}>
-                {(Object.keys(RENEWAL_LABEL) as Renewal[]).map((r) => <option key={r} value={r}>{RENEWAL_LABEL[r]}</option>)}
+              <Select
+                id={`ren-${account.account_id}`}
+                value={renewal}
+                onChange={(e) => setRenewal(e.target.value as Renewal)}
+              >
+                {(Object.keys(RENEWAL_LABEL) as Renewal[]).map((r) => (
+                  <option key={r} value={r}>
+                    {RENEWAL_LABEL[r]}
+                  </option>
+                ))}
               </Select>
             </div>
             <div className="field col-span-full">
-              <Label htmlFor={`pay-${account.account_id}`}>Payout goes to</Label>
-              <Select id={`pay-${account.account_id}`} value={payout} onChange={(e) => setPayout(e.target.value)}>
+              <Label htmlFor={`pay-${account.account_id}`}>
+                Payout goes to
+              </Label>
+              <Select
+                id={`pay-${account.account_id}`}
+                value={payout}
+                onChange={(e) => setPayout(e.target.value)}
+              >
                 <option value="">Reserve account</option>
-                {others.map((a) => <option key={a.account_id} value={a.account_id}>{a.name}</option>)}
+                {others.map((a) => (
+                  <option key={a.account_id} value={a.account_id}>
+                    {a.name}
+                  </option>
+                ))}
               </Select>
             </div>
           </>
         )}
-        {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+        {error && (
+          <p role="alert" className="col-span-full text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <div className="form-actions">
           <ResetButton
             label="Undo my edits"
             onReset={() => {
               setRole(account.role);
               setInstitution(account.institution ?? "");
-              setRate(account.interest_bps == null ? "" : String(account.interest_bps / 100));
+              setRate(
+                account.interest_bps == null
+                  ? ""
+                  : String(account.interest_bps / 100),
+              );
               setMaturity(account.maturity_date ?? "");
               setRenewal(account.renewal);
               setPayout(account.payout_account_id ?? "");
@@ -155,14 +256,22 @@ function AccountDetails({ account, accounts }: { account: Account; accounts: Acc
               setError(null);
             }}
           />
-          <Button type="submit" disabled={save.isPending}>Save details</Button>
+          <Button type="submit" disabled={save.isPending}>
+            Save details
+          </Button>
         </div>
       </form>
     </details>
   );
 }
 
-function AccountRow({ account, accounts }: { account: Account; accounts: Account[] }) {
+function AccountRow({
+  account,
+  accounts,
+}: {
+  account: Account;
+  accounts: Account[];
+}) {
   const [balance, setBalance] = useState(paiseToInput(account.balance_paise));
   const refresh = [keys.accounts];
   const updateBalance = usePlannerMutation(
@@ -187,34 +296,61 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
       }),
     refresh,
   );
-  const remove = usePlannerMutation(() => accountApi.remove(account.account_id), refresh, {
-    success: "Account removed",
-  });
+  const remove = usePlannerMutation(
+    () => accountApi.remove(account.account_id),
+    refresh,
+    {
+      success: "Account removed",
+    },
+  );
 
   const parsed = toPaise(balance);
   const dirty = parsed !== null && parsed !== account.balance_paise;
   const age = daysAgo(account.updated_at);
   const stale = !account.locked && age > STALE_DAYS;
+  const look = KIND_LOOK[account.kind];
 
   return (
     <li className="ledger-row flex-col items-stretch gap-3">
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-background"
+            style={{
+              background: `linear-gradient(135deg, ${partyColor(look.color, 0.8)}, ${partyColor(look.color)})`,
+            }}
+          >
+            <look.Icon className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
           <p className="truncate text-[15px] font-medium" title={account.name}>
             {account.name}
             {ROLE_SHORT[account.role] && (
-              <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">{ROLE_SHORT[account.role]}</span>
+              <span className={cn("ml-2", ROLE_PILL[account.role])}>
+                {ROLE_SHORT[account.role]}
+              </span>
             )}
           </p>
           <p className="text-[13px] leading-snug text-muted-foreground">
             {KIND_LABEL[account.kind]}
             {account.institution && ` · ${account.institution}`}
             {account.last_4_digits && ` · ••${account.last_4_digits}`}
-            {account.interest_bps != null && ` · ${(account.interest_bps / 100).toFixed(2)}%`}
-            {account.maturity_date && ` · matures ${formatDay(account.maturity_date)} ${account.maturity_date.slice(0, 4)}`}
+            {account.interest_bps != null &&
+              ` · ${(account.interest_bps / 100).toFixed(2)}%`}
+            {account.maturity_date &&
+              ` · matures ${formatDay(account.maturity_date)} ${account.maturity_date.slice(0, 4)}`}
           </p>
+          </div>
         </div>
-        <p className="shrink-0 font-display text-lg">{formatINR(account.balance_paise)}</p>
+        <p
+          className={cn(
+            "shrink-0 font-display text-lg tabular-nums",
+            account.balance_paise < 0 && "text-over",
+          )}
+        >
+          {formatINR(account.balance_paise)}
+        </p>
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
@@ -229,20 +365,35 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
             aria-invalid={parsed === null}
           />
         </div>
-        <Button size="sm" disabled={!dirty || updateBalance.isPending} onClick={() => parsed !== null && updateBalance.mutate(parsed)}>
+        <Button
+          size="sm"
+          disabled={!dirty || updateBalance.isPending}
+          onClick={() => parsed !== null && updateBalance.mutate(parsed)}
+        >
           Update
         </Button>
         {balance !== paiseToInput(account.balance_paise) && (
-          <ResetButton label="Revert" onReset={() => setBalance(paiseToInput(account.balance_paise))} />
+          <ResetButton
+            label="Revert"
+            onReset={() => setBalance(paiseToInput(account.balance_paise))}
+          />
         )}
         <Button
           size="sm"
           variant="outline"
           onClick={() => toggleLock.mutate(undefined)}
           disabled={toggleLock.isPending}
-          title={account.locked ? "Locked: not counted in Safe to Spend. Click to unlock." : "Counted in Safe to Spend. Click to lock."}
+          title={
+            account.locked
+              ? "Locked: not counted in Safe to Spend. Click to unlock."
+              : "Counted in Safe to Spend. Click to lock."
+          }
         >
-          {account.locked ? <Lock className="mr-1.5 h-4 w-4" /> : <LockOpen className="mr-1.5 h-4 w-4" />}
+          {account.locked ? (
+            <Lock className="mr-1.5 h-4 w-4" />
+          ) : (
+            <LockOpen className="mr-1.5 h-4 w-4" />
+          )}
           {account.locked ? "Locked" : "Spendable"}
         </Button>
         <Button
@@ -250,13 +401,24 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
           variant="ghost"
           className="h-9 w-9"
           aria-label={`Remove ${account.name}`}
-          onClick={() => window.confirm(`Remove "${account.name}"? Payments tied to it become "any account".`) && remove.mutate(undefined)}
+          onClick={() =>
+            window.confirm(
+              `Remove "${account.name}"? Payments tied to it become "any account".`,
+            ) && remove.mutate(undefined)
+          }
         >
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
-      <p className={cn("text-[13px] leading-snug", stale ? "font-medium text-warn" : "text-muted-foreground")}>
-        {age === 0 ? "Updated today" : `Updated ${age} day${age === 1 ? "" : "s"} ago`}
+      <p
+        className={cn(
+          "text-[13px] leading-snug",
+          stale ? "font-medium text-warn" : "text-muted-foreground",
+        )}
+      >
+        {age === 0
+          ? "Updated today"
+          : `Updated ${age} day${age === 1 ? "" : "s"} ago`}
         {stale && ", update it for a reliable number"}
       </p>
       <AccountDetails account={account} accounts={accounts} />
@@ -277,7 +439,9 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
   const [renewal, setRenewal] = useState<Renewal>("payout");
   const [payout, setPayout] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const create = usePlannerMutation(accountApi.create, [keys.accounts], { success: "Account added. Welcome aboard!" });
+  const create = usePlannerMutation(accountApi.create, [keys.accounts], {
+    success: "Account added. Welcome aboard!",
+  });
 
   const isSavings = kind === "fd" || kind === "rd";
 
@@ -288,7 +452,8 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
     if (!name.trim()) return setError("Give the account a name.");
     if (paise === null) return setError("Balance must be an amount.");
     const digits = parseLast4(last4);
-    if (pct !== null && !(pct >= 0)) return setError("Interest rate must be a number.");
+    if (pct !== null && !(pct >= 0))
+      return setError("Interest rate must be a number.");
     if (digits === undefined) return setError(LAST4_ERROR);
     setError(null);
     create.mutate(
@@ -323,17 +488,28 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
   return (
     <Card>
       <CardHeader className="pb-4">
-        <CardTitle className="text-[32px]">Add an account</CardTitle>
+        <CardTitle className="text-[32px]">
+          <span className="brand-text">Add an account</span>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="form-grid" noValidate>
           <div className="field">
             <Label htmlFor="acc-name">Name</Label>
-            <Input id="acc-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. HDFC Savings" />
+            <Input
+              id="acc-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. HDFC Savings"
+            />
           </div>
           <div className="field">
             <Label htmlFor="acc-kind">Type</Label>
-            <Select id="acc-kind" value={kind} onChange={(e) => setKind(e.target.value as AccountKind)}>
+            <Select
+              id="acc-kind"
+              value={kind}
+              onChange={(e) => setKind(e.target.value as AccountKind)}
+            >
               {(Object.keys(KIND_LABEL) as AccountKind[]).map((k) => (
                 <option key={k} value={k}>
                   {KIND_LABEL[k]}
@@ -343,10 +519,16 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
           </div>
           <div className="field">
             <Label htmlFor="acc-balance">Balance</Label>
-            <MoneyInput id="acc-balance" value={balance} onChange={(e) => setBalance(e.target.value)} />
+            <MoneyInput
+              id="acc-balance"
+              value={balance}
+              onChange={(e) => setBalance(e.target.value)}
+            />
           </div>
           <div className="field">
-            <Label htmlFor="acc-last4">Last 4 digits of account (optional)</Label>
+            <Label htmlFor="acc-last4">
+              Last 4 digits of account (optional)
+            </Label>
             <Input
               id="acc-last4"
               inputMode="numeric"
@@ -359,8 +541,16 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
           {!isSavings ? (
             <div className="field">
               <Label htmlFor="acc-role">What is it for?</Label>
-              <Select id="acc-role" value={role} onChange={(e) => setRole(e.target.value as AccountRole)}>
-                {(Object.keys(ROLE_LABEL) as AccountRole[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+              <Select
+                id="acc-role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as AccountRole)}
+              >
+                {(Object.keys(ROLE_LABEL) as AccountRole[]).map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </option>
+                ))}
               </Select>
             </div>
           ) : (
@@ -369,7 +559,7 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
                 type="checkbox"
                 checked={locked ?? true}
                 onChange={(e) => setLocked(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-foreground"
+                className="mt-0.5 h-4 w-4 accent-brand"
               />
               Don't touch (locked, left out of Safe to Spend)
             </label>
@@ -378,38 +568,77 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
             <>
               <div className="field">
                 <Label htmlFor="acc-inst">Where is it held?</Label>
-                <Input id="acc-inst" value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="e.g. SBI, Post Office" />
+                <Input
+                  id="acc-inst"
+                  value={institution}
+                  onChange={(e) => setInstitution(e.target.value)}
+                  placeholder="e.g. SBI, Post Office"
+                />
               </div>
               <div className="field">
                 <Label htmlFor="acc-rate">Interest rate % (optional)</Label>
-                <Input id="acc-rate" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="7.1" />
+                <Input
+                  id="acc-rate"
+                  inputMode="decimal"
+                  value={rate}
+                  onChange={(e) => setRate(e.target.value)}
+                  placeholder="7.1"
+                />
               </div>
               <div className="field">
                 <Label htmlFor="acc-maturity">Maturity date (optional)</Label>
-                <Input id="acc-maturity" type="date" value={maturity} onChange={(e) => setMaturity(e.target.value)} />
+                <Input
+                  id="acc-maturity"
+                  type="date"
+                  value={maturity}
+                  onChange={(e) => setMaturity(e.target.value)}
+                />
               </div>
               <div className="field">
                 <Label htmlFor="acc-renewal">At maturity</Label>
-                <Select id="acc-renewal" value={renewal} onChange={(e) => setRenewal(e.target.value as Renewal)}>
-                  {(Object.keys(RENEWAL_LABEL) as Renewal[]).map((r) => <option key={r} value={r}>{RENEWAL_LABEL[r]}</option>)}
+                <Select
+                  id="acc-renewal"
+                  value={renewal}
+                  onChange={(e) => setRenewal(e.target.value as Renewal)}
+                >
+                  {(Object.keys(RENEWAL_LABEL) as Renewal[]).map((r) => (
+                    <option key={r} value={r}>
+                      {RENEWAL_LABEL[r]}
+                    </option>
+                  ))}
                 </Select>
               </div>
               <div className="field">
                 <Label htmlFor="acc-payout">Payout goes to</Label>
-                <Select id="acc-payout" value={payout} onChange={(e) => setPayout(e.target.value)}>
+                <Select
+                  id="acc-payout"
+                  value={payout}
+                  onChange={(e) => setPayout(e.target.value)}
+                >
                   <option value="">Reserve account</option>
-                  {accounts.filter((a) => !a.locked).map((a) => <option key={a.account_id} value={a.account_id}>{a.name}</option>)}
+                  {accounts
+                    .filter((a) => !a.locked)
+                    .map((a) => (
+                      <option key={a.account_id} value={a.account_id}>
+                        {a.name}
+                      </option>
+                    ))}
                 </Select>
               </div>
             </>
           )}
           {kind === "rd" && (
             <p className="col-span-full max-w-prose text-sm leading-snug text-muted-foreground">
-              The monthly instalment goes on the Plan page as a fixed payment that goes into this RD, so the projection
-              grows it and it counts against your savings.
+              The monthly instalment goes on the Plan page as a fixed payment
+              that goes into this RD, so the projection grows it and it counts
+              against your savings.
             </p>
           )}
-          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="col-span-full text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="form-actions">
             <ResetButton
               label="Clear"
@@ -441,8 +670,10 @@ function AddAccountForm({ accounts }: { accounts: Account[] }) {
 export default function AccountsPage() {
   const { data: accounts, isLoading, isError } = useAccounts();
   const { data: history } = useDashboardHistory(12);
-  const spendable = accounts?.filter((a) => a.kind === "bank" || a.kind === "cash") ?? [];
-  const savings = accounts?.filter((a) => a.kind === "fd" || a.kind === "rd") ?? [];
+  const spendable =
+    accounts?.filter((a) => a.kind === "bank" || a.kind === "cash") ?? [];
+  const savings =
+    accounts?.filter((a) => a.kind === "fd" || a.kind === "rd") ?? [];
 
   return (
     <div className="min-h-screen text-foreground">
@@ -451,40 +682,68 @@ export default function AccountsPage() {
         <div>
           <h1 className="page-title">Accounts</h1>
           <p className="page-sub">
-            Mark one account as your spending account and one as your reserve. Locked accounts (like an FD) are never
-            counted as spendable.
+            Mark one account as your spending account and one as your reserve.
+            Locked accounts (like an FD) are never counted as spendable.
           </p>
         </div>
 
-        {isLoading && <div className="h-24 animate-pulse rounded-xl bg-muted/40" />}
+        {isLoading && (
+          <div className="h-24 animate-pulse rounded-xl bg-muted/40" />
+        )}
         {isError && <p className="text-destructive">Couldn't load accounts.</p>}
 
         {accounts && (
           <>
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-[32px]">Bank &amp; cash</CardTitle>
+                <CardTitle className="text-[32px]">
+                  <span className="brand-text">Bank &amp; cash</span>
+                </CardTitle>
+                {spendable.length > 0 && (
+                  <p className="font-serif-num text-3xl text-brand-ink">
+                    <MoneyCounter
+                      paise={spendable.reduce((t, a) => t + a.balance_paise, 0)}
+                    />{" "}
+                    <span className="font-sans text-sm font-medium text-muted-foreground">
+                      in all
+                    </span>
+                  </p>
+                )}
               </CardHeader>
               <CardContent>
                 {spendable.length === 0 ? (
                   <p className="empty-note">No accounts yet.</p>
                 ) : (
                   <ul className="ledger">
-                    {spendable.map((a) => <AccountRow key={a.account_id} account={a} accounts={accounts} />)}
+                    {spendable.map((a) => (
+                      <AccountRow
+                        key={a.account_id}
+                        account={a}
+                        accounts={accounts}
+                      />
+                    ))}
                   </ul>
                 )}
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-[32px]">Deposits (FD / RD)</CardTitle>
+                <CardTitle className="text-[32px]">
+                  <span className="brand-text">Deposits (FD / RD)</span>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {savings.length === 0 ? (
                   <p className="empty-note">No deposits yet.</p>
                 ) : (
                   <ul className="ledger">
-                    {savings.map((a) => <AccountRow key={a.account_id} account={a} accounts={accounts} />)}
+                    {savings.map((a) => (
+                      <AccountRow
+                        key={a.account_id}
+                        account={a}
+                        accounts={accounts}
+                      />
+                    ))}
                   </ul>
                 )}
               </CardContent>
@@ -493,7 +752,12 @@ export default function AccountsPage() {
         )}
 
         {history && <MaturityList items={history.maturities} />}
-        {history && <AutoPostings items={history.auto_postings} enabled={history.auto_post} />}
+        {history && (
+          <AutoPostings
+            items={history.auto_postings}
+            enabled={history.auto_post}
+          />
+        )}
 
         <AddAccountForm accounts={accounts ?? []} />
       </main>

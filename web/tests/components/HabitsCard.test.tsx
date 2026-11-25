@@ -7,7 +7,9 @@ import { HabitsCard } from "@/components/feature/HabitsCard";
 import type { Habit } from "@/services/habits";
 
 // Synthetic data only.
-const habit = (overrides: Partial<Habit> & { key: string; title: string }): Habit => ({
+const habit = (
+  overrides: Partial<Habit> & { key: string; title: string },
+): Habit => ({
   area: "data",
   why: "Covers up to 8 Nov. One upload every 3 months keeps every number real.",
   action: null,
@@ -37,12 +39,21 @@ const dueSoon = habit({
 });
 
 const others = Array.from({ length: 4 }, (_, i) =>
-  habit({ key: `food_budget_${i}`, area: "food", title: `Plan habit ${i + 1}`, cadence: "weekly", due_on: null, status: "ok" }),
+  habit({
+    key: `food_budget_${i}`,
+    area: "food",
+    title: `Plan habit ${i + 1}`,
+    cadence: "weekly",
+    due_on: null,
+    status: "ok",
+  }),
 );
 
 function withHabits(habits: Habit[]) {
   // staleTime Infinity keeps the seeded data from refetching against the network.
-  const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  });
   qc.setQueryData(["habits"], { habits });
   return render(
     <QueryClientProvider client={qc}>
@@ -57,7 +68,9 @@ describe("HabitsCard", () => {
   it("renders titles, the why line, status pill, due line and the action link", () => {
     withHabits([overdue, dueSoon]);
     const card = screen.getByRole("region", { name: "Your habits" });
-    expect(card).toHaveTextContent("What to do and when, from your own numbers");
+    expect(card).toHaveTextContent(
+      "What to do and when, from your own numbers",
+    );
     expect(card).toHaveTextContent("Upload your HDFC statement");
     expect(card).toHaveTextContent("Covers up to 8 Nov.");
     expect(card).toHaveTextContent("Every 3 months · Overdue since 6 Feb");
@@ -81,7 +94,9 @@ describe("HabitsCard", () => {
     fireEvent.click(toggle);
     expect(screen.getByText("Plan habit 3")).toBeInTheDocument();
     expect(screen.getByText("Plan habit 4")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Show fewer" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Show fewer" }),
+    ).toBeInTheDocument();
   });
 
   it("omits the toggle when there are five or fewer habits", () => {

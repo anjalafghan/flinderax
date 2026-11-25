@@ -1,0 +1,32 @@
+/* ---- Colour aliases. The app keeps its original warm-minimalism palette (index.css): ink on oat paper.
+   These names exist so components can say what a colour is for (--brand, the party names) while all of
+   them resolve to that palette: brand is ink, party colours are the quiet soft ink, tints are the chip. ---- */
+
+:root {
+  --brand: var(--foreground);
+  --brand-2: var(--foreground);
+  --brand-3: var(--foreground);
+  --brand-tint: var(--chip);
+  --brand-tint-2: var(--chip);
+  --brand-ink: var(--foreground);
+  --brand-fg: var(--background);
+
+  --c-sun: var(--soft);
+  --c-coral: var(--soft);
+  --c-mint: var(--soft);
+  --c-sky: var(--soft);
+  --c-grape: var(--soft);
+  --c-rose: var(--soft);
+  --c-teal: var(--soft);
+  --c-berry: var(--soft);
+}
+
+@layer components {
+  .brand-text { color: hsl(var(--foreground)); }
+
+  .pill { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; color: hsl(var(--muted-foreground)); background: hsl(var(--chip)); }
+  .pill-sun, .pill-coral, .pill-mint, .pill-sky, .pill-grape, .pill-rose { color: hsl(var(--muted-foreground)); background: hsl(var(--chip)); }
+
+  .bg-brand-gradient { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .bg-party-gradient { background: hsl(var(--foreground)); }
+}

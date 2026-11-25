@@ -10,7 +10,9 @@ export default function ReviewPage() {
       <main className="page page-narrow">
         <div className="mb-6 md:mb-8">
           <h1 className="page-title">Review</h1>
-          <p className="page-sub">How last month went, and where your tax stands.</p>
+          <p className="page-sub">
+            How last month went, and where your tax stands.
+          </p>
         </div>
         <div className="stack">
           <MonthClosePanel />

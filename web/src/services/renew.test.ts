@@ -4,12 +4,15 @@ import { adoptRenewedToken } from "./renew";
 beforeEach(() => localStorage.clear());
 afterEach(() => localStorage.clear());
 
-const res = (headers: Record<string, string>) => new Response("{}", { headers });
+const res = (headers: Record<string, string>) =>
+  new Response("{}", { headers });
 
 describe("a renewed session", () => {
   test("the new token replaces the old one", () => {
     localStorage.setItem("token", "old");
-    adoptRenewedToken(res({ "x-refreshed-token": "new", "x-token-expires-at": "1900000000" }));
+    adoptRenewedToken(
+      res({ "x-refreshed-token": "new", "x-token-expires-at": "1900000000" }),
+    );
     expect(localStorage.getItem("token")).toBe("new");
   });
 
@@ -21,7 +24,12 @@ describe("a renewed session", () => {
 
   test("a cookie session keeps its harmless id and never stores the real token", () => {
     localStorage.setItem("token", "s_abcdefghijklmnopqrst");
-    adoptRenewedToken(res({ "x-refreshed-token": "v4.local.SECRET", "x-token-expires-at": "1900000000" }));
+    adoptRenewedToken(
+      res({
+        "x-refreshed-token": "v4.local.SECRET",
+        "x-token-expires-at": "1900000000",
+      }),
+    );
     expect(localStorage.getItem("token")).toBe("s_abcdefghijklmnopqrst");
   });
 

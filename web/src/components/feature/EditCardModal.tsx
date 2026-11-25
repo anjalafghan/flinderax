@@ -72,9 +72,15 @@ export function EditCardModal({
     rgbToHex(...currentSecondaryColor),
   );
   const [last4Digits, setLast4Digits] = useState(currentLast4Digits || "");
-  const [statementDay, setStatementDay] = useState(currentStatementDay ? String(currentStatementDay) : "");
-  const [dueDay, setDueDay] = useState(currentDueDay ? String(currentDueDay) : "");
-  const [creditLimit, setCreditLimit] = useState(currentCreditLimitPaise ? paiseToInput(currentCreditLimitPaise) : "");
+  const [statementDay, setStatementDay] = useState(
+    currentStatementDay ? String(currentStatementDay) : "",
+  );
+  const [dueDay, setDueDay] = useState(
+    currentDueDay ? String(currentDueDay) : "",
+  );
+  const [creditLimit, setCreditLimit] = useState(
+    currentCreditLimitPaise ? paiseToInput(currentCreditLimitPaise) : "",
+  );
   const [payFrom, setPayFrom] = useState(currentPayFrom ?? "");
   const { data: accounts } = useAccounts();
   const queryClient = useQueryClient();
@@ -108,7 +114,10 @@ export function EditCardModal({
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      if ((statementDay.trim() && parseDay(statementDay) === null) || (dueDay.trim() && parseDay(dueDay) === null)) {
+      if (
+        (statementDay.trim() && parseDay(statementDay) === null) ||
+        (dueDay.trim() && parseDay(dueDay) === null)
+      ) {
         throw new Error("Statement day and due day must be between 1 and 31");
       }
       if (creditLimit.trim() && toPaise(creditLimit) === null) {
@@ -137,7 +146,11 @@ export function EditCardModal({
       onClose();
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error && error.message.startsWith("Statement") ? error.message : "Failed to update card");
+      toast.error(
+        error instanceof Error && error.message.startsWith("Statement")
+          ? error.message
+          : "Failed to update card",
+      );
       console.error(error);
     },
   });
@@ -148,7 +161,9 @@ export function EditCardModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 p-4">
       <Card className="w-full max-w-md animate-in fade-in zoom-in duration-200">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-[24px]">Edit card</CardTitle>
+          <CardTitle className="text-[24px]">
+            <span className="brand-text">Edit card</span>
+          </CardTitle>
           <Button
             variant="ghost"
             size="icon"
@@ -191,24 +206,48 @@ export function EditCardModal({
 
             <div className="field">
               <Label htmlFor="edit-statement-day">Statement day</Label>
-              <Input id="edit-statement-day" inputMode="numeric" maxLength={2} value={statementDay} onChange={(e) => setStatementDay(e.target.value)} />
+              <Input
+                id="edit-statement-day"
+                inputMode="numeric"
+                maxLength={2}
+                value={statementDay}
+                onChange={(e) => setStatementDay(e.target.value)}
+              />
             </div>
             <div className="field">
               <Label htmlFor="edit-due-day">Due day</Label>
-              <Input id="edit-due-day" inputMode="numeric" maxLength={2} value={dueDay} onChange={(e) => setDueDay(e.target.value)} />
+              <Input
+                id="edit-due-day"
+                inputMode="numeric"
+                maxLength={2}
+                value={dueDay}
+                onChange={(e) => setDueDay(e.target.value)}
+              />
             </div>
             <div className="field col-span-full">
               <Label htmlFor="edit-limit">Limit</Label>
-              <MoneyInput id="edit-limit" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
+              <MoneyInput
+                id="edit-limit"
+                value={creditLimit}
+                onChange={(e) => setCreditLimit(e.target.value)}
+              />
             </div>
 
             <div className="field col-span-full">
               <Label htmlFor="edit-pay-from">Bill is paid from</Label>
-              <Select id="edit-pay-from" value={payFrom} onChange={(e) => setPayFrom(e.target.value)}>
+              <Select
+                id="edit-pay-from"
+                value={payFrom}
+                onChange={(e) => setPayFrom(e.target.value)}
+              >
                 <option value="">Reserve account</option>
-                {accounts?.filter((a) => !a.locked).map((a) => (
-                  <option key={a.account_id} value={a.account_id}>{a.name}</option>
-                ))}
+                {accounts
+                  ?.filter((a) => !a.locked)
+                  .map((a) => (
+                    <option key={a.account_id} value={a.account_id}>
+                      {a.name}
+                    </option>
+                  ))}
               </Select>
             </div>
 
@@ -263,7 +302,11 @@ export function EditCardModal({
             </div>
 
             <div className="col-span-full flex gap-2 pt-1 sm:justify-end">
-              <Button variant="outline" className="flex-1 sm:flex-none" onClick={onClose}>
+              <Button
+                variant="outline"
+                className="flex-1 sm:flex-none"
+                onClick={onClose}
+              >
                 Cancel
               </Button>
               <Button

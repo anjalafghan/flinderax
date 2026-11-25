@@ -37,12 +37,17 @@ export interface CategorizeOut {
 export const PAYEES_KEY = ["payees"] as const;
 
 export const getPayees = () =>
-  api.get<PayeesOut>("/api/ingest/payees?status=uncategorized&days=365&limit=40").then((r) => r.data);
+  api
+    .get<PayeesOut>("/api/ingest/payees?status=uncategorized&days=365&limit=40")
+    .then((r) => r.data);
 
 export const categorizePayee = (c: CategorizeIn) =>
-  api.post<CategorizeOut>("/api/ingest/payees/categorize", c).then((r) => r.data);
+  api
+    .post<CategorizeOut>("/api/ingest/payees/categorize", c)
+    .then((r) => r.data);
 
-export const usePayees = () => useQuery({ queryKey: [...PAYEES_KEY], queryFn: getPayees, retry: 1 });
+export const usePayees = () =>
+  useQuery({ queryKey: [...PAYEES_KEY], queryFn: getPayees, retry: 1 });
 
 /** Tagging a payee re-categorises its past and future payments, so every spending view is refreshed. */
 export const useCategorizePayee = () =>

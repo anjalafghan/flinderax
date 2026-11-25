@@ -10,9 +10,15 @@ describe("keepsakeFor", () => {
 
   test("around town, by what we did, strongest tag first", () => {
     expect(keepsakeFor("local", ["nightlife", "music", "games"])).toBe("gig"); // karaoke
-    expect(keepsakeFor("local", ["foodie", "cultural", "romantic"])).toBe("coaster"); // a dinner is a dinner
-    expect(keepsakeFor("local", ["foodie", "outdoors", "games"])).toBe("coaster"); // a food-stall hop
-    expect(keepsakeFor("local", ["romantic", "nightlife", "chill"])).toBe("gig"); // a speakeasy
+    expect(keepsakeFor("local", ["foodie", "cultural", "romantic"])).toBe(
+      "coaster",
+    ); // a dinner is a dinner
+    expect(keepsakeFor("local", ["foodie", "outdoors", "games"])).toBe(
+      "coaster",
+    ); // a food-stall hop
+    expect(keepsakeFor("local", ["romantic", "nightlife", "chill"])).toBe(
+      "gig",
+    ); // a speakeasy
     expect(keepsakeFor("local", ["games", "chill"])).toBe("arcade");
     expect(keepsakeFor("local", ["cultural"])).toBe("admission");
     expect(keepsakeFor("local", ["creative", "cozy"])).toBe("swingtag");

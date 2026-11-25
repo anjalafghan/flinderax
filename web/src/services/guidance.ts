@@ -41,12 +41,14 @@ export interface GuidanceDraft {
   shared: { label: string; total: string; partner: string }[];
 }
 
-export const getGuidance = (i: GuidanceInput) => api.post<Guidance>("/api/plan/guidance", i).then((r) => r.data);
+export const getGuidance = (i: GuidanceInput) =>
+  api.post<Guidance>("/api/plan/guidance", i).then((r) => r.data);
 
 function amount(label: string, text: string, blankIsZero = true): number {
   if (text.trim() === "" && blankIsZero) return 0;
   const p = toPaise(text);
-  if (p === null || p < 0) throw new Error(`${label}: enter a plain rupee amount, like 25000.`);
+  if (p === null || p < 0)
+    throw new Error(`${label}: enter a plain rupee amount, like 25000.`);
   return p;
 }
 
@@ -61,13 +63,19 @@ export function buildGuidanceInput(d: GuidanceDraft): GuidanceInput {
     emergency_saved_paise: amount("Already saved", d.saved),
     fixed: d.fixed
       .filter((f) => f.label.trim() !== "" || f.amount.trim() !== "")
-      .map((f) => ({ label: f.label.trim() || "Fixed cost", amount_paise: amount(f.label || "Fixed cost", f.amount) })),
+      .map((f) => ({
+        label: f.label.trim() || "Fixed cost",
+        amount_paise: amount(f.label || "Fixed cost", f.amount),
+      })),
     shared: d.shared
       .filter((s) => s.label.trim() !== "" || s.total.trim() !== "")
       .map((s) => ({
         label: s.label.trim() || "Shared",
         total_paise: amount(s.label || "Shared", s.total),
-        partner_paise: amount(`${s.label || "Shared"}: partner's part`, s.partner),
+        partner_paise: amount(
+          `${s.label || "Shared"}: partner's part`,
+          s.partner,
+        ),
       })),
   };
 }

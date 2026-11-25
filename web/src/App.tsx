@@ -6,6 +6,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute'
 import { TabBar } from './components/layout/Header'
 import { PageSkeleton } from './components/ui/skeleton'
 import { useAuth } from './context/AuthContext'
+import { SectionTheme } from './theme/SectionTheme'
 
 // Lazy load pages for code splitting
 const AccountPage = lazy(() => import('./pages/AccountPage'))
@@ -45,7 +46,7 @@ function App() {
   const showTabs = isAuthenticated && pathname !== '/auth'
 
   return (
-    <>
+    <SectionTheme>
       <div className={showTabs ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0' : undefined}>
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
@@ -96,9 +97,9 @@ function App() {
       </div>
       {showTabs && <TabBar />}
       <Suspense fallback={null}>
-        <Toaster position="top-center" duration={2500} />
+        <Toaster position="top-center" duration={2500} richColors />
       </Suspense>
-    </>
+    </SectionTheme>
   )
 }
 

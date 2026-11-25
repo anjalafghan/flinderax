@@ -2,17 +2,32 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import api from "@/services/api";
+import { Bell, BellOff, BellRing } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { urlBase64ToBytes } from "@/utils/push";
 
-const CARD = "rounded-[28px] border border-border bg-card p-6 stack";
+const CARD =
+  "rounded-[28px] border border-sun/40 bg-gradient-to-br from-sun/12 via-card to-card p-6 stack shadow-[0_16px_40px_-28px_hsl(var(--c-sun)/0.8)]";
 
-const supported = () => typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && typeof Notification !== "undefined";
+const supported = () =>
+  typeof window !== "undefined" &&
+  "serviceWorker" in navigator &&
+  "PushManager" in window &&
+  typeof Notification !== "undefined";
 
 /** A nudge in the morning (today) and the evening (tomorrow), with counts only: no names, no amounts. */
 export function NotificationsSection() {
   const qc = useQueryClient();
-  const status = useQuery({ queryKey: ["push"], queryFn: async () => (await api.get<{ public_key: string | null; subscribed: boolean }>("/api/push")).data, retry: 1 });
+  const status = useQuery({
+    queryKey: ["push"],
+    queryFn: async () =>
+      (
+        await api.get<{ public_key: string | null; subscribed: boolean }>(
+          "/api/push",
+        )
+      ).data,
+    retry: 1,
+  });
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
 
@@ -25,16 +40,34 @@ export function NotificationsSection() {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        setNote("Notifications are blocked for this site. Allow them in your browser's settings, then try again.");
+        setNote(
+          "Notifications are blocked for this site. Allow them in your browser's settings, then try again.",
+        );
         return;
       }
       const reg = await navigator.serviceWorker.ready;
-      const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToBytes(status.data!.public_key!) as BufferSource }));
-      const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
-      await api.post("/api/push/subscribe", { endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth });
+      const sub =
+        (await reg.pushManager.getSubscription()) ??
+        (await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToBytes(
+            status.data!.public_key!,
+          ) as BufferSource,
+        }));
+      const json = sub.toJSON() as {
+        endpoint?: string;
+        keys?: { p256dh?: string; auth?: string };
+      };
+      await api.post("/api/push/subscribe", {
+        endpoint: json.endpoint,
+        p256dh: json.keys?.p256dh,
+        auth: json.keys?.auth,
+      });
       await refresh();
     } catch (e) {
-      setNote(e instanceof Error ? e.message : "Couldn't turn notifications on.");
+      setNote(
+        e instanceof Error ? e.message : "Couldn't turn notifications on.",
+      );
     } finally {
       setBusy(false);
     }
@@ -52,7 +85,9 @@ export function NotificationsSection() {
       }
       await refresh();
     } catch (e) {
-      setNote(e instanceof Error ? e.message : "Couldn't turn notifications off.");
+      setNote(
+        e instanceof Error ? e.message : "Couldn't turn notifications off.",
+      );
     } finally {
       setBusy(false);
     }
@@ -60,20 +95,51 @@ export function NotificationsSection() {
 
   return (
     <div className={CARD}>
-      <h2 className="font-display text-2xl">Notifications</h2>
-      <p className="text-sm text-muted-foreground">A nudge each morning about today and each evening about tomorrow: bills, dates, birthdays and follow-ups. It only counts them; it never shows names or amounts.</p>
+      <h2 className="flex items-center gap-3 font-display text-2xl">
+        <span
+          aria-hidden
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sun/22 text-[hsl(var(--foreground))] dark:text-sun"
+        >
+          {status.data.subscribed ? (
+            <BellRing className="h-5 w-5" strokeWidth={1.8} />
+          ) : (
+            <Bell className="h-5 w-5" strokeWidth={1.8} />
+          )}
+        </span>
+        Notifications
+        {status.data.subscribed && (
+          <span className="pill pill-mint font-sans text-xs">On</span>
+        )}
+      </h2>
+      <p className="text-sm text-muted-foreground">
+        A nudge each morning about today and each evening about tomorrow: bills,
+        dates, birthdays and follow-ups. It only counts them; it never shows
+        names or amounts.
+      </p>
       {!status.data.public_key ? (
-        <p className="text-sm">Notifications are not set up on this server yet.</p>
+        <p className="text-sm">
+          Notifications are not set up on this server yet.
+        </p>
       ) : !supported() ? (
-        <p className="text-sm">This browser can't show notifications. On an iPhone, add joy to your Home Screen first, then open it from there.</p>
+        <p className="text-sm">
+          This browser can't show notifications. On an iPhone, add joy to your
+          Home Screen first, then open it from there.
+        </p>
       ) : (
         <div>
           {status.data.subscribed ? (
-            <Button type="button" variant="outline" disabled={busy} onClick={() => void turnOff()}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => void turnOff()}
+            >
+              <BellOff className="mr-2 h-4 w-4" aria-hidden />
               Turn off notifications
             </Button>
           ) : (
             <Button type="button" disabled={busy} onClick={() => void turnOn()}>
+              <BellRing className="mr-2 h-4 w-4" aria-hidden />
               Turn on notifications
             </Button>
           )}

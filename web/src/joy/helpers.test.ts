@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { FormView, Opt } from "./api";
-import { errorField, formToState, isDuplicateWarning, tidyTitle, toPayload } from "./form";
+import {
+  errorField,
+  formToState,
+  isDuplicateWarning,
+  tidyTitle,
+  toPayload,
+} from "./form";
 import { rupees, standing, toPaise } from "./money";
 import { daysLeftInMonth, nudgeFor } from "./nudge";
 import { mapGoTo, navFor, pageKey } from "./paths";
@@ -61,7 +67,11 @@ describe("undo timer", () => {
   test("expires after 6.5 s", () => {
     const { s, advance } = fake();
     let expired = 0;
-    createUndoTimer({ onExpire: () => expired++, isHeld: () => false, scheduler: s }).start();
+    createUndoTimer({
+      onExpire: () => expired++,
+      isHeld: () => false,
+      scheduler: s,
+    }).start();
     advance(UNDO_MS - 1);
     expect(expired).toBe(0);
     advance(1);
@@ -71,7 +81,11 @@ describe("undo timer", () => {
     const { s, advance } = fake();
     let held = true;
     let expired = 0;
-    createUndoTimer({ onExpire: () => expired++, isHeld: () => held, scheduler: s }).start();
+    createUndoTimer({
+      onExpire: () => expired++,
+      isHeld: () => held,
+      scheduler: s,
+    }).start();
     advance(UNDO_MS + RECHECK_MS * 3);
     expect(expired).toBe(0);
     held = false;
@@ -81,7 +95,11 @@ describe("undo timer", () => {
   test("cancel stops it", () => {
     const { s, advance } = fake();
     let expired = 0;
-    const t = createUndoTimer({ onExpire: () => expired++, isHeld: () => false, scheduler: s });
+    const t = createUndoTimer({
+      onExpire: () => expired++,
+      isHeld: () => false,
+      scheduler: s,
+    });
     t.start();
     t.cancel();
     advance(UNDO_MS * 2);
@@ -98,10 +116,14 @@ describe("nudge maths", () => {
   });
   test("85% with 9 days left", () => {
     const n = nudgeFor(2000000, 1700000, 9);
-    expect(n?.text).toBe("Dates at 85% with 9 days left: keep the next 2 dates under ₹1,500 each");
+    expect(n?.text).toBe(
+      "Dates at 85% with 9 days left: keep the next 2 dates under ₹1,500 each",
+    );
   });
   test("one date near the end, and over budget", () => {
-    expect(nudgeFor(2000000, 1700000, 4)?.text).toBe("Dates at 85% with 4 days left: keep the next date under ₹3,000");
+    expect(nudgeFor(2000000, 1700000, 4)?.text).toBe(
+      "Dates at 85% with 4 days left: keep the next date under ₹3,000",
+    );
     expect(nudgeFor(2000000, 2200000, 1)?.text).toContain("1 day left");
     expect(nudgeFor(2000000, 2200000, 5)?.perDatePaise).toBe(0);
   });
@@ -129,12 +151,19 @@ describe("money", () => {
 
 describe("plan quick picks", () => {
   test("tonight is 7 pm before evening, else the next half hour after an hour", () => {
-    expect(toLocalInput(quickPick("tonight", new Date(2026, 10, 2, 10, 0)))).toBe("2026-11-02T19:00");
-    expect(toLocalInput(quickPick("tonight", new Date(2026, 10, 2, 19, 10)))).toBe("2026-11-02T20:30");
-    expect(toLocalInput(quickPick("tonight", new Date(2026, 10, 2, 19, 40)))).toBe("2026-11-02T21:00");
+    expect(
+      toLocalInput(quickPick("tonight", new Date(2026, 10, 2, 10, 0))),
+    ).toBe("2026-11-02T19:00");
+    expect(
+      toLocalInput(quickPick("tonight", new Date(2026, 10, 2, 19, 10))),
+    ).toBe("2026-11-02T20:30");
+    expect(
+      toLocalInput(quickPick("tonight", new Date(2026, 10, 2, 19, 40))),
+    ).toBe("2026-11-02T21:00");
   });
   test("tonight never rolls into the next day", () => {
-    const at = (h: number, m: number) => toLocalInput(quickPick("tonight", new Date(2026, 10, 2, h, m)));
+    const at = (h: number, m: number) =>
+      toLocalInput(quickPick("tonight", new Date(2026, 10, 2, h, m)));
     // one hour on lands at 23:30 or earlier, still today
     expect(at(22, 30)).toBe("2026-11-02T23:30");
     // 23:31 + an hour would cross midnight: clamp to the last slot today
@@ -148,19 +177,52 @@ describe("plan quick picks", () => {
     const mon = new Date(2026, 10, 2, 10, 0);
     expect(toLocalInput(quickPick("tomorrow", mon))).toBe("2026-11-03T19:00");
     expect(toLocalInput(quickPick("saturday", mon))).toBe("2026-11-07T11:00");
-    expect(toLocalInput(quickPick("saturday", new Date(2026, 10, 7, 9, 0)))).toBe("2026-11-14T11:00");
+    expect(
+      toLocalInput(quickPick("saturday", new Date(2026, 10, 7, 9, 0))),
+    ).toBe("2026-11-14T11:00");
   });
 });
 
-const opt = (value: string, selected = false, label = value): Opt => ({ value, label, selected });
+const opt = (value: string, selected = false, label = value): Opt => ({
+  value,
+  label,
+  selected,
+});
 const view = (over: Partial<FormView> = {}): FormView => ({
-  id: null, title: "  Sunset at\nMarine Drive ", notes: "", est_cost: "800", venue: "", area: "", location: "", tags: "romantic, foodie",
-  currency: "₹", couple: "A & B", error: "",
-  settings: [opt("home"), opt("local", true)], durations: [opt("short", true), opt("half_day")], energies: [opt("low"), opt("med", true)],
-  people: [opt("A", true), opt("B")], pair_opts: [opt("7", true), opt("9")], me_name: "A",
-  closed_opts: [opt("mon", true), opt("tue")], season_from_opts: [opt("11", true)], season_to_opts: [opt("5", true)],
-  hours: "", hours_today: "", best_times: [opt("evening")], minutes: "", bookings: [opt("walk_in")], book_ahead_days: "",
-  covers: [opt("covered")], cover_unknown: true, bring: "", station: "", station_walk_min: "", url: "", details_open: false, ...over,
+  id: null,
+  title: "  Sunset at\nMarine Drive ",
+  notes: "",
+  est_cost: "800",
+  venue: "",
+  area: "",
+  location: "",
+  tags: "romantic, foodie",
+  currency: "₹",
+  couple: "A & B",
+  error: "",
+  settings: [opt("home"), opt("local", true)],
+  durations: [opt("short", true), opt("half_day")],
+  energies: [opt("low"), opt("med", true)],
+  people: [opt("A", true), opt("B")],
+  pair_opts: [opt("7", true), opt("9")],
+  me_name: "A",
+  closed_opts: [opt("mon", true), opt("tue")],
+  season_from_opts: [opt("11", true)],
+  season_to_opts: [opt("5", true)],
+  hours: "",
+  hours_today: "",
+  best_times: [opt("evening")],
+  minutes: "",
+  bookings: [opt("walk_in")],
+  book_ahead_days: "",
+  covers: [opt("covered")],
+  cover_unknown: true,
+  bring: "",
+  station: "",
+  station_walk_min: "",
+  url: "",
+  details_open: false,
+  ...over,
 });
 
 describe("slip form", () => {
@@ -179,7 +241,15 @@ describe("slip form", () => {
     expect(p.added_by).toBe("A");
   });
   test("a blank view still sends setting and duration", () => {
-    const p = toPayload(formToState(view({ settings: [opt("home"), opt("local")], durations: [opt("short")], people: [opt("A"), opt("B")] })));
+    const p = toPayload(
+      formToState(
+        view({
+          settings: [opt("home"), opt("local")],
+          durations: [opt("short")],
+          people: [opt("A"), opt("B")],
+        }),
+      ),
+    );
     expect(p.setting).toBe("home");
     expect(p.duration).toBe("short");
     expect(p.added_by).toBe("A");
@@ -195,14 +265,24 @@ describe("slip form", () => {
 });
 
 describe("slip search", () => {
-  const a = { id: 1, title: "Café crawl", place: "Bandra", tags: ["foodie"], setting: "Local", notes: "" } as never;
+  const a = {
+    id: 1,
+    title: "Café crawl",
+    place: "Bandra",
+    tags: ["foodie"],
+    setting: "Local",
+    notes: "",
+  } as never;
   test("every word must match, ignoring accents", () => {
     expect(matches(a, "cafe bandra")).toBe(true);
     expect(matches(a, "cafe juhu")).toBe(false);
     expect(matches(a, "  ")).toBe(true);
   });
   test("groups with no match drop out only while searching", () => {
-    const groups = [{ key: "local", label: "Local", items: [a] }, { key: "home", label: "Home", items: [] }];
+    const groups = [
+      { key: "local", label: "Local", items: [a] },
+      { key: "home", label: "Home", items: [] },
+    ];
     expect(filterGroups(groups, "").shown.length).toBe(2);
     expect(filterGroups(groups, "zzz").shown.length).toBe(0);
     expect(filterGroups(groups, "cafe").total).toBe(1);
@@ -211,7 +291,11 @@ describe("slip search", () => {
 
 describe("duplicate warning", () => {
   test("recognises the server's question", () => {
-    expect(isDuplicateWarning("A slip like this is already in the jar. Save it anyway?")).toBe(true);
+    expect(
+      isDuplicateWarning(
+        "A slip like this is already in the jar. Save it anyway?",
+      ),
+    ).toBe(true);
     expect(isDuplicateWarning("Give it a name.")).toBe(false);
   });
 });

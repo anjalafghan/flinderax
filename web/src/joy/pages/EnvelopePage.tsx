@@ -8,7 +8,12 @@ import { getEnvelope, keys } from "../api";
 /** The date, arriving in a sealed envelope. Public (no login) and bare (no app chrome). */
 export default function EnvelopePage() {
   const { token = "" } = useParams();
-  const q = useQuery({ queryKey: keys.envelope(token), queryFn: () => getEnvelope(token), retry: false, staleTime: Infinity });
+  const q = useQuery({
+    queryKey: keys.envelope(token),
+    queryFn: () => getEnvelope(token),
+    retry: false,
+    staleTime: Infinity,
+  });
   const [open, setOpen] = useState(false);
   const [out, setOut] = useState(false);
   const letter = useRef<HTMLElement>(null);
@@ -29,13 +34,19 @@ export default function EnvelopePage() {
 
   useEffect(() => {
     const prev = document.title;
-    document.title = env ? (env.from ? `${env.from} sent you a date · joy` : "A note from our jar · joy") : "joy";
+    document.title = env
+      ? env.from
+        ? `${env.from} sent you a date · joy`
+        : "A note from our jar · joy"
+      : "joy";
     return () => {
       document.title = prev;
     };
   }, [env]);
 
-  const still = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const still =
+    typeof matchMedia === "function" &&
+    matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const openIt = () => {
     if (open) return;
@@ -45,13 +56,19 @@ export default function EnvelopePage() {
     } catch {
       /* not supported */
     }
-    timer.current = setTimeout(() => {
-      setOut(true);
-      requestAnimationFrame(() => {
-        letter.current?.scrollIntoView?.({ behavior: still ? "auto" : "smooth", block: "start" });
-        title.current?.focus({ preventScroll: true });
-      });
-    }, still ? 0 : 1150);
+    timer.current = setTimeout(
+      () => {
+        setOut(true);
+        requestAnimationFrame(() => {
+          letter.current?.scrollIntoView?.({
+            behavior: still ? "auto" : "smooth",
+            block: "start",
+          });
+          title.current?.focus({ preventScroll: true });
+        });
+      },
+      still ? 0 : 1150,
+    );
   };
 
   return (
@@ -59,15 +76,25 @@ export default function EnvelopePage() {
       <main id="main">
         <div className="js">
           {q.isPending ? (
-            <p className="loading" role="status">Opening…</p>
+            <p className="loading" role="status">
+              Opening…
+            </p>
           ) : q.isError || !env ? (
             <div className="env-page">
-              <h1 className="env-to" role="status">This envelope is no longer here.</h1>
-              <p className="env-hint">It may have been opened or replaced. Ask them to send it again.</p>
+              <h1 className="env-to" role="status">
+                This envelope is no longer here.
+              </h1>
+              <p className="env-hint">
+                It may have been opened or replaced. Ask them to send it again.
+              </p>
             </div>
           ) : (
             <div className="env-page">
-              <p className="env-to">{env.to ? `For ${env.to}${env.from ? `, from ${env.from}` : ""}` : "From our jar"}</p>
+              <p className="env-to">
+                {env.to
+                  ? `For ${env.to}${env.from ? `, from ${env.from}` : ""}`
+                  : "From our jar"}
+              </p>
 
               <div className={`env${open ? " is-open" : ""}`} id="env">
                 <div className="env-back" aria-hidden="true"></div>
@@ -77,18 +104,35 @@ export default function EnvelopePage() {
                 </div>
                 <div className="env-pocket" aria-hidden="true"></div>
                 <div className="env-flap" aria-hidden="true"></div>
-                <button className="env-seal" id="env-open" type="button" aria-controls="letter" aria-expanded={open} disabled={open} onClick={openIt}>
+                <button
+                  className="env-seal"
+                  id="env-open"
+                  type="button"
+                  aria-controls="letter"
+                  aria-expanded={open}
+                  disabled={open}
+                  onClick={openIt}
+                >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 20.3c-4.6-3.2-8.3-6.4-8.3-10.4 0-2.6 2-4.6 4.4-4.6 1.6 0 3 .9 3.9 2.2.9-1.3 2.3-2.2 3.9-2.2 2.4 0 4.4 2 4.4 4.6 0 4-3.7 7.2-8.3 10.4z" />
                   </svg>
                   <span className="visually-hidden">Open the envelope</span>
                 </button>
               </div>
-              <p className="env-hint" id="env-hint">{open ? "" : "Tap the seal to open it"}</p>
+              <p className="env-hint" id="env-hint">
+                {open ? "" : "Tap the seal to open it"}
+              </p>
 
-              <article ref={letter} className={`env-letter grain${env.sealed ? " is-sealed" : ""}${out ? " is-out" : ""}`} id="letter" aria-labelledby="letter-t">
+              <article
+                ref={letter}
+                className={`env-letter grain${env.sealed ? " is-sealed" : ""}${out ? " is-out" : ""}`}
+                id="letter"
+                aria-labelledby="letter-t"
+              >
                 <p className="env-k">{env.kicker}</p>
-                <h1 className="env-t" id="letter-t" ref={title} tabIndex={-1}>{env.title}</h1>
+                <h1 className="env-t" id="letter-t" ref={title} tabIndex={-1}>
+                  {env.title}
+                </h1>
                 {env.when && <p className="env-when">{env.when}</p>}
                 {env.place && (
                   <p className="env-place">
@@ -97,8 +141,16 @@ export default function EnvelopePage() {
                       <circle cx="12" cy="9.8" r="2.3" />
                     </svg>
                     {env.maps_url ? (
-                      <a href={env.maps_url} target="_blank" rel="noopener noreferrer">
-                        {env.place}<span className="visually-hidden"> (opens the map)</span>
+                      <a
+                        href={env.maps_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {env.place}
+                        <span className="visually-hidden">
+                          {" "}
+                          (opens the map)
+                        </span>
                       </a>
                     ) : (
                       <span>{env.place}</span>
@@ -124,7 +176,11 @@ export default function EnvelopePage() {
                       <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
                       <path d="M8.2 10.5V8a3.8 3.8 0 0 1 7.6 0v2.5" />
                     </svg>
-                    <span>The rest stays locked until {env.from ? `${env.from} reveals it` : "it's revealed"}. Just be ready.</span>
+                    <span>
+                      The rest stays locked until{" "}
+                      {env.from ? `${env.from} reveals it` : "it's revealed"}.
+                      Just be ready.
+                    </span>
                   </p>
                 )}
                 <p className="env-sign">— joy</p>

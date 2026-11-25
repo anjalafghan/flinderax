@@ -1,15 +1,82 @@
 @import "tailwindcss";
+@import "./theme/color.css";
 @variant dark (&:where(.dark, .dark *));
 
-@font-face { font-family: "JetBrains Mono"; src: url("./fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 400 500; font-style: normal; font-display: swap; }
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* Self-hosted Newsreader (opsz variable) and Figtree (wght variable), from @fontsource-variable; the build copies the files into dist/fonts. */
-@font-face { font-family: "Newsreader"; font-style: normal; font-weight: 200 800; font-display: swap; src: url("/fonts/newsreader-latin-ext-opsz-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
-@font-face { font-family: "Newsreader"; font-style: normal; font-weight: 200 800; font-display: swap; src: url("/fonts/newsreader-latin-opsz-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
-@font-face { font-family: "Newsreader"; font-style: italic; font-weight: 200 800; font-display: swap; src: url("/fonts/newsreader-latin-ext-opsz-italic.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
-@font-face { font-family: "Newsreader"; font-style: italic; font-weight: 200 800; font-display: swap; src: url("/fonts/newsreader-latin-opsz-italic.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
-@font-face { font-family: "Figtree"; font-style: normal; font-weight: 300 900; font-display: swap; src: url("/fonts/figtree-latin-ext-wght-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
-@font-face { font-family: "Figtree"; font-style: normal; font-weight: 300 900; font-display: swap; src: url("/fonts/figtree-latin-wght-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/newsreader-latin-ext-opsz-normal.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/newsreader-latin-opsz-normal.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: italic;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/newsreader-latin-ext-opsz-italic.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: italic;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/newsreader-latin-opsz-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("/fonts/figtree-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("/fonts/figtree-latin-wght-normal.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
 
 @theme {
   --color-border: hsl(var(--border));
@@ -47,6 +114,22 @@
   --color-warn-tint: hsl(var(--warn-tint));
   --color-over: hsl(var(--over));
   --color-over-tint: hsl(var(--over-tint));
+
+  /* Section colour (src/theme/color.css) and the party palette. */
+  --color-brand: hsl(var(--brand));
+  --color-brand-2: hsl(var(--brand-2));
+  --color-brand-3: hsl(var(--brand-3));
+  --color-brand-tint: hsl(var(--brand-tint));
+  --color-brand-ink: hsl(var(--brand-ink));
+  --color-brand-fg: hsl(var(--brand-fg));
+  --color-sun: hsl(var(--c-sun));
+  --color-coral: hsl(var(--c-coral));
+  --color-mint: hsl(var(--c-mint));
+  --color-sky: hsl(var(--c-sky));
+  --color-grape: hsl(var(--c-grape));
+  --color-rose: hsl(var(--c-rose));
+  --color-teal: hsl(var(--c-teal));
+  --color-berry: hsl(var(--c-berry));
 
   --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
   --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -147,33 +230,74 @@
     @apply border-border;
   }
 
-  html { background: hsl(var(--background)); }
+  html {
+    background: hsl(var(--background));
+  }
 
   body {
     @apply text-foreground transition-colors duration-300;
-    font-family: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      "Figtree",
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     font-variant-numeric: tabular-nums;
     overscroll-behavior-y: none;
     background: hsl(var(--background));
   }
 
-  a:hover { opacity: 0.8; }
+  a:hover {
+    opacity: 0.8;
+  }
 }
 
 @layer components {
-  .page { @apply mx-auto w-full max-w-[1040px] px-4 py-8 md:px-6 md:py-12; }
+  .page {
+    @apply mx-auto w-full max-w-[1040px] px-4 py-8 md:px-6 md:py-12;
+  }
   /* Reading-width pages: same left edge as the wordmark and tabs, content capped at 48rem. */
-  .page-narrow > * { @apply max-w-3xl; }
+  .page-narrow > * {
+    @apply max-w-3xl;
+  }
   /* Newsreader, upright: section heads and numbers. The italic is kept for the wordmark. */
-  .font-display { font-family: var(--font-display); font-style: normal; font-weight: 400; letter-spacing: -0.02em; }
-  .wordmark { font-family: var(--font-display); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
-  .font-serif-num { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.02em; font-variant-numeric: normal; }
-  .page-title { font-family: var(--font-display); font-style: normal; font-weight: 400; @apply text-4xl leading-none tracking-tight md:text-5xl; }
-  .page-sub { @apply mt-3 text-sm text-muted-foreground md:text-base; }
+  .font-display {
+    font-family: var(--font-display);
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+  .font-serif-num {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    font-variant-numeric: normal;
+  }
+  .page-title {
+    font-family: var(--font-display);
+    font-style: normal;
+    font-weight: 400;
+    @apply text-4xl leading-none tracking-tight md:text-5xl;
+  }
+  .page-sub {
+    @apply mt-3 text-sm text-muted-foreground md:text-base;
+  }
   /* The quiet metadata voice: small, muted, sentence case. */
-  .eyebrow, .section-label { @apply text-[13px] font-normal text-muted-foreground; }
-  .num { font-variant-numeric: tabular-nums; }
+  .eyebrow,
+  .section-label {
+    @apply text-[13px] font-normal text-muted-foreground;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
 
   /* The one panel look: warm card, hairline edge, large radius, no shadow, no blur. */
   .glass {
@@ -181,96 +305,349 @@
     border: 1px solid hsl(var(--border));
   }
   /* Forms: roomy two-column grid, label-over-field, one ink action on the right. */
-  .form-grid { @apply grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2; }
-  .field { @apply flex min-w-0 flex-col gap-2; }
-  .form-actions { @apply col-span-full flex flex-wrap items-center justify-end gap-3 pt-1; }
+  .form-grid {
+    @apply grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2;
+  }
+  .field {
+    @apply flex min-w-0 flex-col gap-2;
+  }
+  .form-actions {
+    @apply col-span-full flex flex-wrap items-center justify-end gap-3 pt-1;
+  }
   /* Lists inside a card: hairline rows, never a box in a box. */
-  .ledger { @apply m-0 list-none p-0; }
-  .ledger-row { @apply flex items-center justify-between gap-4 border-t border-border py-4 first:border-t-0 first:pt-1; }
-  .empty-note { @apply rounded-[18px] border border-dashed border-border px-5 py-4 text-sm text-muted-foreground; }
+  .ledger {
+    @apply m-0 list-none p-0;
+  }
+  .ledger-row {
+    @apply flex items-center justify-between gap-4 border-t border-border py-4 first:border-t-0 first:pt-1;
+  }
+  .empty-note {
+    @apply rounded-[18px] border border-dashed border-border px-5 py-4 text-sm text-muted-foreground;
+  }
   /* Card stacks on a page. */
-  .stack { @apply flex flex-col gap-6 md:gap-8; }
+  .stack {
+    @apply flex flex-col gap-6 md:gap-8;
+  }
 
-  .tone-good { color: hsl(var(--good)); background: hsl(var(--good-tint)); }
-  .tone-warn { color: hsl(var(--warn)); background: hsl(var(--warn-tint)); }
-  .tone-over { color: hsl(var(--over)); background: hsl(var(--over-tint)); }
-  .tone-quiet { color: hsl(var(--muted-foreground)); background: hsl(var(--chip)); }
+  .tone-good {
+    color: hsl(var(--good));
+    background: hsl(var(--good-tint));
+  }
+  .tone-warn {
+    color: hsl(var(--warn));
+    background: hsl(var(--warn-tint));
+  }
+  .tone-over {
+    color: hsl(var(--over));
+    background: hsl(var(--over-tint));
+  }
+  .tone-quiet {
+    color: hsl(var(--muted-foreground));
+    background: hsl(var(--chip));
+  }
 }
 
 /* ---- Motion: a little lift on arrival, a little life on touch. All of it stops under reduced motion (below). ---- */
-@keyframes rise-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-@keyframes pop-in { 0% { opacity: 0; transform: scale(.9); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: none; } }
-@keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-@keyframes soft-pulse { 0%, 100% { box-shadow: 0 0 0 0 hsl(var(--good) / .45); } 50% { box-shadow: 0 0 0 6px hsl(var(--good) / 0); } }
-@keyframes today-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-@keyframes wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.15); } 75% { transform: rotate(10deg) scale(1.15); } }
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes soft-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--good) / 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px hsl(var(--good) / 0);
+  }
+}
+@keyframes today-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-12deg) scale(1.15);
+  }
+  75% {
+    transform: rotate(10deg) scale(1.15);
+  }
+}
 
 /* Each page's blocks rise in one after another. */
-.page > *, .page > div > * { animation: rise-in .5s cubic-bezier(.22, 1, .36, 1) both; }
-.page > :nth-child(2), .page > div > :nth-child(2) { animation-delay: 60ms; }
-.page > :nth-child(3), .page > div > :nth-child(3) { animation-delay: 120ms; }
-.page > :nth-child(4), .page > div > :nth-child(4) { animation-delay: 180ms; }
-.page > :nth-child(5), .page > div > :nth-child(5) { animation-delay: 240ms; }
-.page > :nth-child(n+6), .page > div > :nth-child(n+6) { animation-delay: 300ms; }
+.page > *,
+.page > div > * {
+  animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page > :nth-child(2),
+.page > div > :nth-child(2) {
+  animation-delay: 60ms;
+}
+.page > :nth-child(3),
+.page > div > :nth-child(3) {
+  animation-delay: 120ms;
+}
+.page > :nth-child(4),
+.page > div > :nth-child(4) {
+  animation-delay: 180ms;
+}
+.page > :nth-child(5),
+.page > div > :nth-child(5) {
+  animation-delay: 240ms;
+}
+.page > :nth-child(n + 6),
+.page > div > :nth-child(n + 6) {
+  animation-delay: 300ms;
+}
 
 /* The big number lands with a little pop; the status pill breathes when things are good. */
-[data-status] [aria-label^="Safe to spend"] { animation: pop-in .7s cubic-bezier(.22, 1, .36, 1) both .1s; transform-origin: left center; }
-[data-status="green"] .tone-good > span:first-child { animation: soft-pulse 2.6s ease-in-out infinite; }
+[data-status] [aria-label^="Safe to spend"] {
+  animation: pop-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both 0.1s;
+  transform-origin: left center;
+}
+[data-status="green"] .tone-good > span:first-child {
+  animation: soft-pulse 2.6s ease-in-out infinite;
+}
 
 /* The pay-period strip grows in day by day, and today bounces. */
-[role="img"][aria-label$="in this pay period"] > span { transform-origin: bottom; animation: bar-grow .4s ease-out both; }
-[role="img"][aria-label$="in this pay period"] > span:nth-child(-n+30) { animation-delay: calc(var(--i, 0) * 12ms); }
+[role="img"][aria-label$="in this pay period"] > span {
+  transform-origin: bottom;
+  animation: bar-grow 0.4s ease-out both;
+}
+[role="img"][aria-label$="in this pay period"] > span:nth-child(-n + 30) {
+  animation-delay: calc(var(--i, 0) * 12ms);
+}
 
 /* Touch: buttons and tiles press down and spring back; tiles lift on hover; icons wiggle. */
-button, [role="button"], a.glass, nav[aria-label="Quick actions"] a { transition: transform .15s ease, background-color .2s ease, box-shadow .2s ease; }
-button:not(:disabled):active, [role="button"]:active, nav[aria-label="Quick actions"] a:active { transform: scale(.97); }
+button,
+[role="button"],
+a.glass,
+nav[aria-label="Quick actions"] a {
+  transition:
+    transform 0.15s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+button:not(:disabled):active,
+[role="button"]:active,
+nav[aria-label="Quick actions"] a:active {
+  transform: scale(0.97);
+}
 @media (hover: hover) {
-  nav[aria-label="Quick actions"] a:hover { transform: translateY(-2px); }
-  nav[aria-label="Quick actions"] a:hover svg { animation: wiggle .5s ease; }
+  nav[aria-label="Quick actions"] a:hover {
+    transform: translateY(-2px);
+  }
+  nav[aria-label="Quick actions"] a:hover svg {
+    animation: wiggle 0.5s ease;
+  }
 }
 
 /* Details panels open smoothly, and toasts bounce in. */
-details[open] > :not(summary) { animation: rise-in .3s ease-out both; }
-[data-sonner-toast] { animation: pop-in .35s cubic-bezier(.22, 1, .36, 1) both; }
+details[open] > :not(summary) {
+  animation: rise-in 0.3s ease-out both;
+}
+[data-sonner-toast] {
+  animation: pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 
 /* Today's mood: a soft wash behind the page that follows the Safe to Spend status. */
-body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity 1.2s ease; }
-body:has([data-status="green"])::before { opacity: .55; background: radial-gradient(60% 40% at 50% 0%, hsl(var(--good) / .16), transparent 70%); }
-body:has([data-status="yellow"])::before { opacity: .55; background: radial-gradient(60% 40% at 50% 0%, hsl(var(--warn) / .16), transparent 70%); }
-body:has([data-status="red"])::before { opacity: .4; background: radial-gradient(60% 40% at 50% 0%, hsl(var(--over) / .12), transparent 70%); }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+body:has([data-status="green"])::before {
+  opacity: 0.55;
+  background: radial-gradient(
+    60% 40% at 50% 0%,
+    hsl(var(--good) / 0.16),
+    transparent 70%
+  );
+}
+body:has([data-status="yellow"])::before {
+  opacity: 0.55;
+  background: radial-gradient(
+    60% 40% at 50% 0%,
+    hsl(var(--warn) / 0.16),
+    transparent 70%
+  );
+}
+body:has([data-status="red"])::before {
+  opacity: 0.4;
+  background: radial-gradient(
+    60% 40% at 50% 0%,
+    hsl(var(--over) / 0.12),
+    transparent 70%
+  );
+}
 
 /* Pages glide into each other instead of cutting (View Transitions; browsers without them just cut). */
-@keyframes vt-out { to { opacity: 0; transform: translateY(-8px) scale(.99); } }
-@keyframes vt-in { from { opacity: 0; transform: translateY(12px) scale(.995); } }
-::view-transition-old(root) { animation: vt-out .22s ease-in both; }
-::view-transition-new(root) { animation: vt-in .38s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.99);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.995);
+  }
+}
+::view-transition-old(root) {
+  animation: vt-out 0.22s ease-in both;
+}
+::view-transition-new(root) {
+  animation: vt-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 
-@keyframes skeleton-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes skeleton-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 
 /* Loading placeholders shimmer instead of pulsing. */
-@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
 [class*="animate-pulse"][class*="bg-muted"] {
   animation: shimmer 1.5s linear infinite;
-  background-image: linear-gradient(100deg, transparent 30%, hsl(var(--foreground) / .07) 50%, transparent 70%);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    hsl(var(--foreground) / 0.07) 50%,
+    transparent 70%
+  );
   background-size: 200% 100%;
 }
 
 /* Empty-state illustrations bob gently; the shadow breathes with them. */
-@keyframes empty-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-@keyframes empty-shadow { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(.85); opacity: .6; } }
-.empty-float { animation: empty-float 3s ease-in-out infinite; }
-.empty-shadow { transform-origin: 48px 64px; animation: empty-shadow 3s ease-in-out infinite; }
-
-@keyframes sorter-pop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
-.sorter-pop { animation: sorter-pop .5s cubic-bezier(.22, 1, .36, 1) both; }
-.sorter-stamp { transition: opacity .12s linear; }
-
-@keyframes flicker { 0%, 100% { transform: scale(1) rotate(0); } 30% { transform: scale(1.12) rotate(-4deg); } 60% { transform: scale(.97) rotate(3deg); } }
-.streak-flame { animation: flicker 2.4s ease-in-out infinite; transform-origin: 50% 80%; }
-
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }
+@keyframes empty-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes empty-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scaleX(0.85);
+    opacity: 0.6;
+  }
+}
+.empty-float {
+  animation: empty-float 3s ease-in-out infinite;
+}
+.empty-shadow {
+  transform-origin: 48px 64px;
+  animation: empty-shadow 3s ease-in-out infinite;
 }
 
+@keyframes sorter-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.sorter-pop {
+  animation: sorter-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sorter-stamp {
+  transition: opacity 0.12s linear;
+}
 
+@keyframes flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(0);
+  }
+  30% {
+    transform: scale(1.12) rotate(-4deg);
+  }
+  60% {
+    transform: scale(0.97) rotate(3deg);
+  }
+}
+.streak-flame {
+  animation: flicker 2.4s ease-in-out infinite;
+  transform-origin: 50% 80%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}

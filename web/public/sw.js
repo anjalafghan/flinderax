@@ -19,7 +19,12 @@ const KEEP = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(["/", "/index.html"])).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches
+      .open(SHELL)
+      .then((c) => c.addAll(["/", "/index.html"]))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (e) => {
@@ -27,7 +32,13 @@ self.addEventListener("activate", (e) => {
     caches
       .keys()
       // Older shells, and everything else: the old fx-* names and the old Joy app's joy-static-* caches.
-      .then((keys) => Promise.all(keys.filter((k) => k !== SHELL && !k.startsWith(DATA_PREFIX)).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k !== SHELL && !k.startsWith(DATA_PREFIX))
+            .map((k) => caches.delete(k)),
+        ),
+      )
       .then(() => self.clients.claim()),
   );
 });
@@ -35,7 +46,17 @@ self.addEventListener("activate", (e) => {
 // The page posts {type: "logout"} so every saved copy goes with the login.
 self.addEventListener("message", (e) => {
   if (e.data && e.data.type === "logout") {
-    e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith(DATA_PREFIX)).map((k) => caches.delete(k)))));
+    e.waitUntil(
+      caches
+        .keys()
+        .then((keys) =>
+          Promise.all(
+            keys
+              .filter((k) => k.startsWith(DATA_PREFIX))
+              .map((k) => caches.delete(k)),
+          ),
+        ),
+    );
   }
 });
 
@@ -45,8 +66,14 @@ async function cacheName(req) {
   const sid = req.headers.get("x-session-id");
   const auth = req.headers.get("authorization") || (sid ? "sid:" + sid : null);
   if (!auth) return null;
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(auth));
-  const hex = [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(auth),
+  );
+  const hex = [...new Uint8Array(digest)]
+    .slice(0, 8)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return DATA_PREFIX + hex;
 }
 
@@ -56,7 +83,12 @@ async function userCache(req) {
 }
 
 function withTimeout(p, ms) {
-  return Promise.race([p, new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
+  return Promise.race([
+    p,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), ms),
+    ),
+  ]);
 }
 
 async function keptApi(req) {
@@ -133,14 +165,16 @@ self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   const url = (e.notification.data && e.notification.data.url) || "/";
   e.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((open) => {
-      for (const c of open) {
-        if ("focus" in c) {
-          if ("navigate" in c) c.navigate(url);
-          return c.focus();
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((open) => {
+        for (const c of open) {
+          if ("focus" in c) {
+            if ("navigate" in c) c.navigate(url);
+            return c.focus();
+          }
         }
-      }
-      return self.clients.openWindow(url);
-    }),
+        return self.clients.openWindow(url);
+      }),
   );
 });

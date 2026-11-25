@@ -1,31 +1,52 @@
 import { Link } from "react-router-dom";
 
+import { MessageCircleHeart } from "lucide-react";
+
+import { Avatar } from "@/components/feature/people/Avatar";
 import { CatchUpActions } from "@/components/feature/people/CatchUpActions";
+import { cn } from "@/utils/cn";
 import { NOTE, PANEL, SECTION_TITLE } from "@/components/feature/people/ui";
 import { StatusPill } from "@/components/feature/people/StatusPill";
-import { everyLabel, lastCaughtUpLabel, weekdayDay, type PersonRow } from "@/services/people";
+import {
+  everyLabel,
+  lastCaughtUpLabel,
+  weekdayDay,
+  type PersonRow,
+} from "@/services/people";
 
 function dueText(p: PersonRow): string {
   if (!p.next_due_on) return "";
-  return p.status === "overdue" ? `Was due ${weekdayDay(p.next_due_on)}` : `Due ${weekdayDay(p.next_due_on)}`;
+  return p.status === "overdue"
+    ? `Was due ${weekdayDay(p.next_due_on)}`
+    : `Due ${weekdayDay(p.next_due_on)}`;
 }
 
 function CatchUpRow({ person }: { person: PersonRow }) {
-  const details = [everyLabel(person.every_days), lastCaughtUpLabel(person.last_contact_on), dueText(person)]
+  const details = [
+    everyLabel(person.every_days),
+    lastCaughtUpLabel(person.last_contact_on),
+    dueText(person),
+  ]
     .filter(Boolean)
     .join(" · ");
 
   return (
-    <li className="flex flex-col gap-4 border-t border-border py-5 first:border-t-0 first:pt-1">
+    <li className="flex flex-col gap-4 border-t border-sky/25 py-5 first:border-t-0 first:pt-1">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar name={person.name} status={person.status} />
+          <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Link to={`/people/${person.id}`} className="text-[15px] font-medium text-foreground">
+            <Link
+              to={`/people/${person.id}`}
+              className="text-[15px] font-medium text-foreground"
+            >
               {person.name}
             </Link>
             <StatusPill status={person.status} />
           </div>
           <span className="text-[13px] text-muted-foreground">{details}</span>
+          </div>
         </div>
       </div>
       <CatchUpActions personId={person.id} name={person.name} />
@@ -38,7 +59,16 @@ export function CatchUpSection({ people }: { people: PersonRow[] }) {
   return (
     <section aria-labelledby="people-catch-up-title" className={PANEL}>
       <header className="flex flex-col gap-2">
-        <h2 id="people-catch-up-title" className={SECTION_TITLE}>
+        <h2
+          id="people-catch-up-title"
+          className={cn(SECTION_TITLE, "flex items-center gap-3")}
+        >
+          <span
+            aria-hidden
+            className="grid h-10 w-10 place-items-center rounded-full bg-sky/20 text-sky"
+          >
+            <MessageCircleHeart className="h-5 w-5" />
+          </span>
           Catch up
         </h2>
         <p className={NOTE}>A nudge when it's been a while.</p>

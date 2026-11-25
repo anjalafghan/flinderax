@@ -78,7 +78,11 @@ export interface AnalyticsOut {
   savings_rate_bps: number | null;
   categories: AnalyticsCategory[];
   top_payees: AnalyticsPayee[];
-  small_ticket: { per_month_count: number; per_month_paise: number; threshold_paise: number };
+  small_ticket: {
+    per_month_count: number;
+    per_month_paise: number;
+    threshold_paise: number;
+  };
   salary: AnalyticsSalary | null;
   sips: AnalyticsSip[];
   autopay: AnalyticsAutopay[];
@@ -88,7 +92,9 @@ export interface AnalyticsOut {
   notes: string[];
 }
 
-export const getAnalytics = () => api.get<AnalyticsOut>("/api/dashboard/analytics").then((r) => r.data);
+export const getAnalytics = () =>
+  api.get<AnalyticsOut>("/api/dashboard/analytics").then((r) => r.data);
 
 /** Derived from every transaction and statement import, so it refreshes with the rest of the money data. */
-export const useAnalytics = () => useQuery({ queryKey: ["analytics"], queryFn: getAnalytics, retry: 1 });
+export const useAnalytics = () =>
+  useQuery({ queryKey: ["analytics"], queryFn: getAnalytics, retry: 1 });

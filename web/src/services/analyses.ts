@@ -15,10 +15,13 @@ export interface Analysis {
 
 export const analysesKey = ["analyses"] as const;
 
-export const getAnalyses = () => api.get<{ analyses: Analysis[] }>("/api/analyses").then((r) => r.data);
-export const removeAnalysis = (id: string) => api.del<void>(`/api/analyses/${id}`).then((r) => r.data);
+export const getAnalyses = () =>
+  api.get<{ analyses: Analysis[] }>("/api/analyses").then((r) => r.data);
+export const removeAnalysis = (id: string) =>
+  api.del<void>(`/api/analyses/${id}`).then((r) => r.data);
 
-export const useAnalyses = () => useQuery({ queryKey: analysesKey, queryFn: getAnalyses, retry: 1 });
+export const useAnalyses = () =>
+  useQuery({ queryKey: analysesKey, queryFn: getAnalyses, retry: 1 });
 
 export function useRemoveAnalysis() {
   const qc = useQueryClient();

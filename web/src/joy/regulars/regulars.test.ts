@@ -1,6 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { ApiError } from "../api";
-import { apiMessage, cleanDays, newRegularBody, parseRupees, skipBody, weekdaysLabel, wentElse, wentUsual } from "./days";
+import {
+  apiMessage,
+  cleanDays,
+  newRegularBody,
+  parseRupees,
+  skipBody,
+  weekdaysLabel,
+  wentElse,
+  wentUsual,
+} from "./days";
 import { fitWithin } from "./photo";
 
 describe("weekday labels", () => {
@@ -30,40 +39,84 @@ describe("amounts", () => {
 });
 
 describe("payload builders", () => {
-  const form = { title: "  Blue Tokai ", place: " Goregaon ", maps_url: "https://maps.app.goo.gl/x", days: [4, 2], cost: "300", since: "" };
+  const form = {
+    title: "  Blue Tokai ",
+    place: " Goregaon ",
+    maps_url: "https://maps.app.goo.gl/x",
+    days: [4, 2],
+    cost: "300",
+    since: "",
+  };
   test("a good add form", () => {
     const r = newRegularBody({ ...form, days: [4, 2, 4] });
     expect(r.error).toBe("");
-    expect(r.body).toEqual({ title: "Blue Tokai", place: "Goregaon", maps_url: "https://maps.app.goo.gl/x", days: [2, 4], cost: "300", since: "" });
+    expect(r.body).toEqual({
+      title: "Blue Tokai",
+      place: "Goregaon",
+      maps_url: "https://maps.app.goo.gl/x",
+      days: [2, 4],
+      cost: "300",
+      since: "",
+    });
   });
   test("refusals say why", () => {
-    expect(newRegularBody({ ...form, title: " " }).error).toBe("Give it a name.");
-    expect(newRegularBody({ ...form, days: [] }).error).toBe("Pick at least one day.");
+    expect(newRegularBody({ ...form, title: " " }).error).toBe(
+      "Give it a name.",
+    );
+    expect(newRegularBody({ ...form, days: [] }).error).toBe(
+      "Pick at least one day.",
+    );
     expect(newRegularBody({ ...form, cost: "lots" }).body).toBeNull();
   });
   test("only a web address is sent as the maps link", () => {
-    expect(newRegularBody({ ...form, maps_url: "javascript:alert(1)" }).body?.maps_url).toBe("");
+    expect(
+      newRegularBody({ ...form, maps_url: "javascript:alert(1)" }).body
+        ?.maps_url,
+    ).toBe("");
   });
   test("went: blank means the usual", () => {
-    expect(wentUsual("2026-11-05")).toEqual({ day: "2026-11-05", amount: "", place: "", back: "" });
-    expect(wentElse("2026-11-05", " Elsewhere ", "450").body).toEqual({ day: "2026-11-05", amount: "450", place: "Elsewhere", back: "" });
+    expect(wentUsual("2026-11-05")).toEqual({
+      day: "2026-11-05",
+      amount: "",
+      place: "",
+      back: "",
+    });
+    expect(wentElse("2026-11-05", " Elsewhere ", "450").body).toEqual({
+      day: "2026-11-05",
+      amount: "450",
+      place: "Elsewhere",
+      back: "",
+    });
     expect(wentElse("2026-11-05", "", "x").body).toBeNull();
     expect(wentElse("2026-11-05", "", "").body?.amount).toBe("");
   });
-  test("skip", () => expect(skipBody("2026-11-05")).toEqual({ day: "2026-11-05", back: "" }));
+  test("skip", () =>
+    expect(skipBody("2026-11-05")).toEqual({ day: "2026-11-05", back: "" }));
 });
 
 describe("apiMessage", () => {
   test("prefers the server's {error}", () => {
-    expect(apiMessage(new ApiError(422, '{"error":"Give it a name."}', { error: "Give it a name." }))).toBe("Give it a name.");
+    expect(
+      apiMessage(
+        new ApiError(422, '{"error":"Give it a name."}', {
+          error: "Give it a name.",
+        }),
+      ),
+    ).toBe("Give it a name.");
   });
   test("never shows raw JSON", () => {
-    expect(apiMessage(new ApiError(400, '{"x":1}', { x: 1 }))).toBe("That didn’t work. Try again.");
+    expect(apiMessage(new ApiError(400, '{"x":1}', { x: 1 }))).toBe(
+      "That didn’t work. Try again.",
+    );
   });
   test("plain text, network and server errors", () => {
-    expect(apiMessage(new ApiError(403, "Link not valid", null))).toBe("Link not valid");
+    expect(apiMessage(new ApiError(403, "Link not valid", null))).toBe(
+      "Link not valid",
+    );
     expect(apiMessage(new ApiError(500, "boom", null), "Oops")).toBe("Oops");
-    expect(apiMessage(new TypeError("x"))).toBe("No connection. Try again in a moment.");
+    expect(apiMessage(new TypeError("x"))).toBe(
+      "No connection. Try again in a moment.",
+    );
   });
 });
 

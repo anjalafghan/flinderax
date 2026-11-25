@@ -1,18 +1,17 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import App from './App.tsx'
-import { AuthProvider } from '@/context/AuthProvider'
-import { ThemeProvider } from "@/context/ThemeContext"
-import { ErrorBoundary } from '@/components/ui/error-boundary'
-import { sweepOfflineCopies } from '@/session'
-import { tick } from '@/utils/motion'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import App from "./App.tsx";
+import { AuthProvider } from "@/context/AuthProvider";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { sweepOfflineCopies } from "@/session";
+import { tick } from "@/utils/motion";
 
+const queryClient = new QueryClient();
 
-const queryClient = new QueryClient()
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -26,13 +25,20 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
-)
+);
 
 // After a deploy, an open tab can ask for code chunks that no longer exist. Reload once to pick up
 // the new build instead of showing a broken page; the flag stops a reload loop if it really is down.
 window.addEventListener("unhandledrejection", (e) => {
-  const msg = String((e.reason as { message?: string } | undefined)?.message ?? e.reason ?? "");
-  if (!/dynamically imported module|Importing a module script failed|error loading dynamically/i.test(msg)) return;
+  const msg = String(
+    (e.reason as { message?: string } | undefined)?.message ?? e.reason ?? "",
+  );
+  if (
+    !/dynamically imported module|Importing a module script failed|error loading dynamically/i.test(
+      msg,
+    )
+  )
+    return;
   try {
     if (sessionStorage.getItem("joy-chunk-reload")) return;
     sessionStorage.setItem("joy-chunk-reload", "1");
@@ -64,5 +70,9 @@ if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
 
 // A light tick under the finger when a button is pressed (phones only; skipped under reduced motion).
 document.addEventListener("pointerdown", (e) => {
-  if (e.pointerType === "touch" && (e.target as Element | null)?.closest("button:not(:disabled)")) tick();
+  if (
+    e.pointerType === "touch" &&
+    (e.target as Element | null)?.closest("button:not(:disabled)")
+  )
+    tick();
 });

@@ -1,11 +1,21 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 
 import { FollowUpsCard } from "@/components/feature/people/FollowUpsCard";
 import { PersonFollowUps } from "@/components/feature/people/PersonFollowUps";
-import { followUpWhen, type FollowUp, type FollowUpsOut } from "@/services/people";
+import {
+  followUpWhen,
+  type FollowUp,
+  type FollowUpsOut,
+} from "@/services/people";
 import api from "@/services/api";
 
 // Synthetic data only.
@@ -21,14 +31,32 @@ const f = (o: Partial<FollowUp> & { id: string; text: string }): FollowUp => ({
 
 const data: FollowUpsOut = {
   open: [
-    f({ id: "a", text: "Ask about the surgery", state: "overdue", days_away: -3, due_on: "2026-11-11" }),
-    f({ id: "b", text: "Send the photos", person_id: "p2", person_name: "Ravi", state: "soon", days_away: 2, due_on: "2026-11-16" }),
+    f({
+      id: "a",
+      text: "Ask about the surgery",
+      state: "overdue",
+      days_away: -3,
+      due_on: "2026-11-11",
+    }),
+    f({
+      id: "b",
+      text: "Send the photos",
+      person_id: "p2",
+      person_name: "Ravi",
+      state: "soon",
+      days_away: 2,
+      due_on: "2026-11-16",
+    }),
   ],
-  done: [f({ id: "c", text: "Call back", state: "done", done_on: "2026-11-10" })],
+  done: [
+    f({ id: "c", text: "Call back", state: "done", done_on: "2026-11-10" }),
+  ],
 };
 
 function wrap(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  });
   qc.setQueryData(["people", "followups"], data);
   return render(
     <QueryClientProvider client={qc}>
@@ -46,8 +74,12 @@ afterEach(() => {
 
 describe("follow-up wording", () => {
   it("says when each one is due", () => {
-    expect(followUpWhen({ state: "overdue", days_away: -1 })).toBe("1 day overdue");
-    expect(followUpWhen({ state: "overdue", days_away: -3 })).toBe("3 days overdue");
+    expect(followUpWhen({ state: "overdue", days_away: -1 })).toBe(
+      "1 day overdue",
+    );
+    expect(followUpWhen({ state: "overdue", days_away: -3 })).toBe(
+      "3 days overdue",
+    );
     expect(followUpWhen({ state: "today", days_away: 0 })).toBe("Today");
     expect(followUpWhen({ state: "soon", days_away: 1 })).toBe("Tomorrow");
     expect(followUpWhen({ state: "later", days_away: 30 })).toBe("In 30 days");
@@ -62,7 +94,9 @@ describe("the circle's follow-ups card", () => {
     expect(screen.getByText("Send the photos")).toBeTruthy();
     expect(screen.getByText(/1 overdue\./)).toBeTruthy();
     expect(screen.getByText(/3 days overdue/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Ravi" }).getAttribute("href")).toBe("/people/p2");
+    expect(
+      screen.getByRole("link", { name: "Ravi" }).getAttribute("href"),
+    ).toBe("/people/p2");
   });
 });
 
@@ -79,7 +113,9 @@ describe("one person's follow-ups", () => {
     api.post = post as unknown as typeof api.post;
     wrap(<PersonFollowUps personId="p1" />);
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Write what to follow up on");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Write what to follow up on",
+    );
     const box = screen.getByLabelText("Add a follow-up") as HTMLInputElement;
     fireEvent.change(box, { target: { value: "  Ask about the move " } });
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
@@ -88,21 +124,34 @@ describe("one person's follow-ups", () => {
   });
 
   it("adds a trimmed follow-up with its due day", async () => {
-    const post = mock(async (...args: unknown[]) => ({ data: f({ id: "n", text: String(args.length) }) }));
+    const post = mock(async (...args: unknown[]) => ({
+      data: f({ id: "n", text: String(args.length) }),
+    }));
     api.post = post as unknown as typeof api.post;
     wrap(<PersonFollowUps personId="p1" />);
-    fireEvent.change(screen.getByLabelText("Add a follow-up"), { target: { value: "  Ask about the move " } });
-    fireEvent.change(screen.getByLabelText("By (optional)"), { target: { value: "2027-01-05" } });
+    fireEvent.change(screen.getByLabelText("Add a follow-up"), {
+      target: { value: "  Ask about the move " },
+    });
+    fireEvent.change(screen.getByLabelText("By (optional)"), {
+      target: { value: "2027-01-05" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(post.mock.calls[0]).toEqual(["/api/people/p1/followups", { text: "Ask about the move", due_on: "2027-01-05" }]);
+    expect(post.mock.calls[0]).toEqual([
+      "/api/people/p1/followups",
+      { text: "Ask about the move", due_on: "2027-01-05" },
+    ]);
   });
 
   it("asks before deleting", () => {
     wrap(<PersonFollowUps personId="p1" />);
     const ask = mock(() => false);
     window.confirm = ask;
-    fireEvent.click(screen.getByRole("button", { name: "Delete follow-up: Ask about the surgery" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Delete follow-up: Ask about the surgery",
+      }),
+    );
     expect(ask).toHaveBeenCalledTimes(1);
   });
 });

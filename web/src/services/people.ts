@@ -174,8 +174,17 @@ export interface SeasonInput {
 // ---------- transport ----------
 
 /** PATCH, PUT and DELETE through the shared client, so a lapsed session goes back to sign-in. */
-function request<T>(method: "PATCH" | "PUT" | "DELETE", url: string, body?: unknown): Promise<T> {
-  const call = method === "PUT" ? api.put<T>(url, body) : method === "PATCH" ? api.patch<T>(url, body) : api.del<T>(url);
+function request<T>(
+  method: "PATCH" | "PUT" | "DELETE",
+  url: string,
+  body?: unknown,
+): Promise<T> {
+  const call =
+    method === "PUT"
+      ? api.put<T>(url, body)
+      : method === "PATCH"
+        ? api.patch<T>(url, body)
+        : api.del<T>(url);
   return call.then((r) => r.data);
 }
 
@@ -187,53 +196,87 @@ export const giftPlanKey = ["people", "gift-plan"] as const;
 export const seasonsKey = ["people", "seasons"] as const;
 export const peopleSettingsKey = ["people", "settings"] as const;
 
-export const getPeople = () => api.get<PeopleOverview>("/api/people").then((r) => r.data);
-export const getPerson = (id: string) => api.get<PersonDetail>(`/api/people/${id}`).then((r) => r.data);
-export const createPerson = (input: PersonInput) => api.post<PersonRow>("/api/people", input).then((r) => r.data);
+export const getPeople = () =>
+  api.get<PeopleOverview>("/api/people").then((r) => r.data);
+export const getPerson = (id: string) =>
+  api.get<PersonDetail>(`/api/people/${id}`).then((r) => r.data);
+export const createPerson = (input: PersonInput) =>
+  api.post<PersonRow>("/api/people", input).then((r) => r.data);
 export const updatePerson = (id: string, patch: PersonPatch) =>
   request<PersonRow>("PATCH", `/api/people/${id}`, patch);
-export const deletePerson = (id: string) => request<void>("DELETE", `/api/people/${id}`);
+export const deletePerson = (id: string) =>
+  request<void>("DELETE", `/api/people/${id}`);
 
 export const addTouch = (personId: string, input: TouchInput) =>
-  api.post<PersonRow>(`/api/people/${personId}/touches`, input).then((r) => r.data);
+  api
+    .post<PersonRow>(`/api/people/${personId}/touches`, input)
+    .then((r) => r.data);
 /** Forgets every catch-up with a person, however old (their page only shows the latest). */
-export const clearTouches = (personId: string) => request<PersonRow>("DELETE", `/api/people/${personId}/touches`);
-export const deleteTouch = (touchId: string) => request<void>("DELETE", `/api/people/touches/${touchId}`);
+export const clearTouches = (personId: string) =>
+  request<PersonRow>("DELETE", `/api/people/${personId}/touches`);
+export const deleteTouch = (touchId: string) =>
+  request<void>("DELETE", `/api/people/touches/${touchId}`);
 
 export const addDate = (personId: string, input: DateInput) =>
-  api.post<PersonDate>(`/api/people/${personId}/dates`, input).then((r) => r.data);
+  api
+    .post<PersonDate>(`/api/people/${personId}/dates`, input)
+    .then((r) => r.data);
 export const updateDate = (dateId: string, patch: DatePatch) =>
   request<PersonDate>("PATCH", `/api/people/dates/${dateId}`, patch);
-export const deleteDate = (dateId: string) => request<void>("DELETE", `/api/people/dates/${dateId}`);
+export const deleteDate = (dateId: string) =>
+  request<void>("DELETE", `/api/people/dates/${dateId}`);
 
-export const addGift = (input: GiftInput) => api.post<Gift>("/api/people/gifts", input).then((r) => r.data);
+export const addGift = (input: GiftInput) =>
+  api.post<Gift>("/api/people/gifts", input).then((r) => r.data);
 export const updateGift = (giftId: string, patch: GiftPatch) =>
   request<Gift>("PATCH", `/api/people/gifts/${giftId}`, patch);
-export const deleteGift = (giftId: string) => request<void>("DELETE", `/api/people/gifts/${giftId}`);
+export const deleteGift = (giftId: string) =>
+  request<void>("DELETE", `/api/people/gifts/${giftId}`);
 
 export const getSeasons = () =>
-  api.get<{ seasons: Season[] }>("/api/people/seasons").then((r) => r.data.seasons);
-export const addSeason = (input: SeasonInput) => api.post<Season>("/api/people/seasons", input).then((r) => r.data);
+  api
+    .get<{ seasons: Season[] }>("/api/people/seasons")
+    .then((r) => r.data.seasons);
+export const addSeason = (input: SeasonInput) =>
+  api.post<Season>("/api/people/seasons", input).then((r) => r.data);
 export const updateSeason = (id: string, patch: Partial<SeasonInput>) =>
   request<Season>("PATCH", `/api/people/seasons/${id}`, patch);
-export const deleteSeason = (id: string) => request<void>("DELETE", `/api/people/seasons/${id}`);
+export const deleteSeason = (id: string) =>
+  request<void>("DELETE", `/api/people/seasons/${id}`);
 
-export const getGiftPlan = () => api.get<GiftPlan>("/api/people/gift-plan").then((r) => r.data);
-export const getPeopleSettings = () => api.get<PeopleSettings>("/api/people/settings").then((r) => r.data);
-export const savePeopleSettings = (s: PeopleSettings) => request<PeopleSettings>("PUT", "/api/people/settings", s);
+export const getGiftPlan = () =>
+  api.get<GiftPlan>("/api/people/gift-plan").then((r) => r.data);
+export const getPeopleSettings = () =>
+  api.get<PeopleSettings>("/api/people/settings").then((r) => r.data);
+export const savePeopleSettings = (s: PeopleSettings) =>
+  request<PeopleSettings>("PUT", "/api/people/settings", s);
 
 // ---------- hooks ----------
 
-export const usePeople = () => useQuery({ queryKey: peopleKey, queryFn: getPeople, retry: 1 });
+export const usePeople = () =>
+  useQuery({ queryKey: peopleKey, queryFn: getPeople, retry: 1 });
 export const usePerson = (id: string) =>
-  useQuery({ queryKey: personKey(id), queryFn: () => getPerson(id), retry: 1, enabled: id !== "" });
-export const useGiftPlan = () => useQuery({ queryKey: giftPlanKey, queryFn: getGiftPlan, retry: 1 });
-export const useSeasons = () => useQuery({ queryKey: seasonsKey, queryFn: getSeasons, retry: 1 });
+  useQuery({
+    queryKey: personKey(id),
+    queryFn: () => getPerson(id),
+    retry: 1,
+    enabled: id !== "",
+  });
+export const useGiftPlan = () =>
+  useQuery({ queryKey: giftPlanKey, queryFn: getGiftPlan, retry: 1 });
+export const useSeasons = () =>
+  useQuery({ queryKey: seasonsKey, queryFn: getSeasons, retry: 1 });
 export const usePeopleSettings = () =>
-  useQuery({ queryKey: peopleSettingsKey, queryFn: getPeopleSettings, retry: 1 });
+  useQuery({
+    queryKey: peopleSettingsKey,
+    queryFn: getPeopleSettings,
+    retry: 1,
+  });
 
 /** Any write to people refreshes every people query: the lists, the person, the plan and the dashboard card. */
-export function usePeopleMutation<TInput, TOut>(fn: (input: TInput) => Promise<TOut>) {
+export function usePeopleMutation<TInput, TOut>(
+  fn: (input: TInput) => Promise<TOut>,
+) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: fn,
@@ -249,7 +292,11 @@ export function useMakeGiftsGoal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (targetPaise: number) =>
-      goalsApi.create({ name: "Gifts", kind: "custom", target_paise: targetPaise }),
+      goalsApi.create({
+        name: "Gifts",
+        kind: "custom",
+        target_paise: targetPaise,
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["goals"] });
       void qc.invalidateQueries({ queryKey: giftPlanKey });
@@ -268,7 +315,8 @@ export const CIRCLES: { key: Circle; label: string }[] = [
   { key: "other", label: "Other" },
 ];
 
-export const circleLabel = (c: Circle): string => CIRCLES.find((x) => x.key === c)?.label ?? "Other";
+export const circleLabel = (c: Circle): string =>
+  CIRCLES.find((x) => x.key === c)?.label ?? "Other";
 
 export const KIND_LABEL: Record<DateKind, string> = {
   birthday: "Birthday",
@@ -345,7 +393,8 @@ export function plural(n: number, one: string, many: string): string {
 
 // ---------- follow-ups ----------
 
-export type FollowState = "overdue" | "today" | "soon" | "later" | "undated" | "done";
+export type FollowState =
+  "overdue" | "today" | "soon" | "later" | "undated" | "done";
 
 export interface FollowUp {
   id: string;
@@ -367,14 +416,35 @@ export interface FollowUpsOut {
 /** Under ["people"], so any people write refreshes follow-ups too. */
 export const followUpsKey = ["people", "followups"] as const;
 
-export const getFollowUps = () => api.get<FollowUpsOut>("/api/people/followups").then((r) => r.data);
-export const addFollowUp = (a: { personId: string; text: string; due_on?: string }) =>
-  api.post<FollowUp>(`/api/people/${a.personId}/followups`, { text: a.text, due_on: a.due_on }).then((r) => r.data);
-export const patchFollowUp = (a: { id: string; done?: boolean; text?: string; due_on?: string | null }) =>
-  request<FollowUp>("PATCH", `/api/people/followups/${a.id}`, { done: a.done, text: a.text, due_on: a.due_on });
-export const deleteFollowUp = (id: string) => request<void>("DELETE", `/api/people/followups/${id}`);
+export const getFollowUps = () =>
+  api.get<FollowUpsOut>("/api/people/followups").then((r) => r.data);
+export const addFollowUp = (a: {
+  personId: string;
+  text: string;
+  due_on?: string;
+}) =>
+  api
+    .post<FollowUp>(`/api/people/${a.personId}/followups`, {
+      text: a.text,
+      due_on: a.due_on,
+    })
+    .then((r) => r.data);
+export const patchFollowUp = (a: {
+  id: string;
+  done?: boolean;
+  text?: string;
+  due_on?: string | null;
+}) =>
+  request<FollowUp>("PATCH", `/api/people/followups/${a.id}`, {
+    done: a.done,
+    text: a.text,
+    due_on: a.due_on,
+  });
+export const deleteFollowUp = (id: string) =>
+  request<void>("DELETE", `/api/people/followups/${id}`);
 
-export const useFollowUps = () => useQuery({ queryKey: followUpsKey, queryFn: getFollowUps, retry: 1 });
+export const useFollowUps = () =>
+  useQuery({ queryKey: followUpsKey, queryFn: getFollowUps, retry: 1 });
 
 /** "3 days overdue", "Today", "In 5 days", "No date". */
 export function followUpWhen(f: Pick<FollowUp, "state" | "days_away">): string {
@@ -405,8 +475,13 @@ export interface Fact {
 /** Under ["people"], so any people write refreshes these too. */
 export const factsKey = ["people", "facts"] as const;
 
-export const getFacts = () => api.get<{ facts: Fact[] }>("/api/people/facts").then((r) => r.data.facts);
+export const getFacts = () =>
+  api.get<{ facts: Fact[] }>("/api/people/facts").then((r) => r.data.facts);
 export const addFact = (a: { personId: string; text: string }) =>
-  api.post<Fact>(`/api/people/${a.personId}/facts`, { text: a.text }).then((r) => r.data);
-export const deleteFact = (id: string) => request<void>("DELETE", `/api/people/facts/${id}`);
-export const useFacts = () => useQuery({ queryKey: factsKey, queryFn: getFacts, retry: 1 });
+  api
+    .post<Fact>(`/api/people/${a.personId}/facts`, { text: a.text })
+    .then((r) => r.data);
+export const deleteFact = (id: string) =>
+  request<void>("DELETE", `/api/people/facts/${id}`);
+export const useFacts = () =>
+  useQuery({ queryKey: factsKey, queryFn: getFacts, retry: 1 });

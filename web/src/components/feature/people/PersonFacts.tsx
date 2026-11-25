@@ -1,12 +1,21 @@
 import { useId, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
-import { NOTE, SECTION_TITLE, errorMessage } from "@/components/feature/people/ui";
+import {
+  NOTE,
+  SECTION_TITLE,
+  errorMessage,
+} from "@/components/feature/people/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResetButton } from "@/components/ui/reset-button";
-import { addFact, deleteFact, useFacts, usePeopleMutation } from "@/services/people";
+import {
+  addFact,
+  deleteFact,
+  useFacts,
+  usePeopleMutation,
+} from "@/services/people";
 
 export const FACT_MAX = 120;
 
@@ -28,9 +37,13 @@ export function PersonFacts({ personId }: { personId: string }) {
     e.preventDefault();
     const t = text.trim();
     if (!t) return setError("Write something to remember.");
-    if (t.length > FACT_MAX) return setError(`Keep it to ${FACT_MAX} characters.`);
+    if (t.length > FACT_MAX)
+      return setError(`Keep it to ${FACT_MAX} characters.`);
     setError(null);
-    add.mutate({ personId, text: t }, { onSuccess: reset, onError: (err) => setError(errorMessage(err)) });
+    add.mutate(
+      { personId, text: t },
+      { onSuccess: reset, onError: (err) => setError(errorMessage(err)) },
+    );
   };
 
   return (
@@ -50,7 +63,9 @@ export function PersonFacts({ personId }: { personId: string }) {
                 aria-label={`Remove: ${f.text}`}
                 onClick={() => {
                   if (!window.confirm("Remove this?")) return;
-                  remove.mutate(f.id, { onError: (err) => toast.error(errorMessage(err)) });
+                  remove.mutate(f.id, {
+                    onError: (err) => toast.error(errorMessage(err)),
+                  });
                 }}
               >
                 Remove
@@ -61,10 +76,20 @@ export function PersonFacts({ personId }: { personId: string }) {
       ) : (
         <p className={NOTE}>Nothing noted yet.</p>
       )}
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-3" noValidate>
+      <form
+        onSubmit={submit}
+        className="flex flex-wrap items-end gap-3"
+        noValidate
+      >
         <div className="field min-w-0 flex-1">
           <Label htmlFor={`${id}-text`}>Add something to remember</Label>
-          <Input id={`${id}-text`} value={text} maxLength={FACT_MAX} onChange={(e) => setText(e.target.value)} placeholder="e.g. Allergic to peanuts" />
+          <Input
+            id={`${id}-text`}
+            value={text}
+            maxLength={FACT_MAX}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="e.g. Allergic to peanuts"
+          />
         </div>
         <div className="flex gap-2">
           <ResetButton onReset={reset} />

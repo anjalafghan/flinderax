@@ -50,13 +50,18 @@ export function GiftForm({
   onDone: () => void;
 }) {
   const id = useId();
-  const save = usePeopleMutation((v: { giftId?: string; body: GiftInput | GiftPatch }) =>
-    v.giftId ? updateGift(v.giftId, v.body as GiftPatch) : addGift(v.body as GiftInput),
+  const save = usePeopleMutation(
+    (v: { giftId?: string; body: GiftInput | GiftPatch }) =>
+      v.giftId
+        ? updateGift(v.giftId, v.body as GiftPatch)
+        : addGift(v.body as GiftInput),
   );
   const [title, setTitle] = useState(initial?.title ?? "");
   const [dateId, setDateId] = useState("");
   const [status, setStatus] = useState<GiftStatus>(initial?.status ?? "idea");
-  const [amount, setAmount] = useState(initial?.amount_paise != null ? paiseToInput(initial.amount_paise) : "");
+  const [amount, setAmount] = useState(
+    initial?.amount_paise != null ? paiseToInput(initial.amount_paise) : "",
+  );
   const [onDay, setOnDay] = useState(initial?.on_day ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -85,11 +90,18 @@ export function GiftForm({
         amount_paise: amountPaise,
         on_day: onDay || null,
       };
-      save.mutate({ giftId: initial.id, body: patch }, saved(onDone, "Gift saved."));
+      save.mutate(
+        { giftId: initial.id, body: patch },
+        saved(onDone, "Gift saved."),
+      );
       return;
     }
 
-    const input: GiftInput = { person_id: personId, title: title.trim(), status };
+    const input: GiftInput = {
+      person_id: personId,
+      title: title.trim(),
+      status,
+    };
     if (dateId) {
       const date = dates.find((d) => d.id === dateId);
       if (date) {
@@ -121,7 +133,11 @@ export function GiftForm({
       {!initial && (
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${id}-date`}>For which date? (optional)</Label>
-          <Select id={`${id}-date`} value={dateId} onChange={(e) => setDateId(e.target.value)}>
+          <Select
+            id={`${id}-date`}
+            value={dateId}
+            onChange={(e) => setDateId(e.target.value)}
+          >
             <option value="">No date</option>
             {dates.map((d) => (
               <option key={d.id} value={d.id}>
@@ -133,7 +149,11 @@ export function GiftForm({
       )}
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-status`}>Status</Label>
-        <Select id={`${id}-status`} value={status} onChange={(e) => setStatus(e.target.value as GiftStatus)}>
+        <Select
+          id={`${id}-status`}
+          value={status}
+          onChange={(e) => setStatus(e.target.value as GiftStatus)}
+        >
           {STATUSES.map((s) => (
             <option key={s} value={s}>
               {GIFT_LABEL[s]}
@@ -152,10 +172,19 @@ export function GiftForm({
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-on-day`}>Given on (optional)</Label>
-        <Input id={`${id}-on-day`} type="date" max={localDay()} value={onDay} onChange={(e) => setOnDay(e.target.value)} />
+        <Input
+          id={`${id}-on-day`}
+          type="date"
+          max={localDay()}
+          value={onDay}
+          onChange={(e) => setOnDay(e.target.value)}
+        />
       </div>
       {error && (
-        <p role="alert" className="m-0 text-[13px] text-destructive sm:col-span-2">
+        <p
+          role="alert"
+          className="m-0 text-[13px] text-destructive sm:col-span-2"
+        >
           {error}
         </p>
       )}

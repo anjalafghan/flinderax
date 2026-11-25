@@ -37,7 +37,9 @@ export function PlanDialog({
   const dlg = useRef<HTMLDialogElement>(null);
   const at = useRef<HTMLInputElement>(null);
   const done = useRef<HTMLDivElement>(null);
-  const [when, setWhen] = useState(() => (slip ? toLocalInput(quickPick("tonight")) : ""));
+  const [when, setWhen] = useState(() =>
+    slip ? toLocalInput(quickPick("tonight")) : "",
+  );
   const [picked, setPicked] = useState<WhenKey | null>("tonight");
   const [err, setErr] = useState("");
   const [result, setResult] = useState<SlipPlanned | null>(null);
@@ -142,11 +144,18 @@ export function PlanDialog({
                 <path d="M9 14.6l2 2 4-4.2" />
               </svg>
               <span>
-                <strong>{result.title}</strong> is planned for <strong>{result.label}</strong>.
+                <strong>{result.title}</strong> is planned for{" "}
+                <strong>{result.label}</strong>.
               </span>
             </p>
             <div className="plan-done-acts">
-              <a className="btn btn-stamp plan-send" href={result.wa_url} onClick={share} target="_blank" rel="noopener">
+              <a
+                className="btn btn-stamp plan-send"
+                href={result.wa_url}
+                onClick={share}
+                target="_blank"
+                rel="noopener"
+              >
                 <svg className="ico" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M20.6 3.6 3.4 10.4c-.7.3-.6 1.2.1 1.4l6.3 1.9 1.9 6.3c.2.7 1.1.8 1.4.1z" />
                   <path d="M9.8 13.7 20.6 3.6" />
@@ -158,16 +167,24 @@ export function PlanDialog({
               </a>
             </div>
             <p className="plan-see">
-              <Link to={mapGoTo(result.to)} onClick={close}>See it with our dates</Link>
+              <Link to={mapGoTo(result.to)} onClick={close}>
+                See it with our dates
+              </Link>
             </p>
-            <button className="btn btn-quiet plan-close" type="button" onClick={close}>
+            <button
+              className="btn btn-quiet plan-close"
+              type="button"
+              onClick={close}
+            >
               Done
             </button>
           </div>
         ) : (
           <form className="plan-form" onSubmit={submit}>
             <p className="plan-kicker">Plan it for a day</p>
-            <h2 className="plan-h" id="plan-h">{slip?.title}</h2>
+            <h2 className="plan-h" id="plan-h">
+              {slip?.title}
+            </h2>
             <div className="when-row">
               <label className="when-l">
                 <span className="when-q">When is it?</span>
@@ -187,17 +204,29 @@ export function PlanDialog({
             </div>
             <div className="plan-quick" role="group" aria-label="Quick picks">
               {QUICK.map((c) => (
-                <button key={c.key} type="button" className="plan-chip" aria-pressed={picked === c.key} onClick={() => choose(c.key)}>
+                <button
+                  key={c.key}
+                  type="button"
+                  className="plan-chip"
+                  aria-pressed={picked === c.key}
+                  onClick={() => choose(c.key)}
+                >
                   {c.label}
                 </button>
               ))}
             </div>
-            <p className="when-err" role="status">{err}</p>
+            <p className="when-err" role="status">
+              {err}
+            </p>
             <div className="plan-acts">
               <button className="btn btn-stamp" type="submit" disabled={busy}>
                 Plan it
               </button>
-              <button className="btn btn-quiet plan-close" type="button" onClick={close}>
+              <button
+                className="btn btn-quiet plan-close"
+                type="button"
+                onClick={close}
+              >
                 Not now
               </button>
             </div>

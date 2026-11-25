@@ -9,7 +9,16 @@
 //   swipe.ts / drag.ts          the swipe rules and the pointer plumbing
 //   DayPlanView.tsx             the next date's plan
 //   motion.ts / HeartLayer.tsx  Joy's spring presets and the hearts
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link } from "react-router-dom";
 import "./jar-scope.css";
 import { jarApi, type DecideView, type PickCard } from "./api";
@@ -18,13 +27,25 @@ import DayPlanView from "./DayPlanView";
 import { attachDrag, attachPress } from "./drag";
 import { RegularCard } from "../regulars/RegularCard";
 import { CloseOut } from "./CloseOut";
-import { applyRelax, EMPTY_FILTERS, filtersToForm, putBackForm, stampDate, vetoForm, type Filters, type PickForm } from "./form";
+import {
+  applyRelax,
+  EMPTY_FILTERS,
+  filtersToForm,
+  putBackForm,
+  stampDate,
+  vetoForm,
+  type Filters,
+  type PickForm,
+} from "./form";
 import HeartLayer, { type HeartHandle } from "./HeartLayer";
 import JarCanvas, { type JarHandle } from "./JarCanvas";
 import { buzz, finish, pose, reduced, set, springs, to } from "./motion";
 import { NoteView, SlipView, type CardActions } from "./PickCard";
 import { PlanDialog } from "../components/PlanDialog";
 import Sentence from "./Sentence";
+import { confettiFrom } from "../party";
+const Orb = lazy(() => import("@/components/bits/Orb"));
+import { useSection } from "@/theme/useSection";
 import { magnitude, newShake, shakeStep } from "./shake";
 import { dragPose, MOST, swipeOutcome } from "./swipe";
 
@@ -33,10 +54,32 @@ type View =
   | { kind: "card" | "done" | "note"; key: number; card: PickCard };
 
 const blankCard = (message: string): PickCard => ({
-  activity: null, message, relax_label: "", relax: null, done: false, stamp_date: "",
-  pairs: [], why: [], budget_note: "", paired: null, state: null, can_surprise: false, can_veto: false,
-  partner: "", surprise: false, history_ids: "", share_text: "", wa_url: "", middle: false, when: "", start: "",
-  when_label: "", plan_line: "", route: [], route_note: "", plan: null,
+  activity: null,
+  message,
+  relax_label: "",
+  relax: null,
+  done: false,
+  stamp_date: "",
+  pairs: [],
+  why: [],
+  budget_note: "",
+  paired: null,
+  state: null,
+  can_surprise: false,
+  can_veto: false,
+  partner: "",
+  surprise: false,
+  history_ids: "",
+  share_text: "",
+  wa_url: "",
+  middle: false,
+  when: "",
+  start: "",
+  when_label: "",
+  plan_line: "",
+  route: [],
+  route_note: "",
+  plan: null,
 });
 
 const TAUGHT = "joy.swipe-taught";
@@ -47,14 +90,21 @@ const taught = () => {
     return 2;
   }
 };
-const finished = (a: Animation) => a.finished.then(() => undefined, () => undefined);
+const finished = (a: Animation) =>
+  a.finished.then(
+    () => undefined,
+    () => undefined,
+  );
 
 export default function JarPage() {
   const [data, setData] = useState<DecideView | null>(null);
   const [error, setError] = useState(false);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [matchIds, setMatchIds] = useState<number[] | null>(null);
-  const [counter, setCounter] = useState<{ count: number; total: number } | null>(null);
+  const [counter, setCounter] = useState<{
+    count: number;
+    total: number;
+  } | null>(null);
   const [view, setView] = useState<View>({ kind: "none", key: 0 });
   const [busy, setBusy] = useState(false);
   const [arriving, setArriving] = useState(false);
@@ -63,9 +113,15 @@ export default function JarPage() {
   const [shakeAvailable, setShakeAvailable] = useState(false);
   const [planning, setPlanning] = useState(false);
   /** The day picked for the stamped card, keyed to that card so a new card starts unplanned. */
-  const [planned, setPlanned] = useState<{ key: number; label: string } | null>(null);
+  const [planned, setPlanned] = useState<{ key: number; label: string } | null>(
+    null,
+  );
 
   const rootRef = useRef<HTMLDivElement>(null);
+  // the section's colours, for the confetti (read in callbacks, so kept in a ref)
+  const { colors: sectionColors, dark } = useSection();
+  const section = useRef<string[]>(sectionColors);
+  section.current = sectionColors;
   const pickRef = useRef<HTMLDivElement>(null);
   const jarEl = useRef<HTMLDivElement>(null);
   const jar = useRef<JarHandle>(null);
@@ -105,7 +161,17 @@ export default function JarPage() {
       .then((d) => {
         if (!alive.current) return;
         setData(d);
-        setFilters((f) => (f === EMPTY_FILTERS ? { ...EMPTY_FILTERS, when: d.whens.find((w) => w.selected)?.value ?? d.whens[0]?.value ?? "" } : f));
+        setFilters((f) =>
+          f === EMPTY_FILTERS
+            ? {
+                ...EMPTY_FILTERS,
+                when:
+                  d.whens.find((w) => w.selected)?.value ??
+                  d.whens[0]?.value ??
+                  "",
+              }
+            : f,
+        );
       })
       .catch(() => alive.current && setError(true));
   }, []);
@@ -120,8 +186,12 @@ export default function JarPage() {
         setData((prev) => (prev ? { ...fresh, slips: prev.slips } : fresh));
         setView((v) => {
           if (v.kind !== "done" || !fresh.next_plan) return v;
-          const mine = v.card.history_ids.split(",").includes(String(fresh.next_plan.history_id));
-          return mine ? { ...v, card: { ...v.card, plan: fresh.next_plan } } : v;
+          const mine = v.card.history_ids
+            .split(",")
+            .includes(String(fresh.next_plan.history_id));
+          return mine
+            ? { ...v, card: { ...v.card, plan: fresh.next_plan } }
+            : v;
         });
       })
       .catch(() => undefined);
@@ -150,8 +220,23 @@ export default function JarPage() {
     if (prevCount.current === shownCount) return;
     prevCount.current = shownCount;
     if (reduced()) return;
-    tagRef.current?.animate([{ transform: "rotate(4deg)" }, { transform: "rotate(10deg)" }, { transform: "rotate(1deg)" }, { transform: "rotate(5deg)" }, { transform: "rotate(4deg)" }], { duration: 700, easing: "ease-out" });
-    tagN.current?.animate([{ transform: "translateY(-6px)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" });
+    tagRef.current?.animate(
+      [
+        { transform: "rotate(4deg)" },
+        { transform: "rotate(10deg)" },
+        { transform: "rotate(1deg)" },
+        { transform: "rotate(5deg)" },
+        { transform: "rotate(4deg)" },
+      ],
+      { duration: 700, easing: "ease-out" },
+    );
+    tagN.current?.animate(
+      [
+        { transform: "translateY(-6px)", opacity: 0 },
+        { transform: "none", opacity: 1 },
+      ],
+      { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" },
+    );
   }, [shownCount]);
 
   const change = useCallback((patch: Partial<Filters>, slow = false) => {
@@ -180,7 +265,10 @@ export default function JarPage() {
     setArriving(false);
     setBusy(false);
   };
-  const focusTitle = () => pickEl()?.querySelector<HTMLElement>(".j-slip-title")?.focus({ preventScroll: true });
+  const focusTitle = () =>
+    pickEl()
+      ?.querySelector<HTMLElement>(".j-slip-title")
+      ?.focus({ preventScroll: true });
 
   /** The slip folds and drops back into the jar. */
   const foldAway = (old: HTMLElement): Promise<void> => {
@@ -195,7 +283,12 @@ export default function JarPage() {
     g.classList.add("ghost");
     g.setAttribute("aria-hidden", "true");
     g.inert = true;
-    Object.assign(g.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+    Object.assign(g.style, {
+      left: `${r.left}px`,
+      top: `${r.top}px`,
+      width: `${r.width}px`,
+      height: `${r.height}px`,
+    });
     host.appendChild(g);
     old.classList.add("is-leaving");
     old.inert = true;
@@ -203,7 +296,15 @@ export default function JarPage() {
       g.remove();
       if (id) h.dropIn(id);
     };
-    if (reduced()) return finished(choreo.track(g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" }))).then(done);
+    if (reduced())
+      return finished(
+        choreo.track(
+          g.animate([{ opacity: 1 }, { opacity: 0 }], {
+            duration: 150,
+            fill: "forwards",
+          }),
+        ),
+      ).then(done);
     const cover = document.createElement("div");
     cover.className = "slip-cover";
     g.appendChild(cover);
@@ -216,14 +317,30 @@ export default function JarPage() {
     const dy = m.y - r.top;
     const base = getComputedStyle(old).transform;
     const start = base && base !== "none" ? base : "none";
-    choreo.track(cover.animate([{ opacity: 0 }, { opacity: 1, offset: 0.35 }, { opacity: 1 }], { duration: 480, fill: "forwards" }));
+    choreo.track(
+      cover.animate(
+        [{ opacity: 0 }, { opacity: 1, offset: 0.35 }, { opacity: 1 }],
+        { duration: 480, fill: "forwards" },
+      ),
+    );
     const a = choreo.track(
       g.animate(
         [
           { transform: start, opacity: 1 },
-          { transform: "translateY(-6px) scale(1, .07) rotate(-1.5deg)", offset: 0.38, opacity: 1 },
-          { transform: `translate(${dx}px, ${dy - 46}px) scale(${34 / r.width}, ${14 / r.height}) rotate(10deg)`, offset: 0.78, opacity: 1 },
-          { transform: `translate(${dx}px, ${dy + 14}px) scale(${30 / r.width}, ${12 / r.height}) rotate(24deg)`, opacity: 0 },
+          {
+            transform: "translateY(-6px) scale(1, .07) rotate(-1.5deg)",
+            offset: 0.38,
+            opacity: 1,
+          },
+          {
+            transform: `translate(${dx}px, ${dy - 46}px) scale(${34 / r.width}, ${14 / r.height}) rotate(10deg)`,
+            offset: 0.78,
+            opacity: 1,
+          },
+          {
+            transform: `translate(${dx}px, ${dy + 14}px) scale(${30 / r.width}, ${12 / r.height}) rotate(24deg)`,
+            opacity: 0,
+          },
         ],
         { duration: 480, easing: "cubic-bezier(.45,0,.3,1)", fill: "forwards" },
       ),
@@ -237,7 +354,8 @@ export default function JarPage() {
     jar.current?.openLid(false);
     unlock();
     focusTitle();
-    if (!teach || reduced() || taught() >= 2 || el.dataset.kind !== "card") return;
+    if (!teach || reduced() || taught() >= 2 || el.dataset.kind !== "card")
+      return;
     try {
       localStorage.setItem(TAUGHT, String(taught() + 1));
     } catch {
@@ -246,9 +364,18 @@ export default function JarPage() {
     const canBack = !!el.querySelector(".slip-actions .btn-ink");
     timers.current.push(
       setTimeout(async () => {
-        if (!el.isConnected || rootRef.current?.classList.contains("m-dragging") || lock.current) return;
+        if (
+          !el.isConnected ||
+          rootRef.current?.classList.contains("m-dragging") ||
+          lock.current
+        )
+          return;
         await to(el, { x: 20, r: 0.5, config: { tension: 200, friction: 16 } });
-        await to(el, { x: canBack ? -16 : 0, r: canBack ? -0.4 : 0, config: { tension: 200, friction: 16 } });
+        await to(el, {
+          x: canBack ? -16 : 0,
+          r: canBack ? -0.4 : 0,
+          config: { tension: 200, friction: 16 },
+        });
         to(el, { x: 0, r: 0, config: springs.snap });
       }, 650),
     );
@@ -265,8 +392,18 @@ export default function JarPage() {
     const from = h.takeOut(id, setting) ?? { x: 120, y: 80, a: 0, setting };
     if (reduced()) {
       release();
-      if (cover) choreo.track(cover.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" }));
-      void finished(choreo.track(el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 }))).then(() => ready(el, true));
+      if (cover)
+        choreo.track(
+          cover.animate([{ opacity: 1 }, { opacity: 0 }], {
+            duration: 150,
+            fill: "forwards",
+          }),
+        );
+      void finished(
+        choreo.track(
+          el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 }),
+        ),
+      ).then(() => ready(el, true));
       return;
     }
     const p0 = h.at(from.x, from.y);
@@ -275,7 +412,9 @@ export default function JarPage() {
     const cx = r.left + r.width / 2;
     const cy = r.top + 10;
     // the region grows as the slip unfolds, so the sentence below glides instead of jumping
-    const held = p.classList.contains("is-holding") ? parseFloat(p.style.getPropertyValue("--hold")) || 0 : 0;
+    const held = p.classList.contains("is-holding")
+      ? parseFloat(p.style.getPropertyValue("--hold")) || 0
+      : 0;
     release();
     const overlap = -parseFloat(getComputedStyle(p).marginTop) || 0;
     const startH = held || Math.max(0, overlap - 14);
@@ -286,34 +425,83 @@ export default function JarPage() {
     fl.style.setProperty("--tint", `var(--tint-${from.setting || "local"})`);
     if (p0 && pm) {
       ghosts.current?.appendChild(fl);
-      const at = (x: number, y: number, rot: number, s: number) => `translate(${x - 17}px, ${y - 7}px) rotate(${rot}rad) scale(${s})`;
+      const at = (x: number, y: number, rot: number, s: number) =>
+        `translate(${x - 17}px, ${y - 7}px) rotate(${rot}rad) scale(${s})`;
       const k = (p0.s * 30) / 34;
       choreo.track(
         fl.animate(
           [
             { transform: at(p0.x, p0.y, from.a, k) },
             { transform: at(pm.x, pm.y + 6, -0.15, k * 1.05), offset: 0.34 },
-            { transform: at(pm.x + 6, pm.y - 46 * pm.s, -0.3, k * 1.7), offset: 0.58 },
-            { transform: at(cx, cy, 0, Math.min(3, (r.width / 34) * 0.3)), opacity: 1, offset: 0.92 },
-            { transform: at(cx, cy, 0, Math.min(3, (r.width / 34) * 0.3)), opacity: 0 },
+            {
+              transform: at(pm.x + 6, pm.y - 46 * pm.s, -0.3, k * 1.7),
+              offset: 0.58,
+            },
+            {
+              transform: at(cx, cy, 0, Math.min(3, (r.width / 34) * 0.3)),
+              opacity: 1,
+              offset: 0.92,
+            },
+            {
+              transform: at(cx, cy, 0, Math.min(3, (r.width / 34) * 0.3)),
+              opacity: 0,
+            },
           ],
-          { duration: 560, easing: "cubic-bezier(.33,.7,.25,1)", fill: "forwards" },
+          {
+            duration: 560,
+            easing: "cubic-bezier(.33,.7,.25,1)",
+            fill: "forwards",
+          },
         ),
       );
       choreo.later(() => fl.remove(), 620);
     }
-    choreo.track(p.animate([{ height: `${startH}px` }, { height: `${startH}px`, offset: delay / (delay + 480), easing: "cubic-bezier(.3,.7,.2,1)" }, { height: `${endH}px` }], { duration: delay + 480 }));
-    if (cover) choreo.track(cover.animate([{ opacity: 1 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }], { duration: 480, delay, fill: "both" }));
+    choreo.track(
+      p.animate(
+        [
+          { height: `${startH}px` },
+          {
+            height: `${startH}px`,
+            offset: delay / (delay + 480),
+            easing: "cubic-bezier(.3,.7,.2,1)",
+          },
+          { height: `${endH}px` },
+        ],
+        { duration: delay + 480 },
+      ),
+    );
+    if (cover)
+      choreo.track(
+        cover.animate(
+          [{ opacity: 1 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }],
+          { duration: 480, delay, fill: "both" },
+        ),
+      );
     const a = choreo.track(
       el.animate(
         [
-          { transform: "translateY(-4px) scale(.3, .05) rotate(-3deg)", opacity: 0 },
+          {
+            transform: "translateY(-4px) scale(.3, .05) rotate(-3deg)",
+            opacity: 0,
+          },
           { opacity: 1, offset: 0.08 },
-          { transform: "translateY(-4px) scale(1, .06) rotate(-1.6deg)", offset: 0.38 },
-          { transform: "perspective(1200px) rotateX(-28deg) scale(1, .7) rotate(-1deg)", offset: 0.66 },
+          {
+            transform: "translateY(-4px) scale(1, .06) rotate(-1.6deg)",
+            offset: 0.38,
+          },
+          {
+            transform:
+              "perspective(1200px) rotateX(-28deg) scale(1, .7) rotate(-1deg)",
+            offset: 0.66,
+          },
           { transform: "rotate(-.8deg)", opacity: 1 },
         ],
-        { duration: 480, delay, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" },
+        {
+          duration: 480,
+          delay,
+          easing: "cubic-bezier(.2,.8,.2,1)",
+          fill: "backwards",
+        },
       ),
     );
     void finished(a).then(() => {
@@ -325,7 +513,12 @@ export default function JarPage() {
   const noteArrives = (el: HTMLElement) => {
     jar.current?.openLid(false);
     release();
-    if (reduced()) return void finished(choreo.track(el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 }))).then(unlock);
+    if (reduced())
+      return void finished(
+        choreo.track(
+          el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 }),
+        ),
+      ).then(unlock);
     void finished(
       choreo.track(
         el.animate(
@@ -353,20 +546,35 @@ export default function JarPage() {
       hearts.current?.burst(sr.left + sr.width / 2, sr.top + sr.height / 2);
       if (!reduced()) {
         set(el, { y: 4 });
-        choreo.trackSpring(to(el, { y: 0, config: springs.boing }), () => finish(el));
+        choreo.trackSpring(to(el, { y: 0, config: springs.boing }), () =>
+          finish(el),
+        );
       }
     };
     if (reduced()) {
       land();
-      void finished(choreo.track(stamp.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 }))).then(end);
+      void finished(
+        choreo.track(
+          stamp.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 }),
+        ),
+      ).then(end);
       return;
     }
     set(stamp, { x: 14, y: -46, s: 1.9, r: -8, o: 0 });
-    const thump = to(stamp, { x: 0, y: 0, s: 1, r: 0, o: 1, config: springs.boing });
+    const thump = to(stamp, {
+      x: 0,
+      y: 0,
+      s: 1,
+      r: 0,
+      o: 1,
+      config: springs.boing,
+    });
     choreo.trackSpring(thump, () => finish(stamp));
     choreo.later(land, 320);
     // The boing rings for a while: don't hold the buttons for all of it.
-    void Promise.race([thump, choreo.wait(700)]).then(() => choreo.wait(300)).then(end);
+    void Promise.race([thump, choreo.wait(700)])
+      .then(() => choreo.wait(300))
+      .then(end);
   };
 
   useLayoutEffect(() => {
@@ -386,7 +594,11 @@ export default function JarPage() {
   };
 
   /** Draw, put back, pass, or relax: all post a form to /pick and bring the answer out of the jar. */
-  const draw = async (form: PickForm, _how: "draw" | "putback" | "veto" | "relax", relaxTo?: Filters) => {
+  const draw = async (
+    form: PickForm,
+    _how: "draw" | "putback" | "veto" | "relax",
+    relaxTo?: Filters,
+  ) => {
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
@@ -399,7 +611,11 @@ export default function JarPage() {
     const stage = jarEl.current;
     if (stage) {
       const top = stage.getBoundingClientRect().top;
-      if (top < 40 || top > innerHeight * 0.5) stage.scrollIntoView({ block: "start", behavior: reduced() ? "auto" : "smooth" });
+      if (top < 40 || top > innerHeight * 0.5)
+        stage.scrollIntoView({
+          block: "start",
+          behavior: reduced() ? "auto" : "smooth",
+        });
     }
     const old = pickEl()?.firstElementChild as HTMLElement | null;
     if (old) {
@@ -409,10 +625,19 @@ export default function JarPage() {
     h?.openLid(true);
     h?.shake();
     try {
-      const [card] = await Promise.all([jarApi.pick(form), choreo.wait(reduced() ? 0 : 340)]);
+      const [card] = await Promise.all([
+        jarApi.pick(form),
+        choreo.wait(reduced() ? 0 : 340),
+      ]);
       if (!alive.current) return;
-      if (card.activity) show("card", card);
-      else show("note", card);
+      if (card.activity) {
+        show("card", card);
+        void confettiFrom(
+          rootRef.current?.querySelector("#draw"),
+          "spark",
+          section.current,
+        );
+      } else show("note", card);
     } catch {
       if (!alive.current) return;
       show("note", blankCard("The lid stuck for a second. Try that again?"));
@@ -425,9 +650,14 @@ export default function JarPage() {
     lock.current = true;
     setBusy(true);
     try {
-      const card = await jarApi.accept(v.card.activity.id, { ...o, when: v.card.when, start: v.card.start });
+      const card = await jarApi.accept(v.card.activity.id, {
+        ...o,
+        when: v.card.when,
+        start: v.card.start,
+      });
       if (!alive.current) return;
       show("done", { ...card, stamp_date: stampDate(card.stamp_date) });
+      void confettiFrom(pickEl(), "date", section.current);
     } catch {
       if (!alive.current) return;
       show("note", blankCard("The stamp stuck for a second. Try that again?"));
@@ -446,25 +676,35 @@ export default function JarPage() {
       jar.current?.openLid(false);
       setView({ kind: "none", key: ++keyRef.current });
       unlock();
-      rootRef.current?.querySelector<HTMLElement>("#draw")?.focus({ preventScroll: true });
+      rootRef.current
+        ?.querySelector<HTMLElement>("#draw")
+        ?.focus({ preventScroll: true });
     });
   };
 
-  const drawNow = (middle = false) => draw(filtersToForm(filtersRef.current, middle), "draw");
+  const drawNow = (middle = false) =>
+    draw(filtersToForm(filtersRef.current, middle), "draw");
 
   const actions: CardActions = {
     accept,
     putBack: (reason) => {
       const v = viewRef.current;
-      if (v.kind === "card" && v.card.state) void draw(putBackForm(v.card.state, reason), "putback");
+      if (v.kind === "card" && v.card.state)
+        void draw(putBackForm(v.card.state, reason), "putback");
     },
     veto: () => {
       const v = viewRef.current;
-      if (v.kind === "card" && v.card.state) void draw(vetoForm(v.card.state), "veto");
+      if (v.kind === "card" && v.card.state)
+        void draw(vetoForm(v.card.state), "veto");
     },
     relax: () => {
       const v = viewRef.current;
-      if (v.kind === "note" && v.card.relax) void draw(v.card.relax, "relax", applyRelax(filtersRef.current, v.card.relax));
+      if (v.kind === "note" && v.card.relax)
+        void draw(
+          v.card.relax,
+          "relax",
+          applyRelax(filtersRef.current, v.card.relax),
+        );
     },
     back: backToJar,
     planSwapped: reload,
@@ -481,7 +721,19 @@ export default function JarPage() {
     if (!root) return;
     const offs: (() => void)[] = [];
 
-    offs.push(attachPress(root, ".btn, .j-chip, .share", (el, down) => void to(el, down ? { s: 0.93, config: springs.press } : { s: 1, config: springs.boing })));
+    offs.push(
+      attachPress(
+        root,
+        ".btn, .j-chip, .share",
+        (el, down) =>
+          void to(
+            el,
+            down
+              ? { s: 0.93, config: springs.press }
+              : { s: 1, config: springs.boing },
+          ),
+      ),
+    );
 
     // The drawn slip: swipe right for "It's a date", left to put it back.
     offs.push(
@@ -497,15 +749,34 @@ export default function JarPage() {
         },
         end: (d, cancelled) => {
           const v = viewRef.current;
-          if (v.kind !== "card") return void to(d.el, { x: 0, y: 0, r: 0, s: 1, config: springs.snap });
-          const out = swipeOutcome({ dx: d.dx, vx: d.vx, canYes: true, canBack: true, cancelled });
+          if (v.kind !== "card")
+            return void to(d.el, {
+              x: 0,
+              y: 0,
+              r: 0,
+              s: 1,
+              config: springs.snap,
+            });
+          const out = swipeOutcome({
+            dx: d.dx,
+            vx: d.vx,
+            canYes: true,
+            canBack: true,
+            cancelled,
+          });
           if (out === "yes") {
             void to(d.el, { x: 0, y: 0, r: 0, s: 1, config: springs.snap });
             void actionsRef.current.accept({});
           } else if (out === "back") {
-            void to(d.el, { x: -MOST, r: -0.6, s: 0.94, config: springs.quick });
+            void to(d.el, {
+              x: -MOST,
+              r: -0.6,
+              s: 0.94,
+              config: springs.quick,
+            });
             actionsRef.current.putBack();
-          } else void to(d.el, { x: 0, y: 0, r: 0, s: 1, config: springs.snap });
+          } else
+            void to(d.el, { x: 0, y: 0, r: 0, s: 1, config: springs.snap });
         },
       }),
     );
@@ -582,9 +853,12 @@ export default function JarPage() {
 
   /* ── shake your phone to draw (progressive extra) ──────── */
   useEffect(() => {
-    const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+    const coarse =
+      typeof matchMedia === "function" &&
+      matchMedia("(pointer: coarse)").matches;
     // iOS only delivers motion events on secure origins (https or localhost).
-    if (!coarse || !window.isSecureContext || !("DeviceMotionEvent" in window)) return;
+    if (!coarse || !window.isSecureContext || !("DeviceMotionEvent" in window))
+      return;
     setShakeAvailable(true);
     let saved = false;
     try {
@@ -592,13 +866,17 @@ export default function JarPage() {
     } catch {
       /* private mode */
     }
-    const needsPermission = typeof (DeviceMotionEvent as unknown as { requestPermission?: unknown }).requestPermission === "function";
+    const needsPermission =
+      typeof (DeviceMotionEvent as unknown as { requestPermission?: unknown })
+        .requestPermission === "function";
     if (saved && !needsPermission) setShakeOn(true);
   }, []);
 
   useEffect(() => {
     if (!shakeOn) {
-      setShakeLabel((l) => (l === "shake to draw is on" ? "or shake your phone" : l));
+      setShakeLabel((l) =>
+        l === "shake to draw is on" ? "or shake your phone" : l,
+      );
       return;
     }
     setShakeLabel("shake to draw is on");
@@ -624,8 +902,13 @@ export default function JarPage() {
       return;
     }
     try {
-      const req = (DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission;
-      if (typeof req === "function" && (await req()) !== "granted") return void setShakeLabel("motion is off, tap Draw instead");
+      const req = (
+        DeviceMotionEvent as unknown as {
+          requestPermission?: () => Promise<string>;
+        }
+      ).requestPermission;
+      if (typeof req === "function" && (await req()) !== "granted")
+        return void setShakeLabel("motion is off, tap Draw instead");
       setShakeOn(true);
       try {
         localStorage.setItem("joy.shake", "1");
@@ -638,7 +921,11 @@ export default function JarPage() {
   };
 
   /* ── render ────────────────────────────────────────────── */
-  const rootProps = { ref: rootRef, className: "m-on", style: { overflowX: "clip" as const } };
+  const rootProps = {
+    ref: rootRef,
+    className: "m-on",
+    style: { overflowX: "clip" as const },
+  };
 
   if (!data) {
     return (
@@ -690,11 +977,49 @@ export default function JarPage() {
             <h1 id="jar-h" className="visually-hidden">
               {v.couple}: the date jar
             </h1>
-            <JarCanvas slips={v.slips} matchIds={matchIds} total={v.slips.length} rainy={v.rain != null} couple={v.couple} busy={busy} elRef={jarEl} handle={jar} />
-            <svg className="twine" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            {/* a soft rose glow living behind the glass (the page's one WebGL extra) */}
+            <div className="jar-orb" aria-hidden="true">
+              <Suspense fallback={null}>
+                <Orb
+                  colors={sectionColors}
+                  backgroundColor={dark ? "#000000" : "#ffffff"}
+                  size={0.9}
+                  glow={0.8}
+                  opacity={dark ? 0.75 : 0.55}
+                  speed={0.6}
+                  followCursor={false}
+                  rotateOnHover={false}
+                  clickPulse={false}
+                  hoverIntensity={0}
+                />
+              </Suspense>
+            </div>
+            <JarCanvas
+              slips={v.slips}
+              matchIds={matchIds}
+              total={v.slips.length}
+              rainy={v.rain != null}
+              couple={v.couple}
+              busy={busy}
+              elRef={jarEl}
+              handle={jar}
+            />
+            <svg
+              className="twine"
+              viewBox="0 0 100 40"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
               <path d="M2 2C26 30 62 42 99 38" />
             </svg>
-            <p className="tag" id="tag" role="status" aria-live="polite" ref={tagRef}>
+            <p
+              className="tag"
+              id="tag"
+              role="status"
+              aria-live="polite"
+              ref={tagRef}
+            >
               <span className="tag-n" id="tag-n" ref={tagN}>
                 {shownCount}
               </span>{" "}
@@ -702,7 +1027,11 @@ export default function JarPage() {
                 {shownCount === 1 ? "slip" : "slips"}
               </span>
               <span className="j-tag-text" id="tag-text">
-                {shownCount === 0 ? (empty ? "in the jar so far" : "fit tonight, yet") : "could happen tonight"}
+                {shownCount === 0
+                  ? empty
+                    ? "in the jar so far"
+                    : "fit tonight, yet"
+                  : "could happen tonight"}
               </span>
             </p>
           </section>
@@ -710,12 +1039,16 @@ export default function JarPage() {
           {empty && (
             <div className="empty-note grain">
               <p className="empty-hand">The jar is empty.</p>
-              <p>Every date starts as a slip of paper. Write the first one and it goes straight in.</p>
+              <p>
+                Every date starts as a slip of paper. Write the first one and it
+                goes straight in.
+              </p>
               <Link className="btn btn-stamp" to="/joy/slips/new">
                 Write the first slip
               </Link>
               <p>
-                Just met? <Link to="/joy/kept#add">Mark today</Link> and start the keepsake box.
+                Just met? <Link to="/joy/kept#add">Mark today</Link> and start
+                the keepsake box.
               </p>
             </div>
           )}
@@ -728,7 +1061,9 @@ export default function JarPage() {
           {!empty && plan && (
             <div className="next-plan">
               <p className="next-plan-k">
-                {plan.my_open_tasks > 0 ? `Your next date · ${plan.my_open_tasks} thing${plan.my_open_tasks > 1 ? "s" : ""} for you to do` : "Your next date"}
+                {plan.my_open_tasks > 0
+                  ? `Your next date · ${plan.my_open_tasks} thing${plan.my_open_tasks > 1 ? "s" : ""} for you to do`
+                  : "Your next date"}
               </p>
               <DayPlanView plan={plan} onSwapped={reload} />
             </div>
@@ -742,7 +1077,12 @@ export default function JarPage() {
               busy={busy}
               onDraw={() => void drawNow(false)}
               onDrawMiddle={() => void drawNow(true)}
-              shake={{ available: shakeAvailable, on: shakeOn, label: shakeLabel, toggle: () => void toggleShake() }}
+              shake={{
+                available: shakeAvailable,
+                on: shakeOn,
+                label: shakeLabel,
+                toggle: () => void toggleShake(),
+              }}
             />
           )}
 
@@ -759,7 +1099,9 @@ export default function JarPage() {
             <Link className="keepsake grain" to="/joy/kept#add">
               <span className="keepsake-k">Today, or any day before</span>
               <span className="keepsake-t">Mark a day to remember</span>
-              <span className="keepsake-d">The day you met, a first date, a night that wasn’t a slip.</span>
+              <span className="keepsake-d">
+                The day you met, a first date, a night that wasn’t a slip.
+              </span>
             </Link>
             {!v.budget.budget ? (
               <div className="budget-line">
@@ -770,10 +1112,17 @@ export default function JarPage() {
             ) : (
               <div className={`budget-line${v.budget.over ? " is-over" : ""}`}>
                 <p>
-                  <strong>{v.budget.spent}</strong> of {v.budget.budget} on dates this month
-                  {v.budget.over && <span className="visually-hidden">, over budget</span>}
+                  <strong>{v.budget.spent}</strong> of {v.budget.budget} on
+                  dates this month
+                  {v.budget.over && (
+                    <span className="visually-hidden">, over budget</span>
+                  )}
                 </p>
-                <span className="budget-bar" style={{ "--pct": v.budget.pct } as React.CSSProperties} aria-hidden="true" />
+                <span
+                  className="budget-bar"
+                  style={{ "--pct": v.budget.pct } as React.CSSProperties}
+                  aria-hidden="true"
+                />
               </div>
             )}
           </aside>
@@ -781,14 +1130,25 @@ export default function JarPage() {
       </div>
       <PlanDialog
         slip={planning && view.kind === "done" ? view.card.activity : null}
-        kept={view.kind === "done" ? { ids: view.card.history_ids, partner: view.card.partner, wa_url: view.card.wa_url, share_text: view.card.share_text } : undefined}
+        kept={
+          view.kind === "done"
+            ? {
+                ids: view.card.history_ids,
+                partner: view.card.partner,
+                wa_url: view.card.wa_url,
+                share_text: view.card.share_text,
+              }
+            : undefined
+        }
         onPlanned={(r) => {
           setPlanned({ key: view.key, label: r.label });
           reload();
         }}
         onClose={() => {
           setPlanning(false);
-          rootRef.current?.querySelector<HTMLElement>(".j-slip-title")?.focus({ preventScroll: true });
+          rootRef.current
+            ?.querySelector<HTMLElement>(".j-slip-title")
+            ?.focus({ preventScroll: true });
         }}
       />
       {/* Things that fly or fold live inside the page, never on <body>, so they keep the .joy tokens. */}

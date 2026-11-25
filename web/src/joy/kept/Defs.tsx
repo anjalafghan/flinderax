@@ -1,6 +1,12 @@
 export function Defs() {
   return (
-    <svg className="k-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <svg
+      className="k-defs"
+      width="0"
+      height="0"
+      aria-hidden="true"
+      focusable="false"
+    >
       <defs>
         <symbol id="k-heart" viewBox="0 0 32 30">
           <path d="M16.2 27.4C11.6 24.1 3.4 18.3 3.1 10.9 2.9 6.6 6 3.3 9.8 3.4c2.9.1 5 2.2 6.2 4.6 1.3-2.6 3.5-4.8 6.6-4.7 3.9.2 6.5 3.6 6.2 7.7-.5 7.2-8.4 12.6-12.6 16.4z" />
@@ -26,7 +32,15 @@ export function Defs() {
   );
 }
 
-export const Icon = ({ id, size, className }: { id: string; size: number; className?: string }) => (
+export const Icon = ({
+  id,
+  size,
+  className,
+}: {
+  id: string;
+  size: number;
+  className?: string;
+}) => (
   <svg className={className} width={size} height={size} aria-hidden="true">
     <use href={`#${id}`} />
   </svg>

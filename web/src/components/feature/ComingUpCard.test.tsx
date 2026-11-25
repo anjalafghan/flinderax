@@ -9,7 +9,11 @@ const realFetch = globalThis.fetch;
 
 const view = () =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
       <MemoryRouter>
         <ComingUpCard />
       </MemoryRouter>
@@ -18,7 +22,10 @@ const view = () =>
 
 beforeEach(() => {
   items = [];
-  globalThis.fetch = (async () => new Response(JSON.stringify({ items }), { status: 200 })) as unknown as typeof fetch;
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ items }), {
+      status: 200,
+    })) as unknown as typeof fetch;
 });
 afterEach(() => {
   cleanup();
@@ -28,8 +35,24 @@ afterEach(() => {
 describe("ComingUpCard", () => {
   test("lists what is coming, soonest first, each with when and where to go", async () => {
     items = [
-      { on: "2026-11-16", kind: "bill", title: "Rent", detail: "₹25,000", link: "/money", days_away: 1, when: "Tomorrow" },
-      { on: "2026-11-18", kind: "birthday", title: "Asha: birthday", detail: "", link: "/people/p1", days_away: 3, when: "In 3 days" },
+      {
+        on: "2026-11-16",
+        kind: "bill",
+        title: "Rent",
+        detail: "₹25,000",
+        link: "/money",
+        days_away: 1,
+        when: "Tomorrow",
+      },
+      {
+        on: "2026-11-18",
+        kind: "birthday",
+        title: "Asha: birthday",
+        detail: "",
+        link: "/people/p1",
+        days_away: 3,
+        when: "In 3 days",
+      },
     ];
     view();
     expect(await screen.findByText("Rent")).toBeTruthy();

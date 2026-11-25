@@ -16,17 +16,31 @@ export interface HeartBit {
 }
 
 /** Add new hearts, dropping the oldest so no more than MAX_HEARTS are ever alive. */
-export function addHearts(list: HeartBit[], fresh: HeartBit[], max = MAX_HEARTS): HeartBit[] {
+export function addHearts(
+  list: HeartBit[],
+  fresh: HeartBit[],
+  max = MAX_HEARTS,
+): HeartBit[] {
   return [...list, ...fresh].slice(-max);
 }
 
 /** Hearts older than their time to live are cleared. */
-export function pruneHearts(list: HeartBit[], now: number, ttl = HEART_TTL): HeartBit[] {
+export function pruneHearts(
+  list: HeartBit[],
+  now: number,
+  ttl = HEART_TTL,
+): HeartBit[] {
   return list.filter((h) => now - h.born < ttl);
 }
 
 /** 2 or 3 hearts flying up and out from (x, y). `rand` is injectable for tests. */
-export function makeHearts(x: number, y: number, now: number, firstId: number, rand: () => number = Math.random): HeartBit[] {
+export function makeHearts(
+  x: number,
+  y: number,
+  now: number,
+  firstId: number,
+  rand: () => number = Math.random,
+): HeartBit[] {
   const n = 2 + Math.round(rand());
   return Array.from({ length: n }, (_, i) => {
     const a = -Math.PI / 2 + (rand() - 0.5) * Math.PI * 1.25;

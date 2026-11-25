@@ -69,7 +69,8 @@ export interface LifePlan {
 }
 
 export interface LifeGoal {
-  key: "emergency" | "wedding" | "child_birth" | "child_education" | "retirement";
+  key:
+    "emergency" | "wedding" | "child_birth" | "child_education" | "retirement";
   label: string;
   when: string | null;
   years_away: number;
@@ -90,10 +91,12 @@ export interface LifeGoal {
 /** Query key for the life plan; the page and its tests share it. */
 export const lifeKey = ["life-plan"] as const;
 
-export const getLife = async (): Promise<LifeOut> => (await api.get<LifeOut>("/api/plan/life")).data;
+export const getLife = async (): Promise<LifeOut> =>
+  (await api.get<LifeOut>("/api/plan/life")).data;
 
 /** Forgets the saved details: the plan goes back to the defaults. */
-export const resetLifeProfile = async (): Promise<LifeOut> => (await api.post<LifeOut>("/api/plan/life/reset", {})).data;
+export const resetLifeProfile = async (): Promise<LifeOut> =>
+  (await api.post<LifeOut>("/api/plan/life/reset", {})).data;
 
 export const saveLifeProfile = async (p: LifeProfile): Promise<LifeOut> =>
   (await api.post<LifeOut>("/api/plan/life/profile", p)).data;

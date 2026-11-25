@@ -11,6 +11,7 @@ import { PersonTouches } from "@/components/feature/people/PersonTouches";
 import { Retry } from "@/components/ui/retry";
 import { NOTE, PANEL, TEXT_LINK } from "@/components/feature/people/ui";
 import { StatusPill } from "@/components/feature/people/StatusPill";
+import { Avatar } from "@/components/feature/people/Avatar";
 import {
   circleLabel,
   everyLabel,
@@ -28,46 +29,81 @@ export default function PersonPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="page page-narrow stack">
-        <Link to="/people" className={`${TEXT_LINK} inline-flex min-h-11 items-center`}>
+        <Link
+          to="/people"
+          className={`${TEXT_LINK} inline-flex min-h-11 items-center`}
+        >
           Back to Circle
         </Link>
 
         {detail.isLoading && (
-          <div className="h-48 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading this person" />
+          <div
+            className="h-48 animate-pulse rounded-[28px] bg-muted/40"
+            aria-label="Loading this person"
+          />
         )}
         {detail.isError && !data && (
-          <Retry message="Couldn't load this person." onRetry={() => void detail.refetch()} />
+          <Retry
+            message="Couldn't load this person."
+            onRetry={() => void detail.refetch()}
+          />
         )}
 
         {data && (
           <>
             <header className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center gap-3">
+                <Avatar
+                  name={data.person.name}
+                  status={data.person.status}
+                  size="lg"
+                />
                 <h1 className="page-title">{data.person.name}</h1>
                 <StatusPill status={data.person.status} />
               </div>
               <p className="page-sub">
-                {[circleLabel(data.person.circle), everyLabel(data.person.every_days), lastCaughtUpLabel(data.person.last_contact_on)]
+                {[
+                  circleLabel(data.person.circle),
+                  everyLabel(data.person.every_days),
+                  lastCaughtUpLabel(data.person.last_contact_on),
+                ]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
               {data.person.archived && (
-                <p className={NOTE}>This person is archived. Bring them back from the edit form below.</p>
+                <p className={NOTE}>
+                  This person is archived. Bring them back from the edit form
+                  below.
+                </p>
               )}
             </header>
 
             <section aria-labelledby="person-catch-up-title" className={PANEL}>
-              <h2 id="person-catch-up-title" className="m-0 font-display text-[32px] leading-none">
+              <h2
+                id="person-catch-up-title"
+                className="m-0 font-display text-[32px] leading-none"
+              >
                 Catch up
               </h2>
-              <CatchUpActions personId={data.person.id} name={data.person.name} />
+              <CatchUpActions
+                personId={data.person.id}
+                name={data.person.name}
+              />
             </section>
 
             <div className={PANEL}>
               <PersonFollowUps personId={data.person.id} />
               <PersonFacts personId={data.person.id} />
-              <PersonDates personId={data.person.id} personName={data.person.name} dates={data.dates} />
-              <PersonGifts personId={data.person.id} gifts={data.gifts} dates={data.dates} />
+              <PersonDates
+                personId={data.person.id}
+                personName={data.person.name}
+                dates={data.dates}
+              />
+              <PersonGifts
+                personId={data.person.id}
+                gifts={data.gifts}
+                dates={data.dates}
+              />
               <PersonTouches touches={data.touches} personId={data.person.id} />
               <PersonEditForm person={data.person} />
             </div>

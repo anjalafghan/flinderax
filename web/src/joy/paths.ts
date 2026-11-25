@@ -14,12 +14,23 @@ export function mapGoTo(to: string | undefined | null): string {
   return to;
 }
 
-export type PageKey = "jar" | "slips" | "kept" | "year" | "month" | "regulars" | "middle" | "settings" | "envelope";
+export type PageKey =
+  | "jar"
+  | "slips"
+  | "kept"
+  | "year"
+  | "month"
+  | "regulars"
+  | "middle"
+  | "settings"
+  | "envelope";
 
 /** The `data-page` Joy's CSS keys the nav underline on. */
 export function pageKey(pathname: string): PageKey {
   const p = pathname.replace(/\/+$/, "");
-  const seg = p.startsWith(JOY) ? p.slice(JOY.length).split("/").filter(Boolean) : [];
+  const seg = p.startsWith(JOY)
+    ? p.slice(JOY.length).split("/").filter(Boolean)
+    : [];
   switch (seg[0]) {
     case undefined:
       return "jar";

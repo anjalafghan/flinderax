@@ -29,10 +29,10 @@ fly secrets set VAPID_PRIVATE_KEY=<private> PUSH_RUN_TOKEN=<a long random string
 #    name: JOY_PUSH_TOKEN, value: the PUSH_RUN_TOKEN you chose
 ```
 
-Then open Settings → Notifications on each device and press *Turn on notifications*. On an iPhone the app
+Then open Settings → Notifications on each device and press _Turn on notifications_. On an iPhone the app
 must be added to the Home Screen first and opened from there.
 
-Try it by hand: Actions → Notify → *Run workflow*.
+Try it by hand: Actions → Notify → _Run workflow_.
 
 Without `VAPID_PRIVATE_KEY` the Settings card says notifications are not set up, and the scheduled call is
 refused. Without `PUSH_RUN_TOKEN` the round endpoint answers 404.

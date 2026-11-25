@@ -19,15 +19,30 @@ function Outcome({ result }: { result: ParseResult }) {
   } else if (result.status === "created") {
     message = "Added.";
   } else {
-    message = "Couldn't read that message. Paste the full text of a bank alert.";
+    message =
+      "Couldn't read that message. Paste the full text of a bank alert.";
   }
   const balance = result.balance_updated;
   return (
-    <div role="status" className="space-y-1 rounded-lg bg-muted/50 p-3 text-sm">
-      <p className={result.status === "unrecognized" ? "text-destructive" : "font-medium"}>{message}</p>
+    <div
+      role="status"
+      className={
+        result.status === "unrecognized"
+          ? "space-y-1 rounded-lg border border-over/30 bg-over-tint p-3 text-sm"
+          : "space-y-1 rounded-lg border border-good/30 bg-good-tint p-3 text-sm"
+      }
+    >
+      <p
+        className={
+          result.status === "unrecognized" ? "text-destructive" : "font-medium"
+        }
+      >
+        {message}
+      </p>
       {balance && (
         <p className="text-muted-foreground">
-          {balance.account_name} balance set to {formatINR(balance.balance_paise)}
+          {balance.account_name} balance set to{" "}
+          {formatINR(balance.balance_paise)}
         </p>
       )}
     </div>
@@ -59,7 +74,7 @@ export function PasteAlert() {
         onChange={(e) => setText(e.target.value)}
         rows={4}
         placeholder="Paste a bank alert SMS or email here"
-        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-[border-color,box-shadow] placeholder:text-muted-foreground hover:border-brand/40 focus-visible:border-brand focus-visible:shadow-[0_0_0_4px_hsl(var(--brand)/0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
       <div className="flex flex-wrap items-center justify-end gap-2">
         <ResetButton

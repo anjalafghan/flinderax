@@ -67,6 +67,8 @@ export interface Forecast {
 /** Query key for the forecast; saving the life profile invalidates it. */
 export const forecastKey = ["forecast"] as const;
 
-export const getForecast = () => api.get<Forecast>("/api/plan/forecast").then((r) => r.data);
+export const getForecast = () =>
+  api.get<Forecast>("/api/plan/forecast").then((r) => r.data);
 
-export const useForecast = () => useQuery({ queryKey: forecastKey, queryFn: getForecast, retry: 1 });
+export const useForecast = () =>
+  useQuery({ queryKey: forecastKey, queryFn: getForecast, retry: 1 });
