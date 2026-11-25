@@ -8,26 +8,40 @@ export const SKIP_BELOW_BYTES = 2.5e6;
 export const JPEG_QUALITY = 0.88;
 
 /** Big or unusual files get redrawn as a JPEG, if the browser can decode them at all. */
-export function needsShrink(size: number, type: string, canDecode: boolean): boolean {
+export function needsShrink(
+  size: number,
+  type: string,
+  canDecode: boolean,
+): boolean {
   if (!canDecode) return false;
   return !(size < SKIP_BELOW_BYTES && /^image\/(jpeg|png|webp)$/.test(type));
 }
 
 /** The canvas size: longest edge capped at `max`, never scaled up, never below 1 px. */
-export function fitEdge(width: number, height: number, max = MAX_EDGE): { width: number; height: number } {
+export function fitEdge(
+  width: number,
+  height: number,
+  max = MAX_EDGE,
+): { width: number; height: number } {
   const longest = Math.max(width, height);
   const k = longest > 0 ? Math.min(1, max / longest) : 1;
-  return { width: Math.max(1, Math.round(width * k)), height: Math.max(1, Math.round(height * k)) };
+  return {
+    width: Math.max(1, Math.round(width * k)),
+    height: Math.max(1, Math.round(height * k)),
+  };
 }
 
 /** The progress line while a photo goes up; once every byte is sent the server is developing it. */
 export function uploadLabel(loaded: number, total: number): string {
   if (total <= 0) return "Uploading…";
-  return loaded < total ? `Uploading… ${Math.round((loaded / total) * 100)}%` : "Developing…";
+  return loaded < total
+    ? `Uploading… ${Math.round((loaded / total) * 100)}%`
+    : "Developing…";
 }
 
 /** The same line when several photos go up one after another: "Photo 2 of 3: Uploading… 40%". */
-export const photoOf = (n: number, of: number, label: string) => (of > 1 ? `Photo ${n} of ${of}: ${label}` : label);
+export const photoOf = (n: number, of: number, label: string) =>
+  of > 1 ? `Photo ${n} of ${of}: ${label}` : label;
 
 // ---- the book ----
 /** The slip's angle and tape come from its id, so they hold still between visits. */
@@ -89,7 +103,9 @@ export function dealPose(i: number): { y: number; deg: number } {
 /** "/joy/kept#k5" -> path and hash (hash keeps its #, or ""). */
 export function splitTo(to: string): { path: string; hash: string } {
   const at = to.indexOf("#");
-  return at < 0 ? { path: to, hash: "" } : { path: to.slice(0, at), hash: to.slice(at) };
+  return at < 0
+    ? { path: to, hash: "" }
+    : { path: to.slice(0, at), hash: to.slice(at) };
 }
 
 export const isBudgetHash = (hash: string) => /^#(k-)?budget$/.test(hash);
@@ -104,8 +120,15 @@ export function lineBody(line: string) {
 }
 
 /** Blank clears an actual or a cab fare; `update_estimate` is "1" or "". */
-export function costBody(actual: string, updateEstimate: boolean, cabs: string[]) {
-  const body: Record<string, string> = { actual: actual.trim(), update_estimate: updateEstimate ? "1" : "" };
+export function costBody(
+  actual: string,
+  updateEstimate: boolean,
+  cabs: string[],
+) {
+  const body: Record<string, string> = {
+    actual: actual.trim(),
+    update_estimate: updateEstimate ? "1" : "",
+  };
   cabs.forEach((fare, i) => {
     body[`cab_${i}`] = fare.trim();
   });
@@ -133,4 +156,5 @@ export type RolloverChoice = "roll" | "save" | "fresh";
 export const rolloverBody = (choice: RolloverChoice) => ({ choice });
 
 /** Today in India, as "YYYY-MM-DD" (kept days are IST dates). */
-export const isoToday = () => new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
+export const isoToday = () =>
+  new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);

@@ -4,7 +4,11 @@ const KEY = "joy.keepsakes.seen";
 
 function read(): Set<number> {
   try {
-    return new Set((JSON.parse(localStorage.getItem(KEY) ?? "[]") as number[]).filter((n) => Number.isInteger(n)));
+    return new Set(
+      (JSON.parse(localStorage.getItem(KEY) ?? "[]") as number[]).filter((n) =>
+        Number.isInteger(n),
+      ),
+    );
   } catch {
     return new Set();
   }

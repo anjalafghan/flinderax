@@ -39,7 +39,9 @@ export function useCards() {
   return useQuery({
     queryKey: ["cards"],
     queryFn: async () => {
-      const res = await api.get<{ cards: CardWire[] }>("/api/card/get_all_cards");
+      const res = await api.get<{ cards: CardWire[] }>(
+        "/api/card/get_all_cards",
+      );
       return res.data.cards.map((c) => ({
         card_id: c.card_id,
         card_name: c.card_name,
@@ -56,5 +58,6 @@ export function useCards() {
 
 /** Card APIs still send rupees, not paise (see card.rs), so this formats rupees. */
 export const formatRupees = (rupees: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(rupees);
-
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
+    rupees,
+  );

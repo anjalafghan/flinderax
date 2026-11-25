@@ -21,18 +21,47 @@ export interface KeepsakeDate {
 const stars = (n: number) => "★".repeat(Math.max(0, Math.min(5, n)));
 
 /** Stars a screen reader hears as a number. */
-function Stars({ n, className = "ks-stars" }: { n: number; className?: string }) {
+function Stars({
+  n,
+  className = "ks-stars",
+}: {
+  n: number;
+  className?: string;
+}) {
   if (n <= 0) return null;
-  return <span className={className} role="img" aria-label={`${n} out of 5 stars`}>{stars(n)}</span>;
+  return (
+    <span className={className} role="img" aria-label={`${n} out of 5 stars`}>
+      {stars(n)}
+    </span>
+  );
 }
 
 /** The QR and barcode a ticket carries (drawn once by `KeepsakeDefs`). */
-const Qr = () => <svg className="ks-qr" viewBox="0 0 25 25" aria-hidden="true"><use href="#ks-qr" /></svg>;
+const Qr = () => (
+  <svg className="ks-qr" viewBox="0 0 25 25" aria-hidden="true">
+    <use href="#ks-qr" />
+  </svg>
+);
 const Bar = ({ v = false }: { v?: boolean }) => (
-  <svg className={v ? "ks-bar ks-bar-v" : "ks-bar"} viewBox="0 0 119 30" preserveAspectRatio="none" aria-hidden="true"><use href="#ks-bar" /></svg>
+  <svg
+    className={v ? "ks-bar ks-bar-v" : "ks-bar"}
+    viewBox="0 0 119 30"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+  >
+    <use href="#ks-bar" />
+  </svg>
 );
 
-export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number; kind?: Kind }) {
+export function Keepsake({
+  d,
+  no,
+  kind: forced,
+}: {
+  d: KeepsakeDate;
+  no: number;
+  kind?: Kind;
+}) {
   const kind = forced ?? keepsakeFor(d.kind, d.tags);
   const serial = `no. ${String(no).padStart(3, "0")}`;
   const place = d.place && d.place !== d.title ? d.place : "";
@@ -42,19 +71,40 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
         <div className="ks ks-boarding" data-ks={kind}>
           <div className="ks-body">
             <div className="ks-main">
-              <p className="ks-band"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 14l20-7-3 6-9 2-4 5-1-5z" /></svg><span>Boarding pass</span></p>
+              <p className="ks-band">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 14l20-7-3 6-9 2-4 5-1-5z" />
+                </svg>
+                <span>Boarding pass</span>
+              </p>
               <div className="ks-pad">
-                <p className="ks-code" aria-hidden="true">{codeOf(d.place, d.title)}</p>
+                <p className="ks-code" aria-hidden="true">
+                  {codeOf(d.place, d.title)}
+                </p>
                 <p className="ks-title">{d.title}</p>
                 <dl className="ks-grid">
-                  <div><dt>Passengers</dt><dd>2</dd></div>
-                  <div><dt>Date</dt><dd>{d.day}</dd></div>
-                  {place && <div className="ks-wide"><dt>To</dt><dd>{place}</dd></div>}
+                  <div>
+                    <dt>Passengers</dt>
+                    <dd>2</dd>
+                  </div>
+                  <div>
+                    <dt>Date</dt>
+                    <dd>{d.day}</dd>
+                  </div>
+                  {place && (
+                    <div className="ks-wide">
+                      <dt>To</dt>
+                      <dd>{place}</dd>
+                    </div>
+                  )}
                 </dl>
                 <Stars n={d.rating} />
               </div>
             </div>
-            <div className="ks-stub" aria-hidden="true"><Bar v /><p className="ks-admit">{serial}</p></div>
+            <div className="ks-stub" aria-hidden="true">
+              <Bar v />
+              <p className="ks-admit">{serial}</p>
+            </div>
           </div>
         </div>
       );
@@ -62,7 +112,9 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
       return (
         <div className="ks ks-postcard" data-ks={kind}>
           <div className="ks-body">
-            <p className="ks-eyebrow" aria-hidden="true">Post card</p>
+            <p className="ks-eyebrow" aria-hidden="true">
+              Post card
+            </p>
             <div className="ks-msg">
               <p className="ks-title">{d.title}</p>
               {place && <p className="ks-place">{place}</p>}
@@ -71,8 +123,17 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
             </div>
             <div className="ks-addr">
               <div className="ks-postage" aria-hidden="true">
-                <span className="ks-stampbox"><svg viewBox="0 0 40 46"><circle cx="28" cy="13" r="6" /><path d="M0 46V30l10-10 9 9 7-6 14 13v10z" /></svg></span>
-                <svg className="ks-postmark" viewBox="0 0 120 64"><circle cx="34" cy="32" r="26" /><circle cx="34" cy="32" r="20" /><path d="M64 22c10-6 20 6 30 0s20 6 26 0M64 32c10-6 20 6 30 0s20 6 26 0M64 42c10-6 20 6 30 0s20 6 26 0" /></svg>
+                <span className="ks-stampbox">
+                  <svg viewBox="0 0 40 46">
+                    <circle cx="28" cy="13" r="6" />
+                    <path d="M0 46V30l10-10 9 9 7-6 14 13v10z" />
+                  </svg>
+                </span>
+                <svg className="ks-postmark" viewBox="0 0 120 64">
+                  <circle cx="34" cy="32" r="26" />
+                  <circle cx="34" cy="32" r="20" />
+                  <path d="M64 22c10-6 20 6 30 0s20 6 26 0M64 32c10-6 20 6 30 0s20 6 26 0M64 42c10-6 20 6 30 0s20 6 26 0" />
+                </svg>
               </div>
               <p className="ks-day">{d.day}</p>
               <span className="ks-lines" aria-hidden="true"></span>
@@ -85,8 +146,14 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
         <div className="ks ks-airmail" data-ks={kind}>
           <div className="ks-body">
             <div className="ks-env">
-              <p className="ks-avion" aria-hidden="true">Par avion · By air mail</p>
-              <span className="ks-stampbox" aria-hidden="true"><svg viewBox="0 0 40 46"><path d="M20 38s-14-8-14-19a8 8 0 0 1 14-5 8 8 0 0 1 14 5c0 11-14 19-14 19z" /></svg></span>
+              <p className="ks-avion" aria-hidden="true">
+                Par avion · By air mail
+              </p>
+              <span className="ks-stampbox" aria-hidden="true">
+                <svg viewBox="0 0 40 46">
+                  <path d="M20 38s-14-8-14-19a8 8 0 0 1 14-5 8 8 0 0 1 14 5c0 11-14 19-14 19z" />
+                </svg>
+              </span>
               <p className="ks-to">to us, from far apart</p>
               <p className="ks-title">{d.title}</p>
               <p className="ks-day">{d.day}</p>
@@ -104,7 +171,15 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
             <ul className="ks-ruled">
               <li>serves 2 · {d.day}</li>
               {place && <li>at {place}</li>}
-              <li>{d.rating > 0 ? <>would make again <Stars n={d.rating} /></> : "a night in, just us"}</li>
+              <li>
+                {d.rating > 0 ? (
+                  <>
+                    would make again <Stars n={d.rating} />
+                  </>
+                ) : (
+                  "a night in, just us"
+                )}
+              </li>
             </ul>
           </div>
         </div>
@@ -120,7 +195,12 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
               <p className="ks-day">{d.day} · doors at dusk</p>
               <Stars n={d.rating} />
             </div>
-            <div className="ks-stub" aria-hidden="true"><Qr /><p className="ks-admit">ADMIT 2<span>{serial}</span></p></div>
+            <div className="ks-stub" aria-hidden="true">
+              <Qr />
+              <p className="ks-admit">
+                ADMIT 2<span>{serial}</span>
+              </p>
+            </div>
           </div>
         </div>
       );
@@ -128,10 +208,17 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
       return (
         <div className="ks ks-arcade" data-ks={kind}>
           <div className="ks-body">
-            <p className="ks-eyebrow" aria-hidden="true">★ Prize ticket ★</p>
+            <p className="ks-eyebrow" aria-hidden="true">
+              ★ Prize ticket ★
+            </p>
             <p className="ks-title">{d.title}</p>
-            <p className="ks-day">{[d.day, place].filter(Boolean).join(" · ")}</p>
-            <p className="ks-serial"><span aria-hidden="true">{serial}</span><Stars n={d.rating} /></p>
+            <p className="ks-day">
+              {[d.day, place].filter(Boolean).join(" · ")}
+            </p>
+            <p className="ks-serial">
+              <span aria-hidden="true">{serial}</span>
+              <Stars n={d.rating} />
+            </p>
           </div>
         </div>
       );
@@ -140,19 +227,28 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
         <div className="ks ks-admission" data-ks={kind}>
           <div className="ks-body">
             <p className="ks-eyebrow">Admission</p>
-            <p className="ks-orn" aria-hidden="true">— ✦ —</p>
+            <p className="ks-orn" aria-hidden="true">
+              — ✦ —
+            </p>
             <p className="ks-title">{d.title}</p>
             {place && <p className="ks-place">{place}</p>}
             <Stars n={d.rating} />
-            <p className="ks-foot"><span>{d.day}</span><span aria-hidden="true">{serial}</span></p>
-            <p className="ks-tear" aria-hidden="true">Admit two</p>
+            <p className="ks-foot">
+              <span>{d.day}</span>
+              <span aria-hidden="true">{serial}</span>
+            </p>
+            <p className="ks-tear" aria-hidden="true">
+              Admit two
+            </p>
           </div>
         </div>
       );
     case "swingtag":
       return (
         <div className="ks ks-swingtag" data-ks={kind}>
-          <svg className="ks-string" viewBox="0 0 60 50" aria-hidden="true"><path d="M30 46C24 30 10 22 4 4M30 46C36 30 50 24 58 8" /></svg>
+          <svg className="ks-string" viewBox="0 0 60 50" aria-hidden="true">
+            <path d="M30 46C24 30 10 22 4 4M30 46C36 30 50 24 58 8" />
+          </svg>
           <div className="ks-body">
             <p className="ks-hand">made by us</p>
             <p className="ks-title">{d.title}</p>
@@ -165,9 +261,16 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
     case "trail":
       return (
         <div className="ks ks-trail" data-ks={kind}>
-          <svg className="ks-string" viewBox="0 0 50 40" aria-hidden="true"><path d="M48 20C34 10 18 30 2 14M48 20C34 26 20 36 4 30" /></svg>
+          <svg className="ks-string" viewBox="0 0 50 40" aria-hidden="true">
+            <path d="M48 20C34 10 18 30 2 14M48 20C34 26 20 36 4 30" />
+          </svg>
           <div className="ks-body">
-            <svg className="ks-topo" viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true">
+            <svg
+              className="ks-topo"
+              viewBox="0 0 200 120"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
               <path d="M-10 90C30 70 50 100 90 80s60-40 120-20M-10 70C40 50 60 80 100 60s60-40 110-26M-10 50C30 36 70 56 110 40s50-30 100-20M40 120c10-20 40-24 60-14s40 4 50-6" />
             </svg>
             <p className="ks-band">Trail pass</p>
@@ -184,7 +287,13 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
       return (
         <div className="ks ks-coaster" data-ks={kind}>
           <div className="ks-body">
-            <svg className="ks-ringstain" viewBox="0 0 100 100" aria-hidden="true"><circle cx="58" cy="44" r="30" /></svg>
+            <svg
+              className="ks-ringstain"
+              viewBox="0 0 100 100"
+              aria-hidden="true"
+            >
+              <circle cx="58" cy="44" r="30" />
+            </svg>
             {place && <p className="ks-eyebrow">{place}</p>}
             <p className="ks-title">{d.title}</p>
             <p className="ks-day">{d.day}</p>
@@ -195,20 +304,42 @@ export function Keepsake({ d, no, kind: forced }: { d: KeepsakeDate; no: number;
     case "ticket":
     default:
       return (
-        <div className="ks ks-ticket ks-stubbed" data-ks="ticket" data-setting={d.kind}>
+        <div
+          className="ks ks-ticket ks-stubbed"
+          data-ks="ticket"
+          data-setting={d.kind}
+        >
           <div className="ks-body">
             <div className="ks-main">
-              <p className="ks-band"><svg viewBox="0 0 24 14" aria-hidden="true"><path d="M2 13a10 10 0 0 1 20 0M12 1v3M4.5 4.5l2 2M19.5 4.5l-2 2" /></svg><span>{d.kind_label}</span></p>
+              <p className="ks-band">
+                <svg viewBox="0 0 24 14" aria-hidden="true">
+                  <path d="M2 13a10 10 0 0 1 20 0M12 1v3M4.5 4.5l2 2M19.5 4.5l-2 2" />
+                </svg>
+                <span>{d.kind_label}</span>
+              </p>
               <div className="ks-pad">
                 <p className="ks-title">{d.title}</p>
                 <dl className="ks-meta">
-                  {place && <div><dt>Ticket issued at:</dt><dd>{place}</dd></div>}
-                  <div><dt>Date:</dt><dd>{d.day}</dd></div>
+                  {place && (
+                    <div>
+                      <dt>Ticket issued at:</dt>
+                      <dd>{place}</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt>Date:</dt>
+                    <dd>{d.day}</dd>
+                  </div>
                 </dl>
                 <Stars n={d.rating} />
               </div>
             </div>
-            <div className="ks-stub" aria-hidden="true"><Qr /><p className="ks-admit">ADMIT 2<span>{serial}</span></p></div>
+            <div className="ks-stub" aria-hidden="true">
+              <Qr />
+              <p className="ks-admit">
+                ADMIT 2<span>{serial}</span>
+              </p>
+            </div>
           </div>
         </div>
       );
@@ -229,10 +360,20 @@ const BAR =
 /** Drawings every keepsake shares. Render once on a page that shows keepsakes. */
 export function KeepsakeDefs() {
   return (
-    <svg className="ks-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <svg
+      className="ks-defs"
+      width="0"
+      height="0"
+      aria-hidden="true"
+      focusable="false"
+    >
       <defs>
-        <symbol id="ks-qr" viewBox="0 0 25 25"><path d={QR} fillRule="evenodd" /></symbol>
-        <symbol id="ks-bar" viewBox="0 0 119 30" preserveAspectRatio="none"><path d={BAR} /></symbol>
+        <symbol id="ks-qr" viewBox="0 0 25 25">
+          <path d={QR} fillRule="evenodd" />
+        </symbol>
+        <symbol id="ks-bar" viewBox="0 0 119 30" preserveAspectRatio="none">
+          <path d={BAR} />
+        </symbol>
       </defs>
     </svg>
   );

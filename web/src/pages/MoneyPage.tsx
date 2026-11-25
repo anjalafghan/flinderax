@@ -13,7 +13,9 @@ export default function MoneyPage() {
       <main className="page stack">
         <div>
           <h1 className="page-title">Money</h1>
-          <p className="page-sub">How the household is doing, from your statements and balances.</p>
+          <p className="page-sub">
+            How the household is doing, from your statements and balances.
+          </p>
         </div>
         {history && <NetWorthPanel months={history.months} />}
         <AnalyticsPanel />

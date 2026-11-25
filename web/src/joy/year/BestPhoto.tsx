@@ -1,7 +1,11 @@
 // The dusk-over-water picture on the best-night print when the night has no photo of its own.
 export function DuskArt() {
   return (
-    <svg viewBox="0 0 192 196" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <svg
+      viewBox="0 0 192 196"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+    >
       <defs>
         <linearGradient id="y-dusk" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#e9875a" />

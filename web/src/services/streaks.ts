@@ -18,9 +18,11 @@ export interface StreaksOut {
   activity: Streak;
 }
 
-export const getStreaks = () => api.get<StreaksOut>("/api/dashboard/streaks").then((r) => r.data);
+export const getStreaks = () =>
+  api.get<StreaksOut>("/api/dashboard/streaks").then((r) => r.data);
 
 /** Logging a transaction, a statement or a date all move a streak, so it shares the dashboard refresh cycle. */
 export const streaksKey = ["streaks"] as const;
 
-export const useStreaks = () => useQuery({ queryKey: streaksKey, queryFn: getStreaks, retry: 1 });
+export const useStreaks = () =>
+  useQuery({ queryKey: streaksKey, queryFn: getStreaks, retry: 1 });

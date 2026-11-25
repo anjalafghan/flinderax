@@ -1,7 +1,9 @@
 import { expect, test } from "./fixtures";
 import { newUser, startJarWithSlip } from "./helpers";
 
-test("write a slip, draw it from the jar and keep it as a date", async ({ page }) => {
+test("write a slip, draw it from the jar and keep it as a date", async ({
+  page,
+}) => {
   await newUser(page, "dates");
   await startJarWithSlip(page, "Sunset at Marine Drive");
 
@@ -19,7 +21,9 @@ test("write a slip, draw it from the jar and keep it as a date", async ({ page }
   await expect(page.getByText("Sunset at Marine Drive").first()).toBeVisible();
 });
 
-test("putting a slip back has no limit and is never a date", async ({ page }) => {
+test("putting a slip back has no limit and is never a date", async ({
+  page,
+}) => {
   test.setTimeout(60_000); // six draws, each with its card animation
   const titles = ["Board games and chai", "Kite flying at Juhu"];
   await newUser(page, "putback");
@@ -33,18 +37,28 @@ test("putting a slip back has no limit and is never a date", async ({ page }) =>
   await page.goto("/joy");
   await page.getByRole("button", { name: "Draw a slip" }).click();
   const shown = page.getByText(new RegExp(titles.join("|"))).first();
-  const back = page.locator("button:not([disabled])", { hasText: /^Put it back$/ });
-  const startOver = page.getByRole("button", { name: "Start over with these filters" });
-  const pick = () => page.waitForResponse((r) => r.url().endsWith("/api/dates/pick"), { timeout: 1_000 });
+  const back = page.locator("button:not([disabled])", {
+    hasText: /^Put it back$/,
+  });
+  const startOver = page.getByRole("button", {
+    name: "Start over with these filters",
+  });
+  const pick = () =>
+    page.waitForResponse((r) => r.url().endsWith("/api/dates/pick"), {
+      timeout: 1_000,
+    });
   // Every put-back draws again. Once each slip has been put back the jar offers a fresh round,
   // and that goes on as long as you like: there is no cap to run into.
   await expect(shown).toBeVisible();
-  for (let sent = 0; sent < 6; ) {
+  for (let sent = 0; sent < 6;) {
     // A card can still be on screen, looking ready, while it settles or folds away (a click then
     // does nothing), so retry until a click really reaches the server.
     await expect(async () => {
       if (await startOver.isVisible()) {
-        const [res] = await Promise.all([pick(), startOver.click({ timeout: 1_000 })]);
+        const [res] = await Promise.all([
+          pick(),
+          startOver.click({ timeout: 1_000 }),
+        ]);
         expect(res.ok()).toBe(true);
         return;
       }
@@ -60,7 +74,9 @@ test("putting a slip back has no limit and is never a date", async ({ page }) =>
   for (const t of titles) await expect(page.getByText(t)).toHaveCount(0);
 });
 
-test("mark today as the day we met, straight from the jar", async ({ page }) => {
+test("mark today as the day we met, straight from the jar", async ({
+  page,
+}) => {
   await newUser(page, "markday");
   await startJarWithSlip(page, "Chai at the corner stall");
 

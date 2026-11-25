@@ -1,11 +1,23 @@
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { toast } from "sonner";
 
 import PersonPage from "@/pages/PersonPage";
 import type { PersonDetail } from "@/services/people";
-import { NOT_FOUND, renderWithRouter, serve, type Call, type Reply } from "../components/people/fake";
+import {
+  NOT_FOUND,
+  renderWithRouter,
+  serve,
+  type Call,
+  type Reply,
+} from "../components/people/fake";
 
 // Synthetic data only: Person A, fixed 2026 dates.
 
@@ -38,19 +50,42 @@ const detail: PersonDetail = {
     },
   ],
   gifts: [
-    { id: "g1", person_id: "p1", date_id: "d1", for_year: 2026, status: "idea", title: "A book", amount_paise: null, on_day: null, txn_id: null },
+    {
+      id: "g1",
+      person_id: "p1",
+      date_id: "d1",
+      for_year: 2026,
+      status: "idea",
+      title: "A book",
+      amount_paise: null,
+      on_day: null,
+      txn_id: null,
+    },
   ],
-  touches: [{ id: "t1", person_id: "p1", on_day: "2026-10-20", kind: "call", cost_paise: null, note: "" }],
+  touches: [
+    {
+      id: "t1",
+      person_id: "p1",
+      on_day: "2026-10-20",
+      kind: "call",
+      cost_paise: null,
+      note: "",
+    },
+  ],
 };
 
 function routes(extra: (c: Call) => Reply | undefined = () => undefined) {
   return (c: Call): Reply => {
     const custom = extra(c);
     if (custom) return custom;
-    if (c.method === "GET" && c.url === "/api/people/p1") return { json: detail };
-    if (c.method === "POST" && c.url === "/api/people/p1/touches") return { json: detail.person };
-    if (c.method === "POST" && c.url === "/api/people/gifts") return { json: detail.gifts[0] };
-    if (c.method === "POST" && c.url === "/api/people/p1/dates") return { json: detail.dates[0] };
+    if (c.method === "GET" && c.url === "/api/people/p1")
+      return { json: detail };
+    if (c.method === "POST" && c.url === "/api/people/p1/touches")
+      return { json: detail.person };
+    if (c.method === "POST" && c.url === "/api/people/gifts")
+      return { json: detail.gifts[0] };
+    if (c.method === "POST" && c.url === "/api/people/p1/dates")
+      return { json: detail.dates[0] };
     if (c.method === "PATCH") return { json: detail.person };
     if (c.method === "DELETE") return { status: 204 };
     return NOT_FOUND;
@@ -75,20 +110,30 @@ describe("PersonPage", () => {
     serve(routes());
     renderWithRouter(ui, "/people/p1");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Person A" })).toBeInTheDocument();
-    expect(screen.getByText("Close friends · every 4 weeks · Last caught up 20 Oct")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Person A" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Close friends · every 4 weeks · Last caught up 20 Oct"),
+    ).toBeInTheDocument();
     const dates = screen.getByRole("region", { name: "Dates" });
     expect(within(dates).getByText("Person A's birthday")).toBeInTheDocument();
-    expect(within(dates).getByText("Sat 14 Nov · in 5 days · turns 60")).toBeInTheDocument();
+    expect(
+      within(dates).getByText("Sat 14 Nov · in 5 days · turns 60"),
+    ).toBeInTheDocument();
     expect(within(dates).getByText("Gift budget ₹2,000")).toBeInTheDocument();
 
     const gifts = screen.getByRole("region", { name: "Gifts" });
     expect(within(gifts).getByText("A book")).toBeInTheDocument();
-    expect(within(gifts).getByRole("combobox", { name: "Status for A book" })).toHaveValue("idea");
+    expect(
+      within(gifts).getByRole("combobox", { name: "Status for A book" }),
+    ).toHaveValue("idea");
 
     const touches = screen.getByRole("region", { name: "Catch-ups" });
     expect(within(touches).getByText("Call · 20 Oct")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Back to Circle" })).toHaveAttribute("href", "/people");
+    expect(
+      screen.getByRole("link", { name: "Back to Circle" }),
+    ).toHaveAttribute("href", "/people");
   });
 
   it("logs a one-tap catch-up with no day", async () => {
@@ -97,8 +142,12 @@ describe("PersonPage", () => {
     renderWithRouter(ui, "/people/p1");
     fireEvent.click(await screen.findByRole("button", { name: "Caught up" }));
 
-    await waitFor(() => expect(success).toHaveBeenCalledWith("Caught up with Person A."));
-    expect(calls.find((c) => c.url === "/api/people/p1/touches")?.body).toEqual({ kind: "call" });
+    await waitFor(() =>
+      expect(success).toHaveBeenCalledWith("Caught up with Person A."),
+    );
+    expect(calls.find((c) => c.url === "/api/people/p1/touches")?.body).toEqual(
+      { kind: "call" },
+    );
   });
 
   it("adds a gift for a date, linked to that date and its year", async () => {
@@ -108,13 +157,23 @@ describe("PersonPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Add a gift" }));
 
     const form = screen.getByRole("form", { name: "Add a gift" });
-    fireEvent.change(within(form).getByLabelText("What is the gift?"), { target: { value: "Tea set" } });
-    fireEvent.change(within(form).getByLabelText("For which date? (optional)"), { target: { value: "d1" } });
-    fireEvent.change(within(form).getByLabelText("Amount (₹, optional)"), { target: { value: "1500" } });
+    fireEvent.change(within(form).getByLabelText("What is the gift?"), {
+      target: { value: "Tea set" },
+    });
+    fireEvent.change(
+      within(form).getByLabelText("For which date? (optional)"),
+      { target: { value: "d1" } },
+    );
+    fireEvent.change(within(form).getByLabelText("Amount (₹, optional)"), {
+      target: { value: "1500" },
+    });
     fireEvent.submit(form);
 
     await waitFor(() => expect(success).toHaveBeenCalledWith("Gift added."));
-    expect(calls.find((c) => c.method === "POST" && c.url === "/api/people/gifts")?.body).toEqual({
+    expect(
+      calls.find((c) => c.method === "POST" && c.url === "/api/people/gifts")
+        ?.body,
+    ).toEqual({
       person_id: "p1",
       title: "Tea set",
       status: "idea",
@@ -128,21 +187,37 @@ describe("PersonPage", () => {
     const success = spyOn(toast, "success");
     const calls = serve(routes());
     renderWithRouter(ui, "/people/p1");
-    const status = await screen.findByRole("combobox", { name: "Status for A book" });
+    const status = await screen.findByRole("combobox", {
+      name: "Status for A book",
+    });
     fireEvent.change(status, { target: { value: "bought" } });
 
-    await waitFor(() => expect(success).toHaveBeenCalledWith("A book is now bought."));
-    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/gifts/g1")?.body).toEqual({ status: "bought" });
+    await waitFor(() =>
+      expect(success).toHaveBeenCalledWith("A book is now bought."),
+    );
+    expect(
+      calls.find(
+        (c) => c.method === "PATCH" && c.url === "/api/people/gifts/g1",
+      )?.body,
+    ).toEqual({ status: "bought" });
   });
 
   it("deletes a catch-up by its own id", async () => {
     const success = spyOn(toast, "success");
     const calls = serve(routes());
     renderWithRouter(ui, "/people/p1");
-    fireEvent.click(await screen.findByRole("button", { name: "Delete call on 20 Oct" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Delete call on 20 Oct" }),
+    );
 
-    await waitFor(() => expect(success).toHaveBeenCalledWith("Catch-up removed."));
-    expect(calls.some((c) => c.method === "DELETE" && c.url === "/api/people/touches/t1")).toBe(true);
+    await waitFor(() =>
+      expect(success).toHaveBeenCalledWith("Catch-up removed."),
+    );
+    expect(
+      calls.some(
+        (c) => c.method === "DELETE" && c.url === "/api/people/touches/t1",
+      ),
+    ).toBe(true);
   });
 
   it("adds a yearly date with its day, month and gift budget", async () => {
@@ -152,14 +227,26 @@ describe("PersonPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Add a date" }));
 
     const form = screen.getByRole("form", { name: "Add a date" });
-    fireEvent.change(within(form).getByLabelText("Month"), { target: { value: "3" } });
-    fireEvent.change(within(form).getByLabelText("Day"), { target: { value: "22" } });
-    fireEvent.change(within(form).getByLabelText("Remind me how many days before"), { target: { value: "10" } });
-    fireEvent.change(within(form).getByLabelText("Gift budget (₹, optional)"), { target: { value: "2500" } });
+    fireEvent.change(within(form).getByLabelText("Month"), {
+      target: { value: "3" },
+    });
+    fireEvent.change(within(form).getByLabelText("Day"), {
+      target: { value: "22" },
+    });
+    fireEvent.change(
+      within(form).getByLabelText("Remind me how many days before"),
+      { target: { value: "10" } },
+    );
+    fireEvent.change(within(form).getByLabelText("Gift budget (₹, optional)"), {
+      target: { value: "2500" },
+    });
     fireEvent.submit(form);
 
     await waitFor(() => expect(success).toHaveBeenCalledWith("Date added."));
-    expect(calls.find((c) => c.method === "POST" && c.url === "/api/people/p1/dates")?.body).toEqual({
+    expect(
+      calls.find((c) => c.method === "POST" && c.url === "/api/people/p1/dates")
+        ?.body,
+    ).toEqual({
       kind: "birthday",
       label: "",
       month: 3,
@@ -175,20 +262,37 @@ describe("PersonPage", () => {
     renderWithRouter(ui, "/people/p1");
     fireEvent.click(await screen.findByRole("button", { name: "Archive" }));
 
-    await waitFor(() => expect(success).toHaveBeenCalledWith("Person A is archived."));
-    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")?.body).toEqual({ archived: true });
+    await waitFor(() =>
+      expect(success).toHaveBeenCalledWith("Person A is archived."),
+    );
+    expect(
+      calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")
+        ?.body,
+    ).toEqual({ archived: true });
   });
 
   it("saves edits, sending the rhythm in days and a blank rhythm as null", async () => {
     const success = spyOn(toast, "success");
     const calls = serve(routes());
     renderWithRouter(ui, "/people/p1");
-    const edit = (await screen.findByRole("heading", { name: "Edit" })).closest("section") as HTMLElement;
-    fireEvent.change(within(edit).getByLabelText("Catch up every (weeks, blank for none)"), { target: { value: "" } });
-    fireEvent.submit(within(edit).getByRole("button", { name: "Save" }).closest("form") as HTMLFormElement);
+    const edit = (await screen.findByRole("heading", { name: "Edit" })).closest(
+      "section",
+    ) as HTMLElement;
+    fireEvent.change(
+      within(edit).getByLabelText("Catch up every (weeks, blank for none)"),
+      { target: { value: "" } },
+    );
+    fireEvent.submit(
+      within(edit)
+        .getByRole("button", { name: "Save" })
+        .closest("form") as HTMLFormElement,
+    );
 
     await waitFor(() => expect(success).toHaveBeenCalledWith("Saved."));
-    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")?.body).toEqual({
+    expect(
+      calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")
+        ?.body,
+    ).toEqual({
       name: "Person A",
       circle: "close",
       every_days: null,
@@ -205,19 +309,26 @@ describe("PersonPage", () => {
           return { status: 204 };
         }
         // After the delete the person is gone: any refetch of their page answers 404.
-        if (gone && c.method === "GET" && c.url === "/api/people/p1") return NOT_FOUND;
+        if (gone && c.method === "GET" && c.url === "/api/people/p1")
+          return NOT_FOUND;
         return undefined;
       }),
     );
     renderWithRouter(ui, "/people/p1");
-    fireEvent.click(await screen.findByRole("button", { name: "Delete Person A" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Delete Person A" }),
+    );
 
     expect(screen.getByText("Delete Person A?")).toBeInTheDocument();
     expect(calls.some((c) => c.method === "DELETE")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    expect(await screen.findByText("Circle list", undefined, { timeout: 500 })).toBeInTheDocument();
-    expect(calls.some((c) => c.method === "DELETE" && c.url === "/api/people/p1")).toBe(true);
+    expect(
+      await screen.findByText("Circle list", undefined, { timeout: 500 }),
+    ).toBeInTheDocument();
+    expect(
+      calls.some((c) => c.method === "DELETE" && c.url === "/api/people/p1"),
+    ).toBe(true);
   });
 
   it("edits a gift's amount and given day, sending the new values", async () => {
@@ -227,12 +338,20 @@ describe("PersonPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Edit A book" }));
 
     const form = screen.getByRole("form", { name: "Edit gift" });
-    fireEvent.change(within(form).getByLabelText("Amount (₹, optional)"), { target: { value: "250" } });
-    fireEvent.change(within(form).getByLabelText("Given on (optional)"), { target: { value: "2026-10-22" } });
+    fireEvent.change(within(form).getByLabelText("Amount (₹, optional)"), {
+      target: { value: "250" },
+    });
+    fireEvent.change(within(form).getByLabelText("Given on (optional)"), {
+      target: { value: "2026-10-22" },
+    });
     fireEvent.submit(form);
 
     await waitFor(() => expect(success).toHaveBeenCalledWith("Gift saved."));
-    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/gifts/g1")?.body).toEqual({
+    expect(
+      calls.find(
+        (c) => c.method === "PATCH" && c.url === "/api/people/gifts/g1",
+      )?.body,
+    ).toEqual({
       title: "A book",
       status: "idea",
       amount_paise: 25_000,
@@ -244,20 +363,38 @@ describe("PersonPage", () => {
     const success = spyOn(toast, "success");
     const withAmount: PersonDetail = {
       ...detail,
-      gifts: [{ ...detail.gifts[0], amount_paise: 150_000, on_day: "2026-10-22" }],
+      gifts: [
+        { ...detail.gifts[0], amount_paise: 150_000, on_day: "2026-10-22" },
+      ],
     };
-    const calls = serve(routes((c) => (c.method === "GET" && c.url === "/api/people/p1" ? { json: withAmount } : undefined)));
+    const calls = serve(
+      routes((c) =>
+        c.method === "GET" && c.url === "/api/people/p1"
+          ? { json: withAmount }
+          : undefined,
+      ),
+    );
     renderWithRouter(ui, "/people/p1");
     fireEvent.click(await screen.findByRole("button", { name: "Edit A book" }));
 
     const form = screen.getByRole("form", { name: "Edit gift" });
-    expect(within(form).getByLabelText("Amount (₹, optional)")).toHaveValue("1500");
-    fireEvent.change(within(form).getByLabelText("Amount (₹, optional)"), { target: { value: "" } });
-    fireEvent.change(within(form).getByLabelText("Given on (optional)"), { target: { value: "" } });
+    expect(within(form).getByLabelText("Amount (₹, optional)")).toHaveValue(
+      "1500",
+    );
+    fireEvent.change(within(form).getByLabelText("Amount (₹, optional)"), {
+      target: { value: "" },
+    });
+    fireEvent.change(within(form).getByLabelText("Given on (optional)"), {
+      target: { value: "" },
+    });
     fireEvent.submit(form);
 
     await waitFor(() => expect(success).toHaveBeenCalledWith("Gift saved."));
-    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/gifts/g1")?.body).toEqual({
+    expect(
+      calls.find(
+        (c) => c.method === "PATCH" && c.url === "/api/people/gifts/g1",
+      )?.body,
+    ).toEqual({
       title: "A book",
       status: "idea",
       amount_paise: null,
@@ -269,15 +406,25 @@ describe("PersonPage", () => {
     const success = spyOn(toast, "success");
     const calls = serve(routes());
     renderWithRouter(ui, "/people/p1");
-    fireEvent.click(await screen.findByRole("button", { name: "Edit Person A's birthday" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Edit Person A's birthday" }),
+    );
 
     const form = screen.getByRole("form", { name: "Edit date" });
-    expect(within(form).getByLabelText("Gift budget (₹, optional)")).toHaveValue("2000");
-    fireEvent.change(within(form).getByLabelText("Gift budget (₹, optional)"), { target: { value: "" } });
+    expect(
+      within(form).getByLabelText("Gift budget (₹, optional)"),
+    ).toHaveValue("2000");
+    fireEvent.change(within(form).getByLabelText("Gift budget (₹, optional)"), {
+      target: { value: "" },
+    });
     fireEvent.submit(form);
 
     await waitFor(() => expect(success).toHaveBeenCalledWith("Date updated."));
-    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/dates/d1")?.body).toMatchObject({
+    expect(
+      calls.find(
+        (c) => c.method === "PATCH" && c.url === "/api/people/dates/d1",
+      )?.body,
+    ).toMatchObject({
       kind: "birthday",
       month: 11,
       day: 14,
@@ -288,34 +435,84 @@ describe("PersonPage", () => {
 
   it("brings an archived person back into the circle", async () => {
     const success = spyOn(toast, "success");
-    const archived: PersonDetail = { ...detail, person: { ...detail.person, archived: true } };
-    const calls = serve(routes((c) => (c.method === "GET" && c.url === "/api/people/p1" ? { json: archived } : undefined)));
+    const archived: PersonDetail = {
+      ...detail,
+      person: { ...detail.person, archived: true },
+    };
+    const calls = serve(
+      routes((c) =>
+        c.method === "GET" && c.url === "/api/people/p1"
+          ? { json: archived }
+          : undefined,
+      ),
+    );
     renderWithRouter(ui, "/people/p1");
-    expect(await screen.findByText("This person is archived. Bring them back from the edit form below.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Bring back to circle" }));
+    expect(
+      await screen.findByText(
+        "This person is archived. Bring them back from the edit form below.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Bring back to circle" }),
+    );
 
-    await waitFor(() => expect(success).toHaveBeenCalledWith("Person A is back in your circle."));
-    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")?.body).toEqual({ archived: false });
+    await waitFor(() =>
+      expect(success).toHaveBeenCalledWith("Person A is back in your circle."),
+    );
+    expect(
+      calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")
+        ?.body,
+    ).toEqual({ archived: false });
   });
 
   it("says so when the person can't be found", async () => {
     serve(routes((c) => (c.url === "/api/people/p1" ? NOT_FOUND : undefined)));
     renderWithRouter(ui, "/people/p1");
-    expect(await screen.findByText("Couldn't load this person.", undefined, { timeout: 4000 })).toBeInTheDocument();
+    expect(
+      await screen.findByText("Couldn't load this person.", undefined, {
+        timeout: 4000,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("keeps a rhythm set in days when the edit doesn't touch it", async () => {
     const success = spyOn(toast, "success");
-    const inDays: PersonDetail = { ...detail, person: { ...detail.person, every_days: 10 } };
-    const calls = serve(routes((c) => (c.method === "GET" && c.url === "/api/people/p1" ? { json: inDays } : undefined)));
+    const inDays: PersonDetail = {
+      ...detail,
+      person: { ...detail.person, every_days: 10 },
+    };
+    const calls = serve(
+      routes((c) =>
+        c.method === "GET" && c.url === "/api/people/p1"
+          ? { json: inDays }
+          : undefined,
+      ),
+    );
     renderWithRouter(ui, "/people/p1");
-    const edit = (await screen.findByRole("heading", { name: "Edit" })).closest("section") as HTMLElement;
-    expect(within(edit).getByLabelText("Catch up every (weeks, blank for none)")).toHaveValue(null);
-    expect(within(edit).getByText("Currently every 10 days. Enter weeks to change it.")).toBeInTheDocument();
-    fireEvent.change(within(edit).getByLabelText("Note"), { target: { value: "Likes tea" } });
-    fireEvent.submit(within(edit).getByRole("button", { name: "Save" }).closest("form") as HTMLFormElement);
+    const edit = (await screen.findByRole("heading", { name: "Edit" })).closest(
+      "section",
+    ) as HTMLElement;
+    expect(
+      within(edit).getByLabelText("Catch up every (weeks, blank for none)"),
+    ).toHaveValue(null);
+    expect(
+      within(edit).getByText(
+        "Currently every 10 days. Enter weeks to change it.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.change(within(edit).getByLabelText("Note"), {
+      target: { value: "Likes tea" },
+    });
+    fireEvent.submit(
+      within(edit)
+        .getByRole("button", { name: "Save" })
+        .closest("form") as HTMLFormElement,
+    );
 
     await waitFor(() => expect(success).toHaveBeenCalledWith("Saved."));
-    expect(calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")?.body).toMatchObject({ every_days: 10 });
+    expect(
+      calls.find((c) => c.method === "PATCH" && c.url === "/api/people/p1")
+        ?.body,
+    ).toMatchObject({ every_days: 10 });
   });
 });

@@ -9,10 +9,19 @@ function load() {
   const shown: { title: string; options: Record<string, unknown> }[] = [];
   const opened: string[] = [];
   const focused: string[] = [];
-  const windows: { focus: () => Promise<void>; navigate: (u: string) => void }[] = [];
+  const windows: {
+    focus: () => Promise<void>;
+    navigate: (u: string) => void;
+  }[] = [];
   const scope = {
-    addEventListener: (type: string, fn: (e: unknown) => void) => (listeners[type] = fn),
-    registration: { showNotification: (title: string, options: Record<string, unknown>) => (shown.push({ title, options }), Promise.resolve()) },
+    addEventListener: (type: string, fn: (e: unknown) => void) =>
+      (listeners[type] = fn),
+    registration: {
+      showNotification: (title: string, options: Record<string, unknown>) => (
+        shown.push({ title, options }),
+        Promise.resolve()
+      ),
+    },
     clients: {
       matchAll: () => Promise.resolve(windows),
       openWindow: (u: string) => (opened.push(u), Promise.resolve()),
@@ -21,20 +30,47 @@ function load() {
     skipWaiting: () => {},
     location: { origin: "http://localhost" },
   };
-  const code = readFileSync(path.join(import.meta.dir, "../public/sw.js"), "utf8");
-  vm.runInNewContext(code, { self: scope, caches: {}, fetch: () => {}, URL, Headers, Response, Request, crypto, TextEncoder, setTimeout, Promise, Date, Number, String, Array, Error });
+  const code = readFileSync(
+    path.join(import.meta.dir, "../public/sw.js"),
+    "utf8",
+  );
+  vm.runInNewContext(code, {
+    self: scope,
+    caches: {},
+    fetch: () => {},
+    URL,
+    Headers,
+    Response,
+    Request,
+    crypto,
+    TextEncoder,
+    setTimeout,
+    Promise,
+    Date,
+    Number,
+    String,
+    Array,
+    Error,
+  });
   return { listeners, shown, opened, focused, windows };
 }
 
 const event = (extra: Record<string, unknown>) => {
   const waits: Promise<unknown>[] = [];
-  return { e: { ...extra, waitUntil: (p: Promise<unknown>) => waits.push(p) }, done: () => Promise.all(waits) };
+  return {
+    e: { ...extra, waitUntil: (p: Promise<unknown>) => waits.push(p) },
+    done: () => Promise.all(waits),
+  };
 };
 
 describe("notifications in the service worker", () => {
   test("a push shows the server's words and nothing else", async () => {
     const sw = load();
-    const { e, done } = event({ data: { json: () => ({ title: "joy", body: "Today: 2 bills.", url: "/money" }) } });
+    const { e, done } = event({
+      data: {
+        json: () => ({ title: "joy", body: "Today: 2 bills.", url: "/money" }),
+      },
+    });
     sw.listeners.push!(e);
     await done();
     expect(sw.shown).toHaveLength(1);
@@ -45,7 +81,13 @@ describe("notifications in the service worker", () => {
 
   test("a push without readable data still shows something harmless", async () => {
     const sw = load();
-    const { e, done } = event({ data: { json: () => { throw new Error("not json"); } } });
+    const { e, done } = event({
+      data: {
+        json: () => {
+          throw new Error("not json");
+        },
+      },
+    });
     sw.listeners.push!(e);
     await done();
     expect(sw.shown[0]?.title).toBe("joy");
@@ -55,7 +97,9 @@ describe("notifications in the service worker", () => {
   test("tapping it opens the app when it is closed", async () => {
     const sw = load();
     let closed = false;
-    const { e, done } = event({ notification: { close: () => (closed = true), data: { url: "/money" } } });
+    const { e, done } = event({
+      notification: { close: () => (closed = true), data: { url: "/money" } },
+    });
     sw.listeners.notificationclick!(e);
     await done();
     expect(closed).toBe(true);
@@ -66,8 +110,13 @@ describe("notifications in the service worker", () => {
     const sw = load();
     const visited: string[] = [];
     let focused = false;
-    sw.windows.push({ focus: () => ((focused = true), Promise.resolve()), navigate: (u) => visited.push(u) });
-    const { e, done } = event({ notification: { close: () => {}, data: { url: "/" } } });
+    sw.windows.push({
+      focus: () => ((focused = true), Promise.resolve()),
+      navigate: (u) => visited.push(u),
+    });
+    const { e, done } = event({
+      notification: { close: () => {}, data: { url: "/" } },
+    });
     sw.listeners.notificationclick!(e);
     await done();
     expect(focused).toBe(true);

@@ -5,12 +5,20 @@ import { SeasonsEditor } from "@/components/feature/people/SeasonsEditor";
 import { toast } from "sonner";
 
 import { Retry } from "@/components/ui/retry";
-import { MONTH_NAMES, NOTE, PANEL, SECTION_TITLE, TEXT_LINK, errorMessage } from "@/components/feature/people/ui";
+import {
+  MONTH_NAMES,
+  NOTE,
+  PANEL,
+  SECTION_TITLE,
+  TEXT_LINK,
+  errorMessage,
+} from "@/components/feature/people/ui";
 import { rupees } from "@/services/checkin";
 import { useGiftPlan, useMakeGiftsGoal } from "@/services/people";
 
 /** "2026-12" -> "Dec". */
-const monthShort = (ym: string) => (MONTH_NAMES[Number(ym.slice(5, 7)) - 1] ?? ym).slice(0, 3);
+const monthShort = (ym: string) =>
+  (MONTH_NAMES[Number(ym.slice(5, 7)) - 1] ?? ym).slice(0, 3);
 
 /** Twelve months of gift budget as bars, the monthly set-aside, and the festival seasons. */
 export function GiftPlanCard() {
@@ -18,8 +26,20 @@ export function GiftPlanCard() {
   const makeGoal = useMakeGiftsGoal();
 
   const body = (() => {
-    if (plan.isLoading) return <div className="h-48 animate-pulse rounded-[18px] bg-muted/40" aria-label="Loading your gift plan" />;
-    if (plan.isError && !plan.data) return <Retry message="Couldn't load your gift plan." onRetry={() => void plan.refetch()} />;
+    if (plan.isLoading)
+      return (
+        <div
+          className="h-48 animate-pulse rounded-[18px] bg-muted/40"
+          aria-label="Loading your gift plan"
+        />
+      );
+    if (plan.isError && !plan.data)
+      return (
+        <Retry
+          message="Couldn't load your gift plan."
+          onRetry={() => void plan.refetch()}
+        />
+      );
     const data = plan.data;
     if (!data) return null;
 
@@ -31,17 +51,31 @@ export function GiftPlanCard() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
           <p className="m-0 font-display text-[40px] leading-none">{`About ${rupees(data.monthly_paise)} a month`}</p>
-          <p className={NOTE}>{`Given this year ${rupees(data.given_this_year_paise)}.`}</p>
+          <p
+            className={NOTE}
+          >{`Given this year ${rupees(data.given_this_year_paise)}.`}</p>
         </div>
 
-        <div role="img" aria-label={summary} className="flex h-40 items-end gap-2">
+        <div
+          role="img"
+          aria-label={summary}
+          className="flex h-40 items-end gap-2"
+        >
           {data.months.map((m) => (
-            <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col justify-end gap-2" aria-hidden>
+            <div
+              key={m.month}
+              className="flex h-full min-w-0 flex-1 flex-col justify-end gap-2"
+              aria-hidden
+            >
               <div
                 className="w-full rounded-t-[6px] bg-primary/70"
-                style={{ height: `${Math.max(2, Math.round((m.budget_paise / peak) * 100))}%` }}
+                style={{
+                  height: `${Math.max(2, Math.round((m.budget_paise / peak) * 100))}%`,
+                }}
               />
-              <span className="text-center text-[11px] text-muted-foreground">{monthShort(m.month)}</span>
+              <span className="text-center text-[11px] text-muted-foreground">
+                {monthShort(m.month)}
+              </span>
             </div>
           ))}
         </div>
@@ -81,7 +115,10 @@ export function GiftPlanCard() {
         <h2 id="people-gift-plan-title" className={SECTION_TITLE}>
           Gift plan
         </h2>
-        <p className={NOTE}>What gifts cost across the year, from people's dates and the festival seasons you set.</p>
+        <p className={NOTE}>
+          What gifts cost across the year, from people's dates and the festival
+          seasons you set.
+        </p>
       </header>
       {body}
     </section>

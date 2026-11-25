@@ -12,19 +12,32 @@ const realFetch = globalThis.fetch;
 const login = mock(() => {});
 const logout = mock(() => {});
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status });
 
 function view() {
   return render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-    <AuthContext.Provider value={{ isAuthenticated: true, token: "old", login, logout, isLoading: false }}>
-      <MemoryRouter initialEntries={["/account"]}>
-        <Routes>
-          <Route path="/account" element={<AccountSection />} />
-          <Route path="/auth" element={<p>sign in page</p>} />
-        </Routes>
-      </MemoryRouter>
-    </AuthContext.Provider>
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <AuthContext.Provider
+        value={{
+          isAuthenticated: true,
+          token: "old",
+          login,
+          logout,
+          isLoading: false,
+        }}
+      >
+        <MemoryRouter initialEntries={["/account"]}>
+          <Routes>
+            <Route path="/account" element={<AccountSection />} />
+            <Route path="/auth" element={<p>sign in page</p>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
     </QueryClientProvider>,
   );
 }
@@ -36,8 +49,12 @@ beforeEach(() => {
   reply = () => json({ status: true });
   globalThis.fetch = (async (url: string, init?: RequestInit) => {
     // The notifications card asks the server its status on its own; these tests are about the account calls.
-    if (url === "/api/push") return json({ public_key: null, subscribed: false });
-    calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+    if (url === "/api/push")
+      return json({ public_key: null, subscribed: false });
+    calls.push({
+      url,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    });
     return reply(url);
   }) as unknown as typeof fetch;
 });
@@ -45,7 +62,8 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+const type = (label: string, value: string) =>
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
 describe("AccountSection", () => {
   test("changing the password stores the fresh token", async () => {
@@ -56,8 +74,16 @@ describe("AccountSection", () => {
     type("New password again", "a brand new one");
     fireEvent.click(screen.getByRole("button", { name: "Change password" }));
     await waitFor(() => expect(login).toHaveBeenCalledWith("fresh", 123));
-    expect(calls[0]).toEqual({ url: "/api/common/password", body: { current_password: "old password", new_password: "a brand new one" } });
-    expect(await screen.findByRole("status")).toHaveTextContent("Password changed");
+    expect(calls[0]).toEqual({
+      url: "/api/common/password",
+      body: {
+        current_password: "old password",
+        new_password: "a brand new one",
+      },
+    });
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Password changed",
+    );
   });
 
   test("mismatched new passwords never reach the server", () => {
@@ -71,19 +97,24 @@ describe("AccountSection", () => {
   });
 
   test("a wrong current password shows the server's sentence and keeps the session", async () => {
-    reply = () => new Response("That isn't your current password.", { status: 403 });
+    reply = () =>
+      new Response("That isn't your current password.", { status: 403 });
     view();
     type("Current password", "nope nope nope");
     type("New password", "a brand new one");
     type("New password again", "a brand new one");
     fireEvent.click(screen.getByRole("button", { name: "Change password" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("isn't your current password");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "isn't your current password",
+    );
     expect(login).not.toHaveBeenCalled();
   });
 
   test("sign out everywhere calls the server, clears the session and goes to sign in", async () => {
     view();
-    fireEvent.click(screen.getByRole("button", { name: "Sign out everywhere" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Sign out everywhere" }),
+    );
     expect(await screen.findByText("sign in page")).toBeInTheDocument();
     expect(calls[0].url).toBe("/api/common/logout-everywhere");
     expect(logout).toHaveBeenCalledTimes(1);
@@ -100,12 +131,18 @@ describe("AccountSection", () => {
     expect(go).toBeEnabled();
     fireEvent.click(go);
     expect(await screen.findByText("sign in page")).toBeInTheDocument();
-    expect(calls[0]).toEqual({ url: "/api/common/delete-account", body: { password: "correct horse", confirm: "delete" } });
+    expect(calls[0]).toEqual({
+      url: "/api/common/delete-account",
+      body: { password: "correct horse", confirm: "delete" },
+    });
     expect(logout).toHaveBeenCalledTimes(1);
   });
 
   test("a failed delete keeps you signed in and shows why", async () => {
-    reply = () => new Response("That is the last admin account, so it can't be deleted.", { status: 409 });
+    reply = () =>
+      new Response("That is the last admin account, so it can't be deleted.", {
+        status: 409,
+      });
     view();
     fireEvent.click(screen.getByRole("button", { name: "Delete my account…" }));
     type("Type delete to confirm", "delete");

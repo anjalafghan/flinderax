@@ -26,11 +26,31 @@ const base: DashboardSummary = {
     allocation_paise: 2_662_400,
   },
   pots: {
-    spending: { account_name: "HDFC", balance_paise: 4_301_699, committed_paise: 3_000_000, to_move_paise: 0, free_paise: 1_301_699 },
-    reserve: { account_name: "Kotak", balance_paise: 6_914_400, required_paise: 3_004_200, free_savings_paise: 3_910_200, floor_paise: 0, below_floor: false },
+    spending: {
+      account_name: "HDFC",
+      balance_paise: 4_301_699,
+      committed_paise: 3_000_000,
+      to_move_paise: 0,
+      free_paise: 1_301_699,
+    },
+    reserve: {
+      account_name: "Kotak",
+      balance_paise: 6_914_400,
+      required_paise: 3_004_200,
+      free_savings_paise: 3_910_200,
+      floor_paise: 0,
+      below_floor: false,
+    },
     locked: { total_paise: 20_904_400, count: 2 },
   },
-  spending: { tracked: true, spent_paise: 0, before_tracking_paise: 0, allowance_paise: 1_887_500, left_paise: 1_875_600, overspend_paise: 0 },
+  spending: {
+    tracked: true,
+    spent_paise: 0,
+    before_tracking_paise: 0,
+    allowance_paise: 1_887_500,
+    left_paise: 1_875_600,
+    overspend_paise: 0,
+  },
   recovery: null,
   next_period: null,
   upcoming: [],
@@ -50,60 +70,112 @@ describe("SafeToSpendHero", () => {
     renderHero(base);
     expect(screen.getByText("₹13,017")).toBeInTheDocument();
     expect(screen.getByText(/₹3,254 a week/)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Safe to spend until 30 Oct" })).toBeInTheDocument();
-    expect(screen.getByText(/for the next 25 days\. On track\./)).toBeInTheDocument();
-    expect(screen.getByText(/November money arrives 30 Oct and isn’t counted here/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Safe to spend until 30 Oct" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/for the next 25 days\. On track\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/November money arrives 30 Oct and isn’t counted here/),
+    ).toBeInTheDocument();
   });
 
   it("shows the pay period as one bar per day", () => {
     renderHero(base);
-    expect(screen.getByRole("img", { name: /of 30 in this pay period/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /of 30 in this pay period/ }),
+    ).toBeInTheDocument();
   });
 
   it("shows how much has been spent against the allowance when no income is due", () => {
-    renderHero({ ...base, next_income: null, spending: { ...base.spending, spent_paise: 1_000_000 } });
-    expect(screen.getByText(/₹10,000 spent so far of a ₹18,875 allowance/)).toBeInTheDocument();
+    renderHero({
+      ...base,
+      next_income: null,
+      spending: { ...base.spending, spent_paise: 1_000_000 },
+    });
+    expect(
+      screen.getByText(/₹10,000 spent so far of a ₹18,875 allowance/),
+    ).toBeInTheDocument();
   });
 
   it("says so when spending isn't tracked yet", () => {
-    renderHero({ ...base, next_income: null, spending: { ...base.spending, tracked: false } });
+    renderHero({
+      ...base,
+      next_income: null,
+      spending: { ...base.spending, tracked: false },
+    });
     expect(screen.getByText(/Spending isn’t tracked yet/)).toBeInTheDocument();
   });
 
   it("links to the working page", () => {
     renderHero(base);
-    expect(screen.getByText(/See the working/).closest("a")?.getAttribute("href")).toBe("/working");
+    expect(
+      screen
+        .getByText(/See the working/)
+        .closest("a")
+        ?.getAttribute("href"),
+    ).toBe("/working");
   });
 
   it("names the status in words", () => {
-    const { container } = renderHero({ ...base, status: "red", safe_to_spend_paise: 0 });
+    const { container } = renderHero({
+      ...base,
+      status: "red",
+      safe_to_spend_paise: 0,
+    });
     expect(container.querySelector("[data-status='red']")).not.toBeNull();
     expect(screen.getByText("A bit over plan")).toBeInTheDocument();
-    expect(screen.getByText(/Pause non-essentials until 30 Oct\./)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Pause non-essentials until 30 Oct\./),
+    ).toBeInTheDocument();
   });
 
   it("names the account that is short, in rupees", () => {
-    renderHero({ ...base, status: "red", safe_to_spend_paise: 0, short_by_paise: 4_164_901 });
+    renderHero({
+      ...base,
+      status: "red",
+      safe_to_spend_paise: 0,
+      short_by_paise: 4_164_901,
+    });
     expect(screen.getByText(/HDFC is short by ₹41,649.01/)).toBeInTheDocument();
   });
 
   it("reports an overspend", () => {
-    renderHero({ ...base, spending: { ...base.spending, overspend_paise: 124_400 } });
-    expect(screen.getByText(/over this month’s spending allowance/)).toBeInTheDocument();
+    renderHero({
+      ...base,
+      spending: { ...base.spending, overspend_paise: 124_400 },
+    });
+    expect(
+      screen.getByText(/over this month’s spending allowance/),
+    ).toBeInTheDocument();
   });
 
   it("marks a week-old number as approximate and offers an update", () => {
     renderHero({ ...base, stale: [{ what: "Kotak balance", days_old: 9 }] });
     expect(screen.getByText("~₹13,017")).toBeInTheDocument();
     expect(screen.getByText("Probably fine")).toBeInTheDocument();
-    expect(screen.getByText(/Kotak balance from .* · 9 days old/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Update" })).toHaveAttribute("href", "/money");
+    expect(
+      screen.getByText(/Kotak balance from .* · 9 days old/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Update" })).toHaveAttribute(
+      "href",
+      "/money",
+    );
   });
 
   it("calls a three-week-old number a guess", () => {
-    renderHero({ ...base, status: "yellow", stale: [{ what: "HDFC balance", days_old: 23 }] });
-    expect(screen.getByText(/This is a guess, based on HDFC balance from/)).toBeInTheDocument();
+    renderHero({
+      ...base,
+      status: "yellow",
+      stale: [{ what: "HDFC balance", days_old: 23 }],
+    });
+    expect(
+      screen.getByText(/This is a guess, based on HDFC balance from/),
+    ).toBeInTheDocument();
     expect(screen.getByText("Probably tight")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Update balance" })).toHaveAttribute("href", "/money");
+    expect(
+      screen.getByRole("link", { name: "Update balance" }),
+    ).toHaveAttribute("href", "/money");
   });
 });

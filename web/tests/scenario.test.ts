@@ -3,7 +3,13 @@ import { defaultStart, newDraft, toScenarioItem } from "@/utils/scenario";
 
 describe("toScenarioItem", () => {
   it("turns a complete RD draft into a request item in paise and basis points", () => {
-    const d = { ...newDraft("rd", new Date(2026, 9, 5)), amount: "10,000", rate: "7.1", target: "1,50,000", targetDate: "2027-11-10" };
+    const d = {
+      ...newDraft("rd", new Date(2026, 9, 5)),
+      amount: "10,000",
+      rate: "7.1",
+      target: "1,50,000",
+      targetDate: "2027-11-10",
+    };
     expect(toScenarioItem(d)).toEqual({
       name: "Wedding RD",
       kind: "rd",
@@ -30,13 +36,25 @@ describe("toScenarioItem", () => {
   });
 
   it("one-off spends carry no tenure, rate or renewal", () => {
-    const d = { ...newDraft("one_off", new Date(2026, 9, 5)), amount: "50000", start: "2026-12-05" };
+    const d = {
+      ...newDraft("one_off", new Date(2026, 9, 5)),
+      amount: "50000",
+      start: "2026-12-05",
+    };
     const item = toScenarioItem(d)!;
-    expect([item.tenure_months, item.rate_bps, item.renewal]).toEqual([null, null, null]);
+    expect([item.tenure_months, item.rate_bps, item.renewal]).toEqual([
+      null,
+      null,
+      null,
+    ]);
   });
 
   it("FDs keep their renewal choice", () => {
-    const d = { ...newDraft("fd", new Date(2026, 9, 5)), amount: "300000", renewal: "renew_all" as const };
+    const d = {
+      ...newDraft("fd", new Date(2026, 9, 5)),
+      amount: "300000",
+      renewal: "renew_all" as const,
+    };
     expect(toScenarioItem(d)!.renewal).toBe("renew_all");
   });
 });

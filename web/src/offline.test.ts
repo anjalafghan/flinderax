@@ -13,7 +13,11 @@ beforeEach(() => {
   behave = () => new Response(JSON.stringify({ ok: true }), { status: 200 });
   globalThis.fetch = (async (url: string, init?: RequestInit) => {
     const headers = new Headers(init?.headers);
-    const call = { url: String(url), key: headers.get("idempotency-key"), body: init?.body ? JSON.parse(String(init.body)) : undefined };
+    const call = {
+      url: String(url),
+      key: headers.get("idempotency-key"),
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    };
     calls.push(call);
     const r = behave(call);
     if (r === "offline") throw new TypeError("Failed to fetch");
@@ -40,7 +44,12 @@ describe("writes that survive having no signal", () => {
     expect(r.queued).toBe(true);
     const q = loadQueue();
     expect(q).toHaveLength(1);
-    expect(q[0]).toMatchObject({ url: "/api/x", body: { a: 1 }, label: "Thing", key: calls[0]?.key });
+    expect(q[0]).toMatchObject({
+      url: "/api/x",
+      body: { a: 1 },
+      label: "Thing",
+      key: calls[0]?.key,
+    });
   });
 
   test("a refusal from the server is returned, not queued", async () => {
@@ -56,7 +65,10 @@ describe("writes that survive having no signal", () => {
     enqueue({ key: "k2", url: "/api/b", body: { n: 2 }, label: "Second" });
     const out = await flush();
     expect(out).toEqual({ sent: 2, dropped: [], left: 0 });
-    expect(calls.map((c) => [c.url, c.key])).toEqual([["/api/a", "k1"], ["/api/b", "k2"]]);
+    expect(calls.map((c) => [c.url, c.key])).toEqual([
+      ["/api/a", "k1"],
+      ["/api/b", "k2"],
+    ]);
     expect(loadQueue()).toHaveLength(0);
     expect((await flush()).sent).toBe(0);
   });
@@ -72,7 +84,10 @@ describe("writes that survive having no signal", () => {
   test("an item the server refuses is dropped with its name so it cannot block the rest", async () => {
     enqueue({ key: "k1", url: "/api/a", body: {}, label: "Bad one" });
     enqueue({ key: "k2", url: "/api/b", body: {}, label: "Good one" });
-    behave = (c) => (c.url === "/api/a" ? new Response("no", { status: 422 }) : new Response("{}", { status: 200 }));
+    behave = (c) =>
+      c.url === "/api/a"
+        ? new Response("no", { status: 422 })
+        : new Response("{}", { status: 200 });
     expect(await flush()).toEqual({ sent: 1, dropped: ["Bad one"], left: 0 });
   });
 

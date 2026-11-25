@@ -51,7 +51,11 @@ const fixture: AnalyticsOut = {
     { name: "CORNER TEA", paise: 60_000, count: 3, kind: "shop" },
     { name: "RAVI KUMAR", paise: 30_000, count: 1, kind: "person" },
   ],
-  small_ticket: { per_month_count: 3, per_month_paise: 45_000, threshold_paise: 20_000 },
+  small_ticket: {
+    per_month_count: 3,
+    per_month_paise: 45_000,
+    threshold_paise: 20_000,
+  },
   salary: {
     typical_days: [1, 29],
     usual: "Month-end (29th–1st)",
@@ -61,12 +65,25 @@ const fixture: AnalyticsOut = {
     missing_months: ["2026-09"],
     next_expected: "2026-12-01",
   },
-  sips: [{ label: "SIP ₹5,000", amount_paise: 500_000, usual_day: 10, months_seen: 3, last_on: "2026-10-11" }],
-  autopay: [{ name: "STREAMCO", amount_paise: 59_900, last_on: "2026-10-03", count: 2 }],
+  sips: [
+    {
+      label: "SIP ₹5,000",
+      amount_paise: 500_000,
+      usual_day: 10,
+      months_seen: 3,
+      last_on: "2026-10-11",
+    },
+  ],
+  autopay: [
+    { name: "STREAMCO", amount_paise: 59_900, last_on: "2026-10-03", count: 2 },
+  ],
   own_transfers: { count: 2, out_paise: 500_000, in_paise: 200_000 },
   frequent_small: [],
   weekday_spend_paise: [100_000, 0, 200_000, 0, 0, 0, 50_000],
-  notes: ["Salary arrived between the 1st and the 29th.", "You kept 41% of your income over the last three full months."],
+  notes: [
+    "Salary arrived between the 1st and the 29th.",
+    "You kept 41% of your income over the last three full months.",
+  ],
 };
 
 const empty: AnalyticsOut = {
@@ -75,7 +92,11 @@ const empty: AnalyticsOut = {
   savings_rate_bps: null,
   categories: [],
   top_payees: [],
-  small_ticket: { per_month_count: 0, per_month_paise: 0, threshold_paise: 20_000 },
+  small_ticket: {
+    per_month_count: 0,
+    per_month_paise: 0,
+    threshold_paise: 20_000,
+  },
   salary: null,
   sips: [],
   autopay: [],
@@ -100,17 +121,26 @@ function withData(data: AnalyticsOut) {
 describe("AnalyticsPanel", () => {
   it("names the statement span in the header and shows the savings rate", () => {
     withData(fixture);
-    const panel = screen.getByRole("region", { name: "Your money, from your statements" });
+    const panel = screen.getByRole("region", {
+      name: "Your money, from your statements",
+    });
     expect(panel).toHaveTextContent("Based on statements from 2 Apr to 8 Nov");
     expect(panel).toHaveTextContent("41%");
-    expect(panel).toHaveTextContent("of your income kept over the last three full months.");
+    expect(panel).toHaveTextContent(
+      "of your income kept over the last three full months.",
+    );
   });
 
   it("draws the twelve-month chart with a text summary for screen readers", () => {
     withData(fixture);
-    const chart = screen.getByRole("img", { name: "Money in and out, last 12 months" });
+    const chart = screen.getByRole("img", {
+      name: "Money in and out, last 12 months",
+    });
     expect(chart.children).toHaveLength(12);
-    expect(chart.children[0]).toHaveAttribute("title", "Dec 2025: in ₹90,000, out ₹55,000");
+    expect(chart.children[0]).toHaveAttribute(
+      "title",
+      "Dec 2025: in ₹90,000, out ₹55,000",
+    );
   });
 
   it("shows the salary days, average, next expected date and the missing month", () => {
@@ -143,22 +173,40 @@ describe("AnalyticsPanel", () => {
 
   it("uses the server's pay window for the salary card", () => {
     withData(fixture);
-    expect(screen.getByRole("region", { name: "Salary" })).toHaveTextContent("Month-end (29th–1st)");
+    expect(screen.getByRole("region", { name: "Salary" })).toHaveTextContent(
+      "Month-end (29th–1st)",
+    );
   });
 
   it("shows uncategorised spending as a prompt, not a bar", () => {
     withData({
       ...fixture,
-      categories: [{ category: "uncategorized", paise: 500_000, share_bps: 5_000, count: 40 }, ...fixture.categories],
+      categories: [
+        {
+          category: "uncategorized",
+          paise: 500_000,
+          share_bps: 5_000,
+          count: 40,
+        },
+        ...fixture.categories,
+      ],
     });
-    const categories = screen.getByRole("region", { name: "Where the money goes" });
-    expect(categories).toHaveTextContent("₹5,000 across 40 payments (50%) isn't categorised yet.");
-    expect(within(categories).getByRole("link", { name: "Categorise a few payees" })).toHaveAttribute("href", "/spending");
+    const categories = screen.getByRole("region", {
+      name: "Where the money goes",
+    });
+    expect(categories).toHaveTextContent(
+      "₹5,000 across 40 payments (50%) isn't categorised yet.",
+    );
+    expect(
+      within(categories).getByRole("link", { name: "Categorise a few payees" }),
+    ).toHaveAttribute("href", "/spending");
   });
 
   it("shows only the top six categories", () => {
     withData(fixture);
-    const categories = screen.getByRole("region", { name: "Where the money goes" });
+    const categories = screen.getByRole("region", {
+      name: "Where the money goes",
+    });
     expect(categories).toHaveTextContent("food");
     expect(categories).toHaveTextContent("₹3,000 · 30%");
     expect(categories).toHaveTextContent("bills");
@@ -172,16 +220,26 @@ describe("AnalyticsPanel", () => {
     expect(autopay).toHaveTextContent("₹599");
     expect(autopay).toHaveTextContent("2 payments · last 3 Oct");
 
-    const small = screen.getByRole("region", { name: "Small payments and transfers" });
-    expect(small).toHaveTextContent("₹450 a month goes on 3 payments under ₹200.");
-    expect(small).toHaveTextContent("2 transfers to and from your own accounts: ₹5,000 out, ₹2,000 in.");
+    const small = screen.getByRole("region", {
+      name: "Small payments and transfers",
+    });
+    expect(small).toHaveTextContent(
+      "₹450 a month goes on 3 payments under ₹200.",
+    );
+    expect(small).toHaveTextContent(
+      "2 transfers to and from your own accounts: ₹5,000 out, ₹2,000 in.",
+    );
   });
 
   it("shows the weekday bars and the plain-sentence notes", () => {
     withData(fixture);
-    expect(screen.getByRole("img", { name: "Spending by weekday, last 90 days" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Spending by weekday, last 90 days" }),
+    ).toBeInTheDocument();
     const notes = screen.getByRole("region", { name: "Notes" });
-    expect(notes).toHaveTextContent("Salary arrived between the 1st and the 29th.");
+    expect(notes).toHaveTextContent(
+      "Salary arrived between the 1st and the 29th.",
+    );
   });
 
   it("hides the sections that have nothing to show", () => {
@@ -194,21 +252,29 @@ describe("AnalyticsPanel", () => {
     });
     expect(screen.queryByRole("region", { name: "AutoPay" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Top payees" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "Small payments and transfers" })).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: "Small payments and transfers" }),
+    ).toBeNull();
     expect(screen.getByRole("region", { name: "SIPs" })).toBeInTheDocument();
   });
 
   it("shows the upload prompt with a link to Spending when there is no statement coverage", () => {
     withData(empty);
-    expect(screen.getByText("Upload a statement to see this.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Go to Spending" })).toHaveAttribute("href", "/spending");
-    expect(screen.queryByRole("img", { name: "Money in and out, last 12 months" })).toBeNull();
+    expect(
+      screen.getByText("Upload a statement to see this."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Go to Spending" }),
+    ).toHaveAttribute("href", "/spending");
+    expect(
+      screen.queryByRole("img", { name: "Money in and out, last 12 months" }),
+    ).toBeNull();
   });
 
   it("says the savings rate is unavailable when there is no full month of income", () => {
     withData({ ...fixture, savings_rate_bps: null });
-    expect(screen.getByRole("region", { name: "Your money, from your statements" })).toHaveTextContent(
-      "Savings rate needs a full month of income.",
-    );
+    expect(
+      screen.getByRole("region", { name: "Your money, from your statements" }),
+    ).toHaveTextContent("Savings rate needs a full month of income.");
   });
 });

@@ -21,10 +21,21 @@ export interface DragOpts {
 }
 
 // Starting on these is a tap on them, never a drag. (A link is fine: a slip's face may be one.)
-const FIELDS = "button, input, select, textarea, label, summary, [contenteditable], audio, video";
+const FIELDS =
+  "button, input, select, textarea, label, summary, [contenteditable], audio, video";
 
 export function attachDrag(root: HTMLElement, o: DragOpts): () => void {
-  let p: { el: HTMLElement; id: number; x0: number; y0: number; started: boolean; d: Drag; lx: number; ly: number; lt: number } | null = null;
+  let p: {
+    el: HTMLElement;
+    id: number;
+    x0: number;
+    y0: number;
+    started: boolean;
+    d: Drag;
+    lx: number;
+    ly: number;
+    lt: number;
+  } | null = null;
   let swallowUntil = 0;
 
   const begin = () => {
@@ -58,7 +69,17 @@ export function attachDrag(root: HTMLElement, o: DragOpts): () => void {
     if (hit && el.contains(hit)) return;
     if (o.ok && !o.ok(el)) return;
     const now = performance.now();
-    p = { el, id: e.pointerId, x0: e.clientX, y0: e.clientY, started: false, d: { el, dx: 0, dy: 0, vx: 0, vy: 0 }, lx: e.clientX, ly: e.clientY, lt: now };
+    p = {
+      el,
+      id: e.pointerId,
+      x0: e.clientX,
+      y0: e.clientY,
+      started: false,
+      d: { el, dx: 0, dy: 0, vx: 0, vy: 0 },
+      lx: e.clientX,
+      ly: e.clientY,
+      lt: now,
+    };
   };
 
   const move = (e: PointerEvent) => {
@@ -128,7 +149,11 @@ export function attachDrag(root: HTMLElement, o: DragOpts): () => void {
 }
 
 /** Buttons and chips squash to 0.93 when pressed and bounce back when let go (Joy's press.ts). */
-export function attachPress(root: HTMLElement, sel: string, squash: (el: HTMLElement, down: boolean) => void): () => void {
+export function attachPress(
+  root: HTMLElement,
+  sel: string,
+  squash: (el: HTMLElement, down: boolean) => void,
+): () => void {
   let held: HTMLElement | null = null;
   const up = () => {
     if (!held) return;
@@ -142,7 +167,8 @@ export function attachPress(root: HTMLElement, sel: string, squash: (el: HTMLEle
     squash(el, true);
   };
   const out = (e: PointerEvent) => {
-    if (held && e.target === held && !held.contains(e.relatedTarget as Node)) up();
+    if (held && e.target === held && !held.contains(e.relatedTarget as Node))
+      up();
   };
   root.addEventListener("pointerdown", down, { passive: true });
   addEventListener("pointerup", up);

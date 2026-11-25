@@ -13,5 +13,7 @@ afterEach(() => cleanup());
 // A test that reaches the network is a test that depends on the machine it runs on. Tests that
 // need `fetch` replace it themselves (and put the original back); anything else fails loudly.
 globalThis.fetch = (async (input: RequestInfo | URL) => {
-  throw new Error(`Unmocked fetch to ${String(input instanceof Request ? input.url : input)}. Replace globalThis.fetch in the test.`);
+  throw new Error(
+    `Unmocked fetch to ${String(input instanceof Request ? input.url : input)}. Replace globalThis.fetch in the test.`,
+  );
 }) as unknown as typeof fetch;

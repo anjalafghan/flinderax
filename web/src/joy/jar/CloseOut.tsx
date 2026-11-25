@@ -8,14 +8,22 @@ export interface ToClose {
 }
 
 /** "Did it happen?": a kept date whose day has passed. Yes confirms it; no cancels it. */
-export function CloseOut({ item, onDone }: { item: ToClose; onDone: () => void }) {
+export function CloseOut({
+  item,
+  onDone,
+}: {
+  item: ToClose;
+  onDone: () => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const answer = async (happened: boolean) => {
     setBusy(true);
     setError("");
     try {
-      await post(`/api/dates/history/${item.id}/happened`, { happened: happened ? "1" : "0" });
+      await post(`/api/dates/history/${item.id}/happened`, {
+        happened: happened ? "1" : "0",
+      });
       onDone();
     } catch {
       setError("Couldn't save that. Try again.");
@@ -29,14 +37,28 @@ export function CloseOut({ item, onDone }: { item: ToClose; onDone: () => void }
         {item.title} <span className="closeout-d">({item.when})</span>
       </span>
       <span className="closeout-actions">
-        <button className="btn btn-ink" type="button" disabled={busy} onClick={() => void answer(true)}>
+        <button
+          className="btn btn-ink"
+          type="button"
+          disabled={busy}
+          onClick={() => void answer(true)}
+        >
           Yes, we went
         </button>
-        <button className="btn-why" type="button" disabled={busy} onClick={() => void answer(false)}>
+        <button
+          className="btn-why"
+          type="button"
+          disabled={busy}
+          onClick={() => void answer(false)}
+        >
           It didn't happen
         </button>
       </span>
-      {error && <span role="alert" className="closeout-err">{error}</span>}
+      {error && (
+        <span role="alert" className="closeout-err">
+          {error}
+        </span>
+      )}
     </div>
   );
 }

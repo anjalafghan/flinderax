@@ -8,7 +8,8 @@ export function errorMessageOf(body: string, status: number): string {
   if (text.startsWith("{")) {
     try {
       const v = JSON.parse(text) as { message?: unknown; error?: unknown };
-      for (const m of [v.message, v.error]) if (typeof m === "string" && m) return m;
+      for (const m of [v.message, v.error])
+        if (typeof m === "string" && m) return m;
     } catch {
       /* not JSON after all: fall through to the text */
       return text;

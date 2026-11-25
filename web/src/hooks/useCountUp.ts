@@ -13,7 +13,10 @@ export function useCountUp(target: number, ms = 700): number {
 
   useEffect(() => {
     if (from.current === target) return;
-    if (prefersReducedMotion() || typeof requestAnimationFrame === "undefined") {
+    if (
+      prefersReducedMotion() ||
+      typeof requestAnimationFrame === "undefined"
+    ) {
       from.current = target;
       raf.current = requestAnimationFrame?.(() => setValue(target)) ?? 0;
       return;

@@ -1,9 +1,29 @@
-import { Fragment, useEffect, useRef, useState, type AnimationEvent, type ChangeEvent, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+  type AnimationEvent,
+  type ChangeEvent,
+  type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { thumbOf } from "../photo";
 import { Link } from "react-router-dom";
 import { ApiError } from "../api";
 import { DayEditor } from "./DayEditor";
-import { deleteDate, deletePhoto, rate, setHeroPhoto, reveal, setCost, setLine, setWhen, uploadPhoto } from "./api";
+import {
+  deleteDate,
+  deletePhoto,
+  rate,
+  setHeroPhoto,
+  reveal,
+  setCost,
+  setLine,
+  setWhen,
+  uploadPhoto,
+} from "./api";
 import { CalLink } from "./CalLink";
 import { Icon } from "./Defs";
 import { useKept } from "./ctx";
@@ -19,8 +39,14 @@ import { useAction } from "./useAction";
 import { LinkPayment } from "./LinkPayment";
 import { useFold } from "./useFold";
 
-const slipVars = (h: KeptView, i: number) => ({ "--r": rotOf(h.id), "--i": i }) as CSSProperties;
-const sparkVars = (dx: number, dr: number, delay: number) => ({ "--dx": `${dx}px`, "--dr": `${dr}deg`, animationDelay: `${delay}ms` }) as CSSProperties;
+const slipVars = (h: KeptView, i: number) =>
+  ({ "--r": rotOf(h.id), "--i": i }) as CSSProperties;
+const sparkVars = (dx: number, dr: number, delay: number) =>
+  ({
+    "--dx": `${dx}px`,
+    "--dr": `${dr}deg`,
+    animationDelay: `${delay}ms`,
+  }) as CSSProperties;
 
 function Err({ text }: { text: string }) {
   return text ? (
@@ -33,7 +59,13 @@ function Err({ text }: { text: string }) {
 // ── a surprise, sealed for you: hints only ──────────────────────────────────
 export function SealedSlip({ h, index }: { h: KeptView; index: number }) {
   return (
-    <li className="k-slip k-env grain" id={`k${h.id}`} tabIndex={-1} data-setting={h.setting} style={slipVars(h, index)}>
+    <li
+      className="k-slip k-env grain"
+      id={`k${h.id}`}
+      tabIndex={-1}
+      data-setting={h.setting}
+      style={slipVars(h, index)}
+    >
       <article aria-labelledby={`k-t${h.id}`}>
         <span className="k-env-flap" aria-hidden="true" />
         <span className="k-wax" aria-hidden="true">
@@ -45,7 +77,9 @@ export function SealedSlip({ h, index }: { h: KeptView; index: number }) {
         </div>
         <p className="k-env-eyebrow">A sealed slip</p>
         <h3 className="k-env-title" id={`k-t${h.id}`}>
-          {h.from_name ? `A surprise from ${h.from_name}` : "A surprise for you"}
+          {h.from_name
+            ? `A surprise from ${h.from_name}`
+            : "A surprise for you"}
         </h3>
         <p className="visually-hidden">Sealed on {h.day_label}.</p>
         <p className="k-env-aside hand" aria-hidden="true">
@@ -128,7 +162,14 @@ function Tada() {
         surprise!
       </span>
       {cover && (
-        <div className="k-cover" aria-hidden="true" onPointerDown={() => setCover(false)} onAnimationEnd={(e: AnimationEvent) => e.target === e.currentTarget && setCover(false)}>
+        <div
+          className="k-cover"
+          aria-hidden="true"
+          onPointerDown={() => setCover(false)}
+          onAnimationEnd={(e: AnimationEvent) =>
+            e.target === e.currentTarget && setCover(false)
+          }
+        >
           <span className="k-env-flap" />
           <span className="k-wax">
             <Icon id="k-heart" size={22} />
@@ -139,10 +180,22 @@ function Tada() {
   );
 }
 
-type Phase = { k: "idle" } | { k: "shrink" } | { k: "upload"; label: string } | { k: "dev" };
+type Phase =
+  | { k: "idle" }
+  | { k: "shrink" }
+  | { k: "upload"; label: string }
+  | { k: "dev" };
 
 // ── a kept date ─────────────────────────────────────────────────────────────
-export function Slip({ h, index, scene = null }: { h: KeptView; index: number; scene?: SceneDef | null }) {
+export function Slip({
+  h,
+  index,
+  scene = null,
+}: {
+  h: KeptView;
+  index: number;
+  scene?: SceneDef | null;
+}) {
   const { currency, finish, refresh, revealed } = useKept();
 
   // rating + note: saves itself, newest wins (htmx's `hx-sync="this:queue last"`)
@@ -151,12 +204,21 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
   const saved = useRef({ rating: h.rating, note: h.note });
   const inflight = useRef(false);
   const queued = useRef<{ rating: number | null; note: string } | null>(null);
-  const [status, setStatus] = useState<{ text: string; tone: "" | "ok" | "err" }>({ text: "", tone: "" });
-  const statusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [status, setStatus] = useState<{
+    text: string;
+    tone: "" | "ok" | "err";
+  }>({ text: "", tone: "" });
+  const statusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   const say = (text: string, tone: "" | "ok" | "err" = "") => {
     clearTimeout(statusTimer.current);
     setStatus({ text, tone });
-    if (tone === "ok") statusTimer.current = setTimeout(() => setStatus({ text: "", tone: "" }), 2200);
+    if (tone === "ok")
+      statusTimer.current = setTimeout(
+        () => setStatus({ text: "", tone: "" }),
+        2200,
+      );
   };
   useEffect(() => () => clearTimeout(statusTimer.current), []);
 
@@ -174,7 +236,12 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
       say("Saved", "ok");
     } catch (e) {
       queued.current = null;
-      say(e instanceof TypeError ? "offline? didn’t save" : "didn’t save, try again", "err");
+      say(
+        e instanceof TypeError
+          ? "offline? didn’t save"
+          : "didn’t save, try again",
+        "err",
+      );
     } finally {
       inflight.current = false;
     }
@@ -203,7 +270,8 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
   ];
   const onHeartEnd = (e: AnimationEvent<HTMLLabelElement>, n: number) => {
     const t = e.target as Element;
-    if (t.classList.contains("k-spark")) setSparks((s) => s.filter((i) => i !== Number(t.getAttribute("data-i"))));
+    if (t.classList.contains("k-spark"))
+      setSparks((s) => s.filter((i) => i !== Number(t.getAttribute("data-i"))));
     else if (popped === n) setPopped(0);
   };
 
@@ -233,10 +301,18 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
     if (!reduced()) {
       theirsEl.current?.animate(
         [
-          { opacity: 0, transform: "translateY(-12px) rotate(-2.5deg) scale(.94)" },
+          {
+            opacity: 0,
+            transform: "translateY(-12px) rotate(-2.5deg) scale(.94)",
+          },
           { opacity: 1, transform: "none" },
         ],
-        { duration: 520, delay: 200, easing: "cubic-bezier(.34,1.4,.64,1)", fill: "backwards" },
+        {
+          duration: 520,
+          delay: 200,
+          easing: "cubic-bezier(.34,1.4,.64,1)",
+          fill: "backwards",
+        },
       );
     }
   }, [h.lines.theirs]);
@@ -250,7 +326,10 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
 
   // photo: pick -> shrink -> upload with progress -> developing -> in
   const [phase, setPhase] = useState<Phase>({ k: "idle" });
-  const [photoMsg, setPhotoMsg] = useState<{ text: string; tone: "" | "err" }>({ text: "", tone: "" });
+  const [photoMsg, setPhotoMsg] = useState<{ text: string; tone: "" | "err" }>({
+    text: "",
+    tone: "",
+  });
   const [fresh, setFresh] = useState(false);
   const photoAct = useAction();
   const [viewing, setViewing] = useState<number | null>(null);
@@ -265,7 +344,11 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
       let added = 0;
       try {
         for (const [i, file] of files.entries()) {
-          const tell = (label: string) => setPhotoMsg({ text: photoOf(i + 1, files.length, label), tone: "" });
+          const tell = (label: string) =>
+            setPhotoMsg({
+              text: photoOf(i + 1, files.length, label),
+              tone: "",
+            });
           tell("Getting it ready…");
           setPhase({ k: "shrink" });
           const blob = await shrinkImage(file);
@@ -280,11 +363,25 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
           await refresh();
         }
         setFresh(true);
-        setPhotoMsg({ text: added > 1 ? `${added} photos added.` : "Photo added.", tone: "" });
-        figEl.current?.scrollIntoView({ block: "nearest", behavior: reduced() ? "auto" : "smooth" });
+        setPhotoMsg({
+          text: added > 1 ? `${added} photos added.` : "Photo added.",
+          tone: "",
+        });
+        figEl.current?.scrollIntoView({
+          block: "nearest",
+          behavior: reduced() ? "auto" : "smooth",
+        });
       } catch (x) {
-        const why = x instanceof TypeError ? "Offline? The photo didn’t go up. Try again in a moment." : x instanceof ApiError ? x.message : "That didn’t work. Try again?";
-        setPhotoMsg({ text: added > 0 ? `${added} added, then: ${why}` : why, tone: "err" });
+        const why =
+          x instanceof TypeError
+            ? "Offline? The photo didn’t go up. Try again in a moment."
+            : x instanceof ApiError
+              ? x.message
+              : "That didn’t work. Try again?";
+        setPhotoMsg({
+          text: added > 0 ? `${added} added, then: ${why}` : why,
+          tone: "err",
+        });
       } finally {
         input.value = "";
         setPhase({ k: "idle" });
@@ -315,7 +412,10 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
   const costFold = useFold();
   const costAct = useAction();
   const cabKey = h.cabs.map((c) => c.fare).join("|");
-  const [actual, setActual] = useStateFrom(h.cost_actual_raw, [h.cost_actual_raw, cabKey]);
+  const [actual, setActual] = useStateFrom(h.cost_actual_raw, [
+    h.cost_actual_raw,
+    cabKey,
+  ]);
   const [alsoEstimate, setAlsoEstimate] = useState(true);
   const [cabs, setCabs] = useStateFrom(
     h.cabs.map((c) => c.fare),
@@ -364,7 +464,15 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
         <h3 className="k-slip-title" id={`k-t${h.id}`}>
           {h.title}
         </h3>
-        {scene && <SceneButton className="k-keepsake" scene={scene} what={`${h.title}, ${h.day_label}`} arrive={!isSeen(h.id)} onArrived={() => markSeen(h.id)} />}
+        {scene && (
+          <SceneButton
+            className="k-keepsake"
+            scene={scene}
+            what={`${h.title}, ${h.day_label}`}
+            arrive={!isSeen(h.id)}
+            onArrived={() => markSeen(h.id)}
+          />
+        )}
         <p className="k-meta">
           <time className="visually-hidden" dateTime={h.day}>
             Stamped {h.day_label}
@@ -411,7 +519,9 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
           {h.cost_actual ? (
             <span>
               Estimated {h.cost_est} · actually <strong>{h.cost_actual}</strong>{" "}
-              <span className={`k-cost-diff${h.cost_over ? " is-over" : ""}`}>({h.cost_diff})</span>
+              <span className={`k-cost-diff${h.cost_over ? " is-over" : ""}`}>
+                ({h.cost_diff})
+              </span>
             </span>
           ) : (
             <span>
@@ -422,29 +532,61 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
 
         {hasPhoto ? (
           <>
-            <figure ref={figEl} className={`k-polaroid${fresh ? " k-fresh" : ""}`} id={`kp${h.id}`} tabIndex={-1}>
+            <figure
+              ref={figEl}
+              className={`k-polaroid${fresh ? " k-fresh" : ""}`}
+              id={`kp${h.id}`}
+              tabIndex={-1}
+            >
               <a
                 href={cover.url}
                 className="k-polaroid-frame"
                 onClick={view(0)}
-                aria-label={pics.length > 1 ? `Open the ${pics.length} photos from ${h.title}` : `Open the photo from ${h.title}`}
+                aria-label={
+                  pics.length > 1
+                    ? `Open the ${pics.length} photos from ${h.title}`
+                    : `Open the photo from ${h.title}`
+                }
               >
-                <img src={cover.url} alt={`Photo from ${h.title}`} width={480} height={360} loading={fresh ? "eager" : "lazy"} decoding="async" />
+                <img
+                  src={cover.url}
+                  alt={`Photo from ${h.title}`}
+                  width={480}
+                  height={360}
+                  loading={fresh ? "eager" : "lazy"}
+                  decoding="async"
+                />
               </a>
               <figcaption className="hand" aria-hidden="true">
                 {h.day_label}
               </figcaption>
             </figure>
             <p className="k-photo-tip">
-              {pics.length > 1 ? "Tap a photo to see them all." : "Tap the photo to see it bigger."}{" "}
+              {pics.length > 1
+                ? "Tap a photo to see them all."
+                : "Tap the photo to see it bigger."}{" "}
               <Link to="/joy/year#wall">See all our photos</Link>
             </p>
             {(pics.length > 1 || developing) && (
-              <ul className="k-photo-strip" aria-label={`More photos from ${h.title}`}>
+              <ul
+                className="k-photo-strip"
+                aria-label={`More photos from ${h.title}`}
+              >
                 {pics.slice(1).map((p, i) => (
                   <li key={p.id}>
-                    <a href={p.url} onClick={view(i + 1)} aria-label={`Open photo ${i + 2} of ${pics.length} from ${h.title}`}>
-                      <img src={thumbOf(p.url)} alt="" width={160} height={120} loading="lazy" decoding="async" />
+                    <a
+                      href={p.url}
+                      onClick={view(i + 1)}
+                      aria-label={`Open photo ${i + 2} of ${pics.length} from ${h.title}`}
+                    >
+                      <img
+                        src={thumbOf(p.url)}
+                        alt=""
+                        width={160}
+                        height={120}
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </a>
                   </li>
                 ))}
@@ -456,14 +598,22 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
               </ul>
             )}
             <PhotoViewer
-              photos={pics.map((p, i) => ({ url: p.url, alt: `Photo ${i + 1} of ${pics.length} from ${h.title}`, caption: `${h.title} · ${h.day_label}` }))}
+              photos={pics.map((p, i) => ({
+                url: p.url,
+                alt: `Photo ${i + 1} of ${pics.length} from ${h.title}`,
+                caption: `${h.title} · ${h.day_label}`,
+              }))}
               start={viewing}
               onClose={() => setViewing(null)}
             />
           </>
         ) : (
           developing && (
-            <figure ref={figEl} className="k-polaroid k-pending" aria-hidden="true">
+            <figure
+              ref={figEl}
+              className="k-polaroid k-pending"
+              aria-hidden="true"
+            >
               <div className="k-dev">developing…</div>
               <figcaption className="hand">&nbsp;</figcaption>
             </figure>
@@ -483,8 +633,21 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
             <div className="k-hearts-row">
               {[1, 2, 3, 4, 5].map((n) => (
                 <Fragment key={n}>
-                  <input className="k-heart-in visually-hidden" type="radio" name={`rating-${h.id}`} value={n} id={`r${h.id}-${n}`} checked={rating === n} onChange={() => pick(n)} />
-                  <label className={`k-heart${popped === n ? " k-pop" : ""}`} htmlFor={`r${h.id}-${n}`} data-n={n} onAnimationEnd={(e) => onHeartEnd(e, n)}>
+                  <input
+                    className="k-heart-in visually-hidden"
+                    type="radio"
+                    name={`rating-${h.id}`}
+                    value={n}
+                    id={`r${h.id}-${n}`}
+                    checked={rating === n}
+                    onChange={() => pick(n)}
+                  />
+                  <label
+                    className={`k-heart${popped === n ? " k-pop" : ""}`}
+                    htmlFor={`r${h.id}-${n}`}
+                    data-n={n}
+                    onAnimationEnd={(e) => onHeartEnd(e, n)}
+                  >
                     <svg width="30" height="28" aria-hidden="true">
                       <use href="#k-heart" />
                     </svg>
@@ -493,14 +656,29 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
                     </span>
                     {n === 5 &&
                       sparks.map((i) => (
-                        <svg key={i} data-i={i} className="k-spark" viewBox="0 0 32 30" aria-hidden="true" style={sparkVars(SPARK[i][0], SPARK[i][1], i * 60)}>
+                        <svg
+                          key={i}
+                          data-i={i}
+                          className="k-spark"
+                          viewBox="0 0 32 30"
+                          aria-hidden="true"
+                          style={sparkVars(SPARK[i][0], SPARK[i][1], i * 60)}
+                        >
                           <use href="#k-heart" />
                         </svg>
                       ))}
                   </label>
                 </Fragment>
               ))}
-              <input className="k-heart-in k-clear-in visually-hidden" type="radio" name={`rating-${h.id}`} value="" id={`r${h.id}-0`} checked={rating === null} onChange={() => pick(null)} />
+              <input
+                className="k-heart-in k-clear-in visually-hidden"
+                type="radio"
+                name={`rating-${h.id}`}
+                value=""
+                id={`r${h.id}-0`}
+                checked={rating === null}
+                onChange={() => pick(null)}
+              />
               <label className="k-clear" htmlFor={`r${h.id}-0`}>
                 <span className="k-clear-x" aria-hidden="true">
                   ×
@@ -512,7 +690,8 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
 
           <div className="k-note">
             <label className="k-field-cap" htmlFor={`n${h.id}`}>
-              Our note<span className="visually-hidden"> about {h.title}</span> <span className="k-opt">saved as you go</span>
+              Our note<span className="visually-hidden"> about {h.title}</span>{" "}
+              <span className="k-opt">saved as you go</span>
             </label>
             <textarea
               ref={noteEl}
@@ -534,7 +713,12 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
             <button className="k-save" type="submit">
               Save
             </button>
-            <span className="k-status hand" role="status" aria-live="polite" data-tone={status.tone}>
+            <span
+              className="k-status hand"
+              role="status"
+              aria-live="polite"
+              data-tone={status.tone}
+            >
               {status.text}
             </span>
           </div>
@@ -553,8 +737,11 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
           {h.lines.can_write ? (
             <form className="k-line-form" onSubmit={sealLine}>
               <label className="k-field-cap" htmlFor={`l${h.id}`}>
-                My private line<span className="visually-hidden"> about {h.title}</span>{" "}
-                <span className="k-opt">you’ll both see them once you’ve each written one</span>
+                My private line
+                <span className="visually-hidden"> about {h.title}</span>{" "}
+                <span className="k-opt">
+                  you’ll both see them once you’ve each written one
+                </span>
               </label>
               <textarea
                 ref={lineEl}
@@ -595,10 +782,22 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
         </section>
 
         <div className="k-tools">
-          <form className={`k-photo-form${photoAct.busy ? " is-busy" : ""}`} onSubmit={(e) => e.preventDefault()}>
+          <form
+            className={`k-photo-form${photoAct.busy ? " is-busy" : ""}`}
+            onSubmit={(e) => e.preventDefault()}
+          >
             {h.can_add_photo !== false && (
               <>
-                <input ref={fileEl} className="k-file" type="file" name="photo" id={`p${h.id}`} accept="image/*" multiple onChange={onFile} />
+                <input
+                  ref={fileEl}
+                  className="k-file"
+                  type="file"
+                  name="photo"
+                  id={`p${h.id}`}
+                  accept="image/*"
+                  multiple
+                  onChange={onFile}
+                />
                 <label className="k-tool" htmlFor={`p${h.id}`}>
                   <Icon id="k-cam" size={18} />
                   {hasPhoto ? "Add more photos" : "Add photos"}
@@ -606,178 +805,308 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
                 </label>
               </>
             )}
-            <span className="k-photo-status" role="status" aria-live="polite" data-tone={photoMsg.tone}>
+            <span
+              className="k-photo-status"
+              role="status"
+              aria-live="polite"
+              data-tone={photoMsg.tone}
+            >
               {photoMsg.text}
             </span>
-            {photoAct.err && <span className="k-photo-status" data-tone="err">{photoAct.err}</span>}
+            {photoAct.err && (
+              <span className="k-photo-status" data-tone="err">
+                {photoAct.err}
+              </span>
+            )}
           </form>
           <details className="k-more">
             <summary className="k-tool k-tool-quiet">More</summary>
-          <DayEditor id={h.id} day={h.day} />
-          <details className="k-when-edit" {...whenFold.props}>
-            <summary ref={whenSummary} className="k-tool">
-              <Icon id="k-clock" size={18} />
-              {h.planned_label ? "Change time" : "Set a time"}
-            </summary>
-            <form className="k-when-form" onSubmit={saveWhen}>
-              <label className="k-label" htmlFor={`w${h.id}`}>
-                When is it?
-              </label>
-              <div className="k-inline">
-                <input className="k-field" id={`w${h.id}`} type="datetime-local" name="at" value={at} onChange={(e) => setAt(e.target.value)} />
-                <button className="k-btn" type="submit" disabled={whenAct.busy}>
-                  Save time
-                </button>
-              </div>
-              <p className="k-hint">Empty it and save to clear the time.</p>
-              <Err text={whenAct.err} />
-            </form>
-          </details>
-          <LinkPayment historyId={h.id} linked={h.linked_txn} onDone={() => void finish({ ok: true, to: "/joy/kept" }, { focus: `#k${h.id}` })} />
-          <details className="k-when-edit k-cost-edit" {...costFold.props}>
-            <summary className="k-tool">
-              <span className="k-cost-ico" aria-hidden="true">
-                {currency}
-              </span>
-              {h.cost_actual ? "Change cost" : "What did it cost?"}
-            </summary>
-            <form className="k-when-form k-cost-form" onSubmit={saveCost}>
-              <label className="k-label" htmlFor={`c${h.id}`}>
-                What did the plan itself cost, for both of you? <span className="k-opt">not counting travel</span>
-              </label>
-              <span className="k-money">
-                <span aria-hidden="true">{currency}</span>
-                <input className="k-field" id={`c${h.id}`} type="number" name="actual" inputMode="numeric" min={0} step={1} value={actual} onChange={(e) => setActual(e.target.value)} placeholder="e.g. 5000" />
-              </span>
-              <label className="k-check">
-                <input type="checkbox" name="update_estimate" checked={alsoEstimate} onChange={(e) => setAlsoEstimate(e.target.checked)} /> Also update this slip’s estimate in the jar
-              </label>
-              <p className="k-hint">So next time the jar knows what it really costs.</p>
-              <fieldset className="k-cabs">
-                <legend className="k-label">
-                  Took a cab? <span className="k-opt">one way, optional</span>
-                </legend>
-                {h.cabs.map((c, i) => (
-                  <label className="k-cab" key={i}>
-                    <span>{c.name}</span>
-                    <span className="k-money">
-                      <span aria-hidden="true">{currency}</span>
-                      <input
-                        className="k-field"
-                        type="number"
-                        name={`cab_${i}`}
-                        inputMode="numeric"
-                        min={0}
-                        step={1}
-                        value={cabs[i] ?? ""}
-                        onChange={(e) => setCabs((cur) => cur.map((v, j) => (j === i ? e.target.value : v)))}
-                        placeholder="—"
-                        aria-label={`${c.name}’s cab fare, one way`}
-                      />
-                    </span>
-                  </label>
-                ))}
-                <p className="k-hint">Helps the jar’s cab estimates match what you really pay.</p>
-              </fieldset>
-              <div className="k-cost-actions">
-                <button className="k-btn" type="submit" disabled={costAct.busy}>
-                  Save
-                </button>
-                <span className="k-hint">Empty a field and save to clear it.</span>
-              </div>
-              <Err text={costAct.err} />
-            </form>
-          </details>
-          {pics.length > 1 && (
-            <details className="k-photo-del k-photo-hero" {...heroFold.props}>
-              <summary className="k-tool k-tool-quiet">Choose the main photo</summary>
-              <div>
-                <p>The main photo is the one on our Month and Year pages, and it leads here.</p>
-                <ul className="k-photo-pick">
-                  {pics.map((p, i) => (
-                    <li key={p.id}>
-                      <img src={thumbOf(p.url)} alt="" width={96} height={72} loading="lazy" decoding="async" />
-                      {i === 0 ? (
-                        <span className="k-hero-now">Main photo</span>
-                      ) : (
-                        <button
-                          className="k-btn"
-                          type="button"
-                          disabled={heroAct.busy}
-                          aria-label={`Make photo ${i + 1} of ${pics.length} the main photo`}
-                          onClick={() => void heroAct.act(async () => finish(await setHeroPhoto(h.id, p.id), { focus: `#k${h.id} .k-photo-hero > summary` }))}
-                        >
-                          Make it the main one
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                <Err text={heroAct.err} />
-              </div>
+            <DayEditor id={h.id} day={h.day} />
+            <details className="k-when-edit" {...whenFold.props}>
+              <summary ref={whenSummary} className="k-tool">
+                <Icon id="k-clock" size={18} />
+                {h.planned_label ? "Change time" : "Set a time"}
+              </summary>
+              <form className="k-when-form" onSubmit={saveWhen}>
+                <label className="k-label" htmlFor={`w${h.id}`}>
+                  When is it?
+                </label>
+                <div className="k-inline">
+                  <input
+                    className="k-field"
+                    id={`w${h.id}`}
+                    type="datetime-local"
+                    name="at"
+                    value={at}
+                    onChange={(e) => setAt(e.target.value)}
+                  />
+                  <button
+                    className="k-btn"
+                    type="submit"
+                    disabled={whenAct.busy}
+                  >
+                    Save time
+                  </button>
+                </div>
+                <p className="k-hint">Empty it and save to clear the time.</p>
+                <Err text={whenAct.err} />
+              </form>
             </details>
-          )}
-          {hasPhoto && (
-            <details className="k-photo-del" {...photoFold.props}>
-              <summary className="k-tool k-tool-quiet">{pics.length > 1 ? "Remove a photo" : "Remove photo"}</summary>
-              {pics.length > 1 ? (
+            <LinkPayment
+              historyId={h.id}
+              linked={h.linked_txn}
+              onDone={() =>
+                void finish(
+                  { ok: true, to: "/joy/kept" },
+                  { focus: `#k${h.id}` },
+                )
+              }
+            />
+            <details className="k-when-edit k-cost-edit" {...costFold.props}>
+              <summary className="k-tool">
+                <span className="k-cost-ico" aria-hidden="true">
+                  {currency}
+                </span>
+                {h.cost_actual ? "Change cost" : "What did it cost?"}
+              </summary>
+              <form className="k-when-form k-cost-form" onSubmit={saveCost}>
+                <label className="k-label" htmlFor={`c${h.id}`}>
+                  What did the plan itself cost, for both of you?{" "}
+                  <span className="k-opt">not counting travel</span>
+                </label>
+                <span className="k-money">
+                  <span aria-hidden="true">{currency}</span>
+                  <input
+                    className="k-field"
+                    id={`c${h.id}`}
+                    type="number"
+                    name="actual"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    value={actual}
+                    onChange={(e) => setActual(e.target.value)}
+                    placeholder="e.g. 5000"
+                  />
+                </span>
+                <label className="k-check">
+                  <input
+                    type="checkbox"
+                    name="update_estimate"
+                    checked={alsoEstimate}
+                    onChange={(e) => setAlsoEstimate(e.target.checked)}
+                  />{" "}
+                  Also update this slip’s estimate in the jar
+                </label>
+                <p className="k-hint">
+                  So next time the jar knows what it really costs.
+                </p>
+                <fieldset className="k-cabs">
+                  <legend className="k-label">
+                    Took a cab? <span className="k-opt">one way, optional</span>
+                  </legend>
+                  {h.cabs.map((c, i) => (
+                    <label className="k-cab" key={i}>
+                      <span>{c.name}</span>
+                      <span className="k-money">
+                        <span aria-hidden="true">{currency}</span>
+                        <input
+                          className="k-field"
+                          type="number"
+                          name={`cab_${i}`}
+                          inputMode="numeric"
+                          min={0}
+                          step={1}
+                          value={cabs[i] ?? ""}
+                          onChange={(e) =>
+                            setCabs((cur) =>
+                              cur.map((v, j) => (j === i ? e.target.value : v)),
+                            )
+                          }
+                          placeholder="—"
+                          aria-label={`${c.name}’s cab fare, one way`}
+                        />
+                      </span>
+                    </label>
+                  ))}
+                  <p className="k-hint">
+                    Helps the jar’s cab estimates match what you really pay.
+                  </p>
+                </fieldset>
+                <div className="k-cost-actions">
+                  <button
+                    className="k-btn"
+                    type="submit"
+                    disabled={costAct.busy}
+                  >
+                    Save
+                  </button>
+                  <span className="k-hint">
+                    Empty a field and save to clear it.
+                  </span>
+                </div>
+                <Err text={costAct.err} />
+              </form>
+            </details>
+            {pics.length > 1 && (
+              <details className="k-photo-del k-photo-hero" {...heroFold.props}>
+                <summary className="k-tool k-tool-quiet">
+                  Choose the main photo
+                </summary>
                 <div>
-                  <p>Which one should come off this page? It can’t be undone.</p>
+                  <p>
+                    The main photo is the one on our Month and Year pages, and
+                    it leads here.
+                  </p>
                   <ul className="k-photo-pick">
                     {pics.map((p, i) => (
                       <li key={p.id}>
-                        <img src={thumbOf(p.url)} alt="" width={96} height={72} loading="lazy" decoding="async" />
-                        <button
-                          className="k-btn k-btn-stamp"
-                          type="button"
-                          disabled={photoDel.busy}
-                          aria-label={`Remove photo ${i + 1} of ${pics.length}`}
-                          onClick={() => window.confirm("Remove this photo? This can't be undone.") && void photoDel.act(async () => finish(await deletePhoto(h.id, p.id), { focus: `#k${h.id} .k-photo-del > summary` }))}
-                        >
-                          Remove
-                        </button>
+                        <img
+                          src={thumbOf(p.url)}
+                          alt=""
+                          width={96}
+                          height={72}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        {i === 0 ? (
+                          <span className="k-hero-now">Main photo</span>
+                        ) : (
+                          <button
+                            className="k-btn"
+                            type="button"
+                            disabled={heroAct.busy}
+                            aria-label={`Make photo ${i + 1} of ${pics.length} the main photo`}
+                            onClick={() =>
+                              void heroAct.act(async () =>
+                                finish(await setHeroPhoto(h.id, p.id), {
+                                  focus: `#k${h.id} .k-photo-hero > summary`,
+                                }),
+                              )
+                            }
+                          >
+                            Make it the main one
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ul>
-                  <Err text={photoDel.err} />
+                  <Err text={heroAct.err} />
                 </div>
-              ) : (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!window.confirm("Remove this photo? This can't be undone.")) return;
-                    void photoDel.act(async () => finish(await deletePhoto(h.id, cover.id), { focus: `#p${h.id}` }));
-                  }}
+              </details>
+            )}
+            {hasPhoto && (
+              <details className="k-photo-del" {...photoFold.props}>
+                <summary className="k-tool k-tool-quiet">
+                  {pics.length > 1 ? "Remove a photo" : "Remove photo"}
+                </summary>
+                {pics.length > 1 ? (
+                  <div>
+                    <p>
+                      Which one should come off this page? It can’t be undone.
+                    </p>
+                    <ul className="k-photo-pick">
+                      {pics.map((p, i) => (
+                        <li key={p.id}>
+                          <img
+                            src={thumbOf(p.url)}
+                            alt=""
+                            width={96}
+                            height={72}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <button
+                            className="k-btn k-btn-stamp"
+                            type="button"
+                            disabled={photoDel.busy}
+                            aria-label={`Remove photo ${i + 1} of ${pics.length}`}
+                            onClick={() =>
+                              window.confirm(
+                                "Remove this photo? This can't be undone.",
+                              ) &&
+                              void photoDel.act(async () =>
+                                finish(await deletePhoto(h.id, p.id), {
+                                  focus: `#k${h.id} .k-photo-del > summary`,
+                                }),
+                              )
+                            }
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <Err text={photoDel.err} />
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (
+                        !window.confirm(
+                          "Remove this photo? This can't be undone.",
+                        )
+                      )
+                        return;
+                      void photoDel.act(async () =>
+                        finish(await deletePhoto(h.id, cover.id), {
+                          focus: `#p${h.id}`,
+                        }),
+                      );
+                    }}
+                  >
+                    <p>Take the photo off this page? It can’t be undone.</p>
+                    <button
+                      className="k-btn k-btn-stamp"
+                      type="submit"
+                      disabled={photoDel.busy}
+                    >
+                      Yes, remove it
+                    </button>
+                    <Err text={photoDel.err} />
+                  </form>
+                )}
+              </details>
+            )}
+            <details className="k-photo-del k-date-del" {...dateFold.props}>
+              <summary className="k-tool k-tool-quiet">
+                Remove from Kept
+                <span className="visually-hidden">: {h.title}</span>
+              </summary>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (
+                    !window.confirm(
+                      "Remove this date from Kept, with its photos? This can't be undone.",
+                    )
+                  )
+                    return;
+                  void dateDel.act(async () =>
+                    finish(await deleteDate(h.id), {
+                      focus: "#k-title, #k-empty-h",
+                    }),
+                  );
+                }}
+              >
+                <p>
+                  Take “{h.title}” out of Kept? Its rating
+                  {hasPhoto
+                    ? `, note and ${pics.length > 1 ? "photos" : "photo"}`
+                    : " and note"}{" "}
+                  go too. The slip stays in the jar.
+                </p>
+                <button
+                  className="k-btn k-btn-stamp"
+                  type="submit"
+                  disabled={dateDel.busy}
                 >
-                  <p>Take the photo off this page? It can’t be undone.</p>
-                  <button className="k-btn k-btn-stamp" type="submit" disabled={photoDel.busy}>
-                    Yes, remove it
-                  </button>
-                  <Err text={photoDel.err} />
-                </form>
-              )}
+                  Yes, remove it
+                </button>
+                <Err text={dateDel.err} />
+              </form>
             </details>
-          )}
-          <details className="k-photo-del k-date-del" {...dateFold.props}>
-            <summary className="k-tool k-tool-quiet">
-              Remove from Kept<span className="visually-hidden">: {h.title}</span>
-            </summary>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!window.confirm("Remove this date from Kept, with its photos? This can't be undone.")) return;
-                void dateDel.act(async () => finish(await deleteDate(h.id), { focus: "#k-title, #k-empty-h" }));
-              }}
-            >
-              <p>
-                Take “{h.title}” out of Kept? Its rating{hasPhoto ? `, note and ${pics.length > 1 ? "photos" : "photo"}` : " and note"} go too. The slip stays in the jar.
-              </p>
-              <button className="k-btn k-btn-stamp" type="submit" disabled={dateDel.busy}>
-                Yes, remove it
-              </button>
-              <Err text={dateDel.err} />
-            </form>
-          </details>
           </details>
         </div>
       </article>
@@ -785,4 +1114,3 @@ export function Slip({ h, index, scene = null }: { h: KeptView; index: number; s
     </li>
   );
 }
-

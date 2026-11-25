@@ -157,7 +157,10 @@ export function sourceLabel(source: string): string {
 }
 
 /** "HDFC Credit Card ••1234", or whichever parts are known. Null when neither is known. */
-export function sourceDetail(sourceName: string | null, last4: string | null): string | null {
+export function sourceDetail(
+  sourceName: string | null,
+  last4: string | null,
+): string | null {
   if (sourceName && last4) return `${sourceName} ••${last4}`;
   if (sourceName) return sourceName;
   if (last4) return `••${last4}`;
@@ -182,12 +185,24 @@ function norm(s: string | null): string {
  * The category most likely right for a transaction, from what you already sorted: the one you used
  * most for the same merchant, or null when there is no history for it (never a blind guess).
  */
-export function suggestCategory(txn: { merchant: string | null; direction: string }, all: readonly { merchant: string | null; direction: string; category: string }[]): string | null {
+export function suggestCategory(
+  txn: { merchant: string | null; direction: string },
+  all: readonly {
+    merchant: string | null;
+    direction: string;
+    category: string;
+  }[],
+): string | null {
   const name = norm(txn.merchant);
   if (!name) return null;
   const counts = new Map<string, number>();
   for (const t of all) {
-    if (NOT_A_CHOICE.has(t.category) || t.direction !== txn.direction || norm(t.merchant) !== name) continue;
+    if (
+      NOT_A_CHOICE.has(t.category) ||
+      t.direction !== txn.direction ||
+      norm(t.merchant) !== name
+    )
+      continue;
     counts.set(t.category, (counts.get(t.category) ?? 0) + 1);
   }
   let best: string | null = null;
@@ -199,13 +214,20 @@ export function suggestCategory(txn: { merchant: string | null; direction: strin
 }
 
 /** The categories you use most (for the quick-pick chips), topped up with common ones. */
-export function topCategories(all: readonly { category: string; direction: string }[], direction: string, n = 6): string[] {
+export function topCategories(
+  all: readonly { category: string; direction: string }[],
+  direction: string,
+  n = 6,
+): string[] {
   const counts = new Map<string, number>();
   for (const t of all) {
     if (NOT_A_CHOICE.has(t.category) || t.direction !== direction) continue;
     counts.set(t.category, (counts.get(t.category) ?? 0) + 1);
   }
   const used = [...counts].sort((a, b) => b[1] - a[1]).map(([c]) => c);
-  const fill = direction === "credit" ? ["income", "refund", "transfer", "other"] : ["food", "groceries", "shopping", "transport", "bills", "other"];
+  const fill =
+    direction === "credit"
+      ? ["income", "refund", "transfer", "other"]
+      : ["food", "groceries", "shopping", "transport", "bills", "other"];
   return [...new Set([...used, ...fill])].slice(0, n);
 }

@@ -12,7 +12,12 @@ const CHIP: Record<Upcoming["gift_status"], { label: string; tone: string }> = {
 export function GiftChip({ status }: { status: Upcoming["gift_status"] }) {
   const chip = CHIP[status];
   return (
-    <span className={cn("inline-flex min-h-7 shrink-0 items-center whitespace-nowrap rounded-full px-3 text-[13px] font-semibold", chip.tone)}>
+    <span
+      className={cn(
+        "inline-flex min-h-7 shrink-0 items-center whitespace-nowrap rounded-full px-3 text-[13px] font-semibold",
+        chip.tone,
+      )}
+    >
       {chip.label}
     </span>
   );

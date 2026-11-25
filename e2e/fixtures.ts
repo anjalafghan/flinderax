@@ -10,7 +10,10 @@ export const test = base.extend({
   context: async ({ browser }, use) => {
     n += 1;
     const ip = `10.77.${(n >> 8) & 255}.${n & 255}`;
-    const context = await browser.newContext({ baseURL: "http://127.0.0.1:3123", extraHTTPHeaders: { "fly-client-ip": ip } });
+    const context = await browser.newContext({
+      baseURL: "http://127.0.0.1:3123",
+      extraHTTPHeaders: { "fly-client-ip": ip },
+    });
     await use(context);
     await context.close();
   },

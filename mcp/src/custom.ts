@@ -7,13 +7,24 @@ import { JoyError, type JoyClient } from "./client.ts";
 import { shortHash } from "./inbox.ts";
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
-const failed = (e: unknown, fallback: string) => ({ isError: true, content: [{ type: "text" as const, text: e instanceof JoyError ? e.message : fallback }] });
+const failed = (e: unknown, fallback: string) => ({
+  isError: true,
+  content: [
+    {
+      type: "text" as const,
+      text: e instanceof JoyError ? e.message : fallback,
+    },
+  ],
+});
 
 export const DRESS_FIELDS = {
   notes: z.string().max(2000).optional(),
   venue: z.string().max(120).optional(),
   area: z.string().max(120).optional(),
-  location: z.string().regex(/^-?\d{1,2}(\.\d+)?,\s*-?\d{1,3}(\.\d+)?$/).optional(),
+  location: z
+    .string()
+    .regex(/^-?\d{1,2}(\.\d+)?,\s*-?\d{1,3}(\.\d+)?$/)
+    .optional(),
   tags: z.string().max(400).optional(),
   energy: z.enum(["low", "med", "high"]).optional(),
   duration: z.enum(["short", "half_day", "full_day", "weekend"]).optional(),
@@ -27,7 +38,9 @@ export const DRESS_FIELDS = {
   url: z.string().url().max(300).optional(),
   in_jar: z.boolean().optional(),
 };
-type DressArgs = { slip_id: number } & { [K in keyof typeof DRESS_FIELDS]?: z.infer<(typeof DRESS_FIELDS)[K]> };
+type DressArgs = { slip_id: number } & {
+  [K in keyof typeof DRESS_FIELDS]?: z.infer<(typeof DRESS_FIELDS)[K]>;
+};
 
 export const DRESS_PROMPT = [
   "Go through the days we marked by hand in joy (dates that never were slips) and make each one as good as a slip from the jar.",
@@ -50,7 +63,9 @@ export function registerCustomDates(server: McpServer, client: JoyClient) {
     },
     async () => {
       try {
-        return text(JSON.stringify(await client.get("/api/dates/custom"), null, 2));
+        return text(
+          JSON.stringify(await client.get("/api/dates/custom"), null, 2),
+        );
       } catch (e) {
         return failed(e, "Request failed.");
       }
@@ -61,15 +76,28 @@ export function registerCustomDates(server: McpServer, client: JoyClient) {
     "dates_dress_custom",
     {
       description:
-        "Fill in the slip of one hand-marked day (slip_id from dates_custom) so it reads like a jar slip: notes, place, map location (\"19.06, 72.83\"), tags, energy, duration, best time, minutes, hours (\"tue-sun 12:00-23:30\"), indoor/outdoor, what to bring, nearest station and walk, a link. Only blank fields are filled (energy and duration may be set the first time, while the slip has no notes); the title never changes. in_jar: true also puts it in the jar to be drawn again (not for one-time milestones). Answers which fields were filled and which were left alone. Ask the person first.",
+        'Fill in the slip of one hand-marked day (slip_id from dates_custom) so it reads like a jar slip: notes, place, map location ("19.06, 72.83"), tags, energy, duration, best time, minutes, hours ("tue-sun 12:00-23:30"), indoor/outdoor, what to bring, nearest station and walk, a link. Only blank fields are filled (energy and duration may be set the first time, while the slip has no notes); the title never changes. in_jar: true also puts it in the jar to be drawn again (not for one-time milestones). Answers which fields were filled and which were left alone. Ask the person first.',
       inputSchema: { slip_id: z.number().int().positive(), ...DRESS_FIELDS },
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ slip_id, ...fields }: DressArgs) => {
       try {
-        const body = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined && v !== ""));
+        const body = Object.fromEntries(
+          Object.entries(fields).filter(([, v]) => v !== undefined && v !== ""),
+        );
         const key = `mcp-dress:${slip_id}:${await shortHash(JSON.stringify(body))}`;
-        return text(JSON.stringify(await client.post(`/api/dates/slips/${slip_id}/dress`, body, key), null, 2));
+        return text(
+          JSON.stringify(
+            await client.post(`/api/dates/slips/${slip_id}/dress`, body, key),
+            null,
+            2,
+          ),
+        );
       } catch (e) {
         return failed(e, "Could not fill in that slip.");
       }
@@ -80,8 +108,16 @@ export function registerCustomDates(server: McpServer, client: JoyClient) {
     "dress_custom_dates",
     {
       title: "Turn hand-marked days into proper slips",
-      description: "Find the days we marked by hand and fill in their slips (and keepsakes) so they look as good as the jar's, with your yes first.",
+      description:
+        "Find the days we marked by hand and fill in their slips (and keepsakes) so they look as good as the jar's, with your yes first.",
     },
-    () => ({ messages: [{ role: "user" as const, content: { type: "text" as const, text: DRESS_PROMPT } }] }),
+    () => ({
+      messages: [
+        {
+          role: "user" as const,
+          content: { type: "text" as const, text: DRESS_PROMPT },
+        },
+      ],
+    }),
   );
 }

@@ -6,7 +6,15 @@ import api from "@/services/api";
 
 export interface Habit {
   key: string;
-  area: "data" | "money" | "food" | "goals" | "protection" | "health" | "people" | "work";
+  area:
+    | "data"
+    | "money"
+    | "food"
+    | "goals"
+    | "protection"
+    | "health"
+    | "people"
+    | "work";
   title: string;
   why: string;
   action: { label: string; to: string } | null;
@@ -20,9 +28,11 @@ export interface HabitsOut {
   habits: Habit[];
 }
 
-export const getHabits = () => api.get<HabitsOut>("/api/dashboard/habits").then((r) => r.data);
+export const getHabits = () =>
+  api.get<HabitsOut>("/api/dashboard/habits").then((r) => r.data);
 
 /** Habits move with the data uploads and the planner, so they share the dashboard refresh cycle. */
 export const habitsKey = ["habits"] as const;
 
-export const useHabits = () => useQuery({ queryKey: habitsKey, queryFn: getHabits, retry: 1 });
+export const useHabits = () =>
+  useQuery({ queryKey: habitsKey, queryFn: getHabits, retry: 1 });

@@ -32,18 +32,25 @@ export const STAGES: { value: Stage; label: string }[] = [
   { value: "closed", label: "Closed" },
 ];
 
-export const stageLabel = (s: Stage) => STAGES.find((x) => x.value === s)?.label ?? s;
+export const stageLabel = (s: Stage) =>
+  STAGES.find((x) => x.value === s)?.label ?? s;
 
 export const workKey = ["work"] as const;
 
-export const getWork = () => api.get<{ leads: Lead[] }>("/api/work").then((r) => r.data);
-export const addLead = (lead: LeadInput) => api.post<Lead>("/api/work", lead).then((r) => r.data);
-export const saveLead = (id: string, lead: LeadInput) => api.put<Lead>(`/api/work/${id}`, lead).then((r) => r.data);
+export const getWork = () =>
+  api.get<{ leads: Lead[] }>("/api/work").then((r) => r.data);
+export const addLead = (lead: LeadInput) =>
+  api.post<Lead>("/api/work", lead).then((r) => r.data);
+export const saveLead = (id: string, lead: LeadInput) =>
+  api.put<Lead>(`/api/work/${id}`, lead).then((r) => r.data);
 /** Starts the job search again with no leads. */
-export const clearLeads = () => api.post<{ removed: number }>("/api/work/clear", {}).then((r) => r.data);
-export const removeLead = (id: string) => api.del<void>(`/api/work/${id}`).then((r) => r.data);
+export const clearLeads = () =>
+  api.post<{ removed: number }>("/api/work/clear", {}).then((r) => r.data);
+export const removeLead = (id: string) =>
+  api.del<void>(`/api/work/${id}`).then((r) => r.data);
 
-export const useWork = () => useQuery({ queryKey: workKey, queryFn: getWork, retry: 1 });
+export const useWork = () =>
+  useQuery({ queryKey: workKey, queryFn: getWork, retry: 1 });
 
 /** A write that refreshes the leads and the habits built from them. */
 function useWorkWrite<V, T>(fn: (v: V) => Promise<T>) {
@@ -58,7 +65,8 @@ function useWorkWrite<V, T>(fn: (v: V) => Promise<T>) {
 }
 
 export const useAddLead = () => useWorkWrite(addLead);
-export const useSaveLead = () => useWorkWrite((v: { id: string; lead: LeadInput }) => saveLead(v.id, v.lead));
+export const useSaveLead = () =>
+  useWorkWrite((v: { id: string; lead: LeadInput }) => saveLead(v.id, v.lead));
 export const useRemoveLead = () => useWorkWrite(removeLead);
 export const useClearLeads = () => useWorkWrite(() => clearLeads());
 
@@ -69,12 +77,19 @@ export function daysUntil(day: string): number {
   const [y, m, d] = day.split("-").map(Number);
   const today = new Date();
   const from = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.round((Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1) - from) / 86_400_000);
+  return Math.round(
+    (Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1) - from) / 86_400_000,
+  );
 }
 
 /** Open leads whose next step is late or falls within the week, soonest first. */
 export function stepsThisWeek(leads: Lead[]): Lead[] {
   return leads
-    .filter((l) => l.stage !== "closed" && l.next_on !== null && daysUntil(l.next_on) <= SOON_DAYS)
+    .filter(
+      (l) =>
+        l.stage !== "closed" &&
+        l.next_on !== null &&
+        daysUntil(l.next_on) <= SOON_DAYS,
+    )
     .sort((a, b) => (a.next_on ?? "").localeCompare(b.next_on ?? ""));
 }

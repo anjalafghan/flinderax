@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { barPercent, budgetTone, calendarDaysAgo, dayLabel, isOverBudget, spentPercent } from "@/utils/joy";
+import {
+  barPercent,
+  budgetTone,
+  calendarDaysAgo,
+  dayLabel,
+  isOverBudget,
+  spentPercent,
+} from "@/utils/joy";
 
 describe("spentPercent", () => {
   it("rounds spent as a share of the budget", () => {
@@ -56,18 +63,28 @@ describe("calendarDaysAgo", () => {
   // Local-time fixtures, so the expectations hold in any timezone the tests run in.
   const now = new Date(2026, 10, 8, 9, 0);
   it("counts calendar days, not elapsed hours", () => {
-    expect(calendarDaysAgo(new Date(2026, 10, 8, 0, 5).toISOString(), now)).toBe(0);
+    expect(
+      calendarDaysAgo(new Date(2026, 10, 8, 0, 5).toISOString(), now),
+    ).toBe(0);
     // 23:55 yesterday is only ~9 hours before now, but it is yesterday
-    expect(calendarDaysAgo(new Date(2026, 10, 7, 23, 55).toISOString(), now)).toBe(1);
-    expect(calendarDaysAgo(new Date(2026, 10, 1, 12, 0).toISOString(), now)).toBe(7);
+    expect(
+      calendarDaysAgo(new Date(2026, 10, 7, 23, 55).toISOString(), now),
+    ).toBe(1);
+    expect(
+      calendarDaysAgo(new Date(2026, 10, 1, 12, 0).toISOString(), now),
+    ).toBe(7);
   });
   it("reads a zone-less SQLite timestamp as UTC", () => {
     const utc = new Date(Date.UTC(2026, 10, 7, 20, 0));
     const sqlite = utc.toISOString().slice(0, 19).replace("T", " ");
-    expect(calendarDaysAgo(sqlite, now)).toBe(calendarDaysAgo(utc.toISOString(), now));
+    expect(calendarDaysAgo(sqlite, now)).toBe(
+      calendarDaysAgo(utc.toISOString(), now),
+    );
   });
   it("is null for an unreadable timestamp and never negative for the future", () => {
     expect(calendarDaysAgo("not a date", now)).toBeNull();
-    expect(calendarDaysAgo(new Date(2026, 10, 9, 9, 0).toISOString(), now)).toBe(0);
+    expect(
+      calendarDaysAgo(new Date(2026, 10, 9, 9, 0).toISOString(), now),
+    ).toBe(0);
   });
 });

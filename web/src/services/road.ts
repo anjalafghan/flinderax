@@ -35,6 +35,8 @@ export interface Road {
 
 export const roadKey = ["plan", "road"] as const;
 
-export const getRoad = () => api.get<Road>("/api/plan/road").then((r) => r.data);
+export const getRoad = () =>
+  api.get<Road>("/api/plan/road").then((r) => r.data);
 
-export const useRoad = () => useQuery({ queryKey: roadKey, queryFn: getRoad, retry: 1 });
+export const useRoad = () =>
+  useQuery({ queryKey: roadKey, queryFn: getRoad, retry: 1 });

@@ -1,9 +1,21 @@
 import { expect, test } from "./fixtures";
-import { newUser, PASSWORD, register, registerAndStay, signIn, uniqueName } from "./helpers";
+import {
+  newUser,
+  PASSWORD,
+  register,
+  registerAndStay,
+  signIn,
+  uniqueName,
+} from "./helpers";
 
-test("sign in: the session lives in an HttpOnly cookie and the page keeps no token", async ({ page, context }) => {
+test("sign in: the session lives in an HttpOnly cookie and the page keeps no token", async ({
+  page,
+  context,
+}) => {
   await newUser(page, "signin");
-  const cookie = (await context.cookies()).find((c) => c.name === "joy_session");
+  const cookie = (await context.cookies()).find(
+    (c) => c.name === "joy_session",
+  );
   expect(cookie, "a session cookie").toBeTruthy();
   expect(cookie?.httpOnly).toBe(true);
   expect(cookie?.sameSite).toBe("Strict");
@@ -15,7 +27,9 @@ test("sign in: the session lives in an HttpOnly cookie and the page keeps no tok
   await expect(page).not.toHaveURL(/\/auth/);
 });
 
-test("a wrong password stays on the sign-in screen with a message", async ({ page }) => {
+test("a wrong password stays on the sign-in screen with a message", async ({
+  page,
+}) => {
   const name = uniqueName("wrongpw");
   await register(page, name);
   await page.goto("/auth");
@@ -23,7 +37,11 @@ test("a wrong password stays on the sign-in screen with a message", async ({ pag
   await page.locator("#password").fill(PASSWORD + "x");
   await page.locator("form:visible button[type=submit]").click();
   await expect(page).toHaveURL(/\/auth/);
-  await expect(page.getByText(/invalid username or password|check your credentials/i).first()).toBeVisible();
+  await expect(
+    page
+      .getByText(/invalid username or password|check your credentials/i)
+      .first(),
+  ).toBeVisible();
 });
 
 test("signing out ends the session", async ({ page, context }) => {
@@ -36,7 +54,10 @@ test("signing out ends the session", async ({ page, context }) => {
   ]);
   expect(res.ok()).toBe(true);
   await expect(page).toHaveURL(/\/auth/);
-  expect((await context.cookies()).find((c) => c.name === "joy_session"), "the session cookie is gone").toBeUndefined();
+  expect(
+    (await context.cookies()).find((c) => c.name === "joy_session"),
+    "the session cookie is gone",
+  ).toBeUndefined();
   expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
   // Coming back later still lands on sign-in, and signing in again works.
   await page.goto("/");

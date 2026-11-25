@@ -39,24 +39,59 @@ const I = ({ d, cls = "ico" }: { d: string[]; cls?: string }) => (
     ))}
   </svg>
 );
-const ENVELOPE = ["M3.6 7.2c0-.9.7-1.6 1.6-1.6h13.6c.9 0 1.6.7 1.6 1.6v9.6c0 .9-.7 1.6-1.6 1.6H5.2c-.9 0-1.6-.7-1.6-1.6z", "M4 6.6l8 6.4 8-6.4"];
+const ENVELOPE = [
+  "M3.6 7.2c0-.9.7-1.6 1.6-1.6h13.6c.9 0 1.6.7 1.6 1.6v9.6c0 .9-.7 1.6-1.6 1.6H5.2c-.9 0-1.6-.7-1.6-1.6z",
+  "M4 6.6l8 6.4 8-6.4",
+];
 const CAL = ["M3.6 5.2h16.8v15H3.6z", "M3.8 9.8h16.4M8 3.4v3.6M16 3.4v3.6"];
-const PIN = ["M12 21.2c-3.9-4.6-6.4-8.2-6.4-11.2a6.4 6.4 0 0 1 12.8-.2c.1 3.1-2.5 6.7-6.4 11.4z", "M9.7 9.8a2.3 2.3 0 1 0 4.6 0 2.3 2.3 0 1 0-4.6 0"];
-const WALK = ["M4 18.5c3.2-.4 4.4-2.6 5.6-5.4 1.3-3.1 3.2-6.2 7-6.9", "M15.4 3.9l2.4 2.3-2.2 2.5"];
-const SEND = ["M20.6 3.6 3.4 10.4c-.7.3-.6 1.2.1 1.4l6.3 1.9 1.9 6.3c.2.7 1.1.8 1.4.1z", "M9.8 13.7 20.6 3.6"];
-const NOPE = ["M3.6 12a8.4 8.4 0 1 0 16.8 0 8.4 8.4 0 1 0-16.8 0", "M6.2 17.8 17.8 6.2"];
+const PIN = [
+  "M12 21.2c-3.9-4.6-6.4-8.2-6.4-11.2a6.4 6.4 0 0 1 12.8-.2c.1 3.1-2.5 6.7-6.4 11.4z",
+  "M9.7 9.8a2.3 2.3 0 1 0 4.6 0 2.3 2.3 0 1 0-4.6 0",
+];
+const WALK = [
+  "M4 18.5c3.2-.4 4.4-2.6 5.6-5.4 1.3-3.1 3.2-6.2 7-6.9",
+  "M15.4 3.9l2.4 2.3-2.2 2.5",
+];
+const SEND = [
+  "M20.6 3.6 3.4 10.4c-.7.3-.6 1.2.1 1.4l6.3 1.9 1.9 6.3c.2.7 1.1.8 1.4.1z",
+  "M9.8 13.7 20.6 3.6",
+];
+const NOPE = [
+  "M3.6 12a8.4 8.4 0 1 0 16.8 0 8.4 8.4 0 1 0-16.8 0",
+  "M6.2 17.8 17.8 6.2",
+];
 
 /** The two stamps that say what letting go of a swipe will do, bound to the slip's own spring. */
-function Hints({ x, yes, back }: { x: SpringValue<number>; yes: boolean; back: boolean }) {
+function Hints({
+  x,
+  yes,
+  back,
+}: {
+  x: SpringValue<number>;
+  yes: boolean;
+  back: boolean;
+}) {
   return (
     <span className="m-hints" aria-hidden="true">
       {yes && (
-        <animated.span className="m-hint m-hint-yes" style={{ opacity: x.to([20 * FOLLOW, YES * FOLLOW], [0, 1], "clamp"), scale: x.to([20 * FOLLOW, YES * FOLLOW], [0.7, 1], "clamp") }}>
+        <animated.span
+          className="m-hint m-hint-yes"
+          style={{
+            opacity: x.to([20 * FOLLOW, YES * FOLLOW], [0, 1], "clamp"),
+            scale: x.to([20 * FOLLOW, YES * FOLLOW], [0.7, 1], "clamp"),
+          }}
+        >
           it's a date
         </animated.span>
       )}
       {back && (
-        <animated.span className="m-hint m-hint-back" style={{ opacity: x.to([-YES * FOLLOW, -20 * FOLLOW], [1, 0], "clamp"), scale: x.to([-YES * FOLLOW, -20 * FOLLOW], [1, 0.7], "clamp") }}>
+        <animated.span
+          className="m-hint m-hint-back"
+          style={{
+            opacity: x.to([-YES * FOLLOW, -20 * FOLLOW], [1, 0], "clamp"),
+            scale: x.to([-YES * FOLLOW, -20 * FOLLOW], [1, 0.7], "clamp"),
+          }}
+        >
           put it back
         </animated.span>
       )}
@@ -64,7 +99,15 @@ function Hints({ x, yes, back }: { x: SpringValue<number>; yes: boolean; back: b
   );
 }
 
-function ShareLink({ card, children, busy }: { card: PickCard; children: React.ReactNode; busy: boolean }) {
+function ShareLink({
+  card,
+  children,
+  busy,
+}: {
+  card: PickCard;
+  children: React.ReactNode;
+  busy: boolean;
+}) {
   return (
     <a
       className="share"
@@ -120,11 +163,17 @@ function Travel({ a }: { a: ActivityView }) {
           ))}
         </tbody>
       </table>
-      {a.travel_note && <p className="travel-note">cab fares {a.travel_note}</p>}
+      {a.travel_note && (
+        <p className="travel-note">cab fares {a.travel_note}</p>
+      )}
       {a.uber_url && (
         <p className="travel-link">
           <a href={a.uber_url} target="_blank" rel="noopener noreferrer">
-            Check the real fare in Uber<span className="visually-hidden"> (opens the Uber app or site)</span>
+            Check the real fare in Uber
+            <span className="visually-hidden">
+              {" "}
+              (opens the Uber app or site)
+            </span>
           </a>
         </p>
       )}
@@ -134,24 +183,80 @@ function Travel({ a }: { a: ActivityView }) {
 
 function Stamp({ date }: { date: string }) {
   return (
-    <div className="stamp" role="img" aria-label={`Stamped: it's a date, ${date}`}>
+    <div
+      className="stamp"
+      role="img"
+      aria-label={`Stamped: it's a date, ${date}`}
+    >
       <svg viewBox="0 0 240 120" aria-hidden="true" focusable="false">
         <defs>
           <filter id="stamp-rough" x="-5%" y="-5%" width="110%" height="110%">
-            <feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" seed="7" result="w" />
-            <feDisplacementMap in="SourceGraphic" in2="w" scale="3.2" xChannelSelector="R" yChannelSelector="G" />
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency=".045"
+              numOctaves="2"
+              seed="7"
+              result="w"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="w"
+              scale="3.2"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
           </filter>
           <filter id="stamp-wear-f" x="0" y="0" width="100%" height="100%">
-            <feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves="2" seed="11" />
-            <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -3 2.05" />
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency=".7"
+              numOctaves="2"
+              seed="11"
+            />
+            <feColorMatrix
+              type="matrix"
+              values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -3 2.05"
+            />
           </filter>
-          <mask id="stamp-wear" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="120">
-            <rect width="240" height="120" fill="#fff" filter="url(#stamp-wear-f)" />
+          <mask
+            id="stamp-wear"
+            maskUnits="userSpaceOnUse"
+            x="0"
+            y="0"
+            width="240"
+            height="120"
+          >
+            <rect
+              width="240"
+              height="120"
+              fill="#fff"
+              filter="url(#stamp-wear-f)"
+            />
           </mask>
         </defs>
-        <g className="stamp-ink" filter="url(#stamp-rough)" mask="url(#stamp-wear)">
-          <rect x="6" y="6" width="228" height="108" rx="14" fill="none" strokeWidth="6" />
-          <rect x="16" y="16" width="208" height="88" rx="8" fill="none" strokeWidth="1.6" />
+        <g
+          className="stamp-ink"
+          filter="url(#stamp-rough)"
+          mask="url(#stamp-wear)"
+        >
+          <rect
+            x="6"
+            y="6"
+            width="228"
+            height="108"
+            rx="14"
+            fill="none"
+            strokeWidth="6"
+          />
+          <rect
+            x="16"
+            y="16"
+            width="208"
+            height="88"
+            rx="8"
+            fill="none"
+            strokeWidth="1.6"
+          />
           <text className="stamp-big" x="120" y="66" textAnchor="middle">
             IT'S A DATE
           </text>
@@ -175,7 +280,15 @@ interface SlipProps {
 }
 
 /** What this slip brings home once we keep it: its keepsake's shape, in grey, in the slip's corner. */
-function KeepTeaser({ title, visit, hidden }: { title: string; visit: number; hidden: boolean }) {
+function KeepTeaser({
+  title,
+  visit,
+  hidden,
+}: {
+  title: string;
+  visit: number;
+  hidden: boolean;
+}) {
   const scene = sceneFor(title, visit);
   if (!scene || hidden) return null;
   return (
@@ -186,7 +299,13 @@ function KeepTeaser({ title, visit, hidden }: { title: string; visit: number; hi
   );
 }
 
-export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) {
+export function SlipView({
+  card,
+  busy,
+  actions,
+  arriving,
+  planned,
+}: SlipProps) {
   const a = card.activity!;
   const done = card.done;
   const [el, setEl] = useState<HTMLElement | null>(null);
@@ -242,10 +361,15 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
       <h2 id="slip-title" className="j-slip-title" tabIndex={-1}>
         {a.title}
       </h2>
-      <KeepTeaser title={a.title} visit={(a.times_done ?? 0) + 1} hidden={done || !!card.surprise} />
+      <KeepTeaser
+        title={a.title}
+        visit={(a.times_done ?? 0) + 1}
+        hidden={done || !!card.surprise}
+      />
       {!done && card.plan_line && card.route.length === 0 && (
         <p className="plan-line">
-          <span className="plan-line-k">{card.when_label}:</span> {card.plan_line}
+          <span className="plan-line-k">{card.when_label}:</span>{" "}
+          {card.plan_line}
         </p>
       )}
       {done && card.paired && (
@@ -275,7 +399,12 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
             <p>
               <I d={PIN} />
               {a.maps_url ? (
-                <a className="place-link" href={a.maps_url} target="_blank" rel="noopener noreferrer">
+                <a
+                  className="place-link"
+                  href={a.maps_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {a.place}
                   <span className="visually-hidden"> (opens the map)</span>
                 </a>
@@ -293,7 +422,10 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
         </div>
       )}
       {!done && card.route.length > 0 && (
-        <section className="card-route" aria-label={`The plan for ${card.when_label}`}>
+        <section
+          className="card-route"
+          aria-label={`The plan for ${card.when_label}`}
+        >
           <p className="dp-hand">{card.when_label}, if it's a date:</p>
           <Route steps={card.route} />
           {card.route_note && <p className="dp-note">{card.route_note}</p>}
@@ -316,10 +448,14 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
           {card.surprise ? (
             <p className="sealed-line">
               <I d={ENVELOPE} />
-              <span>Sealed. {card.partner} will only see hints until it's revealed.</span>
+              <span>
+                Sealed. {card.partner} will only see hints until it's revealed.
+              </span>
             </p>
           ) : (
-            <p className="kept-line">In the keepsake box. Rate it after you go.</p>
+            <p className="kept-line">
+              In the keepsake box. Rate it after you go.
+            </p>
           )}
           {planned ? (
             <p className="planned-line" role="status">
@@ -329,7 +465,12 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
           ) : (
             !card.plan && (
               <p className="pick-day">
-                <button className="btn btn-ink" type="button" disabled={busy} onClick={actions.pickDay}>
+                <button
+                  className="btn btn-ink"
+                  type="button"
+                  disabled={busy}
+                  onClick={actions.pickDay}
+                >
                   <I d={CAL} />
                   Pick a day
                 </button>
@@ -341,14 +482,24 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
               <p className="share-row">
                 <ShareLink card={card} busy={busy}>
                   <I d={SEND} />
-                  <span>{card.surprise ? `Send ${card.partner} the sealed plan on WhatsApp` : `Send ${card.partner} the plan on WhatsApp`}</span>
+                  <span>
+                    {card.surprise
+                      ? `Send ${card.partner} the sealed plan on WhatsApp`
+                      : `Send ${card.partner} the plan on WhatsApp`}
+                  </span>
                 </ShareLink>
               </p>
-              <p className="share-note">The plan goes as an envelope: a link that opens like a card.</p>
+              <p className="share-note">
+                The plan goes as an envelope: a link that opens like a card.
+              </p>
             </>
           )}
-          {card.plan && <DayPlanView plan={card.plan} onSwapped={actions.planSwapped} />}
-          {card.budget_note && <p className="slip-budget">{card.budget_note}</p>}
+          {card.plan && (
+            <DayPlanView plan={card.plan} onSwapped={actions.planSwapped} />
+          )}
+          {card.budget_note && (
+            <p className="slip-budget">{card.budget_note}</p>
+          )}
           {card.why.length > 0 && (
             <p className="slip-why" aria-label="Why this one">
               {card.why.join(" · ")}
@@ -358,7 +509,12 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
             <Link className="btn btn-quiet" to="/joy/kept">
               See it in Kept
             </Link>
-            <button className="btn btn-quiet" type="button" disabled={busy} onClick={actions.back}>
+            <button
+              className="btn btn-quiet"
+              type="button"
+              disabled={busy}
+              onClick={actions.back}
+            >
               Back to the jar
             </button>
           </div>
@@ -384,37 +540,74 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
                     <span className="pair-total">together {p.together}</span>
                   </p>
                   {p.over && <p className="pair-over">{p.over}</p>}
-                  <button className="btn btn-ink" type="button" disabled={busy} onClick={() => actions.accept({ with: String(p.id) })}>
-                    Make it a pair<span className="visually-hidden">: {a.title} and {p.title}</span>
+                  <button
+                    className="btn btn-ink"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => actions.accept({ with: String(p.id) })}
+                  >
+                    Make it a pair
+                    <span className="visually-hidden">
+                      : {a.title} and {p.title}
+                    </span>
                   </button>
                 </div>
               ))}
             </section>
           )}
           <div className="slip-actions">
-            <button className="btn btn-stamp" type="button" disabled={busy} onClick={() => actions.accept({})}>
+            <button
+              className="btn btn-stamp"
+              type="button"
+              disabled={busy}
+              onClick={() => actions.accept({})}
+            >
               It's a date
             </button>
-            <button className="btn btn-ink" type="button" disabled={busy} onClick={() => actions.putBack()}>
+            <button
+              className="btn btn-ink"
+              type="button"
+              disabled={busy}
+              onClick={() => actions.putBack()}
+            >
               Put it back
             </button>
           </div>
-          <div className="putback-why" role="group" aria-label="Put it back because">
+          <div
+            className="putback-why"
+            role="group"
+            aria-label="Put it back because"
+          >
             <span className="putback-why-label">or put it back because</span>
             {PUT_BACK_REASONS.map((r) => (
-              <button key={r.value} className="btn-why" type="button" disabled={busy} onClick={() => actions.putBack(r.value)}>
+              <button
+                key={r.value}
+                className="btn-why"
+                type="button"
+                disabled={busy}
+                onClick={() => actions.putBack(r.value)}
+              >
                 {r.label}
               </button>
             ))}
           </div>
           {showHint && (
-            <p className="swipe-hint">{canBack ? "Swipe right to say yes, left to put it back." : "Swipe right to say yes."}</p>
+            <p className="swipe-hint">
+              {canBack
+                ? "Swipe right to say yes, left to put it back."
+                : "Swipe right to say yes."}
+            </p>
           )}
           {(card.can_surprise || card.can_veto || card.share_text) && (
             <div className="slip-more">
               {card.can_surprise && (
                 <span className="f-surprise" style={{ display: "contents" }}>
-                  <button className="share" type="button" disabled={busy} onClick={() => actions.accept({ surprise: true })}>
+                  <button
+                    className="share"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => actions.accept({ surprise: true })}
+                  >
                     <I d={ENVELOPE} />
                     <span>Keep it a surprise for {card.partner}</span>
                   </button>
@@ -427,33 +620,58 @@ export function SlipView({ card, busy, actions, arriving, planned }: SlipProps) 
                 </ShareLink>
               )}
               {card.can_veto && (
-                <button className="share f-veto" type="button" disabled={busy} onClick={actions.veto}>
+                <button
+                  className="share f-veto"
+                  type="button"
+                  disabled={busy}
+                  onClick={actions.veto}
+                >
                   <I d={NOPE} />
                   <span>
-                    Never suggest this<span className="visually-hidden">: take “{a.title}” out of the jar for good</span>
+                    Never suggest this
+                    <span className="visually-hidden">
+                      : take “{a.title}” out of the jar for good
+                    </span>
                   </span>
                 </button>
               )}
               {card.can_veto && (
-                <p className="veto-note">{card.partner} will see it was skipped.</p>
+                <p className="veto-note">
+                  {card.partner} will see it was skipped.
+                </p>
               )}
             </div>
           )}
         </>
       )}
       {arriving && !done && <div className="slip-cover" />}
-      {el && !done && !arriving && (canYes || canBack) && <Hints x={pose(el).springs.x} yes={canYes} back={canBack} />}
+      {el && !done && !arriving && (canYes || canBack) && (
+        <Hints x={pose(el).springs.x} yes={canYes} back={canBack} />
+      )}
     </article>
   );
 }
 
 /** Nothing fits: a handwritten note with the hint and one button that loosens the sentence. */
-export function NoteView({ card, busy, actions }: { card: PickCard; busy: boolean; actions: CardActions }) {
+export function NoteView({
+  card,
+  busy,
+  actions,
+}: {
+  card: PickCard;
+  busy: boolean;
+  actions: CardActions;
+}) {
   return (
     <article className="note" data-kind="note">
       <p className="note-text">{card.message}</p>
       {card.relax_label && card.relax ? (
-        <button className="btn btn-stamp" type="button" disabled={busy} onClick={actions.relax}>
+        <button
+          className="btn btn-stamp"
+          type="button"
+          disabled={busy}
+          onClick={actions.relax}
+        >
           {card.relax_label}
         </button>
       ) : null}

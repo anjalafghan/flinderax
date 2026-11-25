@@ -40,7 +40,9 @@ describe("people labels", () => {
   it("uses the label in place of the kind when one is set", () => {
     expect(dateTitle("Person A", "birthday", "")).toBe("Person A's birthday");
     expect(dateTitle("Aunt B", "other", " Diwali ")).toBe("Aunt B's Diwali");
-    expect(dateTitle("Person A", "remembrance", "")).toBe("Person A's remembrance day");
+    expect(dateTitle("Person A", "remembrance", "")).toBe(
+      "Person A's remembrance day",
+    );
   });
 
   it("gives the circle names and picks the right plural", () => {

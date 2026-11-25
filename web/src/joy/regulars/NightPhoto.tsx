@@ -19,7 +19,14 @@ interface Props {
   onChange: () => void;
 }
 
-export function NightPhoto({ visitId, historyId, hasPhoto, addLabel = "Add a photo", removeLabel = "Remove photo", onChange }: Props) {
+export function NightPhoto({
+  visitId,
+  historyId,
+  hasPhoto,
+  addLabel = "Add a photo",
+  removeLabel = "Remove photo",
+  onChange,
+}: Props) {
   const { busy, run } = useBusy();
   const [stage, setStage] = useState<"" | "shrink" | "up">("");
   const [pct, setPct] = useState(0);
@@ -41,8 +48,12 @@ export function NightPhoto({ visitId, historyId, hasPhoto, addLabel = "Add a pho
           return;
         }
         setStage("up");
-        if (historyId) await uploadKeptPhoto(historyId, jpeg, (loaded, total) => setPct(total > 0 ? Math.round((loaded / total) * 100) : 0));
-        else await uploadPhoto(visitId, jpeg, (f) => setPct(Math.round(f * 100)));
+        if (historyId)
+          await uploadKeptPhoto(historyId, jpeg, (loaded, total) =>
+            setPct(total > 0 ? Math.round((loaded / total) * 100) : 0),
+          );
+        else
+          await uploadPhoto(visitId, jpeg, (f) => setPct(Math.round(f * 100)));
         onChange();
       } catch (e) {
         setError(apiMessage(e, "The photo didn’t go up. Try again."));
@@ -53,7 +64,8 @@ export function NightPhoto({ visitId, historyId, hasPhoto, addLabel = "Add a pho
     });
 
   const remove = () =>
-    window.confirm("Remove this photo? This can't be undone.") && run(async () => {
+    window.confirm("Remove this photo? This can't be undone.") &&
+    run(async () => {
       setError("");
       try {
         await deletePhoto(visitId);
@@ -67,17 +79,36 @@ export function NightPhoto({ visitId, historyId, hasPhoto, addLabel = "Add a pho
     <div className="np">
       {stage ? (
         <div className="np-prog" role="status">
-          <span>{stage === "shrink" ? "Getting the photo ready…" : `Uploading… ${pct}%`}</span>
-          <progress max={100} value={stage === "up" ? pct : undefined} aria-label="Photo upload" />
+          <span>
+            {stage === "shrink"
+              ? "Getting the photo ready…"
+              : `Uploading… ${pct}%`}
+          </span>
+          <progress
+            max={100}
+            value={stage === "up" ? pct : undefined}
+            aria-label="Photo upload"
+          />
         </div>
       ) : hasPhoto && !historyId ? (
-        <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => void remove()}>
+        <button
+          type="button"
+          className="btn btn-quiet"
+          disabled={busy}
+          onClick={() => void remove()}
+        >
           {removeLabel}
         </button>
       ) : (
         <label className="rs-add">
           {addLabel}
-          <input ref={input} type="file" accept="image/*" disabled={busy} onChange={(e) => void pick(e.currentTarget.files?.[0])} />
+          <input
+            ref={input}
+            type="file"
+            accept="image/*"
+            disabled={busy}
+            onChange={(e) => void pick(e.currentTarget.files?.[0])}
+          />
         </label>
       )}
       {error && (

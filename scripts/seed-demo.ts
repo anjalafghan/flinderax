@@ -17,7 +17,10 @@ let token = "";
 async function call<T = any>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(BASE + path, {
     method: body === undefined ? "GET" : "POST",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
@@ -30,64 +33,162 @@ const inr = (paise: number) => "₹" + (paise / 100).toLocaleString("en-IN");
 // ---- account ----
 try {
   // Sign-ups need the server's code: pass the same value in SIGNUP_CODE.
-  await call("/api/common/register", { user_name: USER, user_password: PASS, user_role: "user", signup_code: process.env.SIGNUP_CODE ?? "" });
+  await call("/api/common/register", {
+    user_name: USER,
+    user_password: PASS,
+    user_role: "user",
+    signup_code: process.env.SIGNUP_CODE ?? "",
+  });
 } catch (e) {
   if (!String(e).includes("500")) throw e; // 500 = user name already taken
 }
-token = (await call<{ access_token: string }>("/api/common/login", { user_name: USER, user_password: PASS })).access_token;
+token = (
+  await call<{ access_token: string }>("/api/common/login", {
+    user_name: USER,
+    user_password: PASS,
+  })
+).access_token;
 if ((await call<unknown[]>("/api/account/list")).length > 0) {
-  console.error(`"${USER}" already has data. Pick another name with --user, or delete this one first.`);
+  console.error(
+    `"${USER}" already has data. Pick another name with --user, or delete this one first.`,
+  );
   process.exit(1);
 }
 
 // ---- dates relative to today, so the demo works whenever you run it ----
 const iso = (d: Date) => d.toISOString().slice(0, 10);
-const inMonths = (n: number, day: number) => iso(new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + n, day)));
+const inMonths = (n: number, day: number) =>
+  iso(
+    new Date(
+      Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + n, day),
+    ),
+  );
 
 // ---- accounts ----
-const hdfc = (await call("/api/account/create", { name: "HDFC Savings", kind: "bank", balance_paise: rupees(120000), role: "spending" })).account_id;
-const kotak = (await call("/api/account/create", { name: "Kotak Savings", kind: "bank", balance_paise: rupees(90000), role: "reserve" })).account_id;
+const hdfc = (
+  await call("/api/account/create", {
+    name: "HDFC Savings",
+    kind: "bank",
+    balance_paise: rupees(120000),
+    role: "spending",
+  })
+).account_id;
+const kotak = (
+  await call("/api/account/create", {
+    name: "Kotak Savings",
+    kind: "bank",
+    balance_paise: rupees(90000),
+    role: "reserve",
+  })
+).account_id;
 await call("/api/account/create", {
-  name: "Emergency Fund", kind: "fd", balance_paise: rupees(200000), interest_bps: 700, maturity_date: inMonths(9, 15),
-  institution: "SBI", renewal: "renew_all",
+  name: "Emergency Fund",
+  kind: "fd",
+  balance_paise: rupees(200000),
+  interest_bps: 700,
+  maturity_date: inMonths(9, 15),
+  institution: "SBI",
+  renewal: "renew_all",
 });
 await call("/api/account/create", {
-  name: "Travel FD", kind: "fd", balance_paise: rupees(50000), interest_bps: 650, maturity_date: inMonths(2, 15),
-  institution: "Post Office", renewal: "payout", payout_account_id: kotak,
+  name: "Travel FD",
+  kind: "fd",
+  balance_paise: rupees(50000),
+  interest_bps: 650,
+  maturity_date: inMonths(2, 15),
+  institution: "Post Office",
+  renewal: "payout",
+  payout_account_id: kotak,
 });
 
 // ---- income, fixed payments, budget ----
-await call("/api/plan/income/create", { label: "Salary", amount_paise: rupees(100000), day_of_month: 30, account_id: hdfc });
-const pay = (label: string, amount: number, day: number, account: string, category: string, extra: object = {}) =>
-  call("/api/plan/commitment/create", { label, amount_paise: rupees(amount), day_of_month: day, account_id: account, category, ...extra });
+await call("/api/plan/income/create", {
+  label: "Salary",
+  amount_paise: rupees(100000),
+  day_of_month: 30,
+  account_id: hdfc,
+});
+const pay = (
+  label: string,
+  amount: number,
+  day: number,
+  account: string,
+  category: string,
+  extra: object = {},
+) =>
+  call("/api/plan/commitment/create", {
+    label,
+    amount_paise: rupees(amount),
+    day_of_month: day,
+    account_id: account,
+    category,
+    ...extra,
+  });
 await pay("Rent", 15000, 1, kotak, "house");
 await pay("Internet", 1000, 5, kotak, "bills");
-await pay("Phone bill (yearly)", 12000, 12, kotak, "bills", { frequency: "yearly", due_month: 12 });
-await pay("Gym (yearly)", 6000, 1, kotak, "gym", { frequency: "yearly", due_month: 4 });
+await pay("Phone bill (yearly)", 12000, 12, kotak, "bills", {
+  frequency: "yearly",
+  due_month: 12,
+});
+await pay("Gym (yearly)", 6000, 1, kotak, "gym", {
+  frequency: "yearly",
+  due_month: 4,
+});
 await pay("Donation", 1000, 31, kotak, "donation", { bucket: "needs" });
 await pay("SIP", 20000, 10, hdfc, "sip");
 await pay("Netflix", 500, 1, hdfc, "subscription");
 await call("/api/plan/settings/update", {
-  spending_paise: rupees(25000), allocation_day: 10, savings_floor_paise: rupees(40000), recovery_months: 3, week_start: 1,
+  spending_paise: rupees(25000),
+  allocation_day: 10,
+  savings_floor_paise: rupees(40000),
+  recovery_months: 3,
+  week_start: 1,
 });
 
 // ---- cards ----
-const card = (name: string, bank: string, statement: number, due: number, limit: number, color: [number, number, number]) =>
+const card = (
+  name: string,
+  bank: string,
+  statement: number,
+  due: number,
+  limit: number,
+  color: [number, number, number],
+) =>
   call("/api/card/create", {
-    card_name: name, card_bank: bank, card_primary_color: color, card_secondary_color: color.map((c) => Math.min(255, c + 40)),
-    statement_day: statement, due_day: due, credit_limit_paise: rupees(limit), pay_from_account_id: kotak,
+    card_name: name,
+    card_bank: bank,
+    card_primary_color: color,
+    card_secondary_color: color.map((c) => Math.min(255, c + 40)),
+    statement_day: statement,
+    due_day: due,
+    credit_limit_paise: rupees(limit),
+    pay_from_account_id: kotak,
   }).then((r) => r.card_id as string);
 const travel = await card("Travel Card", "HDFC", 20, 8, 300000, [30, 41, 59]);
 const online = await card("Online Card", "ICICI", 1, 20, 100000, [88, 28, 135]);
-await call("/api/card/emi/create", { card_id: travel, label: "Phone EMI", monthly_paise: rupees(5000), remaining_principal_paise: rupees(30000), months_left: 6 });
+await call("/api/card/emi/create", {
+  card_id: travel,
+  label: "Phone EMI",
+  monthly_paise: rupees(5000),
+  remaining_principal_paise: rupees(30000),
+  months_left: 6,
+});
 // the four numbers from the bank app (first snapshot = a starting balance, not new spending)
 await call("/api/card/snapshot", {
-  card_id: travel, total_due_paise: 0, outstanding_paise: rupees(65000),
-  unbilled_spent_paise: rupees(40000), unbilled_credit_paise: rupees(5000), starting_balance: true,
+  card_id: travel,
+  total_due_paise: 0,
+  outstanding_paise: rupees(65000),
+  unbilled_spent_paise: rupees(40000),
+  unbilled_credit_paise: rupees(5000),
+  starting_balance: true,
 });
 await call("/api/card/snapshot", {
-  card_id: online, total_due_paise: rupees(8000), outstanding_paise: rupees(13000),
-  unbilled_spent_paise: rupees(6000), unbilled_credit_paise: rupees(1000), starting_balance: true,
+  card_id: online,
+  total_due_paise: rupees(8000),
+  outstanding_paise: rupees(13000),
+  unbilled_spent_paise: rupees(6000),
+  unbilled_credit_paise: rupees(1000),
+  starting_balance: true,
 });
 
 // the card bills are already sitting in Kotak, so mark them covered (the "Already in the reserve" button)
@@ -95,7 +196,12 @@ const summary = await call("/api/dashboard/summary");
 for (const a of summary.actions) {
   const l = a.ledger;
   if (l?.kind === "card_bill") {
-    await call("/api/moves/record", { kind: l.kind, key: l.key, amount_paise: l.amount_paise, mode: "already_covered" });
+    await call("/api/moves/record", {
+      kind: l.kind,
+      key: l.key,
+      amount_paise: l.amount_paise,
+      mode: "already_covered",
+    });
   }
 }
 const after = await call("/api/dashboard/summary");

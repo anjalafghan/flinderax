@@ -12,11 +12,25 @@ export function toPaise(input: string): number | null {
   return Math.round(parseFloat(clean) * 100);
 }
 
-export type Standing = { kind: "owed" | "owe" | "square"; paise: number; text: string };
+export type Standing = {
+  kind: "owed" | "owe" | "square";
+  paise: number;
+  text: string;
+};
 
 /** balance_paise > 0: your partner owes you. < 0: you owe them. */
 export function standing(balancePaise: number, symbol = "₹"): Standing {
-  if (balancePaise > 0) return { kind: "owed", paise: balancePaise, text: `Partner owes you ${rupees(balancePaise, symbol)}` };
-  if (balancePaise < 0) return { kind: "owe", paise: -balancePaise, text: `You owe ${rupees(balancePaise, symbol)}` };
+  if (balancePaise > 0)
+    return {
+      kind: "owed",
+      paise: balancePaise,
+      text: `Partner owes you ${rupees(balancePaise, symbol)}`,
+    };
+  if (balancePaise < 0)
+    return {
+      kind: "owe",
+      paise: -balancePaise,
+      text: `You owe ${rupees(balancePaise, symbol)}`,
+    };
   return { kind: "square", paise: 0, text: "All square" };
 }

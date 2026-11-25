@@ -6,9 +6,17 @@ import { StreaksCard } from "@/components/feature/StreaksCard";
 import type { StreaksOut } from "@/services/streaks";
 
 function withStreaks(data: StreaksOut) {
-  const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  });
   qc.setQueryData(["streaks"], data);
-  qc.setQueryData(["rewards"], { rewards: [], history: [], monthly_cap_paise: null, spent_this_month_paise: 0, cap_left_paise: null });
+  qc.setQueryData(["rewards"], {
+    rewards: [],
+    history: [],
+    monthly_cap_paise: null,
+    spent_this_month_paise: 0,
+    cap_left_paise: null,
+  });
   return render(
     <QueryClientProvider client={qc}>
       <StreaksCard />
@@ -20,7 +28,12 @@ describe("StreaksCard", () => {
   beforeEach(() => localStorage.clear());
 
   it("shows each run with an encouraging line", () => {
-    withStreaks({ logging: { current: 5, best: 9 }, saved: { current: 2, best: 2 }, dates: { current: 0, best: 3 }, activity: { current: 0, best: 0 } });
+    withStreaks({
+      logging: { current: 5, best: 9 },
+      saved: { current: 2, best: 2 },
+      dates: { current: 0, best: 3 },
+      activity: { current: 0, best: 0 },
+    });
     const card = screen.getByRole("region", { name: "Your streaks" });
     expect(card).toHaveTextContent("5 days in a row");
     expect(card).toHaveTextContent("2 months in a row");
@@ -29,15 +42,30 @@ describe("StreaksCard", () => {
   });
 
   it("leaves out the dates run outside a couple, and hides itself with nothing to cheer", () => {
-    const { unmount } = withStreaks({ logging: { current: 1, best: 1 }, saved: { current: 0, best: 0 }, dates: null, activity: { current: 0, best: 0 } });
+    const { unmount } = withStreaks({
+      logging: { current: 1, best: 1 },
+      saved: { current: 0, best: 0 },
+      dates: null,
+      activity: { current: 0, best: 0 },
+    });
     expect(screen.queryByText("Dates")).toBeNull();
     unmount();
-    withStreaks({ logging: { current: 0, best: 0 }, saved: { current: 0, best: 0 }, dates: null, activity: { current: 0, best: 0 } });
+    withStreaks({
+      logging: { current: 0, best: 0 },
+      saved: { current: 0, best: 0 },
+      dates: null,
+      activity: { current: 0, best: 0 },
+    });
     expect(screen.queryByRole("region", { name: "Your streaks" })).toBeNull();
   });
 
   it("remembers that a milestone was celebrated, so it does not repeat", () => {
-    withStreaks({ logging: { current: 7, best: 7 }, saved: { current: 0, best: 0 }, dates: null, activity: { current: 0, best: 0 } });
+    withStreaks({
+      logging: { current: 7, best: 7 },
+      saved: { current: 0, best: 0 },
+      dates: null,
+      activity: { current: 0, best: 0 },
+    });
     expect(localStorage.getItem("streak-seen:logging:7")).toBe("1");
   });
 });

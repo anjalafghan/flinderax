@@ -47,7 +47,12 @@ describe("session cleanup", () => {
   });
 });
 
-import { authHeadersFor, isCookieSession, loginToKeep, newSessionId } from "./session";
+import {
+  authHeadersFor,
+  isCookieSession,
+  loginToKeep,
+  newSessionId,
+} from "./session";
 
 describe("cookie sessions", () => {
   test("the page keeps a harmless id, never the token, and sends it with the request marker", () => {
@@ -59,22 +64,36 @@ describe("cookie sessions", () => {
   });
 
   test("a cookie sign-in keeps an id, not the token; an older answer keeps the token", () => {
-    const kept = loginToKeep({ access_token: "v4.local.SECRET", expires_at: 99, cookie: true });
+    const kept = loginToKeep({
+      access_token: "v4.local.SECRET",
+      expires_at: 99,
+      cookie: true,
+    });
     expect(kept.token.startsWith("s_")).toBe(true);
     expect(kept.token).not.toContain("SECRET");
-    expect(loginToKeep({ access_token: "v4.local.abc", expires_at: 99 })).toEqual({ token: "v4.local.abc", expiresAt: 99 });
+    expect(
+      loginToKeep({ access_token: "v4.local.abc", expires_at: 99 }),
+    ).toEqual({ token: "v4.local.abc", expiresAt: 99 });
   });
 
   test("an older bearer login keeps working until it ends", () => {
     expect(isCookieSession("v4.local.abc")).toBe(false);
-    expect(authHeadersFor("v4.local.abc")).toEqual({ Authorization: "Bearer v4.local.abc" });
+    expect(authHeadersFor("v4.local.abc")).toEqual({
+      Authorization: "Bearer v4.local.abc",
+    });
     expect(authHeadersFor(null)).toEqual({});
   });
 
   test("saved offline copies are named the way the service worker names them", async () => {
     const id = newSessionId();
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`sid:${id}`));
-    const hex = [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(`sid:${id}`),
+    );
+    const hex = [...new Uint8Array(digest)]
+      .slice(0, 8)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
     expect(await offlineCacheName(id)).toBe(`joy-data-${hex}`);
   });
 });

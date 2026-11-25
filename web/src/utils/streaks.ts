@@ -37,9 +37,12 @@ const WHAT: Record<StreakKind, string> = {
 /** One encouraging line: warm when it is going well, and never scolding when it is not. */
 export function streakLine(kind: StreakKind, s: Streak): string {
   if (s.current === 0) {
-    return s.best > 0 ? `You managed ${unitLabel(kind, s.best)} before. Start a new run ${kind === "logging" || kind === "activity" ? "today" : "this month"}.` : `A new run starts with ${WHAT[kind]}.`;
+    return s.best > 0
+      ? `You managed ${unitLabel(kind, s.best)} before. Start a new run ${kind === "logging" || kind === "activity" ? "today" : "this month"}.`
+      : `A new run starts with ${WHAT[kind]}.`;
   }
-  if (s.current >= s.best && s.current > 1) return `A new personal best for ${WHAT[kind]}!`;
+  if (s.current >= s.best && s.current > 1)
+    return `A new personal best for ${WHAT[kind]}!`;
   if (s.current === 1) return `A great start on ${WHAT[kind]}.`;
   return `Lovely work ${WHAT[kind]}. Your best is ${unitLabel(kind, s.best)}.`;
 }

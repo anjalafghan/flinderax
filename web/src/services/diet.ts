@@ -111,40 +111,76 @@ export interface NewMark {
 }
 
 export const dietKey = ["diet"] as const;
-export const dietMarksKey = (kind: MarkKind) => ["diet", "marks", kind] as const;
+export const dietMarksKey = (kind: MarkKind) =>
+  ["diet", "marks", kind] as const;
 
-export const getDiet = () => api.get<DietOverview>("/api/diet").then((r) => r.data);
+export const getDiet = () =>
+  api.get<DietOverview>("/api/diet").then((r) => r.data);
 export const getDietMarks = (kind: MarkKind, limit = 12) =>
-  api.get<{ marks: Mark[] }>(`/api/diet/marks?kind=${kind}&limit=${limit}`).then((r) => r.data.marks);
-export const addDietHabit = (habit: NewHabit) => api.post<DietHabit>("/api/diet/habits", habit).then((r) => r.data);
-export const addDietMark = (mark: NewMark) => api.post<Mark>("/api/diet/marks", mark).then((r) => r.data);
+  api
+    .get<{ marks: Mark[] }>(`/api/diet/marks?kind=${kind}&limit=${limit}`)
+    .then((r) => r.data.marks);
+export const addDietHabit = (habit: NewHabit) =>
+  api.post<DietHabit>("/api/diet/habits", habit).then((r) => r.data);
+export const addDietMark = (mark: NewMark) =>
+  api.post<Mark>("/api/diet/marks", mark).then((r) => r.data);
 export const saveDietCap = (eating_out_cap_paise: number | null) =>
-  sendJson<{ eating_out_cap_paise: number | null }>("PUT", "/api/diet/settings", { eating_out_cap_paise });
+  sendJson<{ eating_out_cap_paise: number | null }>(
+    "PUT",
+    "/api/diet/settings",
+    { eating_out_cap_paise },
+  );
 export const updateDietHabit = (id: string, patch: HabitPatch) =>
   sendJson<DietHabit>("PATCH", `/api/diet/habits/${id}`, patch);
-export const removeDietHabit = (id: string) => sendJson<void>("DELETE", `/api/diet/habits/${id}`);
+export const removeDietHabit = (id: string) =>
+  sendJson<void>("DELETE", `/api/diet/habits/${id}`);
 export const saveDietWeek = (weekStart: string, week: WeekInput) =>
   sendJson<Week>("PUT", `/api/diet/weeks/${weekStart}`, week);
-export const removeDietMark = (id: string) => sendJson<void>("DELETE", `/api/diet/marks/${id}`);
+export const removeDietMark = (id: string) =>
+  sendJson<void>("DELETE", `/api/diet/marks/${id}`);
 /** Clears one week's plan, feel and habit ticks, so it no longer counts as logged. */
-export const clearDietWeek = (weekStart: string) => sendJson<Week>("DELETE", `/api/diet/weeks/${weekStart}`);
+export const clearDietWeek = (weekStart: string) =>
+  sendJson<Week>("DELETE", `/api/diet/weeks/${weekStart}`);
 /** Removes every reading of one kind. */
-export const clearDietMarks = (kind: MarkKind) => api.post<{ removed: number }>("/api/diet/marks/clear", { kind }).then((r) => r.data);
+export const clearDietMarks = (kind: MarkKind) =>
+  api
+    .post<{ removed: number }>("/api/diet/marks/clear", { kind })
+    .then((r) => r.data);
 
 /** PUT, PATCH and DELETE through the shared client, so a lapsed session goes back to sign-in. */
-function sendJson<T>(method: "PUT" | "PATCH" | "DELETE", url: string, body?: unknown): Promise<T> {
-  const call = method === "PUT" ? api.put<T>(url, body) : method === "PATCH" ? api.patch<T>(url, body) : api.del<T>(url);
+function sendJson<T>(
+  method: "PUT" | "PATCH" | "DELETE",
+  url: string,
+  body?: unknown,
+): Promise<T> {
+  const call =
+    method === "PUT"
+      ? api.put<T>(url, body)
+      : method === "PATCH"
+        ? api.patch<T>(url, body)
+        : api.del<T>(url);
   return call.then((r) => r.data);
 }
 
-export const useDiet = () => useQuery({ queryKey: dietKey, queryFn: getDiet, retry: 1 });
+export const useDiet = () =>
+  useQuery({ queryKey: dietKey, queryFn: getDiet, retry: 1 });
 /** One week as logged (entries empty when nothing was). Under ["diet"], so saves refresh it too. */
-export const getDietWeek = (weekStart: string) => api.get<Week>(`/api/diet/weeks/${weekStart}`).then((r) => r.data);
+export const getDietWeek = (weekStart: string) =>
+  api.get<Week>(`/api/diet/weeks/${weekStart}`).then((r) => r.data);
 export const useDietWeek = (weekStart: string, enabled: boolean) =>
-  useQuery({ queryKey: [...dietKey, "week", weekStart], queryFn: () => getDietWeek(weekStart), enabled, retry: 1 });
+  useQuery({
+    queryKey: [...dietKey, "week", weekStart],
+    queryFn: () => getDietWeek(weekStart),
+    enabled,
+    retry: 1,
+  });
 
 export const useDietMarks = (kind: MarkKind) =>
-  useQuery({ queryKey: dietMarksKey(kind), queryFn: () => getDietMarks(kind), retry: 1 });
+  useQuery({
+    queryKey: dietMarksKey(kind),
+    queryFn: () => getDietMarks(kind),
+    retry: 1,
+  });
 
 /** Every diet write refreshes the whole diet query, marks included, so the body and money cards stay current. */
 function useDietWrite<V, R>(fn: (v: V) => Promise<R>) {
@@ -156,9 +192,15 @@ function useDietWrite<V, R>(fn: (v: V) => Promise<R>) {
 }
 
 export const useAddDietHabit = () => useDietWrite(addDietHabit);
-export const useUpdateDietHabit = () => useDietWrite((v: { id: string; patch: HabitPatch }) => updateDietHabit(v.id, v.patch));
+export const useUpdateDietHabit = () =>
+  useDietWrite((v: { id: string; patch: HabitPatch }) =>
+    updateDietHabit(v.id, v.patch),
+  );
 export const useRemoveDietHabit = () => useDietWrite(removeDietHabit);
-export const useSaveDietWeek = () => useDietWrite((v: { weekStart: string; week: WeekInput }) => saveDietWeek(v.weekStart, v.week));
+export const useSaveDietWeek = () =>
+  useDietWrite((v: { weekStart: string; week: WeekInput }) =>
+    saveDietWeek(v.weekStart, v.week),
+  );
 export const useAddDietMark = () => useDietWrite(addDietMark);
 export const useRemoveDietMark = () => useDietWrite(removeDietMark);
 export const useClearDietWeek = () => useDietWrite(clearDietWeek);
@@ -188,7 +230,11 @@ export const signedKg = (x10: number): string => {
  * "70.5" -> 705. Accepts up to one decimal and returns tenths, or null for anything else. `min` and `max`
  * are tenths too (200 and 3000 for weight), inclusive.
  */
-export const parseTenths = (text: string, min: number, max: number): number | null => {
+export const parseTenths = (
+  text: string,
+  min: number,
+  max: number,
+): number | null => {
   const t = text.trim();
   if (!/^\d{1,4}(\.\d)?$/.test(t)) return null;
   const x10 = Math.round(Number(t) * 10);
@@ -196,4 +242,5 @@ export const parseTenths = (text: string, min: number, max: number): number | nu
 };
 
 /** Whole-number orders a week for the food money card: 350 -> "3.5". */
-export const ordersPerWeek = (x100: number): string => (x100 / 100).toFixed(1).replace(/\.0$/, "");
+export const ordersPerWeek = (x100: number): string =>
+  (x100 / 100).toFixed(1).replace(/\.0$/, "");

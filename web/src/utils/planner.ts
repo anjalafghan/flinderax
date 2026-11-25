@@ -24,7 +24,12 @@ export function localIsoDate(now: Date = new Date()): string {
 }
 
 /** The bills due within `days` days of `today` (inclusive), soonest first, at most `limit`. */
-export function nextBills(bills: Bill[], today: string, days = 7, limit = 3): Bill[] {
+export function nextBills(
+  bills: Bill[],
+  today: string,
+  days = 7,
+  limit = 3,
+): Bill[] {
   return bills
     .filter((b) => {
       const d = daysBetween(today, b.date);
@@ -57,15 +62,24 @@ export function groupBillsByWeek(bills: Bill[], today: string): BillWeek[] {
     .sort(([a], [b]) => a - b)
     .map(([idx, list]) => {
       const startOffset = idx * 7;
-      const start = new Date(toUtc(today) + startOffset * DAY_MS).toISOString().slice(0, 10);
+      const start = new Date(toUtc(today) + startOffset * DAY_MS)
+        .toISOString()
+        .slice(0, 10);
       const label =
-        idx === 0 ? "This week" : idx === 1 ? "Next week" : `Week of ${formatDay(start)}`;
+        idx === 0
+          ? "This week"
+          : idx === 1
+            ? "Next week"
+            : `Week of ${formatDay(start)}`;
       return { key: `w${idx}`, label, bills: list };
     });
 }
 
 /** "₹2,000 of ₹5,000 moved" for a card bill that is partly covered, else null. */
-export function coveredLine(bill: Bill, format: (paise: number) => string): string | null {
+export function coveredLine(
+  bill: Bill,
+  format: (paise: number) => string,
+): string | null {
   if (bill.kind !== "card_bill" || bill.covered_paise <= 0) return null;
   return `${format(bill.covered_paise)} of ${format(bill.amount_paise)} moved`;
 }
@@ -133,8 +147,10 @@ export function buildAffordPay(
     return { error: "Months must be a whole number from 1 to 120." };
   }
   const rate_bps = percentToBps(emi.rate || "0");
-  if (rate_bps === null) return { error: "Interest must be a percentage like 14 or 14.5." };
+  if (rate_bps === null)
+    return { error: "Interest must be a percentage like 14 or 14.5." };
   const fee = emi.fee.trim() ? toPaise(emi.fee) : 0;
-  if (fee === null || fee < 0) return { error: "The processing fee must be zero or more." };
+  if (fee === null || fee < 0)
+    return { error: "The processing fee must be zero or more." };
   return { pay: { mode: "emi", months, rate_bps, fee_paise: fee } };
 }

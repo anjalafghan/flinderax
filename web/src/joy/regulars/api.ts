@@ -6,7 +6,11 @@ import type { NewRegularBody, WentBody } from "./days";
 const BASE = "/api/dates";
 
 /** multipart POST with upload progress (fetch can't report it). `onProgress` gets 0..1. */
-function upload<T>(url: string, form: FormData, onProgress?: (fraction: number) => void): Promise<T> {
+function upload<T>(
+  url: string,
+  form: FormData,
+  onProgress?: (fraction: number) => void,
+): Promise<T> {
   return uploadWithProgress<T>(url, form, {
     onProgress: (loaded, total) => {
       if (total > 0) onProgress?.(loaded / total);
@@ -110,22 +114,44 @@ export const regKeys = {
 };
 
 export const getRegulars = () => get<RegularsView>(`${BASE}/regulars`);
-export const createRegular = (body: NewRegularBody) => post<Go>(`${BASE}/regulars`, body);
-export const getSpread = (id: string) => get<SpreadView>(`${BASE}/regulars/${encodeURIComponent(id)}`);
-export const updateRegular = (id: number | string, body: NewRegularBody) => post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}`, body);
+export const createRegular = (body: NewRegularBody) =>
+  post<Go>(`${BASE}/regulars`, body);
+export const getSpread = (id: string) =>
+  get<SpreadView>(`${BASE}/regulars/${encodeURIComponent(id)}`);
+export const updateRegular = (id: number | string, body: NewRegularBody) =>
+  post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}`, body);
 /** Stop tracking: the server archives it, so the nights already stamped stay in the year. */
-export const stopTracking = (id: number | string) => post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}/delete`, {});
-export const restoreRegular = (id: number | string) => post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}/restore`, {});
-export const clearSkips = (id: number | string) => post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}/skips/clear`, {});
-export const wentTo = (id: number, body: WentBody) => post<Go>(`${BASE}/regulars/${id}/went`, body);
-export const skipTo = (id: number, body: { day: string; back: string }) => post<Go>(`${BASE}/regulars/${id}/skip`, body);
-export const deleteNight = (visitId: number, back = "") => post<Go>(`${BASE}/nights/${visitId}/delete`, { back });
-export const deletePhoto = (visitId: number, back = "") => post<Go>(`${BASE}/nights/${visitId}/photo/delete`, { back });
-export const uploadPhoto = (visitId: number, jpeg: Blob, onProgress?: (f: number) => void) => {
+export const stopTracking = (id: number | string) =>
+  post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}/delete`, {});
+export const restoreRegular = (id: number | string) =>
+  post<Go>(`${BASE}/regulars/${encodeURIComponent(String(id))}/restore`, {});
+export const clearSkips = (id: number | string) =>
+  post<Go>(
+    `${BASE}/regulars/${encodeURIComponent(String(id))}/skips/clear`,
+    {},
+  );
+export const wentTo = (id: number, body: WentBody) =>
+  post<Go>(`${BASE}/regulars/${id}/went`, body);
+export const skipTo = (id: number, body: { day: string; back: string }) =>
+  post<Go>(`${BASE}/regulars/${id}/skip`, body);
+export const deleteNight = (visitId: number, back = "") =>
+  post<Go>(`${BASE}/nights/${visitId}/delete`, { back });
+export const deletePhoto = (visitId: number, back = "") =>
+  post<Go>(`${BASE}/nights/${visitId}/photo/delete`, { back });
+export const uploadPhoto = (
+  visitId: number,
+  jpeg: Blob,
+  onProgress?: (f: number) => void,
+) => {
   const form = new FormData();
   form.append("photo", jpeg, "night.jpg");
-  return upload<PhotoSaved>(`${BASE}/nights/${visitId}/photo`, form, onProgress);
+  return upload<PhotoSaved>(
+    `${BASE}/nights/${visitId}/photo`,
+    form,
+    onProgress,
+  );
 };
 
 /** Fix what a night cost. */
-export const setNightAmount = (visitId: number, amount: string) => post<Go>(`${BASE}/nights/${visitId}/amount`, { amount });
+export const setNightAmount = (visitId: number, amount: string) =>
+  post<Go>(`${BASE}/nights/${visitId}/amount`, { amount });

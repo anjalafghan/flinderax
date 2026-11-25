@@ -15,7 +15,8 @@ const THOUSAND = 1_000 * 100;
 export function shortINR(paise: number): string {
   const sign = paise < 0 ? "−" : "";
   const p = Math.abs(paise);
-  const one = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1).replace(/\.0$/, ""));
+  const one = (v: number) =>
+    Number.isInteger(v) ? String(v) : v.toFixed(1).replace(/\.0$/, "");
   if (p >= CRORE) return `${sign}₹${one(Math.round((p / CRORE) * 10) / 10)}Cr`;
   if (p >= LAKH) return `${sign}₹${one(Math.round((p / LAKH) * 10) / 10)}L`;
   if (p >= THOUSAND) return `${sign}₹${Math.round(p / THOUSAND)}k`;
@@ -25,19 +26,31 @@ export function shortINR(paise: number): string {
 /** "2026-04" -> "Apr"; with `year`, "Apr '26". */
 export function monthShort(ym: string, year = false): string {
   const [y, m] = ym.split("-").map(Number);
-  const name = new Date(Date.UTC(y, (m || 1) - 1, 1)).toLocaleString("en-IN", { month: "short", timeZone: "UTC" });
+  const name = new Date(Date.UTC(y, (m || 1) - 1, 1)).toLocaleString("en-IN", {
+    month: "short",
+    timeZone: "UTC",
+  });
   return year ? `${name} '${String(y).slice(2)}` : name;
 }
 
 /** "2026-12-10" -> "10 Dec". */
 export function dayShort(day: string): string {
   const [y, m, d] = day.slice(0, 10).split("-").map(Number);
-  return new Date(Date.UTC(y, (m || 1) - 1, d || 1)).toLocaleString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+  return new Date(Date.UTC(y, (m || 1) - 1, d || 1)).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
 }
 
 /** The months worth charting: from the first month with any spending or investing, at most `max`. */
-export function chartMonths(months: AnalyticsMonth[], max = 12): AnalyticsMonth[] {
-  const first = months.findIndex((m) => m.spend_paise > 0 || m.invested_paise > 0);
+export function chartMonths(
+  months: AnalyticsMonth[],
+  max = 12,
+): AnalyticsMonth[] {
+  const first = months.findIndex(
+    (m) => m.spend_paise > 0 || m.invested_paise > 0,
+  );
   if (first < 0) return [];
   return months.slice(first).slice(-max);
 }
@@ -72,9 +85,14 @@ export interface DatesStats {
 /** Counts every kept date in the history view, with the average rating and the real cost. */
 export function datesStats(view: HistoryView): DatesStats {
   const items = view.months.flatMap((m) => m.items);
-  const rated = items.filter((i) => i.rating !== null && i.rating !== undefined);
+  const rated = items.filter(
+    (i) => i.rating !== null && i.rating !== undefined,
+  );
   const sum = rated.reduce((s, i) => s + (i.rating ?? 0), 0);
-  const spent = items.reduce((s, i) => s + (toPaise(i.cost_actual_raw || "") ?? 0), 0);
+  const spent = items.reduce(
+    (s, i) => s + (toPaise(i.cost_actual_raw || "") ?? 0),
+    0,
+  );
   return {
     kept: items.length,
     rated: rated.length,
@@ -104,7 +122,10 @@ export function getaways(view: HistoryView, max = 8): Getaway[] {
 }
 
 /** This month's dates spend and budget, in paise, from the view's rupee text. */
-export function jarBudget(view: HistoryView): { spent_paise: number; budget_paise: number } {
+export function jarBudget(view: HistoryView): {
+  spent_paise: number;
+  budget_paise: number;
+} {
   return {
     spent_paise: toPaise(view.budget.spent) ?? 0,
     budget_paise: toPaise(view.budget.budget_raw || view.budget.budget) ?? 0,
@@ -112,7 +133,9 @@ export function jarBudget(view: HistoryView): { spent_paise: number; budget_pais
 }
 
 /** Milestones grouped by year, in date order. */
-export function byYear(ms: Milestone[]): { year: string; items: Milestone[] }[] {
+export function byYear(
+  ms: Milestone[],
+): { year: string; items: Milestone[] }[] {
   const out: { year: string; items: Milestone[] }[] = [];
   for (const m of [...ms].sort((a, b) => a.on.localeCompare(b.on))) {
     const y = m.on.slice(0, 4);
@@ -133,7 +156,8 @@ export function pct(v: number, max: number): number {
 export function niceTicks(max: number): number[] {
   const raw = max / 3;
   const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? 10 * mag;
+  const step =
+    [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? 10 * mag;
   const out: number[] = [];
   for (let v = 0; v <= max + step * 0.999; v += step) out.push(Math.round(v));
   return out.length > 1 ? out : [0, Math.round(step)];

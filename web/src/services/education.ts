@@ -69,9 +69,12 @@ export const educationKey = ["education"] as const;
 
 export const MAX_STAGES = 6;
 
-export const getEducation = () => api.get<EducationOut>("/api/plan/education").then((r) => r.data);
-export const saveEducation = (plan: EduPlan) => api.put<EducationOut>("/api/plan/education", plan).then((r) => r.data);
-export const forgetEducation = () => api.del<void>("/api/plan/education").then((r) => r.data);
+export const getEducation = () =>
+  api.get<EducationOut>("/api/plan/education").then((r) => r.data);
+export const saveEducation = (plan: EduPlan) =>
+  api.put<EducationOut>("/api/plan/education", plan).then((r) => r.data);
+export const forgetEducation = () =>
+  api.del<void>("/api/plan/education").then((r) => r.data);
 
 /** The form's text fields: rupees as typed, percentages as typed. */
 export interface EduDraft {
@@ -91,7 +94,11 @@ export function toEduDraft(p: EduPlan): EduDraft {
     inflation: bpsToText(p.inflation_bps),
     return_pct: bpsToText(p.return_bps),
     corpus: p.corpus_paise === 0 ? "" : paiseToInput(p.corpus_paise),
-    stages: p.stages.map((s) => ({ name: s.name, start_age: String(s.start_age), cost: paiseToInput(s.today_cost_paise) })),
+    stages: p.stages.map((s) => ({
+      name: s.name,
+      start_age: String(s.start_age),
+      cost: paiseToInput(s.today_cost_paise),
+    })),
   };
 }
 
@@ -100,29 +107,47 @@ export function percentToBps(label: string, text: string, max: number): number {
   const m = /^(\d{1,3})(?:\.(\d{1,2}))?$/.exec(text.trim());
   if (!m) throw new Error(`${label} must be a percentage like 10 or 11.5.`);
   const bps = Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0"));
-  if (bps > max * 100) throw new Error(`${label} must be between 0 and ${max}.`);
+  if (bps > max * 100)
+    throw new Error(`${label} must be between 0 and ${max}.`);
   return bps;
 }
 
-function wholeNumber(label: string, text: string, min: number, max: number): number {
+function wholeNumber(
+  label: string,
+  text: string,
+  min: number,
+  max: number,
+): number {
   const t = text.trim();
   const n = Number(t);
-  if (!/^\d+$/.test(t) || n < min || n > max) throw new Error(`${label} must be a whole number from ${min} to ${max}.`);
+  if (!/^\d+$/.test(t) || n < min || n > max)
+    throw new Error(`${label} must be a whole number from ${min} to ${max}.`);
   return n;
 }
 
 /** Turns the form into a plan to save, or throws a sentence to show. Money goes through `toPaise`. */
 export function buildEduPlan(d: EduDraft): EduPlan {
-  if (d.stages.length === 0) throw new Error("Add at least one stage, like School or College.");
+  if (d.stages.length === 0)
+    throw new Error("Add at least one stage, like School or College.");
   const stages = d.stages.map((s, i) => {
     const label = s.name.trim() || `Stage ${i + 1}`;
     if (s.name.trim() === "") throw new Error(`Stage ${i + 1} needs a name.`);
     const cost = toPaise(s.cost);
-    if (cost === null || cost < 0) throw new Error(`${label}: enter a plain rupee amount for today's cost, like 150000.`);
-    return { name: s.name.trim(), start_age: wholeNumber(`${label}: starting age`, s.start_age, 0, 40), today_cost_paise: cost };
+    if (cost === null || cost < 0)
+      throw new Error(
+        `${label}: enter a plain rupee amount for today's cost, like 150000.`,
+      );
+    return {
+      name: s.name.trim(),
+      start_age: wholeNumber(`${label}: starting age`, s.start_age, 0, 40),
+      today_cost_paise: cost,
+    };
   });
   const corpus = d.corpus.trim() === "" ? 0 : toPaise(d.corpus);
-  if (corpus === null || corpus < 0) throw new Error("Already set aside: enter a plain rupee amount, like 200000.");
+  if (corpus === null || corpus < 0)
+    throw new Error(
+      "Already set aside: enter a plain rupee amount, like 200000.",
+    );
   return {
     child_birth_year: wholeNumber("Birth year", d.child_birth_year, 1900, 2200),
     stages,

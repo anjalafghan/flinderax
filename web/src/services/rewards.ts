@@ -67,7 +67,11 @@ export interface SettledMonth {
   earned_paise: number;
   saved_paise: number;
   payout_paise: number;
-  detail: { areas?: AreaScore[]; held_back_paise?: number; focus?: FundArea | null } | null;
+  detail: {
+    areas?: AreaScore[];
+    held_back_paise?: number;
+    focus?: FundArea | null;
+  } | null;
 }
 
 export interface FundOut {
@@ -103,19 +107,36 @@ const data = <T>(p: Promise<{ data: T }>) => p.then((r) => r.data);
 export const rewardsApi = {
   list: () => data(api.get<RewardsOut>("/api/rewards")),
   fund: () => data(api.get<FundOut>("/api/rewards/fund")),
-  suggestions: () => data(api.get<RewardSuggestion[]>("/api/rewards/suggestions")),
-  create: (r: RewardInput) => data(api.post<{ reward_id: string }>("/api/rewards/create", r)),
-  remove: (reward_id: string) => data(api.post("/api/rewards/remove", { reward_id })),
-  claim: (reward_id: string) => data(api.post("/api/rewards/claim", { reward_id })),
-  unclaim: (reward_id: string) => data(api.post("/api/rewards/unclaim", { reward_id })),
-  setCap: (monthly_cap_paise: number | null) => data(api.post("/api/rewards/cap", { monthly_cap_paise })),
+  suggestions: () =>
+    data(api.get<RewardSuggestion[]>("/api/rewards/suggestions")),
+  create: (r: RewardInput) =>
+    data(api.post<{ reward_id: string }>("/api/rewards/create", r)),
+  remove: (reward_id: string) =>
+    data(api.post("/api/rewards/remove", { reward_id })),
+  claim: (reward_id: string) =>
+    data(api.post("/api/rewards/claim", { reward_id })),
+  unclaim: (reward_id: string) =>
+    data(api.post("/api/rewards/unclaim", { reward_id })),
+  setCap: (monthly_cap_paise: number | null) =>
+    data(api.post("/api/rewards/cap", { monthly_cap_paise })),
 };
 
-export const useRewardSuggestions = () => useQuery({ queryKey: [...rewardsKey, "suggestions"], queryFn: rewardsApi.suggestions, retry: 1 });
+export const useRewardSuggestions = () =>
+  useQuery({
+    queryKey: [...rewardsKey, "suggestions"],
+    queryFn: rewardsApi.suggestions,
+    retry: 1,
+  });
 
-export const useRewardFund = () => useQuery({ queryKey: [...rewardsKey, "fund"], queryFn: rewardsApi.fund, retry: 1 });
+export const useRewardFund = () =>
+  useQuery({
+    queryKey: [...rewardsKey, "fund"],
+    queryFn: rewardsApi.fund,
+    retry: 1,
+  });
 
-export const useRewards = () => useQuery({ queryKey: rewardsKey, queryFn: rewardsApi.list, retry: 1 });
+export const useRewards = () =>
+  useQuery({ queryKey: rewardsKey, queryFn: rewardsApi.list, retry: 1 });
 
 function useRewardMutation<V>(fn: (v: V) => Promise<unknown>, success: string) {
   const qc = useQueryClient();
@@ -136,8 +157,19 @@ export function rewardError(e: unknown): string {
   return e instanceof Error ? e.message : "Something went wrong. Try again.";
 }
 
-export const useAddReward = () => useRewardMutation((r: RewardInput) => rewardsApi.create(r), "Reward added");
-export const useRemoveReward = () => useRewardMutation((id: string) => rewardsApi.remove(id), "Reward removed");
-export const useClaimReward = () => useRewardMutation((id: string) => rewardsApi.claim(id), "Enjoy it, you earned it!");
-export const useUnclaimReward = () => useRewardMutation((id: string) => rewardsApi.unclaim(id), "Claim taken back");
-export const useSetRewardCap = () => useRewardMutation((cap: number | null) => rewardsApi.setCap(cap), "Reward budget saved");
+export const useAddReward = () =>
+  useRewardMutation((r: RewardInput) => rewardsApi.create(r), "Reward added");
+export const useRemoveReward = () =>
+  useRewardMutation((id: string) => rewardsApi.remove(id), "Reward removed");
+export const useClaimReward = () =>
+  useRewardMutation(
+    (id: string) => rewardsApi.claim(id),
+    "Enjoy it, you earned it!",
+  );
+export const useUnclaimReward = () =>
+  useRewardMutation((id: string) => rewardsApi.unclaim(id), "Claim taken back");
+export const useSetRewardCap = () =>
+  useRewardMutation(
+    (cap: number | null) => rewardsApi.setCap(cap),
+    "Reward budget saved",
+  );

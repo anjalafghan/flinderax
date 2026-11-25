@@ -28,7 +28,9 @@ describe("PeopleReportSection", () => {
 
   it("shows catch-ups, gifts, the next quarter, visits and money sent, with the wins and watch", () => {
     render(<PeopleReportSection report={report} />);
-    expect(screen.getByRole("heading", { level: 3, name: "People" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "People" }),
+    ).toBeInTheDocument();
 
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(screen.getByText("3 people past catch-up date")).toBeInTheDocument();
@@ -39,14 +41,25 @@ describe("PeopleReportSection", () => {
     expect(screen.getByText("₹920")).toBeInTheDocument();
     expect(screen.getByText("₹3,100")).toBeInTheDocument();
     expect(screen.getByText("Before: ₹2,500")).toBeInTheDocument();
-    expect(screen.getByText("You caught up 12 times this quarter.")).toBeInTheDocument();
-    expect(screen.getByText("3 people are past their catch-up date.")).toBeInTheDocument();
+    expect(
+      screen.getByText("You caught up 12 times this quarter."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("3 people are past their catch-up date."),
+    ).toBeInTheDocument();
   });
 
   it("uses singular wording and a no-earlier-spend note when there is nothing to compare", () => {
     render(
       <PeopleReportSection
-        report={{ ...report, overdue_people: 0, next_quarter_occasions: 1, prev_sent_to_people_paise: null, wins: [], watch: [] }}
+        report={{
+          ...report,
+          overdue_people: 0,
+          next_quarter_occasions: 1,
+          prev_sent_to_people_paise: null,
+          wins: [],
+          watch: [],
+        }}
       />,
     );
     expect(screen.getByText("Nobody overdue")).toBeInTheDocument();

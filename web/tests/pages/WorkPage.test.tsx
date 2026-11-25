@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 
 import WorkPage from "@/pages/WorkPage";
 import api from "@/services/api";
@@ -35,34 +41,63 @@ describe("WorkPage", () => {
 
   it("groups leads by stage and offers the life line only where a salary is known", async () => {
     const leads = [
-      lead({ id: "l2", company: "Company B", stage: "offer", take_home_paise: 22_000_000, next_step: "Reply to the offer", next_on: "2026-11-20" }),
+      lead({
+        id: "l2",
+        company: "Company B",
+        stage: "offer",
+        take_home_paise: 22_000_000,
+        next_step: "Reply to the offer",
+        next_on: "2026-11-20",
+      }),
       lead({ id: "l1" }),
     ];
     spyOn(api, "get").mockImplementation(() => respond({ leads }));
     renderWithProviders(<WorkPage />);
 
-    const offer = (await screen.findByRole("heading", { name: "Offer" })).closest("section") as HTMLElement;
+    const offer = (
+      await screen.findByRole("heading", { name: "Offer" })
+    ).closest("section") as HTMLElement;
     expect(within(offer).getByText("Company B")).toBeInTheDocument();
-    expect(within(offer).getByText("Engineer · ₹2,20,000 a month · Next: Reply to the offer by 20 Nov")).toBeInTheDocument();
-    expect(within(offer).getByRole("button", { name: "See it on my life line" })).toBeInTheDocument();
+    expect(
+      within(offer).getByText(
+        "Engineer · ₹2,20,000 a month · Next: Reply to the offer by 20 Nov",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(offer).getByRole("button", { name: "See it on my life line" }),
+    ).toBeInTheDocument();
 
-    const applied = screen.getByRole("heading", { name: "Applied" }).closest("section") as HTMLElement;
+    const applied = screen
+      .getByRole("heading", { name: "Applied" })
+      .closest("section") as HTMLElement;
     expect(within(applied).getByText("Company A")).toBeInTheDocument();
-    expect(within(applied).queryByRole("button", { name: "See it on my life line" })).toBeNull();
+    expect(
+      within(applied).queryByRole("button", { name: "See it on my life line" }),
+    ).toBeNull();
   });
 
   it("adds a lead with what was typed, and refuses one with no company", async () => {
     spyOn(api, "get").mockImplementation(() => respond({ leads: [] }));
     const post = spyOn(api, "post").mockImplementation(() => respond(lead({})));
     renderWithProviders(<WorkPage />);
-    expect(await screen.findByText("No leads yet. Add the first company you would like to work for.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "No leads yet. Add the first company you would like to work for.",
+      ),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Add lead" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Company: fill this in.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Company: fill this in.",
+    );
     expect(post).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText("Company"), { target: { value: " Company A " } });
-    fireEvent.change(screen.getByLabelText("Take-home a month (₹)"), { target: { value: "2,20,000" } });
+    fireEvent.change(screen.getByLabelText("Company"), {
+      target: { value: " Company A " },
+    });
+    fireEvent.change(screen.getByLabelText("Take-home a month (₹)"), {
+      target: { value: "2,20,000" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Add lead" }));
     await waitFor(() =>
       expect(post).toHaveBeenCalledWith("/api/work", {

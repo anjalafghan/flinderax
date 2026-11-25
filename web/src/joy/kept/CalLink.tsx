@@ -5,11 +5,23 @@ import { useEffect, useRef, type ReactNode } from "react";
  * and where the device can share files it goes to the share sheet so it can reach the other of
  * us; anywhere else it is a plain download.
  */
-export function CalLink({ href, className, children }: { href: string; className: string; children: ReactNode }) {
+export function CalLink({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className: string;
+  children: ReactNode;
+}) {
   const file = useRef<File | null>(null);
   useEffect(() => {
     file.current = null;
-    if (typeof navigator === "undefined" || typeof navigator.canShare !== "function") return;
+    if (
+      typeof navigator === "undefined" ||
+      typeof navigator.canShare !== "function"
+    )
+      return;
     let dead = false;
     fetch(href)
       .then((r) => (r.ok ? r.blob() : null))
@@ -36,10 +48,12 @@ export function CalLink({ href, className, children }: { href: string; className
         const f = file.current;
         if (!f || typeof navigator.share !== "function") return;
         e.preventDefault();
-        navigator.share({ files: [f], title: "Our date" }).catch((x: unknown) => {
-          if (x instanceof Error && x.name === "AbortError") return;
-          window.location.href = href;
-        });
+        navigator
+          .share({ files: [f], title: "Our date" })
+          .catch((x: unknown) => {
+            if (x instanceof Error && x.name === "AbortError") return;
+            window.location.href = href;
+          });
       }}
     >
       {children}

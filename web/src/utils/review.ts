@@ -4,7 +4,8 @@ import type { TaxRegime, TaxReminder, TaxSectionId } from "@/services/types";
 import { formatINR, toPaise } from "@/utils/money";
 import { monthKey, shiftMonth } from "@/utils/spending";
 
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+const clamp = (n: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, n));
 
 /** The month the Review page opens on: the last complete calendar month, "YYYY-MM". */
 export function lastCompleteMonth(today: Date = new Date()): string {
@@ -21,7 +22,11 @@ export function fyForDate(d: Date = new Date()): string {
  * The month one step from `ym`, or null when that step would pass `last` (the newest month allowed).
  * "YYYY-MM" strings compare correctly as text.
  */
-export function stepMonth(ym: string, delta: number, last: string): string | null {
+export function stepMonth(
+  ym: string,
+  delta: number,
+  last: string,
+): string | null {
   const next = shiftMonth(ym, delta);
   return next > last ? null : next;
 }
@@ -98,10 +103,20 @@ export function sectionLabel(section: TaxSectionId | string): string {
 }
 
 /** Section choices for a select, in the order shown. */
-export const TAX_SECTION_IDS: readonly TaxSectionId[] = ["80C", "80CCD1B", "80D", "HRA", "24B", "other"];
+export const TAX_SECTION_IDS: readonly TaxSectionId[] = [
+  "80C",
+  "80CCD1B",
+  "80D",
+  "HRA",
+  "24B",
+  "other",
+];
 
 /** Why a deduction cannot be saved yet, or null when it can. */
-export function deductionError(label: string, amountText: string): string | null {
+export function deductionError(
+  label: string,
+  amountText: string,
+): string | null {
   if (!label.trim()) return "Name the deduction, for example “PPF deposit”.";
   const paise = toPaise(amountText);
   if (paise === null || paise <= 0) return "Type an amount above zero.";

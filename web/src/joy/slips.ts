@@ -1,10 +1,13 @@
 // Searching the slips list. Pure.
 import type { ActivityView, Group } from "./api";
 
-export const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+export const norm = (s: string) =>
+  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 export function haystack(a: ActivityView): string {
-  return norm([a.title, a.place, a.tags.join(" "), a.setting, a.notes].join(" "));
+  return norm(
+    [a.title, a.place, a.tags.join(" "), a.setting, a.notes].join(" "),
+  );
 }
 
 /** Every word of the query has to appear somewhere in the slip. */
@@ -20,9 +23,15 @@ export interface Filtered {
   items: ActivityView[];
 }
 
-export function filterGroups(groups: Group[], query: string): { shown: Filtered[]; total: number } {
+export function filterGroups(
+  groups: Group[],
+  query: string,
+): { shown: Filtered[]; total: number } {
   const shown = groups
-    .map((group) => ({ group, items: group.items.filter((a) => matches(a, query)) }))
+    .map((group) => ({
+      group,
+      items: group.items.filter((a) => matches(a, query)),
+    }))
     .filter((g) => g.items.length > 0 || query.trim() === "");
   return { shown, total: shown.reduce((n, g) => n + g.items.length, 0) };
 }

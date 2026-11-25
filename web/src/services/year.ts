@@ -3,7 +3,8 @@ import { toast } from "sonner";
 
 import api from "@/services/api";
 
-export type OutflowKind = "premium" | "tax" | "fee" | "maturity" | "wedding" | "other";
+export type OutflowKind =
+  "premium" | "tax" | "fee" | "maturity" | "wedding" | "other";
 
 export interface LumpyItem {
   on: string;
@@ -70,12 +71,19 @@ const data = <T>(p: Promise<{ data: T }>) => p.then((r) => r.data);
 export const yearApi = {
   view: () => data(api.get<YearView>("/api/year")),
   outflows: () => data(api.get<Outflow[]>("/api/year/outflows")),
-  create: (o: OutflowInput) => data(api.post<{ outflow_id: string }>("/api/year/outflows", o)),
+  create: (o: OutflowInput) =>
+    data(api.post<{ outflow_id: string }>("/api/year/outflows", o)),
   remove: (id: string) => data(api.post(`/api/year/outflows/${id}/delete`, {})),
 };
 
-export const useYear = () => useQuery({ queryKey: [...yearKey, "view"], queryFn: yearApi.view, retry: 1 });
-export const useOutflows = () => useQuery({ queryKey: [...yearKey, "outflows"], queryFn: yearApi.outflows, retry: 1 });
+export const useYear = () =>
+  useQuery({ queryKey: [...yearKey, "view"], queryFn: yearApi.view, retry: 1 });
+export const useOutflows = () =>
+  useQuery({
+    queryKey: [...yearKey, "outflows"],
+    queryFn: yearApi.outflows,
+    retry: 1,
+  });
 
 function useYearMutation<V>(fn: (v: V) => Promise<unknown>, success: string) {
   const qc = useQueryClient();
@@ -87,15 +95,34 @@ function useYearMutation<V>(fn: (v: V) => Promise<unknown>, success: string) {
     },
     onError: (e: unknown) => {
       const body = (e as { response?: { data?: unknown } })?.response?.data;
-      toast.error(typeof body === "string" && body.trim() ? body : "Something went wrong. Try again.");
+      toast.error(
+        typeof body === "string" && body.trim()
+          ? body
+          : "Something went wrong. Try again.",
+      );
     },
   });
 }
 
-export const useAddOutflow = () => useYearMutation((o: OutflowInput) => yearApi.create(o), "Added to the year");
-export const useRemoveOutflow = () => useYearMutation((id: string) => yearApi.remove(id), "Removed");
+export const useAddOutflow = () =>
+  useYearMutation((o: OutflowInput) => yearApi.create(o), "Added to the year");
+export const useRemoveOutflow = () =>
+  useYearMutation((id: string) => yearApi.remove(id), "Removed");
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 /** "2027-03" -> "Mar 2027". */
 export function monthLabel(ym: string): string {

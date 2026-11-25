@@ -49,8 +49,14 @@ export function createChoreo(): Choreo {
     },
     trackSpring(done, finish) {
       let over = false;
-      done.then(() => (over = true), () => (over = true));
-      items.push({ finish: () => ((over = true), finish()), playing: () => !over });
+      done.then(
+        () => (over = true),
+        () => (over = true),
+      );
+      items.push({
+        finish: () => ((over = true), finish()),
+        playing: () => !over,
+      });
     },
     later,
     wait: (ms) => new Promise<void>((r) => later(r, ms)),

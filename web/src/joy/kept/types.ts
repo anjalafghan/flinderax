@@ -38,7 +38,12 @@ export interface KeptView {
   /** Room for more photos on this date. */
   can_add_photo: boolean;
   /** The bank payment you linked as what this date cost (yours only). */
-  linked_txn: { txn_id: string; merchant: string; amount_paise: number; day: string } | null;
+  linked_txn: {
+    txn_id: string;
+    merchant: string;
+    amount_paise: number;
+    day: string;
+  } | null;
   cost_est: string;
   cost_actual: string;
   cost_actual_raw: string;

@@ -5,7 +5,8 @@
 import { Controller, type SpringConfig } from "@react-spring/web";
 
 const QUERY = "(prefers-reduced-motion: reduce)";
-export const reduced = (): boolean => typeof matchMedia === "function" && matchMedia(QUERY).matches;
+export const reduced = (): boolean =>
+  typeof matchMedia === "function" && matchMedia(QUERY).matches;
 
 export interface Pose {
   x: number;
@@ -69,7 +70,9 @@ export function to(el: El, p: Go): Promise<unknown> {
     paint(el, c.get());
     return Promise.resolve();
   }
-  return c.start({ ...vals, config, delay, onChange: () => paint(el, c.get()) }).then(() => paint(el, c.get()));
+  return c
+    .start({ ...vals, config, delay, onChange: () => paint(el, c.get()) })
+    .then(() => paint(el, c.get()));
 }
 
 /** Stop a spring where it is and put the element at `end` (a tap that skips the show). */
@@ -77,7 +80,8 @@ export function finish(el: El, end: Partial<Pose> = {}) {
   set(el, { ...REST, ...end });
 }
 
-export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+export const clamp = (v: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, v));
 export const buzz = (ms: number) => {
   try {
     navigator.vibrate?.(ms);

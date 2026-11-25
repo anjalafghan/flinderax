@@ -1,7 +1,21 @@
 // The share picture, drawn on a 1080x1920 canvas. A near line-for-line port of Joy's static/year.js: one fixed
 // palette (the jar's paper by day), the same seeded grain, and only the ShareData it is handed: no names, notes, homes
 // or app address.
-import { coverCrop, fitNumberSize, H, M, monthBars, needsDense, polaroidPile, rng, slackFor, TINT, W, wrapText, type ShareData } from "./layout";
+import {
+  coverCrop,
+  fitNumberSize,
+  H,
+  M,
+  monthBars,
+  needsDense,
+  polaroidPile,
+  rng,
+  slackFor,
+  TINT,
+  W,
+  wrapText,
+  type ShareData,
+} from "./layout";
 
 export const C = {
   paper: "#f5eee3",
@@ -33,21 +47,43 @@ const font = (ctx: Ctx, f: string, spacing = 0) => {
   ctx.font = f;
   if ("letterSpacing" in ctx) ctx.letterSpacing = `${spacing}px`;
 };
-const wrap = (ctx: Ctx, text: string, max: number, lines: number) => wrapText((t) => ctx.measureText(t).width, text, max, lines);
+const wrap = (ctx: Ctx, text: string, max: number, lines: number) =>
+  wrapText((t) => ctx.measureText(t).width, text, max, lines);
 
-const inkLine = (ctx: Ctx, x1: number, y: number, x2: number, w: number, color: string) => {
+const inkLine = (
+  ctx: Ctx,
+  x1: number,
+  y: number,
+  x2: number,
+  w: number,
+  color: string,
+) => {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.lineWidth = w;
   ctx.lineCap = "round";
   ctx.beginPath();
   ctx.moveTo(x1, y + w * 0.5);
-  ctx.bezierCurveTo(x1 + (x2 - x1) * 0.3, y - w * 0.9, x1 + (x2 - x1) * 0.62, y - w * 0.4, x2, y - w * 1.1);
+  ctx.bezierCurveTo(
+    x1 + (x2 - x1) * 0.3,
+    y - w * 0.9,
+    x1 + (x2 - x1) * 0.62,
+    y - w * 0.4,
+    x2,
+    y - w * 1.1,
+  );
   ctx.stroke();
   ctx.restore();
 };
 
-const star = (ctx: Ctx, x: number, y: number, size: number, on: boolean, rot: number) => {
+const star = (
+  ctx: Ctx,
+  x: number,
+  y: number,
+  size: number,
+  on: boolean,
+  rot: number,
+) => {
   ctx.save();
   ctx.translate(x + size / 2, y + size / 2);
   ctx.rotate(rot);
@@ -65,7 +101,14 @@ const star = (ctx: Ctx, x: number, y: number, size: number, on: boolean, rot: nu
   ctx.restore();
 };
 
-const tape = (ctx: Ctx, x: number, y: number, w: number, h: number, rot: number) => {
+const tape = (
+  ctx: Ctx,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  rot: number,
+) => {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rot);
@@ -74,9 +117,11 @@ const tape = (ctx: Ctx, x: number, y: number, w: number, h: number, rot: number)
   const teeth = 7;
   ctx.moveTo(0, 0);
   ctx.lineTo(w, 0);
-  for (let i = 1; i <= teeth; i++) ctx.lineTo(w - (i % 2 ? 7 : 0), (h * i) / teeth);
+  for (let i = 1; i <= teeth; i++)
+    ctx.lineTo(w - (i % 2 ? 7 : 0), (h * i) / teeth);
   ctx.lineTo(0, h);
-  for (let i = teeth - 1; i >= 0; i--) ctx.lineTo(i % 2 ? 7 : 0, (h * i) / teeth);
+  for (let i = teeth - 1; i >= 0; i--)
+    ctx.lineTo(i % 2 ? 7 : 0, (h * i) / teeth);
   ctx.closePath();
   ctx.fill();
   ctx.globalAlpha = 0.25;
@@ -178,7 +223,13 @@ export function paint(ctx: Ctx, d: ShareData, photos: Photo[]) {
   if (extra > 0) draw(ctx, d, photos, dense, extra);
 }
 
-function draw(ctx: Ctx, d: ShareData, photos: Photo[], dense: boolean, extra: number): number {
+function draw(
+  ctx: Ctx,
+  d: ShareData,
+  photos: Photo[],
+  dense: boolean,
+  extra: number,
+): number {
   const gx = extra / 4;
   const rnd = rng(d.year * 97 + d.dates);
 
@@ -230,7 +281,11 @@ function draw(ctx: Ctx, d: ShareData, photos: Photo[], dense: boolean, extra: nu
   let size = dense ? 220 : 380;
   font(ctx, `640 ${size}px ${FD}`, -size * 0.04);
   const maxNum = dense ? 600 : 560;
-  const resized = fitNumberSize(size, ctx.measureText(String(d.dates)).width, maxNum);
+  const resized = fitNumberSize(
+    size,
+    ctx.measureText(String(d.dates)).width,
+    maxNum,
+  );
   if (resized !== size) {
     size = resized;
     font(ctx, `640 ${size}px ${FD}`, -size * 0.04);
@@ -260,7 +315,13 @@ function draw(ctx: Ctx, d: ShareData, photos: Photo[], dense: boolean, extra: nu
       const bw = dense ? 24 : 30;
       ctx.fillStyle = b.busiest ? C.stamp : C.ink;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(b.cx - bw / 2, base - b.h, bw, b.h, [bw * 0.3, bw * 0.38, 2, 2]);
+      if (ctx.roundRect)
+        ctx.roundRect(b.cx - bw / 2, base - b.h, bw, b.h, [
+          bw * 0.3,
+          bw * 0.38,
+          2,
+          2,
+        ]);
       else ctx.rect(b.cx - bw / 2, base - b.h, bw, b.h);
       ctx.fill();
       font(ctx, `600 ${dense ? 26 : 30}px ${FU}`);
@@ -284,9 +345,16 @@ function draw(ctx: Ctx, d: ShareData, photos: Photo[], dense: boolean, extra: nu
 
   // kind of night, streak, stars: three little columns
   const cols: Array<[string, string, string]> = [];
-  if (d.vibe) cols.push(["MOSTLY", d.vibe, d.tags && d.tags.length ? d.tags.slice(0, 3).join(" · ") : ""]);
-  if (d.streak_weeks > 1) cols.push(["LONGEST RUN", `${d.streak_weeks} weeks`, "in a row"]);
-  if (d.avg_rating) cols.push(["AVERAGE NIGHT", `${d.avg_rating} stars`, "out of five"]);
+  if (d.vibe)
+    cols.push([
+      "MOSTLY",
+      d.vibe,
+      d.tags && d.tags.length ? d.tags.slice(0, 3).join(" · ") : "",
+    ]);
+  if (d.streak_weeks > 1)
+    cols.push(["LONGEST RUN", `${d.streak_weeks} weeks`, "in a row"]);
+  if (d.avg_rating)
+    cols.push(["AVERAGE NIGHT", `${d.avg_rating} stars`, "out of five"]);
   if (cols.length) {
     const gap = 36;
     const wt = cols.map((_, i) => (i === 0 && d.vibe ? 1.3 : 1));
@@ -317,7 +385,9 @@ function draw(ctx: Ctx, d: ShareData, photos: Photo[], dense: boolean, extra: nu
         const ss = dense ? 25 : 28;
         font(ctx, `400 ${ss}px ${FU}`);
         ctx.fillStyle = C.soft;
-        wrap(ctx, s, tw, 2).forEach((l, j) => ctx.fillText(l, tx, y + (dense ? 104 : 122) + j * ss * 1.3));
+        wrap(ctx, s, tw, 2).forEach((l, j) =>
+          ctx.fillText(l, tx, y + (dense ? 104 : 122) + j * ss * 1.3),
+        );
       }
     });
     y += (dense ? 172 : 240) + gx;
@@ -353,8 +423,21 @@ function draw(ctx: Ctx, d: ShareData, photos: Photo[], dense: boolean, extra: nu
     });
     ty += dense ? 26 : 34;
     const ss = dense ? 40 : 48;
-    for (let i = 1; i <= 5; i++) star(ctx, px + (i - 1) * (ss + 8), ty, ss, i <= d.best_rating, (i % 2 ? -1 : 1) * 0.07);
-    rubber(ctx, W - M - (dense ? 104 : 124), y + (dense ? 96 : 112), dense ? 0.85 : 1);
+    for (let i = 1; i <= 5; i++)
+      star(
+        ctx,
+        px + (i - 1) * (ss + 8),
+        ty,
+        ss,
+        i <= d.best_rating,
+        (i % 2 ? -1 : 1) * 0.07,
+      );
+    rubber(
+      ctx,
+      W - M - (dense ? 104 : 124),
+      y + (dense ? 96 : 112),
+      dense ? 0.85 : 1,
+    );
     ctx.restore();
     y += sh + (dense ? 56 : 70) + gx;
   }
@@ -384,8 +467,16 @@ function draw(ctx: Ctx, d: ShareData, photos: Photo[], dense: boolean, extra: nu
     const ps = dense ? 30 : 34;
     font(ctx, `400 ${ps}px ${FU}`);
     ctx.fillStyle = C.ink;
-    const room = Math.max(1, Math.floor((H - 250 - y - (dense ? 440 : 0)) / (ps * 1.4)));
-    const lines = wrap(ctx, d.places.join("  ·  "), W - 2 * M, Math.min(dense ? 2 : 4, room));
+    const room = Math.max(
+      1,
+      Math.floor((H - 250 - y - (dense ? 440 : 0)) / (ps * 1.4)),
+    );
+    const lines = wrap(
+      ctx,
+      d.places.join("  ·  "),
+      W - 2 * M,
+      Math.min(dense ? 2 : 4, room),
+    );
     lines.forEach((l, i) => ctx.fillText(l, M, y + 50 + i * ps * 1.4));
     y += 50 + lines.length * ps * 1.4 + 30;
   }
@@ -424,7 +515,13 @@ function draw(ctx: Ctx, d: ShareData, photos: Photo[], dense: boolean, extra: nu
 }
 
 // document.fonts.ready only waits for faces the page already asked for; ask for each one, then check they are in.
-const FACES = ['640 96px "Newsreader"', 'italic 400 48px "Newsreader"', '600 32px "Figtree"', '400 32px "Figtree"', 'italic 600 40px "Newsreader"'];
+const FACES = [
+  '640 96px "Newsreader"',
+  'italic 400 48px "Newsreader"',
+  '600 32px "Figtree"',
+  '400 32px "Figtree"',
+  'italic 600 40px "Newsreader"',
+];
 export async function loadFonts(): Promise<void> {
   if (!document.fonts || !document.fonts.load) return;
   await Promise.all(FACES.map((f) => document.fonts.load(f))).catch(() => {});
@@ -437,7 +534,10 @@ export async function decodePhoto(src: string): Promise<ImageBitmap | null> {
     if (!r.ok) return null;
     const blob = await r.blob();
     try {
-      return await createImageBitmap(blob, { resizeWidth: 720, resizeQuality: "high" });
+      return await createImageBitmap(blob, {
+        resizeWidth: 720,
+        resizeQuality: "high",
+      });
     } catch {
       return await createImageBitmap(blob);
     }
@@ -452,15 +552,21 @@ export async function makePicture(d: ShareData): Promise<File> {
   let bitmaps: ImageBitmap[] = [];
   try {
     await loadFonts();
-    bitmaps = (await Promise.all(d.photos.map((p) => decodePhoto(p.url)))).filter((b): b is ImageBitmap => !!b);
+    bitmaps = (
+      await Promise.all(d.photos.map((p) => decodePhoto(p.url)))
+    ).filter((b): b is ImageBitmap => !!b);
     canvas.width = W; // never devicePixelRatio: 1080 wide is the story size
     canvas.height = H;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("canvas");
     paint(ctx, d, bitmaps);
     const type = bitmaps.length ? "image/jpeg" : "image/png";
-    const blob = await new Promise<Blob>((ok, no) => canvas.toBlob((b) => (b ? ok(b) : no(new Error("toBlob"))), type, 0.9));
-    return new File([blob], `our-${d.year}.${bitmaps.length ? "jpg" : "png"}`, { type });
+    const blob = await new Promise<Blob>((ok, no) =>
+      canvas.toBlob((b) => (b ? ok(b) : no(new Error("toBlob"))), type, 0.9),
+    );
+    return new File([blob], `our-${d.year}.${bitmaps.length ? "jpg" : "png"}`, {
+      type,
+    });
   } finally {
     canvas.width = canvas.height = 0;
     bitmaps.forEach((b) => b.close());

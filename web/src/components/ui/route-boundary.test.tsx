@@ -27,7 +27,9 @@ describe("RouteBoundary", () => {
       </div>,
     );
     expect(screen.getByText("menu")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toContain("This page hit a problem");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "This page hit a problem",
+    );
   });
 
   test("Try again renders the page again", () => {

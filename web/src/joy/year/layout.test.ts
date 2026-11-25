@@ -1,12 +1,45 @@
 import { describe, expect, test } from "bun:test";
 import {
-  coverCrop, dealParams, drawData, fitNumberSize, H, M, MAX_PHOTOS, monthBars, needsDense, pickPhotos, polaroidPile, rng, shareControls,
-  shareFile, slackFor, uniquePlaces, W, wrapText, type ShareData,
+  coverCrop,
+  dealParams,
+  drawData,
+  fitNumberSize,
+  H,
+  M,
+  MAX_PHOTOS,
+  monthBars,
+  needsDense,
+  pickPhotos,
+  polaroidPile,
+  rng,
+  shareControls,
+  shareFile,
+  slackFor,
+  uniquePlaces,
+  W,
+  wrapText,
+  type ShareData,
 } from "./layout";
 
 const data = (o: Partial<ShareData> = {}): ShareData => ({
-  year: 2026, dates: 12, months: [0, 1, 0, 3, 0, 0, 2, 0, 0, 3, 0, 3], vibe: "Around town", tags: [], best_title: "Chai", best_rating: 5, best_more: 0,
-  vibe_key: "local", avg_rating: "4.2", streak_weeks: 3, places: ["A", "B", "A", ""], spent: "₹4,000", photos: [{ id: 1, url: "/a" }, { id: 2, url: "/b" }], ...o,
+  year: 2026,
+  dates: 12,
+  months: [0, 1, 0, 3, 0, 0, 2, 0, 0, 3, 0, 3],
+  vibe: "Around town",
+  tags: [],
+  best_title: "Chai",
+  best_rating: 5,
+  best_more: 0,
+  vibe_key: "local",
+  avg_rating: "4.2",
+  streak_weeks: 3,
+  places: ["A", "B", "A", ""],
+  spent: "₹4,000",
+  photos: [
+    { id: 1, url: "/a" },
+    { id: 2, url: "/b" },
+  ],
+  ...o,
 });
 
 describe("seeded randomness", () => {
@@ -35,24 +68,50 @@ describe("what the picture may hold", () => {
     expect(on.spent).toBe("₹4,000");
   });
   test("photos: only ids in the share data, once each, at most nine", () => {
-    const many = Array.from({ length: 14 }, (_, i) => ({ id: i + 1, url: `/p${i}` }));
-    expect(pickPhotos([1, 99, 1, 2], data().photos).map((p) => p.id)).toEqual([1, 2]);
-    expect(pickPhotos(many.map((p) => p.id), many)).toHaveLength(MAX_PHOTOS);
+    const many = Array.from({ length: 14 }, (_, i) => ({
+      id: i + 1,
+      url: `/p${i}`,
+    }));
+    expect(pickPhotos([1, 99, 1, 2], data().photos).map((p) => p.id)).toEqual([
+      1, 2,
+    ]);
+    expect(
+      pickPhotos(
+        many.map((p) => p.id),
+        many,
+      ),
+    ).toHaveLength(MAX_PHOTOS);
   });
   test("controls hide when there is nothing behind them", () => {
-    expect(shareControls(data({ places: [""], spent: "", photos: [] }))).toEqual({ places: false, spent: false, photos: false });
-    expect(shareControls(data())).toEqual({ places: true, spent: true, photos: true });
+    expect(
+      shareControls(data({ places: [""], spent: "", photos: [] })),
+    ).toEqual({ places: false, spent: false, photos: false });
+    expect(shareControls(data())).toEqual({
+      places: true,
+      spent: true,
+      photos: true,
+    });
     expect(uniquePlaces(["x", "x", ""])).toEqual(["x"]);
   });
   test("file name and type follow the photos", () => {
-    expect(shareFile(2026, true)).toEqual({ name: "our-2026.jpg", type: "image/jpeg" });
-    expect(shareFile(2026, false)).toEqual({ name: "our-2026.png", type: "image/png" });
+    expect(shareFile(2026, true)).toEqual({
+      name: "our-2026.jpg",
+      type: "image/jpeg",
+    });
+    expect(shareFile(2026, false)).toEqual({
+      name: "our-2026.png",
+      type: "image/png",
+    });
   });
 });
 
 describe("wrapping", () => {
   const m = (t: string) => t.length * 10;
-  test("breaks on words", () => expect(wrapText(m, "one two three four", 100, 5)).toEqual(["one two", "three four"]));
+  test("breaks on words", () =>
+    expect(wrapText(m, "one two three four", 100, 5)).toEqual([
+      "one two",
+      "three four",
+    ]));
   test("cuts with an ellipsis when it runs out of lines", () => {
     const out = wrapText(m, "alpha beta gamma delta epsilon", 100, 2);
     expect(out).toHaveLength(2);
@@ -98,10 +157,14 @@ describe("months ledger", () => {
 describe("polaroid pile", () => {
   test("none, one row, two rows", () => {
     expect(polaroidPile(0, 1000)).toEqual([]);
-    expect(new Set(polaroidPile(3, 1000).map((s) => Math.round(s.y / 100))).size).toBeLessThanOrEqual(2);
+    expect(
+      new Set(polaroidPile(3, 1000).map((s) => Math.round(s.y / 100))).size,
+    ).toBeLessThanOrEqual(2);
     const nine = polaroidPile(9, 1000);
     expect(nine).toHaveLength(9);
-    expect(Math.max(...nine.map((s) => s.y))).toBeGreaterThan(Math.min(...nine.map((s) => s.y)));
+    expect(Math.max(...nine.map((s) => s.y))).toBeGreaterThan(
+      Math.min(...nine.map((s) => s.y)),
+    );
   });
   test("everything stays on the page, above the sign-off", () => {
     for (const n of [1, 2, 4, 9]) {

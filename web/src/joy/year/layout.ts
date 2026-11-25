@@ -43,7 +43,11 @@ export interface ShareChoices {
 }
 
 /** The ticked photo ids that really are in the share data, once each, at most nine. */
-export function pickPhotos(ticked: readonly number[], available: readonly SharePhoto[], max = MAX_PHOTOS): SharePhoto[] {
+export function pickPhotos(
+  ticked: readonly number[],
+  available: readonly SharePhoto[],
+  max = MAX_PHOTOS,
+): SharePhoto[] {
   const byId = new Map(available.map((p) => [p.id, p]));
   const out: SharePhoto[] = [];
   const seen = new Set<number>();
@@ -68,17 +72,28 @@ export function drawData(data: ShareData, c: ShareChoices): ShareData {
   };
 }
 
-export const uniquePlaces = (places: readonly string[]): string[] => [...new Set(places.filter(Boolean))];
+export const uniquePlaces = (places: readonly string[]): string[] => [
+  ...new Set(places.filter(Boolean)),
+];
 
 /** Which controls the page shows: a box with nothing behind it stays hidden. */
 export function shareControls(data: ShareData) {
-  return { places: uniquePlaces(data.places).length > 0, spent: !!data.spent, photos: data.photos.length > 0 };
+  return {
+    places: uniquePlaces(data.places).length > 0,
+    spent: !!data.spent,
+    photos: data.photos.length > 0,
+  };
 }
 
 export type Measure = (text: string) => number;
 
 /** Word-wrap to `max` px in at most `lines` lines; the last line ends in "…" when text is cut. */
-export function wrapText(measure: Measure, text: string, max: number, lines: number): string[] {
+export function wrapText(
+  measure: Measure,
+  text: string,
+  max: number,
+  lines: number,
+): string[] {
   const words = String(text).split(/\s+/).filter(Boolean);
   const out: string[] = [];
   let line = "";
@@ -94,8 +109,10 @@ export function wrapText(measure: Measure, text: string, max: number, lines: num
   if (out.length > lines) {
     out.length = lines;
     let last = out[lines - 1] ?? "";
-    while (last && measure(`${last}…`) > max) last = last.replace(/\s*\S+$/, "");
-    out[lines - 1] = (last || out[lines - 1] || "").replace(/[\s·,]+$/, "") + "…";
+    while (last && measure(`${last}…`) > max)
+      last = last.replace(/\s*\S+$/, "");
+    out[lines - 1] =
+      (last || out[lines - 1] || "").replace(/[\s·,]+$/, "") + "…";
   }
   // a single word too wide for the line never overflows
   return out.map((l) => {
@@ -105,7 +122,11 @@ export function wrapText(measure: Measure, text: string, max: number, lines: num
 }
 
 /** Roomy first; if the extras don't fit above the sign-off (and there are no photos), lay out again, tighter. */
-export const needsDense = (roomyEnd: number, hasPhotos: boolean, h = H): boolean => !hasPhotos && roomyEnd > h - 150;
+export const needsDense = (
+  roomyEnd: number,
+  hasPhotos: boolean,
+  h = H,
+): boolean => !hasPhotos && roomyEnd > h - 150;
 
 /** Extra height to spread between sections (only without photos), capped at 380. */
 export function slackFor(end: number, hasPhotos: boolean, h = H): number {
@@ -127,13 +148,25 @@ export interface PolaroidSlot {
 }
 
 /** A loose pile of polaroids in the room left above the sign-off: one or two rows, overlapping when many. */
-export function polaroidPile(n: number, y: number, h = H, w = W, m = M): PolaroidSlot[] {
+export function polaroidPile(
+  n: number,
+  y: number,
+  h = H,
+  w = W,
+  m = M,
+): PolaroidSlot[] {
   if (n <= 0) return [];
   const rows = n <= 3 ? 1 : 2;
   const per = Math.ceil(n / rows);
   const areaTop = y + 6;
   const areaH = h - 200 - areaTop;
-  const pw = Math.max(120, Math.min(n === 1 ? 420 : n <= 3 ? 300 : 340, areaH / (rows * 1.45 - (rows - 1) * 0.3)));
+  const pw = Math.max(
+    120,
+    Math.min(
+      n === 1 ? 420 : n <= 3 ? 300 : 340,
+      areaH / (rows * 1.45 - (rows - 1) * 0.3),
+    ),
+  );
   const fh = pw * 1.45;
   const rowStep = fh * 0.7;
   const usedH = fh + (rows - 1) * rowStep;
@@ -143,12 +176,25 @@ export function polaroidPile(n: number, y: number, h = H, w = W, m = M): Polaroi
     const r = Math.floor(i / per);
     const c = i % per;
     const inRow = Math.min(per, n - r * per);
-    const step = inRow > 1 ? Math.min(pw + 28, (w - 2 * m - pw) / (inRow - 1)) : 0;
+    const step =
+      inRow > 1 ? Math.min(pw + 28, (w - 2 * m - pw) / (inRow - 1)) : 0;
     const rowW = pw + step * (inRow - 1);
-    const x = (w - rowW) / 2 + c * step + (r % 2 ? step * 0.18 : 0) * (inRow < per ? 1 : 0);
+    const x =
+      (w - rowW) / 2 +
+      c * step +
+      (r % 2 ? step * 0.18 : 0) * (inRow < per ? 1 : 0);
     const pad = pw * 0.06;
     const iw = pw - 2 * pad;
-    slots.push({ x, y: y0 + r * rowStep + ((c * 53) % 3) * 8, pw, fh, pad, iw, ih: iw * 1.25, rot: (((i * 37) % 5) - 2) * 0.03 });
+    slots.push({
+      x,
+      y: y0 + r * rowStep + ((c * 53) % 3) * 8,
+      pw,
+      fh,
+      pad,
+      iw,
+      ih: iw * 1.25,
+      rot: (((i * 37) % 5) - 2) * 0.03,
+    });
   }
   return slots;
 }
@@ -180,7 +226,12 @@ export interface Bar {
 }
 
 /** The months ledger: one column per month, bar heights relative to the busiest. */
-export function monthBars(months: readonly number[], barH: number, w = W, m = M): Bar[] {
+export function monthBars(
+  months: readonly number[],
+  barH: number,
+  w = W,
+  m = M,
+): Bar[] {
   const colW = (w - 2 * m) / 12;
   const max = Math.max(1, ...months);
   const top = Math.max(0, ...months);
@@ -193,8 +244,14 @@ export function monthBars(months: readonly number[], barH: number, w = W, m = M)
 }
 
 /** The big number shrinks to stay clear of the postmark. */
-export function fitNumberSize(size: number, measuredWidth: number, maxWidth: number): number {
-  return measuredWidth > maxWidth ? Math.floor((size * maxWidth) / measuredWidth) : size;
+export function fitNumberSize(
+  size: number,
+  measuredWidth: number,
+  maxWidth: number,
+): number {
+  return measuredWidth > maxWidth
+    ? Math.floor((size * maxWidth) / measuredWidth)
+    : size;
 }
 
 /** The paper tint behind "MOSTLY", by the server's kind-of-night key. */
@@ -213,7 +270,10 @@ export const shareFile = (year: number, hasPhotos: boolean) => ({
 });
 
 /** Where each polaroid on the page is dealt from: a seeded angle and delay, so a year always lands the same. */
-export function dealParams(seed: number, i: number): { rot: number; dx: number; delay: number } {
+export function dealParams(
+  seed: number,
+  i: number,
+): { rot: number; dx: number; delay: number } {
   const r = rng(seed * 31 + i * 7 + 1);
   const a = r();
   const b = r();

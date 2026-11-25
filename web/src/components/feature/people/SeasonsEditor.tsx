@@ -8,18 +8,40 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
 import { MONTH_NAMES, errorMessage } from "@/components/feature/people/ui";
 import { rupees } from "@/services/checkin";
-import { addSeason, deleteSeason, updateSeason, useSeasons, usePeopleMutation, type Season } from "@/services/people";
+import {
+  addSeason,
+  deleteSeason,
+  updateSeason,
+  useSeasons,
+  usePeopleMutation,
+  type Season,
+} from "@/services/people";
 import { paiseToInput, toPaise } from "@/utils/money";
 
 /** Add or edit a festival season: a name, the month it starts, and the budget for that season. */
-export function SeasonForm({ initial, onDone }: { initial?: Season; onDone: () => void }) {
+export function SeasonForm({
+  initial,
+  onDone,
+}: {
+  initial?: Season;
+  onDone: () => void;
+}) {
   const id = useId();
-  const save = usePeopleMutation((s: { id?: string; label: string; month: number; budget_paise: number }) =>
-    s.id ? updateSeason(s.id, { label: s.label, month: s.month, budget_paise: s.budget_paise }) : addSeason(s),
+  const save = usePeopleMutation(
+    (s: { id?: string; label: string; month: number; budget_paise: number }) =>
+      s.id
+        ? updateSeason(s.id, {
+            label: s.label,
+            month: s.month,
+            budget_paise: s.budget_paise,
+          })
+        : addSeason(s),
   );
   const [label, setLabel] = useState(initial?.label ?? "");
   const [month, setMonth] = useState(initial?.month ?? 10);
-  const [budget, setBudget] = useState(initial ? paiseToInput(initial.budget_paise) : "");
+  const [budget, setBudget] = useState(
+    initial ? paiseToInput(initial.budget_paise) : "",
+  );
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -45,14 +67,28 @@ export function SeasonForm({ initial, onDone }: { initial?: Season; onDone: () =
   };
 
   return (
-    <form onSubmit={submit} className="grid gap-4 sm:grid-cols-3" aria-label={initial ? `Edit ${initial.label}` : "Add a season"}>
+    <form
+      onSubmit={submit}
+      className="grid gap-4 sm:grid-cols-3"
+      aria-label={initial ? `Edit ${initial.label}` : "Add a season"}
+    >
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-label`}>Season</Label>
-        <Input id={`${id}-label`} maxLength={40} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Diwali" />
+        <Input
+          id={`${id}-label`}
+          maxLength={40}
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Diwali"
+        />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-month`}>Month</Label>
-        <Select id={`${id}-month`} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+        <Select
+          id={`${id}-month`}
+          value={month}
+          onChange={(e) => setMonth(Number(e.target.value))}
+        >
           {MONTH_NAMES.map((name, i) => (
             <option key={name} value={i + 1}>
               {name}
@@ -62,7 +98,11 @@ export function SeasonForm({ initial, onDone }: { initial?: Season; onDone: () =
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-budget`}>Budget (₹)</Label>
-        <MoneyInput id={`${id}-budget`} value={budget} onChange={(e) => setBudget(e.target.value)} />
+        <MoneyInput
+          id={`${id}-budget`}
+          value={budget}
+          onChange={(e) => setBudget(e.target.value)}
+        />
       </div>
       <div className="flex flex-wrap gap-2 sm:col-span-3">
         <Button type="submit" disabled={save.isPending}>
@@ -97,7 +137,11 @@ function SeasonRow({ season }: { season: Season }) {
         <span className="text-[13px] text-muted-foreground">{`${MONTH_NAMES[season.month - 1]} · budget ${rupees(season.budget_paise)}`}</span>
       </span>
       <span className="flex shrink-0 gap-2">
-        <Button variant="outline" className="min-h-11" onClick={() => setEditing(true)}>
+        <Button
+          variant="outline"
+          className="min-h-11"
+          onClick={() => setEditing(true)}
+        >
           {`Edit ${season.label}`}
         </Button>
         <Button
@@ -130,13 +174,19 @@ export function SeasonsEditor() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="m-0 text-[15px] font-medium">Festival seasons</h3>
         {!adding && (
-          <Button variant="outline" className="min-h-11" onClick={() => setAdding(true)}>
+          <Button
+            variant="outline"
+            className="min-h-11"
+            onClick={() => setAdding(true)}
+          >
             Add a season
           </Button>
         )}
       </div>
       {seasons.isError && !seasons.data && (
-        <p className="m-0 text-sm text-muted-foreground">Couldn't load your seasons.</p>
+        <p className="m-0 text-sm text-muted-foreground">
+          Couldn't load your seasons.
+        </p>
       )}
       {list.length > 0 ? (
         <ul className="ledger">
@@ -145,10 +195,13 @@ export function SeasonsEditor() {
           ))}
         </ul>
       ) : (
-        seasons.data && <p className="m-0 text-sm text-muted-foreground">No festival seasons yet.</p>
+        seasons.data && (
+          <p className="m-0 text-sm text-muted-foreground">
+            No festival seasons yet.
+          </p>
+        )
       )}
       {adding && <SeasonForm onDone={() => setAdding(false)} />}
     </div>
   );
 }
-

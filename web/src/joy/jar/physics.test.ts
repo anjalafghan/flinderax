@@ -1,10 +1,33 @@
 import { describe, expect, test } from "bun:test";
 import {
-  assign, CAP, dropIn, FLOOR, hash, insetAt, jostle, makeParts, makeSlots, MOUTH, mix, parseColor, rgba, rng, sample, step, takeOut, WALL_L, WALL_R,
+  assign,
+  CAP,
+  dropIn,
+  FLOOR,
+  hash,
+  insetAt,
+  jostle,
+  makeParts,
+  makeSlots,
+  MOUTH,
+  mix,
+  parseColor,
+  rgba,
+  rng,
+  sample,
+  step,
+  takeOut,
+  WALL_L,
+  WALL_R,
   type SlipInfo,
 } from "./physics";
 
-const slips = (n: number): SlipInfo[] => Array.from({ length: n }, (_, i) => ({ id: i + 1, setting: i % 2 ? "home" : "local", outdoor: i % 3 === 0 }));
+const slips = (n: number): SlipInfo[] =>
+  Array.from({ length: n }, (_, i) => ({
+    id: i + 1,
+    setting: i % 2 ? "home" : "local",
+    outdoor: i % 3 === 0,
+  }));
 const fixed = () => 0.5;
 const settle = (parts: ReturnType<typeof makeParts>, reduced = false) => {
   let n = 0;
@@ -14,7 +37,12 @@ const settle = (parts: ReturnType<typeof makeParts>, reduced = false) => {
 const setup = (n: number) => {
   const parts = makeParts(slips(n));
   const slots = makeSlots(n + 1);
-  assign(parts, slots, { matchSet: null, rainy: false, animate: false, reduced: false });
+  assign(parts, slots, {
+    matchSet: null,
+    rainy: false,
+    animate: false,
+    reduced: false,
+  });
   return { parts, slots };
 };
 
@@ -72,7 +100,12 @@ describe("step", () => {
     const { parts, slots } = setup(6);
     parts[0].x = 5;
     parts[0].y = 5;
-    assign(parts, slots, { matchSet: new Set([999]), rainy: false, animate: true, reduced: true });
+    assign(parts, slots, {
+      matchSet: new Set([999]),
+      rainy: false,
+      animate: true,
+      reduced: true,
+    });
     step(parts, 0.05, true);
     expect(parts[0].x).toBe(parts[0].tx);
     expect(parts[0].dim).toBeGreaterThan(0);
@@ -99,7 +132,13 @@ describe("step", () => {
 describe("dimming", () => {
   test("slips that don't match grey out; the ones that do stay lit and sit on top", () => {
     const { parts, slots } = setup(10);
-    assign(parts, slots, { matchSet: new Set([1, 2, 3]), rainy: false, animate: true, reduced: false, rand: fixed });
+    assign(parts, slots, {
+      matchSet: new Set([1, 2, 3]),
+      rainy: false,
+      animate: true,
+      reduced: false,
+      rand: fixed,
+    });
     settle(parts);
     for (const p of parts) expect(p.dim).toBe([1, 2, 3].includes(p.id) ? 0 : 1);
     const lit = parts.filter((p) => p.dimT === 0).map((p) => p.ty);
@@ -108,9 +147,21 @@ describe("dimming", () => {
   });
   test("clearing the match lights everything again", () => {
     const { parts, slots } = setup(6);
-    assign(parts, slots, { matchSet: new Set([1]), rainy: false, animate: true, reduced: false, rand: fixed });
+    assign(parts, slots, {
+      matchSet: new Set([1]),
+      rainy: false,
+      animate: true,
+      reduced: false,
+      rand: fixed,
+    });
     settle(parts);
-    assign(parts, slots, { matchSet: null, rainy: false, animate: true, reduced: false, rand: fixed });
+    assign(parts, slots, {
+      matchSet: null,
+      rainy: false,
+      animate: true,
+      reduced: false,
+      rand: fixed,
+    });
     settle(parts);
     expect(parts.every((p) => p.dim === 0)).toBe(true);
   });
@@ -120,7 +171,12 @@ describe("dimming", () => {
       { id: 2, setting: "home", outdoor: false },
     ]);
     const slots = makeSlots(3);
-    assign(parts, slots, { matchSet: null, rainy: true, animate: false, reduced: false });
+    assign(parts, slots, {
+      matchSet: null,
+      rainy: true,
+      animate: false,
+      reduced: false,
+    });
     const [outdoor, cozy] = [parts[0], parts[1]];
     expect(cozy.ty).toBe(slots[1].y); // later slot = higher up the pile
     expect(outdoor.ty).toBe(slots[0].y);
@@ -133,7 +189,12 @@ describe("taking a slip out and putting it back", () => {
     const at = takeOut(parts, 3, "home");
     expect(at?.setting).toBeTruthy();
     expect(parts.find((p) => p.id === 3)?.out).toBe(true);
-    assign(parts, slots, { matchSet: null, rainy: false, animate: true, reduced: false });
+    assign(parts, slots, {
+      matchSet: null,
+      rainy: false,
+      animate: true,
+      reduced: false,
+    });
     expect(parts.filter((p) => !p.out)).toHaveLength(7);
   });
   test("an unsimulated slip is stood in for by the top slip that fits", () => {
@@ -160,7 +221,9 @@ describe("taking a slip out and putting it back", () => {
     const { parts } = setup(4);
     takeOut(parts, 999, "travel");
     dropIn(parts, 999, shown, true);
-    const stand = parts.find((p) => p.subFor === null && p.setting !== "travel");
+    const stand = parts.find(
+      (p) => p.subFor === null && p.setting !== "travel",
+    );
     expect(stand).toBeDefined();
     expect(dropIn(parts, 5, shown, true)).toBe(false);
   });
@@ -170,7 +233,9 @@ describe("colours", () => {
   test("hex and rgba tokens parse; junk falls back to grey", () => {
     expect(parseColor("#f5eee3")).toEqual([245, 238, 227, 1]);
     expect(parseColor(" #fff ")).toEqual([255, 255, 255, 1]);
-    expect(parseColor("rgba(255, 190, 110, .35)")).toEqual([255, 190, 110, 0.35]);
+    expect(parseColor("rgba(255, 190, 110, .35)")).toEqual([
+      255, 190, 110, 0.35,
+    ]);
     expect(parseColor("")).toEqual([128, 128, 128, 1]);
   });
   test("mix and rgba", () => {

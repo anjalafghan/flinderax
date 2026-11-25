@@ -13,15 +13,22 @@ function inDays(days: number): string {
 
 /** Unsafe requests made with the page's cookie must carry the X-Joy header. */
 async function post(page: Page, path: string, data: unknown) {
-  const res = await page.request.post(path, { data, headers: { "X-Joy": "1" } });
+  const res = await page.request.post(path, {
+    data,
+    headers: { "X-Joy": "1" },
+  });
   expect(res.status(), await res.text()).toBe(200);
   return (await res.json()) as Record<string, unknown>;
 }
 
-test("add a large yearly amount and see it in the year ahead", async ({ page }) => {
+test("add a large yearly amount and see it in the year ahead", async ({
+  page,
+}) => {
   await newUser(page, "year");
   await page.goto("/year");
-  await expect(page.getByRole("heading", { name: "Year ahead", level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Year ahead", level: 1 }),
+  ).toBeVisible();
   await expect(page.getByText("Nothing added yet.")).toBeVisible();
 
   await page.locator("#out-label").fill("Term insurance premium");
@@ -38,21 +45,39 @@ test("add a large yearly amount and see it in the year ahead", async ({ page }) 
   await expect(page.getByText("−₹48,000").first()).toBeVisible();
 
   // Removing it takes it out again.
-  await page.getByRole("button", { name: "Remove Term insurance premium" }).click();
+  await page
+    .getByRole("button", { name: "Remove Term insurance premium" })
+    .click();
   await expect(page.getByText("Nothing added yet.")).toBeVisible();
 });
 
-test("a wedding budget shows its verdict and a due payment, and the payment lands in the year ahead", async ({ page }) => {
+test("a wedding budget shows its verdict and a due payment, and the payment lands in the year ahead", async ({
+  page,
+}) => {
   await newUser(page, "wedding");
   // The two of you share a goal: a couple is needed before one can be started.
   await post(page, "/api/couple/create", { packs: [] });
-  const goal = await post(page, "/api/couple-goals", { name: "Our wedding", target_paise: 50_000_000, target_date: inDays(300) });
+  const goal = await post(page, "/api/couple-goals", {
+    name: "Our wedding",
+    target_paise: 50_000_000,
+    target_date: inDays(300),
+  });
   const goalId = goal.goal_id as string;
-  const item = await post(page, `/api/couple-goals/${goalId}/items`, { name: "Venue hall", category: "venue", estimate_paise: 20_000_000 });
-  await post(page, `/api/couple-goals/${goalId}/items/${item.item_id as string}/milestones`, { due_on: inDays(20), amount_paise: 5_000_000 });
+  const item = await post(page, `/api/couple-goals/${goalId}/items`, {
+    name: "Venue hall",
+    category: "venue",
+    estimate_paise: 20_000_000,
+  });
+  await post(
+    page,
+    `/api/couple-goals/${goalId}/items/${item.item_id as string}/milestones`,
+    { due_on: inDays(20), amount_paise: 5_000_000 },
+  );
 
   await page.goto(`/wedding/${goalId}`);
-  await expect(page.getByRole("status", { name: "Budget verdict" })).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Budget verdict" }),
+  ).toBeVisible();
   await expect(page.getByText("Venue hall").first()).toBeVisible();
   await expect(page.getByText(/Planned ₹2,00,000/)).toBeVisible();
 
@@ -64,12 +89,16 @@ test("a wedding budget shows its verdict and a due payment, and the payment land
   // Marking it paid records the money and takes it off the year ahead.
   await page.goto(`/wedding/${goalId}`);
   await page.getByRole("button", { name: /Mark Venue hall .* paid/ }).click();
-  await expect(page.getByRole("button", { name: "Undo payment" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Undo payment" }),
+  ).toBeVisible();
   await page.goto("/year");
   await expect(page.getByText(/Our wedding: Venue hall/)).toHaveCount(0);
 });
 
-test("set up an education plan and see the monthly top-up with its range", async ({ page }) => {
+test("set up an education plan and see the monthly top-up with its range", async ({
+  page,
+}) => {
   await newUser(page, "edu");
   await page.goto("/life");
   const card = page.getByRole("region", { name: /Education fund/ });
@@ -88,13 +117,24 @@ test("set up an education plan and see the monthly top-up with its range", async
 
   // It is still there after a reload.
   await page.reload();
-  await expect(page.getByRole("region", { name: /Education fund/ }).getByRole("button", { name: "Edit plan" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: /Education fund/ })
+      .getByRole("button", { name: "Edit plan" }),
+  ).toBeVisible();
 });
 
-test("the week page lists what needs a decision, with counts and no names", async ({ page }) => {
+test("the week page lists what needs a decision, with counts and no names", async ({
+  page,
+}) => {
   await newUser(page, "decide");
   // A large amount due within two weeks needs a decision.
-  await post(page, "/api/year/outflows", { label: "Secret premium", on_day: inDays(5), amount_paise: 4_000_000, kind: "premium" });
+  await post(page, "/api/year/outflows", {
+    label: "Secret premium",
+    on_day: inDays(5),
+    amount_paise: 4_000_000,
+    kind: "premium",
+  });
   await page.goto("/week");
   const card = page.getByRole("region", { name: "Needs a decision" });
   await expect(card).toBeVisible();

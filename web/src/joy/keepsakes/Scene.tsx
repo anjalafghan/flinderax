@@ -3,21 +3,34 @@
 // Its photo, when there is one, is an instant print tucked in behind it that can be pulled out.
 // The drawings are files of their own (/keepsakes/<id>-<hash>.svg), fetched once a keepsake is
 // near the screen and then kept by the browser for good.
-import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import type { SceneDef } from "./scene-types";
 
 export type { SceneDef };
 
-const ratio = (s: SceneDef) => ({ "--ar": `${s.vb[2]} / ${s.vb[3]}`, "--arn": s.vb[2] / s.vb[3] }) as CSSProperties;
+const ratio = (s: SceneDef) =>
+  ({
+    "--ar": `${s.vb[2]} / ${s.vb[3]}`,
+    "--arn": s.vb[2] / s.vb[3],
+  }) as CSSProperties;
 
 const files = new Map<string, Promise<string | null>>();
 /** The drawing's markup (our own static file), fetched once per page load. */
 function loadScene(s: SceneDef): Promise<string | null> {
   let p = files.get(s.file);
   if (!p) {
-    p = typeof fetch === "function"
-      ? fetch(`/keepsakes/${s.file}`).then((r) => (r.ok ? r.text() : null)).catch(() => null)
-      : Promise.resolve(null);
+    p =
+      typeof fetch === "function"
+        ? fetch(`/keepsakes/${s.file}`)
+            .then((r) => (r.ok ? r.text() : null))
+            .catch(() => null)
+        : Promise.resolve(null);
     files.set(s.file, p);
   }
   return p;
@@ -30,7 +43,10 @@ function useNear(ref: RefObject<HTMLElement | null>, eager: boolean) {
     if (near) return;
     const el = ref.current;
     if (!el || typeof IntersectionObserver !== "function") return setNear(true);
-    const io = new IntersectionObserver((seen) => seen.some((s) => s.isIntersecting) && setNear(true), { rootMargin: "400px" });
+    const io = new IntersectionObserver(
+      (seen) => seen.some((s) => s.isIntersecting) && setNear(true),
+      { rootMargin: "400px" },
+    );
     io.observe(el);
     return () => io.disconnect();
   }, [near, ref]);
@@ -42,7 +58,9 @@ function useSvg(scene: SceneDef, near: boolean) {
   useEffect(() => {
     if (!near) return;
     let live = true;
-    void loadScene(scene).then((t) => live && t && setSvg({ file: scene.file, text: t }));
+    void loadScene(scene).then(
+      (t) => live && t && setSvg({ file: scene.file, text: t }),
+    );
     return () => {
       live = false;
     };
@@ -51,16 +69,37 @@ function useSvg(scene: SceneDef, near: boolean) {
 }
 
 function Drawing({ text }: { text: string | null }) {
-  return text ? <span className="ksc-svg" dangerouslySetInnerHTML={{ __html: text }} /> : <span className="ksc-svg ksc-wait" />;
+  return text ? (
+    <span className="ksc-svg" dangerouslySetInnerHTML={{ __html: text }} />
+  ) : (
+    <span className="ksc-svg ksc-wait" />
+  );
 }
 
 /** Just the drawing. `open` plays its moment (the Year shelf opens it while hovered); `ghost` shows
  *  a slip's keepsake before it's ours: the shape of it, in grey. */
-export function SceneArt({ scene, open = false, ghost = false, eager = false, className = "" }: { scene: SceneDef; open?: boolean; ghost?: boolean; eager?: boolean; className?: string }) {
+export function SceneArt({
+  scene,
+  open = false,
+  ghost = false,
+  eager = false,
+  className = "",
+}: {
+  scene: SceneDef;
+  open?: boolean;
+  ghost?: boolean;
+  eager?: boolean;
+  className?: string;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const text = useSvg(scene, useNear(ref, eager));
   return (
-    <span ref={ref} className={`ksc ksc-${scene.id}${open ? " open" : ""}${ghost ? " is-ghost" : ""} ${className}`} style={ratio(scene)} aria-hidden="true">
+    <span
+      ref={ref}
+      className={`ksc ksc-${scene.id}${open ? " open" : ""}${ghost ? " is-ghost" : ""} ${className}`}
+      style={ratio(scene)}
+      aria-hidden="true"
+    >
       <Drawing text={text} />
     </span>
   );
@@ -68,7 +107,19 @@ export function SceneArt({ scene, open = false, ghost = false, eager = false, cl
 
 /** The keepsake you can touch. `what` names the date for a screen reader: "Cat café, 9 Nov".
  *  `arrive`: the first time it's seen it plays its moment by itself, marked new, then calls `onArrived`. */
-export function SceneButton({ scene, what, className = "", arrive = false, onArrived }: { scene: SceneDef; what: string; className?: string; arrive?: boolean; onArrived?: () => void }) {
+export function SceneButton({
+  scene,
+  what,
+  className = "",
+  arrive = false,
+  onArrived,
+}: {
+  scene: SceneDef;
+  what: string;
+  className?: string;
+  arrive?: boolean;
+  onArrived?: () => void;
+}) {
   const ref = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [fresh, setFresh] = useState(arrive);
@@ -84,7 +135,8 @@ export function SceneButton({ scene, what, className = "", arrive = false, onArr
     let t: ReturnType<typeof setTimeout> | undefined;
     const io = new IntersectionObserver(
       (seen) => {
-        if (!seen.some((s) => s.isIntersecting && s.intersectionRatio > 0.5)) return;
+        if (!seen.some((s) => s.isIntersecting && s.intersectionRatio > 0.5))
+          return;
         io.disconnect();
         t = setTimeout(() => {
           setOpen(true);
@@ -113,13 +165,25 @@ export function SceneButton({ scene, what, className = "", arrive = false, onArr
       }}
     >
       <Drawing text={text} />
-      {fresh && <span className="ksc-new" aria-hidden="true">new in the museum</span>}
+      {fresh && (
+        <span className="ksc-new" aria-hidden="true">
+          new in the museum
+        </span>
+      )}
     </button>
   );
 }
 
 /** An instant print tucked behind a keepsake: touch it to pull it out, again to tuck it back. */
-export function TuckedPrint({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
+export function TuckedPrint({
+  src,
+  alt,
+  className = "",
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
   const [up, setUp] = useState(false);
   return (
     <button
@@ -129,7 +193,14 @@ export function TuckedPrint({ src, alt, className = "" }: { src: string; alt: st
       aria-label={`${alt}. ${up ? "Tuck it back" : "Pull it out"}.`}
       onClick={() => setUp((u) => !u)}
     >
-      <img src={src} alt="" loading="lazy" decoding="async" width={240} height={300} />
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        width={240}
+        height={300}
+      />
     </button>
   );
 }

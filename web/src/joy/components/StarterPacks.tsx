@@ -14,9 +14,13 @@ interface Pack {
 export function StarterPacks() {
   const qc = useQueryClient();
   const [note, setNote] = useState("");
-  const packs = useQuery({ queryKey: ["joy", "packs"], queryFn: () => get<Pack[]>("/api/dates/packs") });
+  const packs = useQuery({
+    queryKey: ["joy", "packs"],
+    queryFn: () => get<Pack[]>("/api/dates/packs"),
+  });
   const add = useMutation({
-    mutationFn: (pack: string) => post<{ added: number }>("/api/dates/packs/add", { pack }),
+    mutationFn: (pack: string) =>
+      post<{ added: number }>("/api/dates/packs/add", { pack }),
     onSuccess: (r) => {
       setNote(`${r.added} slips added to the jar.`);
       void qc.invalidateQueries({ queryKey: ["joy", "packs"] });
@@ -28,7 +32,10 @@ export function StarterPacks() {
   return (
     <section className="starter-packs" aria-labelledby="packs-h">
       <h2 id="packs-h">Starter slips</h2>
-      <p className="soft">Not sure where to start? Add a pack of ready-made ideas. You can change or delete any of them.</p>
+      <p className="soft">
+        Not sure where to start? Add a pack of ready-made ideas. You can change
+        or delete any of them.
+      </p>
       <ul className="pack-list">
         {packs.data.map((p) => (
           <li key={p.key} className="pack">
@@ -40,7 +47,12 @@ export function StarterPacks() {
             {p.added >= p.total ? (
               <span className="pack-done">Added</span>
             ) : (
-              <button type="button" className="btn" disabled={add.isPending} onClick={() => add.mutate(p.key)}>
+              <button
+                type="button"
+                className="btn"
+                disabled={add.isPending}
+                onClick={() => add.mutate(p.key)}
+              >
                 Add<span className="visually-hidden"> {p.label}</span>
               </button>
             )}

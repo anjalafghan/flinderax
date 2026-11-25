@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { CloseOut } from "./CloseOut";
 
 let calls: { url: string; body: unknown }[];
@@ -8,8 +14,13 @@ const realFetch = globalThis.fetch;
 beforeEach(() => {
   calls = [];
   globalThis.fetch = (async (url: string, init?: RequestInit) => {
-    calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
-    return new Response(JSON.stringify({ ok: true, to: "/joy/kept" }), { status: 200 });
+    calls.push({
+      url,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    });
+    return new Response(JSON.stringify({ ok: true, to: "/joy/kept" }), {
+      status: 200,
+    });
   }) as unknown as typeof fetch;
 });
 afterEach(() => {

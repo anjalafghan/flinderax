@@ -8,7 +8,10 @@ export const JOY_WARN_PERCENT = 80;
 export type BudgetTone = "none" | "ok" | "warn" | "over";
 
 /** Spent as a whole percent of the budget, or null when there is no budget to measure against. */
-export function spentPercent(spent: number, budget: number | null): number | null {
+export function spentPercent(
+  spent: number,
+  budget: number | null,
+): number | null {
   if (budget === null || budget <= 0) return null;
   return Math.round((spent / budget) * 100);
 }
@@ -49,10 +52,14 @@ function parseTimestamp(ts: string): Date | null {
  * Whole calendar days between the local date of `ts` and the local date of `now` (0 = same day).
  * Counts days, not elapsed hours, so 23:00 yesterday is one day ago at 09:00 today.
  */
-export function calendarDaysAgo(ts: string, now: Date = new Date()): number | null {
+export function calendarDaysAgo(
+  ts: string,
+  now: Date = new Date(),
+): number | null {
   const t = parseTimestamp(ts);
   if (!t) return null;
-  const dayStart = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayStart = (d: Date) =>
+    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
   // Round, so a daylight-saving shift inside the span can't leave a fraction.
   return Math.max(0, Math.round((dayStart(now) - dayStart(t)) / DAY_MS));
 }

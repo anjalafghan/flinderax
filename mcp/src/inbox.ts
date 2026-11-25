@@ -4,8 +4,27 @@
 
 /** Categories the server accepts (`src/alerts.rs` CATEGORIES). */
 export const CATEGORIES = [
-  "food", "groceries", "shopping", "transport", "fuel", "bills", "entertainment", "health", "travel", "rent",
-  "emi", "cash", "dates", "people", "transfer", "income", "investments", "fees", "refund", "other", "uncategorized",
+  "food",
+  "groceries",
+  "shopping",
+  "transport",
+  "fuel",
+  "bills",
+  "entertainment",
+  "health",
+  "travel",
+  "rent",
+  "emi",
+  "cash",
+  "dates",
+  "people",
+  "transfer",
+  "income",
+  "investments",
+  "fees",
+  "refund",
+  "other",
+  "uncategorized",
 ] as const;
 
 const MAX_AMOUNT_PAISE = 100_000_000_000_000n;
@@ -22,10 +41,17 @@ export function rupeesToPaise(text: string): number {
   const t = text.trim().replace(/^₹/, "").replace(/[, ]/g, "");
   if (t.startsWith("-")) throw new Error("Amount can't be negative.");
   const [whole = "", frac = "", extra] = t.split(".");
-  if (extra !== undefined || (whole === "" && frac === "") || !/^\d*$/.test(whole) || !/^\d*$/.test(frac) || frac.length > 2) {
+  if (
+    extra !== undefined ||
+    (whole === "" && frac === "") ||
+    !/^\d*$/.test(whole) ||
+    !/^\d*$/.test(frac) ||
+    frac.length > 2
+  ) {
     throw new Error("That amount didn't look right.");
   }
-  const paise = BigInt(whole || "0") * 100n + BigInt(frac.padEnd(2, "0") || "0");
+  const paise =
+    BigInt(whole || "0") * 100n + BigInt(frac.padEnd(2, "0") || "0");
   if (paise <= 0n) throw new Error("Amount must be more than zero.");
   if (paise > MAX_AMOUNT_PAISE) throw new Error("That amount is too large.");
   return Number(paise);
@@ -48,14 +74,24 @@ export interface NewTxn {
  */
 export async function txnKey(t: NewTxn, paise: number): Promise<string> {
   if (t.alert_id) return `mcp-txn:a:${t.alert_id}`.slice(0, 100);
-  const raw = [t.occurred_on, t.direction, paise, (t.merchant ?? "").trim().toLowerCase(), t.occurrence ?? 1].join("|");
+  const raw = [
+    t.occurred_on,
+    t.direction,
+    paise,
+    (t.merchant ?? "").trim().toLowerCase(),
+    t.occurrence ?? 1,
+  ].join("|");
   return `mcp-txn:h:${await shortHash(raw)}`;
 }
 
 /** First 16 bytes of SHA-256, as hex. */
 export async function shortHash(text: string): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
-  return [...digest.slice(0, 16)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const digest = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)),
+  );
+  return [...digest.slice(0, 16)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export const SORT_INBOX_PROMPT = [

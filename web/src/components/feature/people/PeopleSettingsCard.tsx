@@ -1,8 +1,17 @@
 import { useId } from "react";
 import { toast } from "sonner";
 
-import { NOTE, PANEL, SECTION_TITLE, errorMessage } from "@/components/feature/people/ui";
-import { savePeopleSettings, usePeopleMutation, usePeopleSettings } from "@/services/people";
+import {
+  NOTE,
+  PANEL,
+  SECTION_TITLE,
+  errorMessage,
+} from "@/components/feature/people/ui";
+import {
+  savePeopleSettings,
+  usePeopleMutation,
+  usePeopleSettings,
+} from "@/services/people";
 
 /** The one setting on this screen: whether names appear in the calendar feed. */
 export function PeopleSettingsCard() {
@@ -19,7 +28,10 @@ export function PeopleSettingsCard() {
         </h2>
       </header>
       <div className="flex flex-col gap-1">
-        <label htmlFor={`${id}-feed-names`} className="flex min-h-11 cursor-pointer items-center gap-3 text-[15px] font-medium">
+        <label
+          htmlFor={`${id}-feed-names`}
+          className="flex min-h-11 cursor-pointer items-center gap-3 text-[15px] font-medium"
+        >
           <input
             id={`${id}-feed-names`}
             type="checkbox"
@@ -32,7 +44,12 @@ export function PeopleSettingsCard() {
               save.mutate(
                 { feed_names: next },
                 {
-                  onSuccess: () => toast.success(next ? "Names will show in your calendar." : "Names are kept out of your calendar."),
+                  onSuccess: () =>
+                    toast.success(
+                      next
+                        ? "Names will show in your calendar."
+                        : "Names are kept out of your calendar.",
+                    ),
                   onError: (err) => toast.error(errorMessage(err)),
                 },
               );
@@ -41,7 +58,8 @@ export function PeopleSettingsCard() {
           Show details in my calendar feed
         </label>
         <p id={`${id}-feed-hint`} className={NOTE}>
-          Off, events just say a money, health or people task is due. On, they include names, accounts and amounts.
+          Off, events just say a money, health or people task is due. On, they
+          include names, accounts and amounts.
         </p>
       </div>
     </section>

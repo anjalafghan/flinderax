@@ -11,7 +11,8 @@ export function adoptRenewedToken(response: Response): void {
   try {
     // Only an older bearer login is renewed this way; a cookie login is renewed in its cookie.
     const current = localStorage.getItem("token");
-    if (current && !isCookieSession(current)) localStorage.setItem("token", fresh);
+    if (current && !isCookieSession(current))
+      localStorage.setItem("token", fresh);
   } catch {
     // Storage can be blocked; the current token keeps working until it expires.
   }

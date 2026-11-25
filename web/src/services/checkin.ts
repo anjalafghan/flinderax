@@ -78,7 +78,12 @@ export interface QuarterReport {
   /** Phase 5: catch-ups, gifts and money sent to people. No names. */
   people?: PeopleReport | null;
   /** Where the life line stands, and how it moved since the last check-in. */
-  lifeline?: { free_at_age: number | null; runs_out_at_age: number | null; end_age: number; line: string } | null;
+  lifeline?: {
+    free_at_age: number | null;
+    runs_out_at_age: number | null;
+    end_age: number;
+    line: string;
+  } | null;
 }
 
 export interface DietHabitRate {
@@ -160,26 +165,48 @@ export const checkinKey = ["checkin"] as const;
 export const checkinReportKey = ["checkin", "report"] as const;
 export const checkinHistoryKey = ["checkin", "history"] as const;
 
-export const getCheckinStatus = () => api.get<CheckinStatus>("/api/checkin").then((r) => r.data);
+export const getCheckinStatus = () =>
+  api.get<CheckinStatus>("/api/checkin").then((r) => r.data);
 /** No query string: the server answers for the status period, so the report and the status always agree. */
-export const getCheckinReport = () => api.get<QuarterReport>("/api/checkin/report").then((r) => r.data);
-export const getCheckinHistory = () => api.get<CheckinHistory>("/api/checkin/history").then((r) => r.data);
-export const completeCheckin = () => api.post<CheckinStatus>("/api/checkin/complete", {}).then((r) => r.data);
+export const getCheckinReport = () =>
+  api.get<QuarterReport>("/api/checkin/report").then((r) => r.data);
+export const getCheckinHistory = () =>
+  api.get<CheckinHistory>("/api/checkin/history").then((r) => r.data);
+export const completeCheckin = () =>
+  api.post<CheckinStatus>("/api/checkin/complete", {}).then((r) => r.data);
 /** Fetched on demand only: the first call creates the user's private feed. */
-export const getReminderLink = () => api.get<ReminderLink>("/api/reminders/link").then((r) => r.data);
+export const getReminderLink = () =>
+  api.get<ReminderLink>("/api/reminders/link").then((r) => r.data);
 
-export const useCheckinStatus = () => useQuery({ queryKey: checkinKey, queryFn: getCheckinStatus, retry: 1 });
+export const useCheckinStatus = () =>
+  useQuery({ queryKey: checkinKey, queryFn: getCheckinStatus, retry: 1 });
 export const useCheckinReport = (enabled = true) =>
-  useQuery({ queryKey: checkinReportKey, queryFn: getCheckinReport, retry: 1, enabled });
+  useQuery({
+    queryKey: checkinReportKey,
+    queryFn: getCheckinReport,
+    retry: 1,
+    enabled,
+  });
 export const useCheckinHistory = () =>
-  useQuery({ queryKey: checkinHistoryKey, queryFn: getCheckinHistory, retry: 1 });
-export const useReminderLink = () => useMutation({ mutationFn: getReminderLink });
+  useQuery({
+    queryKey: checkinHistoryKey,
+    queryFn: getCheckinHistory,
+    retry: 1,
+  });
+export const useReminderLink = () =>
+  useMutation({ mutationFn: getReminderLink });
 /** A new private calendar link; the old one stops working. */
-export const resetReminderLink = () => api.post<ReminderLink>("/api/reminders/link/reset", {}).then((r) => r.data);
-export const useResetReminderLink = () => useMutation({ mutationFn: resetReminderLink });
+export const resetReminderLink = () =>
+  api.post<ReminderLink>("/api/reminders/link/reset", {}).then((r) => r.data);
+export const useResetReminderLink = () =>
+  useMutation({ mutationFn: resetReminderLink });
 /** Forgets the forecast kept with check-ins, so the forecast is no longer tempered by it. */
-export const resetCalibration = () => api.post<{ status: boolean }>("/api/checkin/calibration/reset", {}).then((r) => r.data);
-export const useCompleteCheckin = () => useMutation({ mutationFn: completeCheckin });
+export const resetCalibration = () =>
+  api
+    .post<{ status: boolean }>("/api/checkin/calibration/reset", {})
+    .then((r) => r.data);
+export const useCompleteCheckin = () =>
+  useMutation({ mutationFn: completeCheckin });
 
 /**
  * True once this period has been finished: the period then starts after it ends
@@ -188,10 +215,12 @@ export const useCompleteCheckin = () => useMutation({ mutationFn: completeChecki
 export const isSaved = (s: CheckinStatus): boolean => s.done_today;
 
 /** Whole rupees with Indian grouping, for the planning figures on this page. */
-export const rupees = (paise: number): string => formatINR(Math.round(paise / 100) * 100);
+export const rupees = (paise: number): string =>
+  formatINR(Math.round(paise / 100) * 100);
 
 /** Whole percent ("22%"), or a dash when there is no income to measure against. */
-export const rate = (bps: number | null): string => (bps === null ? "—" : `${Math.round(bps / 100)}%`);
+export const rate = (bps: number | null): string =>
+  bps === null ? "—" : `${Math.round(bps / 100)}%`;
 
 /** A signed change: "+38%", "-12%", "0%". Null (no earlier spend) reads as "No earlier spend". */
 export const signedChange = (bps: number | null): string => {

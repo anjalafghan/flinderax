@@ -17,13 +17,31 @@ export function DayEditor({ id, day }: { id: number; day: string }) {
         onSubmit={(e) => {
           e.preventDefault();
           if (!on || on === day) return;
-          void act(async () => finish(await setDay(id, on), { focus: `#k${id}` }));
+          void act(async () =>
+            finish(await setDay(id, on), { focus: `#k${id}` }),
+          );
         }}
       >
-        <input className="k-field" type="date" min="2000-01-01" max={today} value={on} onChange={(e) => setOn(e.target.value)} aria-label="The day it happened" />
-        <button type="submit" className="k-btn" disabled={busy}>Save day</button>
-        <button type="button" className="k-btn" onClick={() => setOn(day)}>Reset</button>
-        {err && <span className="k-photo-status" data-tone="err">{err}</span>}
+        <input
+          className="k-field"
+          type="date"
+          min="2000-01-01"
+          max={today}
+          value={on}
+          onChange={(e) => setOn(e.target.value)}
+          aria-label="The day it happened"
+        />
+        <button type="submit" className="k-btn" disabled={busy}>
+          Save day
+        </button>
+        <button type="button" className="k-btn" onClick={() => setOn(day)}>
+          Reset
+        </button>
+        {err && (
+          <span className="k-photo-status" data-tone="err">
+            {err}
+          </span>
+        )}
       </form>
     </details>
   );

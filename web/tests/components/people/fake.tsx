@@ -20,7 +20,10 @@ export type Reply = { status?: number; json?: unknown; text?: string };
 /** Routes every fetch. Each call is recorded so tests can check the exact request body. */
 export function serve(route: (call: Call) => Reply): Call[] {
   const calls: Call[] = [];
-  spyOn(globalThis, "fetch").mockImplementation((async (input: RequestInfo | URL, init?: RequestInit) => {
+  spyOn(globalThis, "fetch").mockImplementation((async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => {
     const call: Call = {
       method: init?.method ?? "GET",
       url: String(input),
@@ -29,10 +32,18 @@ export function serve(route: (call: Call) => Reply): Call[] {
     calls.push(call);
     const reply = route(call);
     const status = reply.status ?? 200;
-    const payload = reply.text !== undefined ? reply.text : reply.json !== undefined ? JSON.stringify(reply.json) : null;
+    const payload =
+      reply.text !== undefined
+        ? reply.text
+        : reply.json !== undefined
+          ? JSON.stringify(reply.json)
+          : null;
     return new Response(status === 204 ? null : payload, {
       status,
-      headers: { "Content-Type": reply.text !== undefined ? "text/plain" : "application/json" },
+      headers: {
+        "Content-Type":
+          reply.text !== undefined ? "text/plain" : "application/json",
+      },
     });
   }) as typeof fetch);
   return calls;
@@ -41,10 +52,20 @@ export function serve(route: (call: Call) => Reply): Call[] {
 export const NOT_FOUND: Reply = { status: 404, text: "Not found." };
 
 export function renderWithRouter(ui: ReactNode, path = "/people") {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
     <QueryClientProvider client={qc}>
-      <AuthContext.Provider value={{ isAuthenticated: true, token: "t", login: () => {}, logout: () => {}, isLoading: false }}>
+      <AuthContext.Provider
+        value={{
+          isAuthenticated: true,
+          token: "t",
+          login: () => {},
+          logout: () => {},
+          isLoading: false,
+        }}
+      >
         <MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>
       </AuthContext.Provider>
     </QueryClientProvider>,

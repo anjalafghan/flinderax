@@ -1,11 +1,19 @@
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 
 const toastSuccess = mock(() => {});
 const toastError = mock(() => {});
-mock.module("sonner", () => ({ toast: { success: toastSuccess, error: toastError, info: () => {} } }));
+mock.module("sonner", () => ({
+  toast: { success: toastSuccess, error: toastError, info: () => {} },
+}));
 
 import { CheckInCard } from "@/components/feature/CheckInCard";
 import api from "@/services/api";
@@ -35,7 +43,9 @@ const estimate = (name: string, paise: number, id: string) => ({
 
 function withStatus(status: CheckinStatus) {
   // staleTime Infinity keeps the seeded data from refetching against the network.
-  const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  });
   qc.setQueryData(checkinKey, status);
   return render(
     <QueryClientProvider client={qc}>
@@ -46,7 +56,8 @@ function withStatus(status: CheckinStatus) {
   );
 }
 
-const linkResponse = (url: string) => ({ data: { url }, status: 200, statusText: "OK" }) as never;
+const linkResponse = (url: string) =>
+  ({ data: { url }, status: 200, statusText: "OK" }) as never;
 
 describe("CheckInCard", () => {
   afterEach(() => {
@@ -67,19 +78,29 @@ describe("CheckInCard", () => {
   it("says the check-in is due when overdue", () => {
     withStatus({ ...base, status: "overdue", next_due_on: "2026-10-01" });
     const card = screen.getByRole("region", { name: "Quarterly check-in" });
-    expect(card).toHaveTextContent("Your check-in is due. It takes about 20 minutes.");
-    expect(screen.getByRole("link", { name: "Start check-in" })).toHaveAttribute("href", "/checkin");
+    expect(card).toHaveTextContent(
+      "Your check-in is due. It takes about 20 minutes.",
+    );
+    expect(
+      screen.getByRole("link", { name: "Start check-in" }),
+    ).toHaveAttribute("href", "/checkin");
   });
 
   it("shows the due date when due soon", () => {
     withStatus({ ...base, status: "due_soon", next_due_on: "2026-11-12" });
-    expect(screen.getByRole("region", { name: "Quarterly check-in" })).toHaveTextContent("Check-in due 12 Nov.");
+    expect(
+      screen.getByRole("region", { name: "Quarterly check-in" }),
+    ).toHaveTextContent("Check-in due 12 Nov.");
   });
 
   it("shows at most two estimates, each labelled as an estimate", () => {
     withStatus({
       ...base,
-      estimates: [estimate("Asha Savings", 1_240_000, "a1"), estimate("Acme Current", 560_000, "a2"), estimate("Third Account", 100_000, "a3")],
+      estimates: [
+        estimate("Asha Savings", 1_240_000, "a1"),
+        estimate("Acme Current", 560_000, "a2"),
+        estimate("Third Account", 100_000, "a3"),
+      ],
     });
     const card = screen.getByRole("region", { name: "Quarterly check-in" });
     expect(card).toHaveTextContent("Asha Savings: about ₹12,400 (estimate)");
@@ -88,36 +109,63 @@ describe("CheckInCard", () => {
   });
 
   it("fetches the calendar link only on click, then shows it read-only with a copy button", async () => {
-    const get = spyOn(api, "get").mockResolvedValue(linkResponse("https://example.test/api/public/reminders/synthetic.ics"));
+    const get = spyOn(api, "get").mockResolvedValue(
+      linkResponse("https://example.test/api/public/reminders/synthetic.ics"),
+    );
     withStatus(base);
     expect(get).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Add reminders to your calendar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add reminders to your calendar" }),
+    );
     const input = await screen.findByLabelText("Your calendar link");
     expect(get).toHaveBeenCalledWith("/api/reminders/link");
     expect(input).toHaveAttribute("readonly");
-    expect(input).toHaveValue("https://example.test/api/public/reminders/synthetic.ics");
-    expect(screen.getByText(/Paste this into Google Calendar/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+    expect(input).toHaveValue(
+      "https://example.test/api/public/reminders/synthetic.ics",
+    );
+    expect(
+      screen.getByText(/Paste this into Google Calendar/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy link" }),
+    ).toBeInTheDocument();
   });
 
   it("copies the calendar link and confirms it", async () => {
-    spyOn(api, "get").mockResolvedValue(linkResponse("https://example.test/synthetic.ics"));
+    spyOn(api, "get").mockResolvedValue(
+      linkResponse("https://example.test/synthetic.ics"),
+    );
     const writeText = mock(() => Promise.resolve());
-    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
     withStatus(base);
 
-    fireEvent.click(screen.getByRole("button", { name: "Add reminders to your calendar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add reminders to your calendar" }),
+    );
     fireEvent.click(await screen.findByRole("button", { name: "Copy link" }));
-    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Link copied"));
-    expect(writeText).toHaveBeenCalledWith("https://example.test/synthetic.ics");
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith("Link copied"),
+    );
+    expect(writeText).toHaveBeenCalledWith(
+      "https://example.test/synthetic.ics",
+    );
   });
 
   it("shows a toast when the calendar link cannot be fetched", async () => {
     spyOn(api, "get").mockRejectedValue(new Error("offline"));
     withStatus(base);
-    fireEvent.click(screen.getByRole("button", { name: "Add reminders to your calendar" }));
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Couldn't get the calendar link. Try again."));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add reminders to your calendar" }),
+    );
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        "Couldn't get the calendar link. Try again.",
+      ),
+    );
     expect(screen.queryByLabelText("Your calendar link")).toBeNull();
   });
 });

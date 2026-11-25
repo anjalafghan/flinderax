@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { formatCompactINR, formatINR, formatPercent, paiseToInput, parseAmountOrPercent, toPaise } from "@/utils/money";
+import {
+  formatCompactINR,
+  formatINR,
+  formatPercent,
+  paiseToInput,
+  parseAmountOrPercent,
+  toPaise,
+} from "@/utils/money";
 
 describe("toPaise", () => {
   it("parses whole and decimal rupees without float error", () => {
@@ -60,15 +67,30 @@ describe("formatCompactINR", () => {
 describe("parseAmountOrPercent", () => {
   it("reads percentages as basis points", () => {
     expect(parseAmountOrPercent("25%")).toEqual({ kind: "percent", bps: 2500 });
-    expect(parseAmountOrPercent(" 22.5 % ")).toEqual({ kind: "percent", bps: 2250 });
-    expect(parseAmountOrPercent("33.33%")).toEqual({ kind: "percent", bps: 3333 });
+    expect(parseAmountOrPercent(" 22.5 % ")).toEqual({
+      kind: "percent",
+      bps: 2250,
+    });
+    expect(parseAmountOrPercent("33.33%")).toEqual({
+      kind: "percent",
+      bps: 3333,
+    });
     expect(parseAmountOrPercent("0%")).toEqual({ kind: "percent", bps: 0 });
-    expect(parseAmountOrPercent("100%")).toEqual({ kind: "percent", bps: 10000 });
+    expect(parseAmountOrPercent("100%")).toEqual({
+      kind: "percent",
+      bps: 10000,
+    });
   });
 
   it("reads plain numbers as rupee amounts", () => {
-    expect(parseAmountOrPercent("18875")).toEqual({ kind: "amount", paise: 1_887_500 });
-    expect(parseAmountOrPercent("₹18,875.50")).toEqual({ kind: "amount", paise: 1_887_550 });
+    expect(parseAmountOrPercent("18875")).toEqual({
+      kind: "amount",
+      paise: 1_887_500,
+    });
+    expect(parseAmountOrPercent("₹18,875.50")).toEqual({
+      kind: "amount",
+      paise: 1_887_550,
+    });
   });
 
   it("treats blank as empty and junk as invalid", () => {
