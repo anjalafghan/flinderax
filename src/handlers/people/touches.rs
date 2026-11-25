@@ -1,6 +1,5 @@
 //! Touches: when you last caught up with someone.
 
-#![allow(unused_imports)]
 use super::*;
 
 // ---------- touches ----------

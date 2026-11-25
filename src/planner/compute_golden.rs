@@ -33,7 +33,6 @@ fn income(amount_rupees: i64, day: u8) -> IncomeIn {
     IncomeIn { label: "Salary".into(), amount: amount_rupees * 100, day, account_id: None }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn card(id: &str, due: i64, due_date: Option<Date>, next: i64, next_date: Option<Date>, covered: (i64, i64), spent: Option<i64>, updated: Option<Date>) -> CardIn {
     CardIn {
         card_id: id.into(),

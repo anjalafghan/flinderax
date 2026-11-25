@@ -107,7 +107,6 @@ fn base() -> ProjectionInput {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn item(name: &str, kind: ItemKind, amount: i64, start: Date, tenure: Option<i64>, rate: Option<i64>, goal: Option<(i64, Date)>, renewal: Option<Renewal>) -> ScenarioItem {
     ScenarioItem {
         name: name.into(),

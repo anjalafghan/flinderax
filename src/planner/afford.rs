@@ -156,7 +156,6 @@ fn on_emi(amount: i64, months: i64, rate_bps: i64, fee_paise: i64, safe_to_spend
 /// Decides. `short_if_spent_on(date)` returns the worst monthly shortfall a lump of `amount` on
 /// that date causes over the projection (`None` = every month stays covered). `rest_savings` is
 /// what you save beyond the SIP each month (an EMI comes out of it first).
-#[allow(clippy::too_many_arguments)]
 pub fn afford(
     amount: i64,
     pay: Pay,
