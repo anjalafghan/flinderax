@@ -130,13 +130,13 @@ async fn main() -> Result<(), sqlx::Error> {
     let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
-        .unwrap();
+        .map_err(|e| sqlx::Error::Io(std::io::Error::new(e.kind(), format!("could not bind port {port}: {e}"))))?;
     info!("Serving API and web app (from {}) on port {}", app::static_dir(), port);
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await
-        .unwrap();
+        .map_err(|e| sqlx::Error::Io(std::io::Error::new(e.kind(), format!("server error: {e}"))))?;
     pool.close().await;
     Ok(())
 }

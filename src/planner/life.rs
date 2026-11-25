@@ -395,7 +395,6 @@ impl Who {
 
 /// A goal on a calendar date: `cost` in today's money, inflated at `inflation_bps` to that date.
 /// Returns the months away (the order goals are listed in) and the goal.
-#[allow(clippy::too_many_arguments)]
 fn dated_goal(today: Date, key: &'static str, label: &'static str, when: Date, cost: i64, inflation_bps: i64, saved: i64) -> (i64, LifeGoal) {
     let months = months_until(today, when);
     let mix = mix_for(months);

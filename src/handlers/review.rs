@@ -279,11 +279,12 @@ pub async fn tax(State(state): State<AppState>, Extension((user_id, _)): User, Q
     .await?
     .into_iter()
     .map(|c| {
+        let freq = planner::Freq::from_columns(&c.frequency, c.every_months, c.first_month.as_deref());
         let p = Payment {
             amount: c.amount_paise,
             day: c.day_of_month as u8,
-            yearly: c.frequency == "yearly",
-            every: match planner::Freq::from_columns(&c.frequency, c.every_months, c.first_month.as_deref()) {
+            yearly: matches!(freq, planner::Freq::Yearly),
+            every: match freq {
                 planner::Freq::Every { months, first } => Some((months, first)),
                 _ => None,
             },

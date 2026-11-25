@@ -1,6 +1,5 @@
 //! Gifts, gift seasons, the gift plan and settings.
 
-#![allow(unused_imports)]
 use super::*;
 
 // ---------- gifts ----------

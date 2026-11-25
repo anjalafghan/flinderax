@@ -255,7 +255,7 @@ pub fn get_paseto_token(
             ExpirationClaim::try_from(
                 expiration
                     .format(&time::format_description::well_known::Rfc3339)
-                    .unwrap(),
+                    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?,
             )
             .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?,
         )
