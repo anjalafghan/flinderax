@@ -36,7 +36,7 @@ async function copyLink(url: string) {
 }
 
 /** The quarterly check-in's entry point on the dashboard. Hidden when its data can't be read. */
-export function CheckInCard() {
+export function CheckInCard({ dueOnly = false }: { dueOnly?: boolean }) {
   const { data, isLoading } = useCheckinStatus();
   const reminders = useReminderLink();
   const resetLink = useResetReminderLink();
@@ -48,7 +48,7 @@ export function CheckInCard() {
     ) : null;
   }
 
-  if (data.status === "ok") return null;
+  if (dueOnly && data.status === "ok") return null;
 
   const estimates = data.estimates.slice(0, SHOWN_ESTIMATES);
 
@@ -86,11 +86,11 @@ export function CheckInCard() {
           to="/checkin"
           className="bg-brand-gradient inline-flex min-h-10 shrink-0 items-center justify-center rounded-full px-5 text-sm font-semibold no-underline sm:ml-auto"
         >
-          Open check-in
+          {data.status === "ok" ? "Open check-in" : "Start check-in"}
         </Link>
       </header>
 
-      <details className="text-sm sm:basis-full sm:pl-[60px]">
+      <details open={!dueOnly} className="text-sm sm:basis-full sm:pl-[60px]">
         <summary className="min-h-10 cursor-pointer content-center text-muted-foreground">
           More check-in options
         </summary>

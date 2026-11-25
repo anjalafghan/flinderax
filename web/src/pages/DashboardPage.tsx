@@ -132,7 +132,7 @@ function MoneyDashboard() {
         <h1 className="sr-only">Today</h1>
         <PlannerSummary />
         <ComingUpCard />
-        <CheckInCard />
+        <CheckInCard dueOnly />
         <CoupleGoalsCard />
 
         <nav

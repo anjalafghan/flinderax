@@ -230,7 +230,7 @@ function WeekForm({ habits, week, saving, onSave }: FormProps) {
   );
 }
 
-/** Weeks already logged, newest first, with the share of target days hit. */
+/** Recent weeks, newest first, with a neutral saved or empty state. */
 function RecentWeeks({ recent }: { recent: DietOverview["recent"] }) {
   return (
     <div className="flex flex-col gap-3">
