@@ -258,6 +258,9 @@ pub async fn list(db: &SqlitePool, couple: &str, archived: bool) -> sqlx::Result
     .await
 }
 
+/// Raw lookup with NO seal check. Anything reached through a client-sent id goes through
+/// `visible_get`, `drawable_get` or `api::slip` instead; a slip behind one of our own history rows
+/// goes through `row_activity`.
 pub async fn get(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Option<Activity>> {
     sqlx::query_as(&format!("SELECT {COLS} FROM joy_activities WHERE couple_id = ? AND id = ?"))
         .bind(couple)
@@ -551,6 +554,21 @@ pub async fn visible_get(db: &SqlitePool, couple: &str, who: usize, id: i64) -> 
         return Ok(None);
     }
     get(db, couple, id).await
+}
+
+/// `visible_get` for a viewer who may be unknown: no viewer fails closed, as in `visible_list`.
+pub async fn visible_get_opt(db: &SqlitePool, couple: &str, who: Option<usize>, id: i64) -> sqlx::Result<Option<Activity>> {
+    match who {
+        Some(w) => visible_get(db, couple, w, id).await,
+        None if sealed_any(db, couple).await?.contains(&id) => Ok(None),
+        None => get(db, couple, id).await,
+    }
+}
+
+/// The slip behind one of the couple's own history rows (never a client-sent id). It is not hidden
+/// from a viewer a surprise is sealed from: the caller masks what it shows with `decide::sealed_for`.
+pub async fn row_activity(db: &SqlitePool, couple: &str, row: &HistoryRow) -> sqlx::Result<Option<Activity>> {
+    get(db, couple, row.activity_id).await
 }
 
 /// A joiner takes over an empty slot. Whatever the person who left was still planning in secret

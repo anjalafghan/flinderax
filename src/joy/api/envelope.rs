@@ -106,7 +106,7 @@ pub async fn build(db: &SqlitePool, couple: &str, ctx: &Ctx, env: db::Envelope) 
             let to = row.drawn_by.map(|d| (1 - d.clamp(0, 1)) as usize);
             let plan = super::dayplan::build(db, couple, ctx, &row, to).await?;
             let sealed = super::decide::sealed_for(&row, to);
-            let a = db::get(db, couple, row.activity_id).await?;
+            let a = db::row_activity(db, couple, &row).await?;
             let v = a.as_ref().map(|a| ActivityView::new(ctx, a, &learned));
             let when = match (&plan, row.planned_local.as_deref()) {
                 (Some(p), _) => p.when.clone(),

@@ -69,6 +69,12 @@ pub async fn unsealed(db: &SqlitePool, couple: &str, who: usize, id: i64) -> Res
     Ok(())
 }
 
+/// The slip `id` as `who` may see it, or a 404 (the same for one that is sealed from them as for one
+/// that doesn't exist). Use this instead of `unsealed` followed by a raw fetch.
+pub async fn slip(db: &SqlitePool, couple: &str, who: usize, id: i64) -> Result<crate::joy::db::Activity, AppError> {
+    crate::joy::db::visible_get(db, couple, who, id).await?.ok_or_else(|| crate::handlers::common::not_found("No such slip"))
+}
+
 /// The caller's couple, slot and settings. A 403 for someone who hasn't started or joined one.
 pub async fn joy(state: &AppState, user_id: &str) -> Result<Joy, AppError> {
     let (couple, who) = require_couple(&state.db, user_id).await?;
