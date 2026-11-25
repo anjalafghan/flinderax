@@ -5,6 +5,7 @@ import type { JoySummary } from "@/services/types";
 import { authHeadersFor, clearSession } from "@/session";
 import { sendOrQueue } from "@/offline";
 import { errorMessageOf } from "@/services/errors";
+import { storageGet } from "@/utils/storage";
 
 export interface Opt {
   value: string;
@@ -242,7 +243,7 @@ interface Options {
 /** The bearer header from localStorage. Empty when storage is blocked: the server then answers 401. */
 export function authHeaders(): Record<string, string> {
   try {
-    return authHeadersFor(localStorage.getItem("token"));
+    return authHeadersFor(storageGet("token"));
   } catch {
     return {};
   }

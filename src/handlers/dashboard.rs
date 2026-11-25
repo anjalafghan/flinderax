@@ -8,7 +8,7 @@ use axum::{
     Extension, Json,
 };
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date};
+use time::{Date};
 
 use crate::{
     handlers::{
@@ -27,7 +27,7 @@ use crate::{
 };
 
 fn parse_db_date(ts: &str) -> Option<Date> {
-    Date::parse(ts.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(ts)
 }
 
 /// The ledger key for a card's bill due on `due` (see `handlers::moves`).

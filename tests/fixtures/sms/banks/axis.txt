@@ -1,0 +1,7 @@
+# id | expected | merchant | last4 | date | text   (~ = none; expected: D:<paise> / C:<paise> / -). All values invented.
+axis_card_spend|D:75000|UBER INDIA|1234|2026-11-01|INR 750.00 spent on Axis Bank Card no. XX1234 at UBER INDIA on 01-11-26 10:22:11 IST. Avl Limit: INR 49,250.00. Not you? SMS BLOCK 1234 to 919951860002
+axis_salary|C:5200000|DEMO CORP|1234|2026-11-01|INR 52,000.00 credited to A/c no. XX1234 on 01-11-26 05:00:00 SALARY Cr from DEMO CORP. Avl Bal INR 60,000.00 - Axis Bank
+axis_upi_inr|D:50000|shop.demo|1234|2026-11-14|INR 500 debited from Axis Bank A/c XX1234 on 14-11-26 to VPA shop.demo@okhdfc UPI Ref 430512345686
+axis_failed|-|||||Payment of INR 300.00 failed on Axis Bank Card XX1234. If any amount is debited it will be reversed in 3 days.
+axis_verification|-|||||Your verification code for Axis Bank login is 778899. Do not share.
+axis_upi_received|C:200000|buddy|1234|2026-11-15|INR 2,000.00 credited to A/c no. XX1234 on 15-11-26 from VPA buddy@okicici UPI Ref 430512345690

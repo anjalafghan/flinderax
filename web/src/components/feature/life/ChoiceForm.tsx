@@ -244,7 +244,7 @@ function startDraft(kind: ChoiceKind, from?: Choice): Draft {
   const draft: Draft = {};
   const given =
     from && from.kind === kind
-      ? (from as unknown as Record<string, unknown>)
+      ? (from as Record<string, unknown>)
       : undefined;
   for (const f of CHOICE_SPECS[kind].fields) {
     const v = given?.[f.key];
@@ -300,7 +300,7 @@ function build(kind: ChoiceKind, draft: Draft): Choice {
       out[f.key] = f.type === "pct" ? Math.round(n * 100) : n;
     }
   }
-  return out as unknown as Choice;
+  return out as Choice;
 }
 
 /** Pick a kind of choice, fill it in, and hand it to `onTry`. Saves nothing itself. */

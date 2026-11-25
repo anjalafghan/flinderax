@@ -60,7 +60,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
     let view = |a: &Activity| {
         let mut v = ActivityView::new(ctx, a, &learned);
         v.my_want = wants.iter().find(|(id, p, _)| *id == a.id && *p == j.who as i64).map(|(_, _, l)| l.clone()).unwrap_or_default();
-        v.both_want = (0..2).all(|p| wants.iter().any(|(id, person, l)| *id == a.id && *person == p && l == "want"));
+        v.both_want = db::both_want(&wants, a.id);
         v.vetoed_by = vetoes
             .iter()
             .filter(|(act, _)| *act == a.id)
@@ -119,15 +119,10 @@ pub struct PlanForm {
     pub at: String,
 }
 
-/// 404 when `id` is a sealed surprise the other partner drew for this viewer, so it can't be opened,
-/// changed or even confirmed to exist (a 403 would give the surprise away).
-async fn unsealed(db: &SqlitePool, j: &Joy, id: i64) -> Result<(), AppError> {
-    super::unsealed(db, &j.couple, j.who, id).await
-}
-
-/// A slip of ours, or a 404.
-async fn mine(db: &SqlitePool, couple: &str, id: i64) -> Result<Activity, AppError> {
-    db::get(db, couple, id).await?.ok_or_else(|| not_found("No such slip"))
+/// A slip of ours, or a 404: also when it is a sealed surprise the other partner drew for this
+/// viewer, so it can't be opened, changed or even confirmed to exist (a 403 would give it away).
+async fn mine(db: &SqlitePool, j: &Joy, id: i64) -> Result<Activity, AppError> {
+    super::slip(db, &j.couple, j.who, id).await
 }
 
 /// Keep a slip as a date at a time we choose, without drawing it from the jar.
@@ -442,8 +437,7 @@ pub async fn new(State(s): State<AppState>, Extension((user_id, _)): User) -> Re
 /// `GET /slips/{id}`: the form filled in with that slip.
 pub async fn edit(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<FormView>, AppError> {
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
-    let a = mine(&s.db, &j.couple, id).await?;
+    let a = mine(&s.db, &j, id).await?;
     let mut input = input_from(&j.ctx, &a);
     input.pairs = db::partners(&s.db, &j.couple, id).await?.iter().map(|p| p.id).collect();
     Ok(Json(form(&s.db, &j, Some(id), &input, "").await?))
@@ -485,7 +479,7 @@ fn slip_error(i: &ActivityInput, cost_ok: bool, latlng: Option<(f64, f64)>) -> &
 async fn save(s: AppState, user_id: String, id: Option<i64>, body: SlipBody) -> Result<Response, AppError> {
     let j = joy(&s, &user_id).await?;
     if let Some(id) = id {
-        mine(&s.db, &j.couple, id).await?;
+        mine(&s.db, &j, id).await?;
     }
     let allow_duplicate = body.allow_duplicate;
     let (i, cost_ok) = body.input();
@@ -515,8 +509,7 @@ pub async fn update(
     Path(id): Path<i64>,
     Json(i): Json<SlipBody>,
 ) -> Result<Response, AppError> {
-    let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
+    // `save` looks the slip up through `mine`, which answers 404 for one sealed from us.
     save(s, user_id, Some(id), i).await
 }
 
@@ -653,8 +646,7 @@ pub async fn dress(
     Json(b): Json<DressBody>,
 ) -> Result<Response, AppError> {
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
-    let a = mine(&s.db, &j.couple, id).await?;
+    let a = mine(&s.db, &j, id).await?;
     if !db::is_custom(&s.db, &j.couple, id).await? {
         return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, "That slip wasn't a day marked by hand; edit it from Slips instead.".into()));
     }
@@ -708,8 +700,7 @@ pub async fn dress(
 /// `POST /slips/{id}/archive`
 pub async fn archive(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
-    mine(&s.db, &j.couple, id).await?;
+    mine(&s.db, &j, id).await?;
     db::set_archived(&s.db, &j.couple, id, true).await?;
     Ok(go(SLIPS))
 }
@@ -729,8 +720,7 @@ pub async fn want(
     Json(b): Json<WantBody>,
 ) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
-    mine(&s.db, &j.couple, id).await?;
+    mine(&s.db, &j, id).await?;
     if !matches!(b.level.as_str(), "" | "want" | "fine" | "no") {
         return Err(AppError(StatusCode::UNPROCESSABLE_ENTITY, "Pick want, fine or no.".into()));
     }
@@ -766,8 +756,7 @@ pub async fn add_pack(State(s): State<AppState>, Extension((user_id, _)): User, 
 /// `POST /slips/{id}/unshare`: the envelope link stops opening.
 pub async fn unshare(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
-    mine(&s.db, &j.couple, id).await?;
+    mine(&s.db, &j, id).await?;
     db::unshare(&s.db, &j.couple, "joy_activities", id).await?;
     Ok(go(SLIPS))
 }
@@ -775,8 +764,7 @@ pub async fn unshare(State(s): State<AppState>, Extension((user_id, _)): User, P
 /// `POST /slips/{id}/restore`
 pub async fn restore(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
-    mine(&s.db, &j.couple, id).await?;
+    mine(&s.db, &j, id).await?;
     // A hand-added date's one-off slip has no place in the jar.
     if !db::restore_one(&s.db, &j.couple, id).await? {
         return Err(not_found("No such slip"));
@@ -787,8 +775,7 @@ pub async fn restore(State(s): State<AppState>, Extension((user_id, _)): User, P
 /// `POST /slips/{id}/unveto`: bring a slip someone passed on back into the draw.
 pub async fn unveto(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
-    mine(&s.db, &j.couple, id).await?;
+    mine(&s.db, &j, id).await?;
     db::unveto(&s.db, &j.couple, id, j.who).await?;
     Ok(go(SLIPS))
 }
@@ -810,8 +797,7 @@ pub async fn restore_all(State(s): State<AppState>, Extension((user_id, _)): Use
 /// `POST /slips/{id}/delete`
 pub async fn delete(State(s): State<AppState>, Extension((user_id, _)): User, Path(id): Path<i64>) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
-    unsealed(&s.db, &j, id).await?;
-    mine(&s.db, &j.couple, id).await?;
+    mine(&s.db, &j, id).await?;
     // Archived rather than dropped when it has history (see `db::delete`); the answer is the same.
     db::delete(&s.db, &j.couple, id).await?;
     Ok(go(SLIPS))

@@ -1,6 +1,5 @@
 //! Dates that matter: birthdays and anniversaries.
 
-#![allow(unused_imports)]
 use super::*;
 
 // ---------- dates ----------

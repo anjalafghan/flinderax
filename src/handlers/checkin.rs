@@ -9,7 +9,7 @@ use axum::{
 };
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date};
+use time::{Date};
 
 use crate::{
     handlers::{
@@ -328,7 +328,7 @@ fn parse_day(s: &str) -> Result<Date, AppError> {
 
 /// A date stored as 'YYYY-MM-DD' (the first ten characters of a longer timestamp are read too).
 fn stored_day(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 /// A saved row that no longer reads back is a server fault, logged and hidden from the client.

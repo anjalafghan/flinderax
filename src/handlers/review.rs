@@ -8,7 +8,7 @@ use axum::{
 };
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date};
+use time::Date;
 
 use crate::{
     alerts::is_spending,
@@ -30,7 +30,7 @@ use crate::{
 type User = Extension<(String, String)>;
 
 fn parse_db_date(ts: &str) -> Option<Date> {
-    Date::parse(ts.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(ts)
 }
 
 // ---------- month close ----------
@@ -279,11 +279,12 @@ pub async fn tax(State(state): State<AppState>, Extension((user_id, _)): User, Q
     .await?
     .into_iter()
     .map(|c| {
+        let freq = planner::Freq::from_columns(&c.frequency, c.every_months, c.first_month.as_deref());
         let p = Payment {
             amount: c.amount_paise,
             day: c.day_of_month as u8,
-            yearly: c.frequency == "yearly",
-            every: match planner::Freq::from_columns(&c.frequency, c.every_months, c.first_month.as_deref()) {
+            yearly: matches!(freq, planner::Freq::Yearly),
+            every: match freq {
                 planner::Freq::Every { months, first } => Some((months, first)),
                 _ => None,
             },

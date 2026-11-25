@@ -412,7 +412,7 @@ fn year_month(idx: i32) -> (i32, Month) {
 
 /// "2026-03" style label for a month index.
 fn month_label(idx: i32) -> String {
-    format!("{:04}-{:02}", idx.div_euclid(12), idx.rem_euclid(12) + 1)
+    crate::planner::dates::month_key(idx.div_euclid(12), (idx.rem_euclid(12) + 1) as u8)
 }
 
 fn last_day(y: i32, m: Month) -> u8 {

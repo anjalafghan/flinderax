@@ -1,0 +1,10 @@
+# id | expected | merchant | last4 | date | text   (~ = none; expected: D:<paise> / C:<paise> / -). All values invented.
+icici_card_spend|D:129900|AMAZON|1234|2026-11-01|INR 1,299.00 spent using ICICI Bank Card XX1234 on 01-Nov-26 on AMAZON. Avl Limit: INR 98,701.00. If not you, call 1800 2662/SMS BLOCK 1234 to 9215676766
+icici_acct_debit|D:50000|ZOMATO|234|2026-11-01|ICICI Bank Acct XX234 debited for Rs 500.00 on 01-Nov-26; ZOMATO credited. UPI:430512345678. Call 18002662 for dispute. SMS BLOCK 234 to 9215676766.
+icici_credit|C:2500000|SAMPLE PERSON|234|2026-11-05|ICICI Bank Acct XX234 credited with Rs 25,000.00 on 05-Nov-26 from SAMPLE PERSON. UPI:430512345681
+icici_imps|D:320000|ASHA TEST|234|2026-11-06|Dear Customer, Rs 3,200.00 debited from ICICI Bank A/c XX234 on 06-Nov-26 for IMPS-430512345682-ASHA TEST. Avl bal INR 10,000.00
+icici_refund|C:45000|MYNTRA|234|2026-11-12|INR 450.00 credited to ICICI Bank A/c XX234 on 12-Nov-26 refund from MYNTRA. UPI Ref 430512345685
+icici_rupee_sign|D:9900|SPOTIFY|1234|2026-11-13|₹99.00 spent on ICICI Bank Card XX1234 at SPOTIFY on 13-Nov-26. Avl Limit: INR 50,000.00
+icici_otp|-|||||OTP is 889900 for your ICICI Bank transaction of INR 1,299.00 at AMAZON. Do not share.
+icici_offer|-|||||ICICI Bank: pre-approved personal loan up to Rs 5,00,000. Apply now and get the best offer.
+icici_cashback|C:12000|~|234|2026-11-14|INR 120.00 cashback credited to ICICI Bank A/c XX234 on 14-Nov-26. UPI Ref 430512345691

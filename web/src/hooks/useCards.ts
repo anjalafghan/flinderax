@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import api from "@/services/api";
+import { formatRupeesFixed } from "@/utils/money";
 
 /** A card as /api/card/get_all_cards sends it; colours are packed 0xRRGGBB integers. */
 interface CardWire {
@@ -57,7 +58,4 @@ export function useCards() {
 }
 
 /** Card APIs still send rupees, not paise (see card.rs), so this formats rupees. */
-export const formatRupees = (rupees: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
-    rupees,
-  );
+export const formatRupees = formatRupeesFixed;

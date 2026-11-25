@@ -1,0 +1,5 @@
+# id | expected | merchant | last4 | date | text   (~ = none; expected: D:<paise> / C:<paise> / -). All values invented.
+kotak_upi_sent|D:12000|merchant.zepto|1234|2026-11-01|Sent Rs.120.00 from Kotak Bank AC X1234 to merchant.zepto@ybl on 01-11-26.UPI Ref 430512345678. Not you, https://kotak.com/KBANKT/Fraud
+kotak_credit|C:350000|friend|1234|2026-11-09|Received Rs.3,500.00 in your Kotak Bank AC X1234 from friend@okaxis on 09-11-26.UPI Ref 430512345687
+kotak_promo|-|||||Kotak Bank: special offer on 811 savings. Apply now and win rewards.
+kotak_card_spend|D:64000|DOMINOS|4321|2026-11-11|Rs.640.00 spent on Kotak Credit Card XX4321 at DOMINOS on 11-11-26. Avl limit Rs 30,000.00

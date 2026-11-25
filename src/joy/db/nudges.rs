@@ -1,9 +1,7 @@
 //! Gentle nudges: what is coming up, and how long since the last date.
 
-#![allow(unused_imports)]
 use super::*;
-use serde::Deserialize;
-use sqlx::{FromRow, SqlitePool};
+use sqlx::SqlitePool;
 
 // ── gentle nudges ─────────────────────────────────────────────────────────
 

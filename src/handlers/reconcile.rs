@@ -17,7 +17,7 @@ use crate::{
 const LOOKBACK_DAYS: i64 = 200;
 
 fn parse_day(s: &str) -> Option<Date> {
-    Date::parse(s, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd(s)
 }
 
 pub async fn report(

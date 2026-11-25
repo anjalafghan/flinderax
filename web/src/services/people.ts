@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import api, { goalsApi } from "@/services/api";
 import { formatDay } from "@/utils/dates";
+import { localIsoDate } from "@/utils/planner";
 
 // Circle: the people API (section B of the Phase 5 contract). Ids are only in paths, names never in URLs.
 // Money is integer paise. Dates are "YYYY-MM-DD" and every person's data is private to that user.
@@ -377,10 +378,7 @@ export function daysAwayLabel(n: number): string {
 }
 
 /** The viewer's local calendar day as "YYYY-MM-DD", for date inputs and their `max`. */
-export function localDay(now: Date = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
+export const localDay = localIsoDate;
 
 /** "Asha's birthday", "Asha's Diwali" (any label is used in place of the kind). */
 export function dateTitle(name: string, kind: DateKind, label: string): string {

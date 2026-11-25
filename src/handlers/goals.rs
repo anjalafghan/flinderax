@@ -5,7 +5,7 @@
 use axum::{extract::State, Extension, Json};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date};
+use time::{Date};
 
 use crate::{
     validate,
@@ -29,7 +29,7 @@ type User = Extension<(String, String)>;
 const EMERGENCY_MONTHS: i64 = 6;
 
 fn parse_date(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 /// A goal's plan plus what the edit form needs.

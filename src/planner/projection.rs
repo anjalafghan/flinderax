@@ -305,7 +305,7 @@ impl Sim {
 }
 
 fn month_key(d: Date) -> String {
-    format!("{:04}-{:02}", d.year(), d.month() as u8)
+    crate::planner::dates::month_key(d.year(), d.month() as u8)
 }
 
 /// `start` shifted forward by `months`, same day (clamped).

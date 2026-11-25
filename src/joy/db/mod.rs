@@ -258,6 +258,9 @@ pub async fn list(db: &SqlitePool, couple: &str, archived: bool) -> sqlx::Result
     .await
 }
 
+/// Raw lookup with NO seal check. Anything reached through a client-sent id goes through
+/// `visible_get`, `drawable_get` or `api::slip` instead; a slip behind one of our own history rows
+/// goes through `row_activity`.
 pub async fn get(db: &SqlitePool, couple: &str, id: i64) -> sqlx::Result<Option<Activity>> {
     sqlx::query_as(&format!("SELECT {COLS} FROM joy_activities WHERE couple_id = ? AND id = ?"))
         .bind(couple)
@@ -301,6 +304,12 @@ pub async fn wants(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(i64, i64,
     .bind(couple)
     .fetch_all(db)
     .await
+}
+
+/// Both partners (the two distinct slots) marked this slip "want". Takes `wants` as fetched once per
+/// request; only ever answers yes or no, never who or how much.
+pub fn both_want(wants: &[(i64, i64, String)], id: i64) -> bool {
+    (0..2).all(|p| wants.iter().any(|(i, person, l)| *i == id && *person == p && l == "want"))
 }
 
 /// Another slip in the jar with the same title (ignoring case and spacing), if any.
@@ -551,6 +560,21 @@ pub async fn visible_get(db: &SqlitePool, couple: &str, who: usize, id: i64) -> 
         return Ok(None);
     }
     get(db, couple, id).await
+}
+
+/// `visible_get` for a viewer who may be unknown: no viewer fails closed, as in `visible_list`.
+pub async fn visible_get_opt(db: &SqlitePool, couple: &str, who: Option<usize>, id: i64) -> sqlx::Result<Option<Activity>> {
+    match who {
+        Some(w) => visible_get(db, couple, w, id).await,
+        None if sealed_any(db, couple).await?.contains(&id) => Ok(None),
+        None => get(db, couple, id).await,
+    }
+}
+
+/// The slip behind one of the couple's own history rows (never a client-sent id). It is not hidden
+/// from a viewer a surprise is sealed from: the caller masks what it shows with `decide::sealed_for`.
+pub async fn row_activity(db: &SqlitePool, couple: &str, row: &HistoryRow) -> sqlx::Result<Option<Activity>> {
+    get(db, couple, row.activity_id).await
 }
 
 /// A joiner takes over an empty slot. Whatever the person who left was still planning in secret
@@ -912,10 +936,7 @@ pub struct HistoryRow {
     pub day_kind: String,
 }
 
-const MONTHS: [&str; 12] = [
-    "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November",
-    "December",
-];
+use crate::joy::names::MONTHS_LONG as MONTHS;
 
 impl HistoryRow {
     /// "14 Oct"
@@ -1281,6 +1302,15 @@ pub async fn month_budget(db: &SqlitePool, couple: &str, month: &str) -> sqlx::R
         .await
 }
 
+/// Every month the couple has settled: month ("YYYY-MM") -> (base, carry).
+pub async fn month_budgets(db: &SqlitePool, couple: &str) -> sqlx::Result<std::collections::HashMap<String, (i64, i64)>> {
+    let rows: Vec<(String, i64, i64)> = sqlx::query_as("SELECT month, base, carry FROM joy_month_budget WHERE couple_id = ?")
+        .bind(couple)
+        .fetch_all(db)
+        .await?;
+    Ok(rows.into_iter().map(|(m, b, c)| (m, (b, c))).collect())
+}
+
 /// Settle a month's start: rolling over `carry` (0 = start fresh). Pressing twice changes nothing.
 /// True when this call was the one that settled it.
 /// `leftover` ((amount, note) for the savings jar) goes in with it in one transaction, so a failure
@@ -1644,5 +1674,13 @@ mod tests {
         }
         assert!(add_photo(&db, "B", kept, "one-too-many.jpg").await.unwrap().is_none());
         assert_eq!(photos_of(&db, "B", kept).await.unwrap().len() as i64, MAX_PHOTOS_PER_DATE);
+    }
+
+    #[test]
+    fn both_want_needs_both_slots_to_say_want() {
+        let w = |id: i64, person: i64, l: &str| (id, person, l.to_string());
+        let marks = vec![w(1, 0, "want"), w(1, 1, "want"), w(2, 0, "want"), w(2, 1, "fine"), w(3, 1, "want")];
+        assert!(both_want(&marks, 1));
+        assert!(!both_want(&marks, 2) && !both_want(&marks, 3) && !both_want(&marks, 4));
     }
 }

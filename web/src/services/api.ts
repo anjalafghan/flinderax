@@ -46,6 +46,7 @@ import type {
 import { authHeadersFor, clearSession } from "../session";
 import { errorMessageOf } from "./errors";
 import { sendOrQueue } from "@/offline";
+import { storageGet } from "@/utils/storage";
 
 // The Rust server serves both the API and this app, so every request is same-origin.
 
@@ -77,7 +78,7 @@ async function send(
   body?: unknown,
 ): Promise<Response> {
   const headers: HeadersInit = { "Content-Type": "application/json" };
-  const token = localStorage.getItem("token");
+  const token = storageGet("token");
   Object.assign(headers, authHeadersFor(token));
 
   const response = await fetch(url, {
@@ -231,7 +232,7 @@ export const movesApi = {
 
 /** A statement multipart post. No Content-Type header: the browser must set the multipart boundary itself. */
 async function postStatement<T>(url: string, form: FormData): Promise<T> {
-  const token = localStorage.getItem("token");
+  const token = storageGet("token");
   const response = await fetch(url, {
     method: "POST",
     headers: authHeadersFor(token),

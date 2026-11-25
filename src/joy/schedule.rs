@@ -76,7 +76,7 @@ pub struct Slot {
     pub today: bool,
 }
 
-const WEEKDAY_NAMES: [&str; 7] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+use crate::joy::names::DAYS_LONG as WEEKDAY_NAMES;
 
 fn weekday_index(w: Weekday) -> u8 {
     w.number_days_from_sunday()

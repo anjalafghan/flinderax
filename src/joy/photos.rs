@@ -124,6 +124,15 @@ pub fn photos_root() -> std::path::PathBuf {
     std::path::Path::new(file).parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(std::path::Path::new(".")).join("joy-photos")
 }
 
+/// Delete a photo file. One that is already gone is fine; any other failure is logged, not hidden.
+pub async fn remove_file(path: impl AsRef<std::path::Path>) {
+    if let Err(e) = tokio::fs::remove_file(path).await
+        && e.kind() != std::io::ErrorKind::NotFound
+    {
+        tracing::warn!(error = %e, "could not remove a photo file");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

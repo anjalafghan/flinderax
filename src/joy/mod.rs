@@ -4,6 +4,7 @@ pub mod api;
 pub mod ctx;
 pub mod db;
 pub mod hours;
+pub mod names;
 pub mod ics;
 pub mod photos;
 pub mod picker;

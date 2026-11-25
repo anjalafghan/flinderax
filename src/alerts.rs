@@ -117,6 +117,8 @@ fn clean_merchant(raw: &str) -> Option<String> {
         m = handle;
     }
     let m = regex!(r"[-_.]?\d{5,}$").replace(m, "");
+    // A reference number in front of the payee ("IMPS-430512345682-ASHA TEST").
+    let m = regex!(r"^\d{5,}[-_/ ]+").replace(&m, "");
     let m = regex!(r"\s+").replace_all(m.trim(), " ");
     let m = m.trim();
     let generic = ["your", "you", "a/c", "ac", "account", "vpa", "upi", "neft", "imps"];

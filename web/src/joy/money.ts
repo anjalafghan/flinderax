@@ -1,4 +1,5 @@
 // Rupee helpers and the settle-up wording. Pure.
+import { toPaise as parsePaise } from "@/utils/money";
 
 /** 150000 paise -> "₹1,500". */
 export function rupees(paise: number, symbol = "₹"): string {
@@ -9,7 +10,7 @@ export function rupees(paise: number, symbol = "₹"): string {
 export function toPaise(input: string): number | null {
   const clean = input.replace(/[₹,\s]/g, "");
   if (!/^\d+(\.\d{1,2})?$/.test(clean)) return null;
-  return Math.round(parseFloat(clean) * 100);
+  return parsePaise(clean);
 }
 
 export type Standing = {

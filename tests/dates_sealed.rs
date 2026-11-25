@@ -338,3 +338,18 @@ async fn a_new_partner_in_the_leavers_slot_does_not_inherit_their_surprise() {
     }
     assert_eq!(t.scalar(&format!("SELECT revealed FROM joy_history WHERE id = {hid}")).await, 0);
 }
+
+#[tokio::test]
+async fn every_slip_by_id_write_is_a_404_for_the_partner_and_changes_nothing() {
+    let t = setup().await;
+    let (rohit, neha, _couple, id, _h) = t.sealed_setup().await;
+    let body = json!({"title": "Hijacked", "est_cost": "1", "setting": "home", "duration": "short", "level": "want", "at": "2026-12-01T19:00"});
+    for action in ["", "/archive", "/restore", "/unshare", "/want", "/delete", "/unveto", "/plan", "/dress"] {
+        let r = t.post(&format!("/api/dates/slips/{id}{action}"), &neha, body.clone()).await;
+        assert_eq!(r.status, StatusCode::NOT_FOUND, "{action}: {}", r.text);
+        assert!(!r.text.contains(NEEDLE), "{action}: {}", r.text);
+    }
+    assert_eq!(t.text(&format!("SELECT title FROM joy_activities WHERE id = {id}")).await, SECRET);
+    assert_eq!(t.scalar(&format!("SELECT archived FROM joy_activities WHERE id = {id}")).await, 0);
+    assert!(t.get(&format!("/api/dates/slips/{id}"), &rohit).await.status.is_success(), "the planner still reaches it");
+}

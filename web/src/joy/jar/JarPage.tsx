@@ -96,6 +96,11 @@ const finished = (a: Animation) =>
     () => undefined,
   );
 
+/** iOS asks before motion events flow; other browsers have no `requestPermission`. */
+type MotionWithPermission = typeof DeviceMotionEvent & {
+  requestPermission?: () => Promise<string>;
+};
+
 export default function JarPage() {
   const [data, setData] = useState<DecideView | null>(null);
   const [error, setError] = useState(false);
@@ -867,8 +872,7 @@ export default function JarPage() {
       /* private mode */
     }
     const needsPermission =
-      typeof (DeviceMotionEvent as unknown as { requestPermission?: unknown })
-        .requestPermission === "function";
+      typeof (DeviceMotionEvent as MotionWithPermission).requestPermission === "function";
     if (saved && !needsPermission) setShakeOn(true);
   }, []);
 
@@ -902,11 +906,7 @@ export default function JarPage() {
       return;
     }
     try {
-      const req = (
-        DeviceMotionEvent as unknown as {
-          requestPermission?: () => Promise<string>;
-        }
-      ).requestPermission;
+      const req = (DeviceMotionEvent as MotionWithPermission).requestPermission;
       if (typeof req === "function" && (await req()) !== "granted")
         return void setShakeLabel("motion is off, tap Draw instead");
       setShakeOn(true);

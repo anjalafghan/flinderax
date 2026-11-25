@@ -153,7 +153,7 @@ fn resolve_cadence(
 }
 
 fn year_month(d: time::Date) -> String {
-    format!("{:04}-{:02}", d.year(), d.month() as u8)
+    crate::planner::dates::month_key(d.year(), d.month() as u8)
 }
 
 pub async fn commitment_create(

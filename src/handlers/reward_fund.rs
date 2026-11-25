@@ -33,7 +33,7 @@ type User = Extension<(String, String)>;
 const MAX_CATCH_UP: i32 = 12;
 
 pub fn month_key(idx: i32) -> String {
-    format!("{:04}-{:02}", idx.div_euclid(12), idx.rem_euclid(12) + 1)
+    crate::planner::dates::month_key(idx.div_euclid(12), (idx.rem_euclid(12) + 1) as u8)
 }
 
 #[derive(Serialize)]

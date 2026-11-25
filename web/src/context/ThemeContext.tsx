@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { storageGet, storageSet } from "@/utils/storage";
 
 type Theme = "dark" | "light";
 
@@ -26,7 +27,7 @@ export function ThemeProvider({
   storageKey = "vite-ui-theme",
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
+    () => (storageGet(storageKey) as Theme) || defaultTheme,
   );
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
+      storageSet(storageKey, theme);
       setTheme(theme);
     },
   };

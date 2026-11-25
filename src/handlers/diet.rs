@@ -10,7 +10,7 @@ use axum::{
 };
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date, Duration};
+use time::{Date, Duration};
 
 use crate::{
     handlers::common::{not_found, today_local, AppError},
@@ -31,11 +31,11 @@ fn unprocessable(msg: impl Into<String>) -> AppError {
 }
 
 fn parse_day(s: &str) -> Option<Date> {
-    Date::parse(s, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd(s)
 }
 
 fn month_key(d: Date) -> String {
-    format!("{:04}-{:02}", d.year(), d.month() as u8)
+    crate::planner::dates::month_key(d.year(), d.month() as u8)
 }
 
 fn first_of_month(d: Date) -> Date {

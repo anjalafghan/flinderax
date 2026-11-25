@@ -1,6 +1,5 @@
 //! Statement import: preview, upload, matching against alerts.
 
-#![allow(unused_imports)]
 use super::*;
 
 // ---------- statement import ----------

@@ -314,7 +314,7 @@ pub fn add_notes(report: &mut DietReport, prev_delivery_x100: Option<i64>, today
 }
 
 fn parse_day(s: &str) -> Option<Date> {
-    Date::parse(s, time::macros::format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd(s)
 }
 
 #[cfg(test)]

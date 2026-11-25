@@ -1259,7 +1259,7 @@ mod tests {
         ok(add_season(st(&s), user("u"), Json(NewSeason { label: "Diwali".into(), month: m, budget_paise: 300_000 })).await);
         let out = ok(gift_plan(st(&s), user("u")).await).0;
         assert_eq!(out.months.len(), 12);
-        assert_eq!(out.months[0].month, format!("{:04}-{:02}", today.year(), today.month() as u8));
+        assert_eq!(out.months[0].month, crate::planner::dates::month_key(today.year(), today.month() as u8));
         assert_eq!((out.months[0].budget_paise, out.months[0].occasions), (500_000, 2), "archived people's dates do not count");
         assert_eq!(out.total_paise, 500_000);
         assert_eq!(out.monthly_paise, 41_667);

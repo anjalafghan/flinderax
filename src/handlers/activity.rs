@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 
 use axum::{extract::State, Extension, Json};
 use serde::Serialize;
-use time::{macros::format_description, Date};
+use time::{Date};
 
 use crate::{
     handlers::common::{today_local, AppError},
@@ -68,7 +68,7 @@ pub async fn record(db: &sqlx::SqlitePool, user_id: &str, kind: Kind, ref_id: &s
 }
 
 fn parse(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 pub async fn compute(state: &AppState, user_id: &str, today: Date) -> Result<ActivityOut, AppError> {

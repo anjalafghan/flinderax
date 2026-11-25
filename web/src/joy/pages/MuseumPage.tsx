@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getSlips, keys } from "../api";
 import { getKept, keptKey } from "../kept/api";
+import { isoToday } from "../kept/helpers";
 import type { KeptView } from "../kept/types";
 import { errText } from "../components/useBusy";
 import {
@@ -17,10 +18,6 @@ import {
 import { sceneFor, visitsOf } from "../keepsakes/scene-find";
 import { isSeen, markSeen } from "../keepsakes/seen";
 import "../kept/kept.css";
-
-/** Today in India, as "YYYY-MM-DD" (kept days are IST dates). */
-const isoToday = () =>
-  new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
 
 interface Piece {
   h: KeptView;

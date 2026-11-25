@@ -301,7 +301,7 @@ pub async fn delete_night(
 ) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     let v = db::visit(&s.db, &j.couple, vid).await?.ok_or_else(|| not_found("No such night"))?;
-    let _ = tokio::fs::remove_file(photos::visit_path(&j.ctx.photos_dir, vid)).await;
+    photos::remove_file(photos::visit_path(&j.ctx.photos_dir, vid)).await;
     // The kept date behind the night goes with it, and so do its photo files.
     let files = match v.history_id {
         Some(h) => db::photos_of(&s.db, &j.couple, h).await?,
@@ -310,7 +310,7 @@ pub async fn delete_night(
     db::delete_visit(&s.db, &j.couple, vid).await?;
     for p in files {
         if let Some(path) = photos::date_path(&j.ctx.photos_dir, &p.file) {
-            let _ = tokio::fs::remove_file(path).await;
+            photos::remove_file(path).await;
         }
     }
     Ok(back_to(&body.unwrap_or_default().0.back, &spread_path(v.regular_id)))
@@ -372,7 +372,7 @@ pub async fn delete_photo(
 ) -> Result<Json<Go>, AppError> {
     let j = joy(&s, &user_id).await?;
     let v = db::visit(&s.db, &j.couple, vid).await?.ok_or_else(|| not_found("No such night"))?;
-    let _ = tokio::fs::remove_file(photos::visit_path(&j.ctx.photos_dir, vid)).await;
+    photos::remove_file(photos::visit_path(&j.ctx.photos_dir, vid)).await;
     db::set_visit_photo(&s.db, &j.couple, vid, false).await?;
     Ok(back_to(&body.unwrap_or_default().0.back, &spread_path(v.regular_id)))
 }
@@ -533,15 +533,12 @@ pub struct RegularsView {
 pub async fn index(State(s): State<AppState>, Extension((user_id, _)): User) -> Result<Json<RegularsView>, AppError> {
     let j = joy(&s, &user_id).await?;
     let mut items = vec![];
+    let counts = db::went_counts(&s.db, &j.couple).await?;
     for r in db::regulars(&s.db, &j.couple).await? {
-        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM joy_regular_visits WHERE regular_id = ? AND status = 'went'")
-            .bind(r.id)
-            .fetch_one(&s.db)
-            .await?;
+        let count = counts.get(&r.id).copied().unwrap_or(0);
         items.push(ListItem { id: r.id, title: r.title, place: r.place, days: weekdays_label(&r.weekdays), usual: j.ctx.money(r.usual_cost), count });
     }
-    const LABELS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    let days = LABELS.iter().enumerate().map(|(i, l)| DayBox { value: i, label: l, checked: i == 2 || i == 4 }).collect();
+    let days = crate::joy::names::DAYS_SHORT.iter().enumerate().map(|(i, l)| DayBox { value: i, label: l, checked: i == 2 || i == 4 }).collect();
     let stopped = db::stopped_regulars(&s.db, &j.couple).await?.into_iter().map(|(id, title)| StoppedItem { id, title }).collect();
     Ok(Json(RegularsView { me_name: Me::new(&j.ctx, Some(j.who)).name, items, stopped, days }))
 }

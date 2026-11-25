@@ -153,7 +153,7 @@ pub fn year_view(
         lowest = lowest.min(balance);
         total_out += out;
         let short = balance < 0;
-        let month = format!("{:04}-{:02}", y, m as u8);
+        let month = crate::planner::dates::month_key(y, m as u8);
         if short && first_short.is_none() {
             first_short = Some(month.clone());
         }

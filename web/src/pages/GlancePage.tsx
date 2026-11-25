@@ -28,10 +28,10 @@ import { useRewardFund } from "@/services/rewards";
 import { useRoad } from "@/services/road";
 import { useYear } from "@/services/year";
 import type { DashboardSummary } from "@/services/types";
-import { formatINR } from "@/utils/money";
+import { formatWholeINR } from "@/utils/money";
 
 /** Whole rupees: this page is about the shape of things, not the paise. */
-const rupees = (p: number) => formatINR(Math.round(p / 100) * 100);
+const rupees = formatWholeINR;
 
 // Spending coral, investing mint, what is promised sky: the same colours as the rest of the app.
 const MONEY_SERIES: BarSeries[] = [

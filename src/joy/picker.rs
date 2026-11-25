@@ -138,7 +138,7 @@ pub struct Today {
 
 pub const WEEKDAYS: [(&str, &str); 7] =
     [("sun", "Sunday"), ("mon", "Monday"), ("tue", "Tuesday"), ("wed", "Wednesday"), ("thu", "Thursday"), ("fri", "Friday"), ("sat", "Saturday")];
-pub const MONTHS_SHORT: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+pub use crate::joy::names::MONTHS_SHORT;
 
 /// "mon,wed" → [1, 3].
 pub fn parse_closed(s: &str) -> Vec<u8> {
@@ -217,15 +217,27 @@ fn checks(c: &Candidate, f: &Filters) -> Checks {
     }
 }
 
+/// A slip never had is this many times as likely as one just done.
+pub const UNSEEN_BONUS: f64 = 3.0;
+/// A done slip climbs back up over this long (seconds)...
+pub const RECOVERY_SPAN: i64 = 30 * DAY;
+/// ...by at most this much extra weight.
+pub const RECOVERY_CAP: f64 = 2.0;
+/// A slip put back within this long (seconds) is damped.
+pub const RECENT_SKIP_WINDOW: i64 = 3 * DAY;
+pub const RECENT_SKIP_DAMP: f64 = 0.5;
+/// Outdoor plans when rain is likely.
+pub const RAIN_OUTDOOR_DAMP: f64 = 0.3;
+
 /// Higher weight = more likely. Never-done ideas get a boost, older ones
 /// climb back up over ~2 months, recently skipped ones are damped.
 pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
     let mut w = c.taste * match c.last_done_at {
-        None => 3.0,
-        Some(t) => 1.0 + ((now - t).max(0) as f64 / (30 * DAY) as f64).min(2.0),
+        None => UNSEEN_BONUS,
+        Some(t) => 1.0 + ((now - t).max(0) as f64 / RECOVERY_SPAN as f64).min(RECOVERY_CAP),
     };
-    if c.last_skipped_at.is_some_and(|t| now - t < 3 * DAY) {
-        w *= 0.5;
+    if c.last_skipped_at.is_some_and(|t| now - t < RECENT_SKIP_WINDOW) {
+        w *= RECENT_SKIP_DAMP;
     }
     if c.like_recent {
         w *= VARIETY_DAMP;
@@ -240,7 +252,7 @@ pub fn weight(c: &Candidate, now: i64, rain_likely: bool) -> f64 {
     }
     // Rain doesn't rule outdoor plans out, it just lets the cozy ones float up.
     if rain_likely && c.outdoor {
-        w *= 0.3;
+        w *= RAIN_OUTDOOR_DAMP;
     }
     w
 }
@@ -256,9 +268,23 @@ pub fn matches(c: &Candidate, f: &Filters) -> bool {
 /// slip that was shown so a later model can be judged against what was actually on offer.
 pub fn draw_probabilities(all: &[Candidate], f: &Filters, excluded: &[i64], now: i64) -> Vec<(i64, f64)> {
     let pool: Vec<&Candidate> = all.iter().filter(|c| matches(c, f) && !excluded.contains(&c.id)).collect();
-    let weights: Vec<f64> = pool.iter().map(|c| weight(c, now, f.rain_likely)).collect();
+    let weights = usable_weights(pool.iter().map(|c| weight(c, now, f.rain_likely)).collect());
     let total: f64 = weights.iter().sum();
     pool.iter().zip(&weights).map(|(c, w)| (c.id, w / total)).collect()
+}
+
+/// Weights a draw can use: non-finite or negative ones count as 0, and if nothing is left every slip
+/// gets the same weight, so the total is always positive for a non-empty pool.
+fn usable_weights(mut w: Vec<f64>) -> Vec<f64> {
+    for x in &mut w {
+        if !x.is_finite() || *x < 0.0 {
+            *x = 0.0;
+        }
+    }
+    if !w.is_empty() && w.iter().sum::<f64>() <= 0.0 {
+        w.iter_mut().for_each(|x| *x = 1.0);
+    }
+    w
 }
 
 pub fn pick<R: Rng>(
@@ -287,7 +313,7 @@ pub fn pick<R: Rng>(
         });
     }
 
-    let weights: Vec<f64> = pool.iter().map(|c| weight(c, now, f.rain_likely)).collect();
+    let weights = usable_weights(pool.iter().map(|c| weight(c, now, f.rain_likely)).collect());
     let mut roll = rng.gen_range(0.0..weights.iter().sum::<f64>());
     for (c, w) in pool.iter().zip(&weights) {
         if roll < *w {
@@ -332,7 +358,7 @@ fn hint(all: &[Candidate], f: &Filters) -> Hint {
 
     let mut farther =
         only_fails(|k| k.budget && k.duration && !k.distance && k.setting && k.mood && k.open && k.window);
-    farther.sort_by(|a, b| a.distance_km.partial_cmp(&b.distance_km).unwrap());
+    farther.sort_by(|a, b| a.distance_km.unwrap_or(f64::INFINITY).total_cmp(&b.distance_km.unwrap_or(f64::INFINITY)));
     if let Some(c) = farther.first() {
         return Hint::TooFar { title: c.title.clone(), km: c.distance_km.unwrap_or(0.0).round() as i64 };
     }
@@ -762,6 +788,37 @@ mod tests {
                 let w = weight(&c, NOW, rain);
                 prop_assert!(w.is_finite() && w > 0.0, "{w}");
             }
+        }
+    }
+
+    #[test]
+    fn zero_and_nan_weights_do_not_panic() {
+        for bad in [0.0, f64::NAN, f64::INFINITY, -1.0] {
+            let mut a = cand(1, 100, "home", Duration::Short);
+            let mut b = cand(2, 100, "home", Duration::Short);
+            a.taste = bad;
+            b.taste = bad;
+            let all = [a, b];
+            let f = filters(500);
+            let mut r = rng();
+            for _ in 0..20 {
+                assert!(matches!(pick(&all, &f, &[], NOW, &mut r), PickResult::Pick(1 | 2)));
+            }
+            let p = draw_probabilities(&all, &f, &[], NOW);
+            assert_eq!(p.len(), 2);
+            assert!(p.iter().all(|(_, x)| x.is_finite() && (*x - 0.5).abs() < 1e-9));
+        }
+    }
+
+    #[test]
+    fn one_nan_weight_is_never_drawn() {
+        let mut a = cand(1, 100, "home", Duration::Short);
+        a.taste = f64::NAN;
+        let b = cand(2, 100, "home", Duration::Short);
+        let all = [a, b];
+        let mut r = rng();
+        for _ in 0..30 {
+            assert_eq!(pick(&all, &filters(500), &[], NOW, &mut r), PickResult::Pick(2));
         }
     }
 }
