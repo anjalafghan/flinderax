@@ -9,7 +9,7 @@ import {
   type InsightsOut,
 } from "@/services/insights";
 import { formatDay } from "@/utils/dates";
-import { formatINR } from "@/utils/money";
+import { formatINR, formatWholeINR } from "@/utils/money";
 import { cn } from "@/utils/cn";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -37,7 +37,7 @@ function monthYear(ym: string): string {
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** Whole rupees for the sentences: "₹1,234", not "₹1,234.00". */
-const rupees = (paise: number) => formatINR(Math.round(paise / 100) * 100);
+const rupees = formatWholeINR;
 
 const RAIL_LABEL: Record<InsightRefund["rail"], string> = {
   p2p: "to a person",

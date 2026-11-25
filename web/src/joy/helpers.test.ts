@@ -14,6 +14,22 @@ import { quickPick, toLocalInput } from "./plan";
 import { filterGroups, matches } from "./slips";
 import { createUndoTimer, RECHECK_MS, UNDO_MS, type Scheduler } from "./undo";
 
+describe("joy toPaise (integer-safe)", () => {
+  test.each([
+    ["1,500", 150000],
+    ["₹1500", 150000],
+    ["1,200.50", 120050],
+    ["12.5", 1250],
+    ["19.99", 1999],
+    ["1.15", 115],
+  ])("%s -> %d", (text, paise) => {
+    expect(toPaise(text)).toBe(paise);
+  });
+  test.each(["12.345", "", "abc", "-5", ".5", "5."])("%j is null", (text) => {
+    expect(toPaise(text)).toBeNull();
+  });
+});
+
 describe("path mapping", () => {
   test("Go.to stays under /joy, and #middle becomes the Middle page", () => {
     expect(mapGoTo("/joy/slips")).toBe("/joy/slips");

@@ -5,7 +5,7 @@ import Counter from "@/components/bits/Counter";
 
 import type { DashboardSummary, Status } from "@/services/types";
 import { formatDay } from "@/utils/dates";
-import { formatINR } from "@/utils/money";
+import { formatINR, formatWholeINR } from "@/utils/money";
 import { daysBetween, localIsoDate } from "@/utils/planner";
 import { cn } from "@/utils/cn";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -70,9 +70,7 @@ const TONES: Record<Status, Tone> = {
 };
 
 /** Whole rupees: the hero is a reading, not a ledger, so paise are dropped. */
-function rupees(paise: number): string {
-  return formatINR(Math.round(paise / 100) * 100);
-}
+const rupees = formatWholeINR;
 
 /** "2026-11-08" minus `days` days, as an ISO date. */
 function isoMinusDays(iso: string, days: number): string {

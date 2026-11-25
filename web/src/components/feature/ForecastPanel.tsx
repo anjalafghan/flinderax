@@ -10,7 +10,7 @@ import {
 } from "@/services/forecast";
 import { formatDay } from "@/utils/dates";
 import { cn } from "@/utils/cn";
-import { formatCompactINR, formatINR } from "@/utils/money";
+import { formatCompactINR, formatWholeINR } from "@/utils/money";
 
 const SECTION =
   "flex flex-col gap-10 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10";
@@ -23,7 +23,7 @@ const PAD_TOP = 24;
 const PAD_BOTTOM = 30;
 
 /** Whole rupees with Indian grouping: round paise first, then format. */
-const rupees = (paise: number) => formatINR(Math.round(paise / 100) * 100);
+const rupees = formatWholeINR;
 
 /** Whole percent from basis points: 8249 -> 82. */
 const percent = (bps: number) => Math.round(bps / 100);

@@ -10,7 +10,7 @@ import {
   type AnalyticsSalary,
 } from "@/services/analytics";
 import { formatDay } from "@/utils/dates";
-import { formatINR } from "@/utils/money";
+import { formatWholeINR } from "@/utils/money";
 import { cn } from "@/utils/cn";
 import { categoryColor } from "@/utils/categoryColors";
 
@@ -39,7 +39,7 @@ const INVESTED_COLOR = "hsl(var(--c-sky))";
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** Whole rupees everywhere in this panel: "₹1,234", never "₹1,234.00". */
-const rupees = (paise: number) => formatINR(Math.round(paise / 100) * 100);
+const rupees = formatWholeINR;
 
 /** "2026-09" -> "Sep". */
 const monthAbbr = (ym: string) => MONTHS[Number(ym.split("-")[1]) - 1];

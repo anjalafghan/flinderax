@@ -2,7 +2,7 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import type { Road, RoadArea, RoadSource } from "@/services/road";
-import { formatINR } from "@/utils/money";
+import { formatWholeINR } from "@/utils/money";
 import { byYear, monthShort } from "./glance";
 
 // Money sky, family rose, cover mint: the party colours, so the road reads at a glance.
@@ -26,7 +26,7 @@ const SOURCE_NAME: Record<RoadSource, string> = {
 };
 
 /** Whole rupees for planning figures. */
-const rupees = (p: number) => formatINR(Math.round(p / 100) * 100);
+const rupees = formatWholeINR;
 
 /** The road ahead, year by year: what is coming, what it costs then, and what it needs a month from now. */
 export function RoadAhead({ road }: { road: Road }) {

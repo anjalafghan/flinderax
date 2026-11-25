@@ -18,10 +18,10 @@ import {
   type EduDraft,
   type EducationOut,
 } from "@/services/education";
-import { formatINR as formatExact, formatPercent } from "@/utils/money";
+import { formatPercent, formatWholeINR } from "@/utils/money";
 
 /** Planning figures in whole rupees: paise are noise over a 15-year horizon. */
-const rupees = (paise: number) => formatExact(Math.round(paise / 100) * 100);
+const rupees = formatWholeINR;
 
 const RANGE_HUE: Record<string, string> = {
   low: "mint",

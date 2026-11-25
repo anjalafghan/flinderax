@@ -2,6 +2,7 @@ import { memo } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import TiltedCard from "@/components/bits/TiltedCard";
 import { cn } from "@/utils/cn";
+import { formatRupeesFixed } from "@/utils/money";
 
 interface CreditCardProps {
   id: string;
@@ -137,10 +138,7 @@ export const CreditCard = memo(function CreditCard({
                   {balance < 0 ? "Credit Balance" : "Total Due"}
                 </p>
                 <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-                  {new Intl.NumberFormat("en-IN", {
-                    style: "currency",
-                    currency: "INR",
-                  }).format(balance)}
+                  {formatRupeesFixed(balance)}
                 </h3>
               </div>
               {lastDelta !== 0 && (
@@ -158,10 +156,7 @@ export const CreditCard = memo(function CreditCard({
                     <ArrowUp className="h-3 w-3 md:h-4 md:w-4" />
                   )}
                   <span className="">
-                    {new Intl.NumberFormat("en-IN", {
-                      style: "currency",
-                      currency: "INR",
-                    }).format(Math.abs(lastDelta))}
+                    {formatRupeesFixed(Math.abs(lastDelta))}
                   </span>
                 </div>
               )}
