@@ -60,7 +60,7 @@ pub async fn page(State(s): State<AppState>, Extension((user_id, _)): User) -> R
     let view = |a: &Activity| {
         let mut v = ActivityView::new(ctx, a, &learned);
         v.my_want = wants.iter().find(|(id, p, _)| *id == a.id && *p == j.who as i64).map(|(_, _, l)| l.clone()).unwrap_or_default();
-        v.both_want = (0..2).all(|p| wants.iter().any(|(id, person, l)| *id == a.id && *person == p && l == "want"));
+        v.both_want = db::both_want(&wants, a.id);
         v.vetoed_by = vetoes
             .iter()
             .filter(|(act, _)| *act == a.id)

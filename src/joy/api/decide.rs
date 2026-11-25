@@ -479,7 +479,7 @@ pub async fn jar_data(db: &SqlitePool, couple: &str, _ctx: &Ctx, who: usize, slo
 impl JarData {
     /// Both of us marked this slip "want".
     pub fn both_want(&self, id: i64) -> bool {
-        (0..2).all(|p| self.wants.iter().any(|(i, person, l)| *i == id && *person == p && l == "want"))
+        db::both_want(&self.wants, id)
     }
 
     fn candidates(&self, ctx: &Ctx, f: &PickForm) -> Vec<Candidate> {
@@ -747,7 +747,8 @@ pub async fn pick(
 
     let card_out = match result {
         PickResult::Pick(id) => {
-            card(db, couple, ctx, &d, &f, jar.acts.iter().find(|a| a.id == id), &excluded, &jar.learned, jar.slot).await?
+            let both_want = jar.both_want(id);
+            card(db, couple, ctx, &d, &f, jar.acts.iter().find(|a| a.id == id), &excluded, &jar.learned, jar.slot, both_want).await?
         }
         PickResult::NoMatch(h) => no_match_card(ctx, &f, &filters, jar.slot, middle.is_some(), h),
     };
@@ -765,6 +766,7 @@ async fn card(
     excluded: &[i64],
     learned: &Learned,
     slot: Option<Slot>,
+    both_want: bool,
 ) -> Result<PickCard, AppError> {
     let pairs = match a {
         Some(a) => pair_offers(db, couple, ctx, d.me.who, f, a, learned).await?,
@@ -814,7 +816,7 @@ async fn card(
                 km: distance_from(ctx, a, f.from()),
                 max_km: f.filters().max_km,
                 taste: learned.taste.factor_for(&crate::joy::taste::features(&a.draw_tags(), &a.setting, &a.energy, a.effective_cost(learned.cost))),
-                both_want: db::wants(db, couple).await?.iter().filter(|(id, _, l)| *id == a.id && l == "want").count() == 2,
+                both_want,
                 money: &money,
             })
         }

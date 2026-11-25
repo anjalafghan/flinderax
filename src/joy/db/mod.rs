@@ -306,6 +306,12 @@ pub async fn wants(db: &SqlitePool, couple: &str) -> sqlx::Result<Vec<(i64, i64,
     .await
 }
 
+/// Both partners (the two distinct slots) marked this slip "want". Takes `wants` as fetched once per
+/// request; only ever answers yes or no, never who or how much.
+pub fn both_want(wants: &[(i64, i64, String)], id: i64) -> bool {
+    (0..2).all(|p| wants.iter().any(|(i, person, l)| *i == id && *person == p && l == "want"))
+}
+
 /// Another slip in the jar with the same title (ignoring case and spacing), if any.
 pub async fn duplicate_of(db: &SqlitePool, couple: &str, title: &str, except: Option<i64>) -> sqlx::Result<Option<i64>> {
     let norm = |t: &str| t.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
@@ -1659,5 +1665,13 @@ mod tests {
         }
         assert!(add_photo(&db, "B", kept, "one-too-many.jpg").await.unwrap().is_none());
         assert_eq!(photos_of(&db, "B", kept).await.unwrap().len() as i64, MAX_PHOTOS_PER_DATE);
+    }
+
+    #[test]
+    fn both_want_needs_both_slots_to_say_want() {
+        let w = |id: i64, person: i64, l: &str| (id, person, l.to_string());
+        let marks = vec![w(1, 0, "want"), w(1, 1, "want"), w(2, 0, "want"), w(2, 1, "fine"), w(3, 1, "want")];
+        assert!(both_want(&marks, 1));
+        assert!(!both_want(&marks, 2) && !both_want(&marks, 3) && !both_want(&marks, 4));
     }
 }
