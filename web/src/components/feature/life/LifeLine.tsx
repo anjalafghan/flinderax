@@ -30,7 +30,7 @@ import {
   type TryOut,
 } from "@/services/lifeline";
 import { cn } from "@/utils/cn";
-import { formatCompactINR, formatINR } from "@/utils/money";
+import { formatCompactINR, formatWholeINR } from "@/utils/money";
 import { hue, ink, type Hue } from "./hue";
 
 /** What is being compared with the plan right now. `draft` is set while the choice is not saved yet. */
@@ -40,7 +40,7 @@ interface Preview {
   draft?: Choice;
 }
 
-const rupees = (paise: number) => formatINR(Math.round(paise / 100) * 100);
+const rupees = formatWholeINR;
 
 function Stat({
   label,

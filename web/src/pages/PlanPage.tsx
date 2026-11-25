@@ -45,6 +45,7 @@ import {
 } from "@/utils/dates";
 import { BUCKET_HELP, BUCKET_LABEL, defaultBucket } from "@/utils/buckets";
 import { cn } from "@/utils/cn";
+import { freqOf } from "@/utils/freq";
 import { GuidanceCard } from "@/components/feature/GuidanceCard";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 
@@ -270,9 +271,10 @@ function CommitmentRow({
   const remove = usePlannerMutation(planApi.removeCommitment, refresh, {
     success: "Removed",
   });
-  const everyFew = c.frequency === "monthly" && c.every_months > 1;
+  const freq = freqOf(c);
+  const everyFew = freq.kind === "every";
   const when =
-    c.frequency === "yearly"
+    freq.kind === "yearly"
       ? `yearly${c.due_month ? ` in ${MONTHS[c.due_month - 1]}` : ", month not set"} on the ${ordinal(c.day_of_month)}`
       : everyFew
         ? `every ${c.every_months} months${c.first_month ? ` from ${formatYearMonth(c.first_month)}` : ""} on the ${ordinal(c.day_of_month)}`
@@ -312,7 +314,7 @@ function CommitmentRow({
           {c.to_account_id &&
             ` → ${accountName(accounts, c.to_account_id)}`} ·{" "}
           {BUCKET_LABEL[c.bucket]}
-          {c.frequency === "yearly" &&
+          {freq.kind === "yearly" &&
             ` · ${formatINR(Math.floor(c.amount_paise / 12))}/month set aside`}
           {everyFew &&
             ` · ${formatINR(Math.floor(c.amount_paise / c.every_months))}/month set aside`}
@@ -421,7 +423,8 @@ function StartSaving({
   onSave: (month: string) => void;
   pending: boolean;
 }) {
-  const everyFew = c.frequency === "monthly" && c.every_months > 1;
+  const freq = freqOf(c);
+  const everyFew = freq.kind === "every";
   const [open, setOpen] = useState(openAtFirst);
   const [from, setFrom] = useState(
     everyFew ? thisYearMonth() : (c.start_month ?? thisYearMonth()),
@@ -441,7 +444,7 @@ function StartSaving({
   const month = from || thisYearMonth();
   const preview = everyFew
     ? `First buy in ${formatYearMonth(firstBuyMonth(month, c.every_months))}`
-    : c.frequency === "yearly"
+    : freq.kind === "yearly"
       ? `${formatINR(Math.floor(c.amount_paise / 12))} a month set aside from ${formatYearMonth(month)}`
       : `First payment in ${formatYearMonth(month)}`;
   return (

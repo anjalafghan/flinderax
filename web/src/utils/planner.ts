@@ -17,7 +17,11 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((toUtc(to) - toUtc(from)) / DAY_MS);
 }
 
-/** Today's date in the viewer's local calendar, as "YYYY-MM-DD". */
+/**
+ * Today's date in the viewer's local calendar, as "YYYY-MM-DD". The one local-time helper
+ * (`localDay` and `todayIso` are aliases). Kept-day code uses IST instead: see `isoToday` in
+ * joy/kept/helpers.ts. The two differ for a viewer outside India.
+ */
 export function localIsoDate(now: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;

@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import api from "@/services/api";
 import type { Habit } from "@/services/habits";
-import { formatINR } from "@/utils/money";
+import { formatWholeINR } from "@/utils/money";
 
 // Mirrors the check-in contract, sections A (GET /api/checkin, ...) and B (reminder feed).
 // Money is integer paise, dates are "YYYY-MM-DD", percentages are basis points.
@@ -215,8 +215,7 @@ export const useCompleteCheckin = () =>
 export const isSaved = (s: CheckinStatus): boolean => s.done_today;
 
 /** Whole rupees with Indian grouping, for the planning figures on this page. */
-export const rupees = (paise: number): string =>
-  formatINR(Math.round(paise / 100) * 100);
+export const rupees = formatWholeINR;
 
 /** Whole percent ("22%"), or a dash when there is no income to measure against. */
 export const rate = (bps: number | null): string =>

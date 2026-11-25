@@ -1,4 +1,5 @@
 import { isCookieSession } from "@/session";
+import { storageGet, storageSet } from "@/utils/storage";
 
 /**
  * The server hands a session that is past its halfway point a fresh token in `x-refreshed-token`.
@@ -10,9 +11,9 @@ export function adoptRenewedToken(response: Response): void {
   if (!fresh) return;
   try {
     // Only an older bearer login is renewed this way; a cookie login is renewed in its cookie.
-    const current = localStorage.getItem("token");
+    const current = storageGet("token");
     if (current && !isCookieSession(current))
-      localStorage.setItem("token", fresh);
+      storageSet("token", fresh);
   } catch {
     // Storage can be blocked; the current token keeps working until it expires.
   }

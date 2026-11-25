@@ -1,4 +1,5 @@
 // What a login leaves on this device, and how it is removed when the login ends.
+import { storageGet } from "@/utils/storage";
 // Personal data kept in the browser: the token and its expiry, the what-if drafts, and the offline
 // copies of API answers that public/sw.js keeps in Cache Storage (one cache per token, "joy-data-<hash>").
 // The theme key is a display preference, not personal data, so it stays.
@@ -106,7 +107,7 @@ export function clearSession(): void {
 export async function sweepOfflineCopies(): Promise<void> {
   let token: string | null = null;
   try {
-    token = localStorage.getItem("token");
+    token = storageGet("token");
   } catch {
     /* treat as signed out */
   }

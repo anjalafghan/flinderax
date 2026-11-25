@@ -64,6 +64,7 @@ export function ConfirmationModal({
             variant="ghost"
             size="icon"
             onClick={onClose}
+            aria-label="Close"
             className="h-9 w-9 shrink-0 rounded-full -mt-1 -mr-1"
             disabled={isPending}
           >

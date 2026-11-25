@@ -9,11 +9,28 @@ const fmt = (digits: number) =>
     maximumFractionDigits: digits,
   });
 const whole = fmt(0);
+const rupeesFixed = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+});
 const withPaise = fmt(2);
 
 /** 1234500 -> "₹12,345", 150 -> "₹1.50" (paise shown only when non-zero). */
 export function formatINR(paise: number): string {
   return (paise % 100 === 0 ? whole : withPaise).format(paise / 100);
+}
+
+/** Whole rupees: 150050 -> "₹1,501"; readings, not ledgers, so paise are dropped. */
+export function formatWholeINR(paise: number): string {
+  return formatINR(Math.round(paise / 100) * 100);
+}
+
+/**
+ * Rupees (not paise) with two decimals always, as the card APIs send them (see card.rs):
+ * 1234 -> "₹1,234.00".
+ */
+export function formatRupeesFixed(rupees: number): string {
+  return rupeesFixed.format(rupees);
 }
 
 /**

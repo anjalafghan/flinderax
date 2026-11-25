@@ -24,6 +24,7 @@ import { CardBreakdownPanel } from "@/components/feature/CardBreakdownPanel";
 import { CardSnapshotForm } from "@/components/feature/CardSnapshotForm";
 import { CardLoansSection } from "@/components/feature/CardLoansSection";
 import { cn } from "@/utils/cn";
+import { formatRupeesFixed } from "@/utils/money";
 
 const ConfirmationModal = lazy(() =>
   import("@/components/ui/ConfirmationModal").then((m) => ({
@@ -36,10 +37,7 @@ const EditCardModal = lazy(() =>
   })),
 );
 
-const formatINR = (amount: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
-    amount,
-  );
+const formatINR = formatRupeesFixed;
 
 export default function CardDetailsPage() {
   const { id } = useParams<{ id: string }>();
