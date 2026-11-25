@@ -1,3 +1,5 @@
+> Archived: this is the checklist of the original standalone credit-card app, kept for history. It is not the active backlog.
+
 # ✅ **CREDIT CARD BALANCE APP — TASK LIST**
 
 ---

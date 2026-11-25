@@ -44,17 +44,36 @@ It never touches Fly or a running database. `cargo test --test backup_restore` d
 code: snapshot, open in a fresh pool, migrations no-op, row counts, `/healthz` answers 200.
 Run the drill after any change to the backup code and now and then on a real pulled copy.
 
-## Restore runbook (production)
+## Restoring production
 
-1. Pick a copy and run `scripts/restore-drill.sh` on it first. Stop if it fails.
-2. Stop the app so nothing writes: `fly scale count 0 -a joy`.
-3. Put the copy at `/data/joy-app.db` (`fly ssh sftp` while a machine is up, or start one for the
-   transfer and stop it again). Keep the broken file as `/data/joy-app.db.bad` rather than deleting it.
-4. Delete `/data/joy-app.db-wal` and `/data/joy-app.db-shm`. A stale WAL from the old file would be
-   replayed over the restored one.
-5. Start: `fly scale count 1 -a joy`. The app applies any migrations newer than the copy at start.
-6. Check `curl -fsS https://joy.fly.dev/healthz` (it runs `SELECT 1`), then sign in and look at the
-   dashboard and the Dates page.
+Use this when the live database is damaged or a bad write has to be undone. The copy you restore
+loses everything written after it was taken, so pick the newest good one.
+
+1. **Pick a snapshot.** Either a daily copy on the volume (`fly ssh console -a joy -C "ls /data/backups"`)
+   or an off-volume copy you pulled (see "Off-volume pull"). Bring it to your machine:
+   `fly ssh sftp get -a joy /data/backups/joy-YYYY-MM-DD.db ./restore.db`.
+2. **Check it with the drill.** `scripts/restore-drill.sh ./restore.db`. Stop here if it fails and try an
+   older copy. The drill works on a scratch copy and never touches Fly.
+3. **Stage it on the volume, beside the live file.** While a machine is up:
+   `fly ssh sftp shell -a joy`, then `put ./restore.db /data/joy-restore.db`. This does not touch the
+   running database. (Check the size with `ls -l /data` afterwards.)
+4. **Stop the app so nothing writes.** `fly machine list -a joy` for the machine id, then
+   `fly machine stop <id> -a joy`.
+5. **Swap the file and remove the stale WAL.** With the app stopped, on the volume:
+   `mv /data/joy-app.db /data/joy-app.db.bad`, `mv /data/joy-restore.db /data/joy-app.db`,
+   `rm -f /data/joy-app.db-wal /data/joy-app.db-shm`. The old WAL must go: replayed over the restored
+   file it would corrupt it. Keep the `.bad` file until you are sure.
+   *Uncertain:* a stopped machine has no shell, so this step needs a way to reach the volume while the
+   app is not running. The usual route is a one-off machine that mounts `joy_data`
+   (`fly machine run <image> --volume joy_data:/data -a joy`, with an image that has a shell, then
+   `fly ssh console` into it and stop it afterwards); check the current `fly machine run` flags before
+   relying on this. If that is not workable, do steps 5 and 6 on the running machine and restart it
+   immediately: `fly ssh console -a joy`, run the three commands, `exit`, then
+   `fly machine restart <id> -a joy`.
+6. **Start.** `fly machine start <id> -a joy` (after a one-off machine, stop that one first so two
+   machines never share the volume). The app applies any migrations newer than the copy at start.
+7. **Verify.** `curl -fsS https://joy.fly.dev/healthz` (it runs `SELECT 1`), then sign in and look at the
+   dashboard and the Dates page. If they look right, delete `/data/joy-app.db.bad` later.
 
 ## After a restore: things to know
 
