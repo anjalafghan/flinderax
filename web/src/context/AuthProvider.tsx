@@ -26,6 +26,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const isLoading = false;
   const queryClient = useQueryClient();
 
+  // localStorage is shared across tabs, while React state and query caches are not.
+  // Clear account-scoped data whenever another tab changes or ends the session.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== "token" && event.key !== "expires_at" && event.key !== null) return;
+      const nextToken = localStorage.getItem("token");
+      queryClient.clear();
+      setToken(nextToken);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [queryClient]);
+
   const logout = useCallback(() => {
     // Ends the cookie on the server (best effort: a stale cookie is harmless and expires on its own).
     if (isCookieSession(localStorage.getItem("token"))) {

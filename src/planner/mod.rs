@@ -508,7 +508,7 @@ pub fn emi_effective(
     if left == 0 || months_left == 0 {
         return (0, 0, 0);
     }
-    (monthly, remaining * left / months_left, left)
+    (monthly, (i128::from(remaining) * i128::from(left) / i128::from(months_left)) as i64, left)
 }
 
 // ---------- helpers ----------

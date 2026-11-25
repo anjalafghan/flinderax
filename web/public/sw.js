@@ -93,17 +93,9 @@ function withTimeout(p, ms) {
 
 async function keptApi(req) {
   const cache = await userCache(req);
+  let res;
   try {
-    const res = await withTimeout(fetch(req), NETWORK_TIMEOUT_MS);
-    // The login is no longer valid: its saved copies go too.
-    if (res.status === 401 && cache) await caches.delete(await cacheName(req));
-    if (cache && res.ok) {
-      const body = await res.clone().blob();
-      const headers = new Headers(res.headers);
-      headers.set("x-joy-saved-at", String(Date.now()));
-      await cache.put(req.url, new Response(body, { status: 200, headers }));
-    }
-    return res;
+    res = await withTimeout(fetch(req), NETWORK_TIMEOUT_MS);
   } catch (err) {
     const saved = cache && (await cache.match(req.url));
     const at = saved && Number(saved.headers.get("x-joy-saved-at"));
@@ -114,6 +106,21 @@ async function keptApi(req) {
     }
     throw err;
   }
+
+  // The login is no longer valid: its saved copies go too.
+  if (res.status === 401 && cache) await caches.delete(await cacheName(req));
+  // A cache failure must not replace a successful live response with stale data.
+  if (cache && res.ok) {
+    try {
+      const body = await res.clone().blob();
+      const headers = new Headers(res.headers);
+      headers.set("x-joy-saved-at", String(Date.now()));
+      await cache.put(req.url, new Response(body, { status: 200, headers }));
+    } catch {
+      /* the live response remains authoritative */
+    }
+  }
+  return res;
 }
 
 async function shell(req) {

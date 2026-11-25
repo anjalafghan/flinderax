@@ -3,10 +3,12 @@
 //! `Authorization: Bearer ...`; without either set the route answers 404.
 
 use axum::{
+    body::Body,
     extract::State,
     http::{header, HeaderMap, StatusCode},
     response::IntoResponse,
 };
+use tokio_util::io::ReaderStream;
 
 use crate::{handlers::common::AppError, handlers::push::same, models::AppState};
 
@@ -19,9 +21,10 @@ pub async fn run(State(state): State<AppState>, headers: HeaderMap) -> Result<im
     if !same(given.as_bytes(), token.as_bytes()) {
         return Err(AppError(StatusCode::UNAUTHORIZED, "Not allowed".into()));
     }
-    let bytes = crate::backup::snapshot_bytes(&state.db).await.map_err(|e| {
+    let file = crate::backup::snapshot_file(&state.db).await.map_err(|e| {
         tracing::error!("on-demand backup failed: {e}");
         AppError(StatusCode::INTERNAL_SERVER_ERROR, "Backup failed".into())
     })?;
-    Ok(([(header::CONTENT_TYPE, "application/octet-stream"), (header::CACHE_CONTROL, "no-store")], bytes))
+    let body = Body::from_stream(ReaderStream::new(file));
+    Ok(([(header::CONTENT_TYPE, "application/octet-stream"), (header::CACHE_CONTROL, "no-store")], body))
 }

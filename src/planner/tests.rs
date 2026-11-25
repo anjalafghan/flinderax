@@ -568,6 +568,8 @@ fn emis_age_with_the_calendar() {
     // entered with 0 months left, or an as-of month in the future: no panic, no negative
     assert_eq!(emi_effective(100, 100, 0, oct, oct), (0, 0, 0));
     assert_eq!(emi_effective(381_500, 1_473_900, 4, oct + 2, oct), (381_500, 1_473_900, 4));
+    // Even legacy rows at extreme i64 values must not overflow projection arithmetic.
+    assert_eq!(emi_effective(0, i64::MAX, 2, oct, oct + 1), (0, i64::MAX / 2, 1));
 }
 
 #[test]

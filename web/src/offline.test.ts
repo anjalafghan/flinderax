@@ -96,4 +96,22 @@ describe("writes that survive having no signal", () => {
     behave = () => new Response("oops", { status: 503 });
     expect(await flush()).toEqual({ sent: 0, dropped: [], left: 1 });
   });
+
+  test("an expired session retains queued writes until reauthentication", async () => {
+    enqueue({ key: "k1", url: "/api/a", body: {}, label: "First" });
+    behave = () => new Response("expired", { status: 401 });
+    expect(await flush()).toEqual({ sent: 0, dropped: [], left: 1 });
+    expect(loadQueue()).toHaveLength(1);
+  });
+
+  test("one signed-in account cannot flush another session's queued writes", async () => {
+    enqueue({ key: "a1", url: "/api/a", body: {}, label: "A" });
+    localStorage.setItem("token", "s_user_b");
+    enqueue({ key: "b1", url: "/api/b", body: {}, label: "B" });
+    expect(await flush()).toEqual({ sent: 1, dropped: [], left: 0 });
+    expect(calls.map((call) => call.url)).toEqual(["/api/b"]);
+    localStorage.setItem("token", "s_abc");
+    expect(await flush()).toEqual({ sent: 1, dropped: [], left: 0 });
+    expect(calls.map((call) => call.url)).toEqual(["/api/b", "/api/a"]);
+  });
 });

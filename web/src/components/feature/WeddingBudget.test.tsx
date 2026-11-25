@@ -58,6 +58,8 @@ beforeEach(() => {
   calls = [];
   offline = false;
   localStorage.clear();
+  // Mutations are only queued for a signed-in session, matching the app's real offline flow.
+  localStorage.setItem("token", "s_test-session");
   budget = {
     goal_id: "g1",
     name: "Wedding",

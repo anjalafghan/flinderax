@@ -108,6 +108,9 @@ pub async fn record(
     if moving && (p.from_account_id.is_none() || p.to_account_id.is_none()) {
         return Err(bad_request("a move needs from_account_id and to_account_id"));
     }
+    if moving && p.from_account_id == p.to_account_id {
+        return Err(bad_request("from_account_id and to_account_id must be different"));
+    }
 
     let key = p.idempotency_key.as_deref().map(str::trim).filter(|k| !k.is_empty());
     if key.is_some_and(|k| k.len() > 100) {
@@ -116,12 +119,18 @@ pub async fn record(
     let move_id = nanoid!();
     let mut tx = state.db.begin().await?;
     if let Some(k) = key {
-        let seen: Option<String> = sqlx::query_scalar("SELECT move_id FROM moves WHERE user_id = ? AND idempotency_key = ?")
-            .bind(&user_id)
-            .bind(k)
-            .fetch_optional(&mut *tx)
-            .await?;
-        if let Some(move_id) = seen {
+        let seen: Option<(String, String, String, i64, String, Option<String>, Option<String>)> =
+            sqlx::query_as("SELECT move_id, kind, move_key, amount_paise, mode, from_account_id, to_account_id FROM moves WHERE user_id = ? AND idempotency_key = ?")
+                .bind(&user_id)
+                .bind(k)
+                .fetch_optional(&mut *tx)
+                .await?;
+        if let Some((move_id, kind, move_key, amount, mode, from, to)) = seen {
+            if kind != p.kind || move_key != p.key || amount != p.amount_paise || mode != p.mode
+                || from != p.from_account_id || to != p.to_account_id
+            {
+                return Err(AppError(axum::http::StatusCode::CONFLICT, "Idempotency key was already used for a different move".into()));
+            }
             return Ok(Json(MoveId { move_id, status: true }));
         }
     }
