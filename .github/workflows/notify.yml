@@ -20,9 +20,12 @@ jobs:
     steps:
       - name: Pick the slot
         id: slot
+        env:
+          INPUT_SLOT: ${{ github.event.inputs.slot }}
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
-          if [ -n "${{ github.event.inputs.slot }}" ]; then echo "slot=${{ github.event.inputs.slot }}" >> "$GITHUB_OUTPUT";
-          elif [ "${{ github.event.schedule }}" = "0 2 * * *" ]; then echo "slot=morning" >> "$GITHUB_OUTPUT";
+          if [ "$INPUT_SLOT" = "morning" ] || [ "$INPUT_SLOT" = "evening" ]; then echo "slot=$INPUT_SLOT" >> "$GITHUB_OUTPUT";
+          elif [ "$SCHEDULE" = "0 2 * * *" ]; then echo "slot=morning" >> "$GITHUB_OUTPUT";
           else echo "slot=evening" >> "$GITHUB_OUTPUT"; fi
       - name: Send
         env:

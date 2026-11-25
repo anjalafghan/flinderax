@@ -7,7 +7,8 @@ A private life-planning app for one household: money (Flinderax) plus the date j
 - `src/planner/`: pure rules. No IO, `today` is passed in. Keep it that way.
 - `src/joy/picker.rs`, `src/joy/taste.rs`: pure and deterministic under a seeded RNG. Keep IO out.
 - `src/handlers/`, `src/joy/api/`: HTTP. Newer files still mix SQL and rules; new code should follow `handlers/x.rs` (HTTP), SQL helpers, `planner/x.rs` (rules).
-- `src/joy/db.rs`: all Dates SQL.
+- `src/joy/db/`: all Dates SQL (`mod.rs` plus submodules).
+- `src/routes/`: route tables (which path goes to which handler).
 - `web/src/`: SPA. Dates lives in `web/src/joy/`.
 
 ## Rules that must keep holding
