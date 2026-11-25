@@ -555,174 +555,176 @@ function SlipForm({ id, view }: { id: string | null; view: FormView }) {
           <summary>
             More details <span className="opt">for the day-of plan</span>
           </summary>
-          <p className="hint">
-            The jar uses these to work out when to leave, whether to book, and
-            what to bring. Leave any of them blank.
-          </p>
-          <div className="field">
-            <label htmlFor="f-hours">Opening hours</label>
-            <input
-              ref={hoursRef}
-              id="f-hours"
-              name="hours"
-              value={s.hours}
-              onChange={(e) => set("hours", e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="e.g. tue-sun 12:00-23:30; mon 18:00-23:00"
-              aria-describedby="hours-hint"
-              aria-invalid={fieldErr === "hours" ? true : undefined}
-            />
-            <p className="hint" id="hours-hint">
-              {view.hours_today
-                ? `Today: ${view.hours_today}`
-                : "Write the days, then the open and close in 24-hour time, like tue-sun 12:00-23:30. Separate different days with a semicolon. A close before the open runs past midnight."}
+          <div className="more-body">
+            <p className="hint">
+              The jar uses these to work out when to leave, whether to book, and
+              what to bring. Leave any of them blank.
             </p>
-          </div>
-          <div className="pair">
             <div className="field">
-              <label htmlFor="f-best">Best time</label>
-              <div className="select">
-                <select
-                  id="f-best"
-                  name="best_time"
-                  value={s.best_time}
-                  onChange={(e) => set("best_time", e.target.value)}
-                >
-                  <option value="">Any time</option>
-                  {view.best_times.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="field">
-              <label htmlFor="f-min">How long, in minutes</label>
+              <label htmlFor="f-hours">Opening hours</label>
               <input
-                id="f-min"
-                type="number"
-                name="minutes"
-                value={s.minutes}
-                onChange={(e) => set("minutes", e.target.value)}
-                inputMode="numeric"
-                min={1}
-                step={5}
-                placeholder="90"
+                ref={hoursRef}
+                id="f-hours"
+                name="hours"
+                value={s.hours}
+                onChange={(e) => set("hours", e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="e.g. tue-sun 12:00-23:30; mon 18:00-23:00"
+                aria-describedby="hours-hint"
+                aria-invalid={fieldErr === "hours" ? true : undefined}
               />
+              <p className="hint" id="hours-hint">
+                {view.hours_today
+                  ? `Today: ${view.hours_today}`
+                  : "Write the days, then the open and close in 24-hour time, like tue-sun 12:00-23:30. Separate different days with a semicolon. A close before the open runs past midnight."}
+              </p>
             </div>
-          </div>
-          <div className="pair">
-            <div className="field">
-              <label htmlFor="f-book">Booking</label>
-              <div className="select">
-                <select
-                  id="f-book"
-                  name="booking"
-                  value={s.booking}
-                  onChange={(e) => set("booking", e.target.value)}
-                >
-                  <option value="">Not sure</option>
-                  {view.bookings.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+            <div className="pair">
+              <div className="field">
+                <label htmlFor="f-best">Best time</label>
+                <div className="select">
+                  <select
+                    id="f-best"
+                    name="best_time"
+                    value={s.best_time}
+                    onChange={(e) => set("best_time", e.target.value)}
+                  >
+                    <option value="">Any time</option>
+                    {view.best_times.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
-            <div className="field">
-              <label htmlFor="f-ahead">Days ahead</label>
-              <input
-                id="f-ahead"
-                type="number"
-                name="book_ahead_days"
-                value={s.book_ahead_days}
-                onChange={(e) => set("book_ahead_days", e.target.value)}
-                inputMode="numeric"
-                min={1}
-                max={90}
-                placeholder="2"
-              />
-            </div>
-          </div>
-          <fieldset className="chips">
-            <legend className="sub-legend">If it rains</legend>
-            <div className="chip-row">
-              <label className="chip">
+              <div className="field">
+                <label htmlFor="f-min">How long, in minutes</label>
                 <input
-                  type="radio"
-                  name="cover"
-                  value=""
-                  checked={s.cover === ""}
-                  onChange={() => set("cover", "")}
+                  id="f-min"
+                  type="number"
+                  name="minutes"
+                  value={s.minutes}
+                  onChange={(e) => set("minutes", e.target.value)}
+                  inputMode="numeric"
+                  min={1}
+                  step={5}
+                  placeholder="90"
                 />
-                <span>Not sure</span>
-              </label>
-              {view.covers.map((o) => (
-                <label key={o.value} className="chip">
+              </div>
+            </div>
+            <div className="pair">
+              <div className="field">
+                <label htmlFor="f-book">Booking</label>
+                <div className="select">
+                  <select
+                    id="f-book"
+                    name="booking"
+                    value={s.booking}
+                    onChange={(e) => set("booking", e.target.value)}
+                  >
+                    <option value="">Not sure</option>
+                    {view.bookings.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="f-ahead">Days ahead</label>
+                <input
+                  id="f-ahead"
+                  type="number"
+                  name="book_ahead_days"
+                  value={s.book_ahead_days}
+                  onChange={(e) => set("book_ahead_days", e.target.value)}
+                  inputMode="numeric"
+                  min={1}
+                  max={90}
+                  placeholder="2"
+                />
+              </div>
+            </div>
+            <fieldset className="chips">
+              <legend className="sub-legend">If it rains</legend>
+              <div className="chip-row">
+                <label className="chip">
                   <input
                     type="radio"
                     name="cover"
-                    value={o.value}
-                    checked={s.cover === o.value}
-                    onChange={() => set("cover", o.value)}
+                    value=""
+                    checked={s.cover === ""}
+                    onChange={() => set("cover", "")}
                   />
-                  <span>{o.label}</span>
+                  <span>Not sure</span>
                 </label>
-              ))}
-            </div>
-          </fieldset>
-          <div className="field">
-            <label htmlFor="f-bring">Bring</label>
-            <input
-              id="f-bring"
-              name="bring"
-              value={s.bring}
-              onChange={(e) => set("bring", e.target.value)}
-              autoComplete="off"
-              placeholder="closed shoes, cash"
-            />
-          </div>
-          <div className="pair">
+                {view.covers.map((o) => (
+                  <label key={o.value} className="chip">
+                    <input
+                      type="radio"
+                      name="cover"
+                      value={o.value}
+                      checked={s.cover === o.value}
+                      onChange={() => set("cover", o.value)}
+                    />
+                    <span>{o.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <div className="field">
-              <label htmlFor="f-url">Link</label>
+              <label htmlFor="f-bring">Bring</label>
               <input
-                id="f-url"
-                type="url"
-                name="url"
-                value={s.url}
-                onChange={(e) => set("url", e.target.value)}
+                id="f-bring"
+                name="bring"
+                value={s.bring}
+                onChange={(e) => set("bring", e.target.value)}
                 autoComplete="off"
-                placeholder="https://… booking page or menu"
-                maxLength={300}
+                placeholder="closed shoes, cash"
               />
             </div>
-            <div className="field">
-              <label htmlFor="f-station">Nearest station</label>
-              <input
-                id="f-station"
-                name="station"
-                value={s.station}
-                onChange={(e) => set("station", e.target.value)}
-                autoComplete="off"
-                placeholder="Andheri"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="f-walk">Walk, in minutes</label>
-              <input
-                id="f-walk"
-                type="number"
-                name="station_walk_min"
-                value={s.station_walk_min}
-                onChange={(e) => set("station_walk_min", e.target.value)}
-                inputMode="numeric"
-                min={1}
-                max={120}
-                placeholder="10"
-              />
+            <div className="pair">
+              <div className="field">
+                <label htmlFor="f-url">Link</label>
+                <input
+                  id="f-url"
+                  type="url"
+                  name="url"
+                  value={s.url}
+                  onChange={(e) => set("url", e.target.value)}
+                  autoComplete="off"
+                  placeholder="https://… booking page or menu"
+                  maxLength={300}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="f-station">Nearest station</label>
+                <input
+                  id="f-station"
+                  name="station"
+                  value={s.station}
+                  onChange={(e) => set("station", e.target.value)}
+                  autoComplete="off"
+                  placeholder="Andheri"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="f-walk">Walk, in minutes</label>
+                <input
+                  id="f-walk"
+                  type="number"
+                  name="station_walk_min"
+                  value={s.station_walk_min}
+                  onChange={(e) => set("station_walk_min", e.target.value)}
+                  inputMode="numeric"
+                  min={1}
+                  max={120}
+                  placeholder="10"
+                />
+              </div>
             </div>
           </div>
         </details>

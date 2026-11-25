@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Trash2, Check, Plus } from "lucide-react";
+import { useRef, useState } from "react";
+import { Trash2, Check, Plus, Pencil } from "lucide-react";
 
 import { cardPlanApi } from "@/services/api";
 import { keys, usePlannerMutation } from "@/hooks/usePlanner";
@@ -10,9 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatINR, toPaise } from "@/utils/money";
+import { formatINR, paiseToInput, toPaise } from "@/utils/money";
 
-/** EMIs and not-yet-posted charges for one card: add, remove, mark as posted. */
+/** EMIs and not-yet-posted charges for one card: add, edit, remove, mark as posted. */
 export function CardLoansSection({
   cardId,
   breakdown,
@@ -24,6 +24,9 @@ export function CardLoansSection({
   const addEmi = usePlannerMutation(cardPlanApi.createEmi, refresh, {
     success: "EMI added",
   });
+  const updateEmi = usePlannerMutation(cardPlanApi.updateEmi, refresh, {
+    success: "EMI updated",
+  });
   const removeEmi = usePlannerMutation(cardPlanApi.removeEmi, refresh, {
     success: "EMI removed",
   });
@@ -34,12 +37,26 @@ export function CardLoansSection({
     success: "Marked as posted",
   });
 
-  const [emi, setEmi] = useState({
-    label: "",
-    monthly: "",
-    remaining: "",
-    months: "",
-  });
+  const blankEmi = { label: "", monthly: "", remaining: "", months: "" };
+  const [emi, setEmi] = useState(blankEmi);
+  /** The EMI being edited; null while the form adds a new one. */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const emiLabelRef = useRef<HTMLInputElement>(null);
+  const resetEmi = () => {
+    setEmi(blankEmi);
+    setEditingId(null);
+  };
+  const startEdit = (e: CardBreakdown["emis"][number]) => {
+    setEditingId(e.emi_id);
+    setEmi({
+      label: e.label,
+      monthly: paiseToInput(e.monthly_paise),
+      remaining: paiseToInput(e.remaining_principal_paise),
+      months: String(e.months_left),
+    });
+    setError(null);
+    emiLabelRef.current?.focus();
+  };
   const [charge, setCharge] = useState({ label: "", amount: "" });
   const [error, setError] = useState<string | null>(null);
 
@@ -60,19 +77,20 @@ export function CardLoansSection({
       );
     }
     setError(null);
-    addEmi.mutate(
-      {
-        card_id: cardId,
-        label: emi.label.trim(),
-        monthly_paise: monthly,
-        remaining_principal_paise: remaining,
-        months_left: months,
-      },
-      {
-        onSuccess: () =>
-          setEmi({ label: "", monthly: "", remaining: "", months: "" }),
-      },
-    );
+    const fields = {
+      label: emi.label.trim(),
+      monthly_paise: monthly,
+      remaining_principal_paise: remaining,
+      months_left: months,
+    };
+    if (editingId) {
+      updateEmi.mutate(
+        { emi_id: editingId, ...fields },
+        { onSuccess: resetEmi },
+      );
+    } else {
+      addEmi.mutate({ card_id: cardId, ...fields }, { onSuccess: resetEmi });
+    }
   };
 
   const submitCharge = (e: React.FormEvent) => {
@@ -115,10 +133,22 @@ export function CardLoansSection({
                   variant="ghost"
                   size="icon"
                   className="h-9 w-9 shrink-0"
+                  aria-label={`Edit ${e.label}`}
+                  aria-pressed={editingId === e.emi_id}
+                  onClick={() => startEdit(e)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
                   aria-label={`Remove ${e.label}`}
                   onClick={() =>
                     window.confirm(`Remove EMI "${e.label}"?`) &&
-                    removeEmi.mutate(e.emi_id)
+                  removeEmi.mutate(e.emi_id, {
+                    onSuccess: () => editingId === e.emi_id && resetEmi(),
+                  })
                   }
                 >
                   <Trash2 className="h-4 w-4" />
@@ -137,6 +167,7 @@ export function CardLoansSection({
             <div className="field col-span-full">
               <Label htmlFor="emi-label">EMI name</Label>
               <Input
+                ref={emiLabelRef}
                 id="emi-label"
                 value={emi.label}
                 onChange={(e) => setEmi({ ...emi, label: e.target.value })}
@@ -170,13 +201,22 @@ export function CardLoansSection({
             </div>
             <div className="form-actions">
               <ResetButton
-                label="Clear"
-                onReset={() =>
-                  setEmi({ label: "", monthly: "", remaining: "", months: "" })
-                }
+                label={editingId ? "Cancel" : "Clear"}
+                onReset={resetEmi}
               />
-              <Button type="submit" disabled={addEmi.isPending}>
-                <Plus className="mr-2 h-4 w-4" /> Add EMI
+              <Button
+                type="submit"
+                disabled={addEmi.isPending || updateEmi.isPending}
+              >
+                {editingId ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" /> Save EMI
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" /> Add EMI
+                  </>
+                )}
               </Button>
             </div>
           </form>
