@@ -17,7 +17,7 @@ use nanoid::nanoid;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use time::{macros::format_description, Date, Duration};
+use time::{Date, Duration};
 
 use crate::{
     alerts::{self, categorize, normalize, Alert, Direction, CATEGORIES},
@@ -104,7 +104,7 @@ pub struct Done {
 }
 
 fn parse_date(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 fn hash_key(key: &str) -> String {
@@ -460,7 +460,7 @@ pub async fn list(
     Query(q): Query<MonthQuery>,
 ) -> Result<Json<Vec<TxnRow>>, AppError> {
     let today = today_local();
-    let ym = q.month.unwrap_or_else(|| format!("{:04}-{:02}", today.year(), today.month() as u8));
+    let ym = q.month.unwrap_or_else(|| crate::planner::dates::month_key(today.year(), today.month() as u8));
     let (from, to) = month_bounds(&ym).ok_or_else(|| bad_request("month must look like 2026-11"))?;
     Ok(Json(
         sqlx::query_as!(
@@ -1598,7 +1598,7 @@ mod statement_tests {
             "INSERT INTO card_emis (emi_id, card_id, label, monthly_paise, remaining_principal_paise, months_left, as_of_month)
              VALUES ('e1', 'cardA', 'Phone', 300000, 1500000, 5, ?)",
         )
-        .bind(format!("{:04}-{:02}", today.year(), today.month() as u8))
+        .bind(crate::planner::dates::month_key(today.year(), today.month() as u8))
         .execute(&state.db)
         .await
         .unwrap();

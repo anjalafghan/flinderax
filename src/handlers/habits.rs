@@ -246,7 +246,7 @@ async fn food(db: &sqlx::SqlitePool, user_id: &str, today: Date) -> Result<FoodI
 
 /// "YYYY-MM" for a date, the form the analytics use for months.
 fn month_key(d: Date) -> String {
-    format!("{:04}-{:02}", d.year(), d.month() as u8)
+    crate::planner::dates::month_key(d.year(), d.month() as u8)
 }
 
 /// The last day of the month before `d`'s month.

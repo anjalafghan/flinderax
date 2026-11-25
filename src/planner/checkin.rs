@@ -715,9 +715,13 @@ fn label(category: &str) -> String {
 }
 
 /// Paise as whole rupees with Indian grouping: ₹2,13,596. Halves round away from zero.
+///
+/// Not the same as `life::inr`, which rounds halves up (so -50 paise is "₹0" there and "-₹1"
+/// here), and not `format_inr`, which keeps non-zero paise. Check-in text reads better with
+/// symmetric rounding, so the three stay separate. Safe for every `i64` (including `i64::MIN`).
 pub fn rupees(paise: i64) -> String {
-    let whole = (paise.abs() + 50) / 100 * paise.signum();
-    format_inr(whole * 100)
+    let whole = ((paise.unsigned_abs() + 50) / 100) as i64 * 100;
+    format_inr(if paise < 0 { -whole } else { whole })
 }
 
 #[cfg(test)]
@@ -996,6 +1000,9 @@ mod tests {
         assert_eq!(rupees(-50), "-₹1");
         assert_eq!(rupees(-5_050), "-₹51");
         assert_eq!(rupees(0), "₹0");
+        assert_eq!(rupees(-49), "₹0");
+        assert_eq!(rupees(i64::MAX), "₹92,23,37,20,36,85,47,758");
+        assert_eq!(rupees(i64::MIN), "-₹92,23,37,20,36,85,47,758");
     }
 
     #[test]

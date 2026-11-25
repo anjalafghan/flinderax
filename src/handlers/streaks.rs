@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axum::{extract::State, Extension, Json};
 use serde::Serialize;
-use time::{macros::format_description, Date, Month};
+use time::{Date, Month};
 
 use crate::{
     alerts::is_spending,
@@ -40,7 +40,7 @@ pub struct StreaksOut {
 }
 
 fn parse(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 /// `"2026-10"` as a month index.

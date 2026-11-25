@@ -15,6 +15,8 @@ use crate::{
 
 /// Days in an average month, for the money left each month.
 const DAYS_PER_MONTH: f64 = 30.44;
+/// Fewest months of statements after the snapshot before a monthly surplus is worked out.
+const MIN_SURPLUS_MONTHS: f64 = 0.9;
 
 /// The forecast as it stands today, to keep with a check-in.
 pub async fn snapshot(state: &AppState, user_id: &str, today: Date) -> Result<Snapshot, AppError> {
@@ -66,7 +68,7 @@ pub async fn latest(state: &AppState, user_id: &str, today: Date) -> Result<Opti
         let months = days as f64 / DAYS_PER_MONTH;
         let period = Period { start, end };
         let (totals, ..) = report(&txns, period, Period { start: made_on, end: made_on });
-        (months >= 0.9).then(|| ((totals.income_paise - totals.spend_paise) as f64 / months).round() as i64)
+        (months >= MIN_SURPLUS_MONTHS).then(|| ((totals.income_paise - totals.spend_paise) as f64 / months).round() as i64)
     });
 
     // Saved amounts now, from the plan.
@@ -88,7 +90,7 @@ pub fn day_label(on: &str) -> String {
 }
 
 fn day(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 #[derive(serde::Serialize)]

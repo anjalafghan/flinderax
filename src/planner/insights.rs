@@ -41,6 +41,14 @@ const BIG_TICKET_PAISE: i64 = 2_500_000;
 const SPEND_WINDOW_DAYS: i64 = 90;
 const SIMULATIONS: usize = 500;
 const TARGET_SAVINGS_BPS: i64 = 2_000;
+/// Most health-score points a savings-rate shortfall can cost.
+const SAVINGS_PENALTY_MAX: f64 = 30.0;
+/// Most health-score points a thin emergency cover can cost.
+const EMERGENCY_PENALTY_MAX: f64 = 25.0;
+/// Health-score points lost for swinging income.
+const SWINGING_INCOME_PENALTY: f64 = 10.0;
+/// Health-score points lost for costly charges.
+const COSTLY_CHARGES_PENALTY: f64 = 10.0;
 const TARGET_EMERGENCY_TENTHS: i64 = 30;
 const CV_ALERT_BPS: i64 = 2_500;
 const CHARGES_ALERT_PAISE: i64 = 200_000;
@@ -83,7 +91,7 @@ fn month_index(d: Date) -> i32 {
 }
 
 fn month_label(idx: i32) -> String {
-    format!("{:04}-{:02}", idx.div_euclid(12), idx.rem_euclid(12) + 1)
+    crate::planner::dates::month_key(idx.div_euclid(12), (idx.rem_euclid(12) + 1) as u8)
 }
 
 fn median(mut values: Vec<i64>) -> i64 {
@@ -459,16 +467,16 @@ impl HealthFacts {
     fn score(&self) -> i64 {
         let mut score = 100.0_f64;
         if let Some(rate) = self.low_savings_rate() {
-            score -= ((TARGET_SAVINGS_BPS - rate) as f64 * 30.0 / TARGET_SAVINGS_BPS as f64).min(30.0);
+            score -= ((TARGET_SAVINGS_BPS - rate) as f64 * SAVINGS_PENALTY_MAX / TARGET_SAVINGS_BPS as f64).min(SAVINGS_PENALTY_MAX);
         }
         if let Some(t) = self.low_emergency_cover() {
-            score -= ((TARGET_EMERGENCY_TENTHS - t) as f64 * 25.0 / TARGET_EMERGENCY_TENTHS as f64).min(25.0);
+            score -= ((TARGET_EMERGENCY_TENTHS - t) as f64 * EMERGENCY_PENALTY_MAX / TARGET_EMERGENCY_TENTHS as f64).min(EMERGENCY_PENALTY_MAX);
         }
         if self.swinging_income().is_some() {
-            score -= 10.0;
+            score -= SWINGING_INCOME_PENALTY;
         }
         if self.costly_charges() {
-            score -= 10.0;
+            score -= COSTLY_CHARGES_PENALTY;
         }
         score.round().clamp(0.0, 100.0) as i64
     }

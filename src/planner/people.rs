@@ -3,7 +3,7 @@
 //! Money is paise. No names appear in the report text.
 
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, util::is_leap_year, Date, Duration, Month};
+use time::{util::is_leap_year, Date, Duration, Month};
 
 use crate::planner::{
     checkin::{rupees, Period},
@@ -11,7 +11,8 @@ use crate::planner::{
     short_date,
 };
 
-const ISO: &[time::format_description::FormatItem<'static>] = format_description!("[year]-[month]-[day]");
+/// Days counted as one month in "caught up N months ago".
+const DAYS_PER_MONTH: i64 = 30;
 
 /// A person is `due_soon` this many days before the catch-up date.
 pub const CATCH_UP_SOON_DAYS: i64 = 7;
@@ -253,7 +254,7 @@ pub fn possible_day(month: u8, day: u8) -> bool {
 }
 
 fn parse_iso(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, ISO).ok()
+    super::dates::parse_ymd_prefix(s)
 }
 
 /// Calendar text for the kind, used in titles.
@@ -387,7 +388,7 @@ fn ago(last: Option<Date>, today: Date) -> String {
     } else if days < 60 {
         plural(days / 7, "week")
     } else {
-        plural(days / 30, "month")
+        plural(days / DAYS_PER_MONTH, "month")
     };
     format!("Last caught up {when} ago.")
 }

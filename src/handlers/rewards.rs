@@ -84,7 +84,7 @@ pub struct Done {
 }
 
 fn month_of(day: Date) -> String {
-    format!("{:04}-{:02}", day.year(), day.month() as u8)
+    crate::planner::dates::month_key(day.year(), day.month() as u8)
 }
 
 async fn cap_of(db: &sqlx::SqlitePool, user_id: &str) -> Result<Option<i64>, AppError> {

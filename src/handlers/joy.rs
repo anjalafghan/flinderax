@@ -4,7 +4,7 @@
 
 use axum::{extract::State, Extension, Json};
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date};
+use time::{Date};
 
 use crate::{
     handlers::{
@@ -49,7 +49,7 @@ pub struct JoyPayload {
 }
 
 fn parse_date(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 
@@ -193,7 +193,7 @@ pub async fn summary(State(state): State<AppState>, Extension((user_id, _)): Use
 /// This month's figures and recent entries from a payload, with your share.
 fn fill_month(out: &mut Summary, p: &JoyPayload, partner_paise: i64) {
     let today = today_local();
-    let this_month = format!("{:04}-{:02}", today.year(), today.month() as u8);
+    let this_month = crate::planner::dates::month_key(today.year(), today.month() as u8);
     let Some(m) = p.months.iter().find(|m| m.month == this_month).or(p.months.last()) else { return };
     let budget = m.budget.map(|b| b + m.carry);
     let spent = m.spent;

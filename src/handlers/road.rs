@@ -18,7 +18,7 @@ use crate::{
 type User = Extension<(String, String)>;
 
 fn parse_day(s: &str) -> Option<time::Date> {
-    time::Date::parse(s.get(..10)?, time::macros::format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 pub async fn get(State(state): State<AppState>, Extension((user_id, name)): User) -> Result<Json<Road>, AppError> {

@@ -6,11 +6,13 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date, Month};
+use time::{Date, Month};
 
 use super::format_inr;
 
-/// Money in advice text: whole rupees (planning figures, not ledger entries).
+/// Money in advice text: whole rupees (planning figures, not ledger entries). Halves round up
+/// (towards +infinity), unlike `checkin::rupees`, which rounds them away from zero; the planning
+/// text and its golden snapshots depend on this, so the two are kept apart.
 pub(crate) fn inr(paise: i64) -> String {
     format_inr(paise.saturating_add(50).div_euclid(100).saturating_mul(100))
 }
@@ -227,7 +229,7 @@ pub fn mix_for(months: i64) -> Mix {
 
 /// Parses a `YYYY-MM-DD` date. `None` when it isn't one.
 pub fn parse_date(s: &str) -> Option<Date> {
-    Date::parse(s.trim(), format_description!("[year]-[month]-[day]")).ok()
+    super::dates::parse_ymd(s.trim())
 }
 
 /// Keeps an amount inside `0..=MAX_AMOUNT_PAISE`.
@@ -625,6 +627,18 @@ mod tests {
 
     fn today() -> Date {
         date!(2026 - 11 - 09)
+    }
+
+    #[test]
+    fn inr_rounds_halves_up_and_never_overflows() {
+        assert_eq!(inr(0), "₹0");
+        assert_eq!(inr(49), "₹0");
+        assert_eq!(inr(50), "₹1");
+        assert_eq!(inr(-50), "₹0");
+        assert_eq!(inr(-51), "-₹1");
+        assert_eq!(inr(-150), "-₹1");
+        assert_eq!(inr(i64::MAX), "₹92,23,37,20,36,85,47,758");
+        assert_eq!(inr(i64::MIN), "-₹92,23,37,20,36,85,47,758");
     }
 
     fn goal<'a>(plan: &'a LifePlan, key: &str) -> &'a LifeGoal {

@@ -7,7 +7,7 @@ use axum::{
 };
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date};
+use time::{Date};
 
 use crate::{
     handlers::{
@@ -29,7 +29,7 @@ type User = Extension<(String, String)>;
 const KINDS: [&str; 6] = ["premium", "tax", "fee", "maturity", "wedding", "other"];
 
 fn parse_date(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 #[derive(Serialize)]
