@@ -155,6 +155,9 @@ export function goalBody(id: string) {
 export type RolloverChoice = "roll" | "save" | "fresh";
 export const rolloverBody = (choice: RolloverChoice) => ({ choice });
 
-/** Today in India, as "YYYY-MM-DD" (kept days are IST dates). */
+/**
+ * Today in India, as "YYYY-MM-DD" (kept days are IST dates). Unlike `localIsoDate` in
+ * utils/planner.ts, which follows the viewer's own clock, this is fixed to IST on purpose.
+ */
 export const isoToday = () =>
   new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);

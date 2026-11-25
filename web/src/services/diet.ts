@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import api from "@/services/api";
+import { localIsoDate } from "@/utils/planner";
 
 // Mirrors the diet and health contract, section A (GET /api/diet and the endpoints under it).
 // Money is integer paise, dates are "YYYY-MM-DD", weight and waist are tenths (kg x10, cm x10).
@@ -208,10 +209,7 @@ export const useClearDietMarks = () => useDietWrite(clearDietMarks);
 export const useSaveDietCap = () => useDietWrite(saveDietCap);
 
 /** Today as "YYYY-MM-DD" in the viewer's own calendar. */
-export const todayIso = (now: Date = new Date()): string => {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-};
+export const todayIso = localIsoDate;
 
 /** 705 -> "70.5 kg". */
 export const kgLabel = (x10: number): string => `${(x10 / 10).toFixed(1)} kg`;
