@@ -1,10 +1,7 @@
-import { lazy, Suspense } from "react";
 import { Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import Counter from "@/components/bits/Counter";
-import StarBorder from "@/components/bits/StarBorder";
-import { useTheme } from "@/context/ThemeContext";
 
 import type { DashboardSummary, Status } from "@/services/types";
 import { formatDay } from "@/utils/dates";
@@ -12,17 +9,6 @@ import { formatINR } from "@/utils/money";
 import { daysBetween, localIsoDate } from "@/utils/planner";
 import { cn } from "@/utils/cn";
 import { useCountUp } from "@/hooks/useCountUp";
-
-// The one WebGL background on Today, loaded after the number so it never holds it up.
-const SoftAurora = lazy(() => import("@/components/bits/SoftAurora"));
-
-/** Aurora colours per status: mint when fine, sun when snug, coral when over. */
-const AURORA: Record<Tone["tone"] | "quiet", [string, string]> = {
-  good: ["#8a8073", "#8a8073"],
-  warn: ["#8a8073", "#8a8073"],
-  over: ["#8a8073", "#8a8073"],
-  quiet: ["#8a8073", "#8a8073"],
-};
 
 /**
  * Rupees as an odometer. The formatted text (same as formatINR) sits in a screen-reader copy inside
@@ -62,7 +48,6 @@ interface Tone {
   label: string;
   /** Shown instead of `label` when the data behind the number is old. */
   unsure: string;
-  tone: "good" | "warn" | "over";
   line: (until: string) => string;
 }
 
@@ -70,19 +55,16 @@ const TONES: Record<Status, Tone> = {
   green: {
     label: "You’re doing well",
     unsure: "Probably fine",
-    tone: "good",
     line: () => "On track. Nicely done.",
   },
   yellow: {
     label: "Getting snug",
     unsure: "Probably tight",
-    tone: "warn",
     line: () => "A little care this week keeps you comfortable.",
   },
   red: {
     label: "A bit over plan",
     unsure: "Possibly over",
-    tone: "over",
     line: (u) => `Pause non-essentials until ${u}. You can get back on track.`,
   },
 };
@@ -99,7 +81,7 @@ function isoMinusDays(iso: string, days: number): string {
   return localIsoDate(t);
 }
 
-/** One bar per day of the pay period: past days muted, today in the status colour, the rest hairline. */
+/** One bar per day of the pay period in a restrained, monochrome treatment. */
 function PeriodStrip({
   start,
   until,
@@ -133,17 +115,13 @@ function PeriodStrip({
               i < elapsed
                 ? {
                     ["--i" as string]: i,
-                    // Days gone are slices of one sunrise gradient across the whole period.
-                    backgroundImage:
-                      "linear-gradient(90deg, hsl(var(--brand-3)), hsl(var(--brand)), hsl(var(--brand-2)))",
-                    backgroundSize: `${total * 100}% 100%`,
-                    backgroundPosition: `${total > 1 ? (i / (total - 1)) * 100 : 0}% 0`,
+                    background: "hsl(var(--foreground) / 0.42)",
                   }
                 : i === elapsed
                   ? {
                       ["--i" as string]: i,
                       background: dot,
-                      boxShadow: `0 0 10px ${dot}`,
+                      boxShadow: "none",
                     }
                   : {
                       ["--i" as string]: i,
@@ -183,16 +161,10 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
   const tilde = freshness === "fresh" ? "" : "~";
   const since = oldest ? formatDay(isoMinusDays(today, oldest.days_old)) : "";
 
-  // Warnings keep their colour when unsure; only "fine" softens, because we can't promise it.
-  const pillClass =
-    freshness !== "fresh" && t.tone === "good"
-      ? "tone-quiet"
-      : `tone-${t.tone}`;
+  // Keep status clear in copy without painting the whole dashboard as an alert.
+  const pillClass = "tone-quiet";
   const pillLabel = freshness === "fresh" ? t.label : t.unsure;
-  const dot =
-    pillClass === "tone-quiet"
-      ? "hsl(var(--muted-foreground))"
-      : `hsl(var(--${t.tone}))`;
+  const dot = "hsl(var(--foreground) / 0.72)";
 
   const line =
     freshness === "fresh"
@@ -201,13 +173,9 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
         ? `Could be a little lower: spending since ${since} isn’t counted.`
         : `Could be lower: spending since ${since} isn’t counted.`;
 
-  const { theme } = useTheme();
   const shownWeek = useCountUp(summary.per_week_paise);
   const wholeSafe = Math.round(summary.safe_to_spend_paise / 100) * 100;
   const amount = rupees(summary.safe_to_spend_paise);
-  // The status colour the card glows in; "quiet" when a fine number can't be promised.
-  const glow = pillClass === "tone-quiet" ? "quiet" : t.tone;
-  const glowVar = glow === "quiet" ? "--brand" : `--${glow}`;
   const aria =
     freshness === "fresh"
       ? `Safe to spend: ${amount}`
@@ -217,28 +185,12 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
     <section
       aria-labelledby="safe-title"
       data-status={summary.status}
-      className="relative isolate flex flex-col gap-7 overflow-hidden rounded-[28px] border px-6 pb-8 pt-8 transition-[border-color] duration-500 sm:px-12 sm:pb-10 sm:pt-12"
+      className="relative flex flex-col gap-7 overflow-hidden rounded-[28px] border px-6 pb-8 pt-8 sm:px-12 sm:pb-10 sm:pt-12"
       style={{
-        borderColor: `hsl(var(${glowVar}) / 0.35)`,
-        background: `radial-gradient(110% 80% at 100% 0%, hsl(var(${glowVar}) / 0.14) 0%, transparent 60%), radial-gradient(90% 70% at 0% 100%, hsl(var(--brand-tint-2)) 0%, transparent 65%), hsl(var(--card))`,
-        boxShadow: `0 1px 0 hsl(var(${glowVar}) / 0.08), 0 24px 60px -30px hsl(var(${glowVar}) / 0.55)`,
+        borderColor: "hsl(var(--border))",
+        background: "hsl(var(--card))",
       }}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[75%] opacity-60 [mask-image:linear-gradient(to_bottom,#000_30%,transparent)]"
-      >
-        <Suspense fallback={null}>
-          <SoftAurora
-            color1={AURORA[glow][0]}
-            color2={AURORA[glow][1]}
-            lightMode={theme !== "dark"}
-            speed={0.4}
-            brightness={theme === "dark" ? 0.9 : 1.1}
-            enableMouseInteraction={false}
-          />
-        </Suspense>
-      </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1
           id="safe-title"
@@ -248,7 +200,7 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
         </h1>
         <span
           className={cn(
-            "inline-flex min-h-8 items-center gap-2 rounded-full px-3.5 text-sm font-semibold transition-colors duration-500",
+            "inline-flex min-h-8 items-center gap-2 rounded-full border border-border bg-secondary/70 px-3.5 text-sm font-medium text-muted-foreground",
             pillClass,
           )}
         >
@@ -276,14 +228,14 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
             aria-hidden
             className="pointer-events-none absolute -inset-x-8 inset-y-0 -z-10 blur-2xl transition-[background] duration-500"
             style={{
-              background: `radial-gradient(closest-side, hsl(var(${glowVar}) / 0.4), transparent)`,
+              background: "none",
             }}
           />
           <MoneyCounter paise={wholeSafe} prefix={tilde} />
         </p>
         <p className="m-0 text-base text-muted-foreground sm:text-lg">
           About{" "}
-          <span className="font-semibold text-brand-ink">
+          <span className="font-semibold text-foreground">
             {tilde}
             {rupees(shownWeek)} a week
           </span>{" "}
@@ -291,7 +243,7 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
           {summary.days_left === 1 ? "day" : "days"}. {line}
         </p>
         {summary.short_by_paise > 0 && (
-          <p className="m-0 text-sm text-[hsl(var(--warn))]">
+          <p className="m-0 text-sm text-muted-foreground">
             {summary.pots.spending.account_name ?? "Your spending account"} is
             short by {formatINR(summary.short_by_paise)} for the moves below.
             Mark what you’ve already dealt with, or skip this month’s savings
@@ -299,7 +251,7 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
           </p>
         )}
         {summary.spending.tracked && summary.spending.overspend_paise > 0 && (
-          <p className="m-0 text-sm text-[hsl(var(--over))]">
+          <p className="m-0 text-sm text-muted-foreground">
             You’ve gone {formatINR(summary.spending.overspend_paise)} over this
             month’s spending allowance.
           </p>
@@ -314,7 +266,7 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
       />
 
       {freshness === "stale" && oldest && (
-        <div className="tone-warn flex flex-wrap items-center justify-between gap-4 rounded-[18px] px-5 py-[18px]">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[18px] border border-border bg-secondary/40 px-5 py-[18px]">
           <div className="flex min-w-0 flex-[1_1_360px] items-start gap-3">
             <Clock
               className="mt-px h-5 w-5 shrink-0"
@@ -331,25 +283,17 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
               </span>
             </span>
           </div>
-          <StarBorder
-            as={Link}
+          <Link
             to="/money"
-            radius={999}
-            color={theme === "dark" ? "#c9bfae" : "#8a8073"}
-            backgroundColor="hsl(var(--foreground))"
-            textColor="hsl(var(--background))"
-            borderColor="hsl(var(--warn) / 0.5)"
-            theme={theme === "dark" ? "dark" : "light"}
-            glow={0.8}
-            className="min-h-11 !px-5 !py-0 text-sm font-semibold"
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 text-sm font-semibold text-foreground no-underline hover:bg-secondary"
           >
             Update balance
-          </StarBorder>
+          </Link>
         </div>
       )}
 
       {freshness === "week" && oldest && (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[18px] border border-warn/30 bg-warn-tint/60 px-5 py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[18px] border border-border bg-secondary/40 px-5 py-3.5">
           <span className="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
             <Clock
               className="h-[18px] w-[18px]"
@@ -360,7 +304,7 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
           </span>
           <Link
             to="/money"
-            className="inline-flex min-h-11 items-center rounded-full border border-warn/40 bg-card px-[18px] text-sm font-semibold text-foreground no-underline transition-colors hover:bg-warn-tint"
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-[18px] text-sm font-semibold text-foreground no-underline transition-colors hover:bg-secondary"
           >
             Update
           </Link>

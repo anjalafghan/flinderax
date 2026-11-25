@@ -66,6 +66,10 @@ Browser tests: `bun run e2e` (Playwright; builds the web app and the server and 
 
 Commit to `develop`, merge to `master`, then deploy by hand: `fly deploy --depot=false` (Fly app `joy`, https://joy.fly.dev). CI runs on push; the deploy workflow only runs after green CI and needs the `FLY_API_TOKEN` secret. `/healthz` runs `SELECT 1` and is the Fly health check.
 
+One command does all of it in the background: commit to `develop`, then `bun run release` (add `--skip-checks` if you just ran them). It works in a temporary worktree (never touches your checkout), runs the checks, merges `develop` into `master`, pushes both, runs `fly deploy --depot=false` and waits for `/healthz`. `bun run deploy:status` says where the latest one is ("Deployed 22252c8 2 min ago", "Failed at checks: lint"); `bun run deploy:log` follows it live; `bun run deploy:status -a` lists recent ones. Logs live in `logs/deploys/` (git-ignored). `RELEASE_DRY_RUN=1` does everything but push, move `master` and deploy.
+
+Don't run prettier over golden snapshots (`*_golden.json`, `tests/golden/`): the tests compare them byte for byte. Nor over `web/index.html`: the inline theme script's hash is pinned in the CSP (`src/headers.rs`).
+
 ## Known open work
 
 See `findings_s_tier.md` (local, not in git) for the prioritised list.

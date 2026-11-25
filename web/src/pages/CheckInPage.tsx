@@ -392,6 +392,19 @@ function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
     );
     body = (
       <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-1">
+          <h3 className="m-0 text-[15px] font-medium">This quarter</h3>
+          <p className="m-0 text-sm text-muted-foreground">
+            {`${formatDay(data.period.start)} to ${formatDay(data.period.end)}`}
+            {` · compared with ${formatDay(data.previous.start)} to ${formatDay(data.previous.end)}`}
+          </p>
+          {!data.prev && (
+            <p className="m-0 text-sm text-muted-foreground">
+              There isn’t enough information from the previous period for a
+              financial comparison yet.
+            </p>
+          )}
+        </div>
         <TotalsRow now={data.totals} before={data.prev} />
 
         {sorted.length > 0 && (
@@ -491,7 +504,9 @@ function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
 
         {data.lifeline && (
           <div className="flex flex-col gap-3">
-            <h3 className="m-0 text-[15px] font-medium">Your life line</h3>
+            <h3 className="m-0 text-[15px] font-medium">
+              Life line since your last check-in
+            </h3>
             <p className="m-0 text-[15px]">{data.lifeline.line}</p>
             <Link
               to="/life"

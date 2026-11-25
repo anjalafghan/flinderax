@@ -246,7 +246,7 @@ function RecentWeeks({ recent }: { recent: DietOverview["recent"] }) {
                   w.logged ? "tone-good" : "tone-quiet",
                 )}
               >
-                {w.logged ? "Logged" : "Not logged"}
+                {w.logged ? "Saved" : "No entry"}
               </span>
               <span
                 aria-hidden
@@ -281,6 +281,8 @@ export function WeekCard({ overview }: { overview: DietOverview }) {
   // The last eight weeks before this one: the server's recent list starts with the current week.
   const pastWeeks = overview.recent.slice(1, 9);
   const isPast = weekStart !== current;
+  const selectedWeekLogged =
+    overview.recent.find((w) => w.week_start === weekStart)?.logged ?? false;
   // A past week loads what was logged then, so filling it in starts from that.
   const past = useDietWeek(weekStart, isPast);
   const week: Week = isPast
@@ -317,21 +319,27 @@ export function WeekCard({ overview }: { overview: DietOverview }) {
               boxShadow: "0 0 0 4px hsl(var(--c-sun) / 0.22)",
             }}
           />
-          This week
+          {isPast ? `Week of ${formatDay(weekStart)}` : "This week"}
         </h2>
         <p className="m-0 text-sm text-muted-foreground">
-          How many days you hit each habit, food and exercise. A rough count is
-          fine.
+          Add a rough count when it suits you. You can edit this week later; an
+          empty week simply means there is no entry.
         </p>
+        <span
+          className={cn(
+            "self-start rounded-full px-3 py-1 text-[13px]",
+            selectedWeekLogged ? "tone-good" : "tone-quiet",
+          )}
+        >
+          {selectedWeekLogged ? "Saved" : "No entry yet"}
+        </span>
       </div>
 
       {active.length > 0 ? (
         <>
-          {isPast && (
-            <p className="m-0 text-sm text-muted-foreground">
-              {past.isLoading
-                ? `Loading the week of ${formatDay(weekStart)}…`
-                : `You're logging the week of ${formatDay(weekStart)}.`}
+          {isPast && past.isLoading && (
+            <p className="m-0 text-sm text-muted-foreground" role="status">
+              Loading this week…
             </p>
           )}
           <WeekForm

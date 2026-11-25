@@ -10,7 +10,10 @@
     "start": "bun run build && cargo run --release",
     "test": "cargo test && bun run --cwd web test",
     "typecheck": "bun run --cwd web typecheck",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "release": "bash scripts/release.sh",
+    "deploy:status": "bash scripts/deploy-status.sh",
+    "deploy:log": "bash scripts/deploy-status.sh -f"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1"
