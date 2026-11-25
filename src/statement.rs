@@ -166,7 +166,8 @@ pub fn parse_date(raw: &str) -> Option<Date> {
 /// As `parse_date`, but a numeric date is read in the given order (month first for `Mdy`).
 pub fn parse_date_in(raw: &str, order: DateOrder) -> Option<Date> {
     let s = raw.trim();
-    let s = s.split([' ', 'T']).next().filter(|_| !s.contains(char::is_alphabetic)).unwrap_or(s);
+    // "12/10/2026| 14:22" (an HDFC card PDF) puts a bar between the date and the time.
+    let s = s.split([' ', 'T', '|']).next().filter(|_| !s.contains(char::is_alphabetic)).unwrap_or(s);
     let parts: Vec<&str> = s.split(['/', '-', '.', ' ', ',']).filter(|p| !p.is_empty()).collect();
     if parts.len() != 3 {
         return None;
@@ -200,12 +201,12 @@ pub fn parse_date_in(raw: &str, order: DateOrder) -> Option<Date> {
 
 /// "1,23,456.78", "Rs. 450", "-450.00", "Rs. -450", "(450.00)", "450.00 Dr" -> signed paise.
 /// A minus sign or an opening bracket before the number makes it negative. Empty / zero -> None.
+/// When a cell holds two figures ("USD 0.50 ₹ 43.10", a foreign spend and what it cost) the last
+/// one is the amount.
 fn parse_amount(raw: &str) -> Option<i64> {
-    // Everything before the first digit is a sign or a currency prefix such as "Rs.", whose dot
-    // must not be read as a decimal point.
-    let start = raw.find(|c: char| c.is_ascii_digit()).unwrap_or(raw.len());
-    let negative = raw[..start].contains('-') || raw[..start].contains('(');
-    let cleaned: String = raw[start..].chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();
+    let (sign, number) = last_figure(raw);
+    let negative = sign.contains('-') || sign.contains('(');
+    let cleaned: String = number.chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();
     if cleaned.is_empty() {
         return None;
     }
@@ -236,9 +237,29 @@ fn sided(side: Direction, signed: i64) -> (Direction, i64) {
     }
 }
 
+/// The last figure in a cell (digits with their commas and points, from its first digit) and the
+/// text between it and the figure before it, where its sign and currency sit. A currency prefix
+/// such as "Rs." stays in that text, so its dot is not read as a decimal point.
+fn last_figure(raw: &str) -> (&str, &str) {
+    let is_part = |c: char| c.is_ascii_digit() || c == ',' || c == '.';
+    let chars: Vec<(usize, char)> = raw.char_indices().collect();
+    let Some(last) = chars.iter().rposition(|(_, c)| c.is_ascii_digit()) else {
+        return (raw, "");
+    };
+    let at = |i: usize| chars.get(i).map_or(raw.len(), |(b, _)| *b);
+    let end = (last + 1..chars.len()).find(|&i| !is_part(chars[i].1)).unwrap_or(chars.len());
+    let run = (0..last).rev().find(|&i| !is_part(chars[i].1)).map_or(0, |i| i + 1);
+    let start = (run..=last).find(|&i| chars[i].1.is_ascii_digit()).unwrap_or(last);
+    // The sign text runs back to the end of the figure before this one (or the start of the cell).
+    let sign_from = (0..run).rev().find(|&i| chars[i].1.is_ascii_digit()).map_or(0, |i| i + 1);
+    (&raw[at(sign_from)..at(start)], &raw[at(start)..at(end)])
+}
+
 /// The side of a row from its single amount column, as the sign rule reads it.
 fn amount_side(sign: SignRule, raw: &str, signed: i64, row: &[String]) -> Direction {
     let lower = raw.to_lowercase();
+    // HDFC card statements print payments and refunds as "+ ₹ 1,000.00".
+    let plus = last_figure(raw).0.contains('+');
     let suffix_cr = lower.ends_with("cr") || lower.ends_with("cr.");
     let suffix_dr = lower.ends_with("dr") || lower.ends_with("dr.");
     match sign {
@@ -251,7 +272,7 @@ fn amount_side(sign: SignRule, raw: &str, signed: i64, row: &[String]) -> Direct
             }
         }
         SignRule::CrSuffix => {
-            let base = if suffix_cr { Direction::Credit } else { Direction::Debit };
+            let base = if suffix_cr || plus { Direction::Credit } else { Direction::Debit };
             if signed < 0 {
                 flip(base)
             } else {
@@ -521,6 +542,7 @@ mod tests {
         assert_eq!(parse_date("2026-11-01 13:45:12"), Some(date!(2026 - 11 - 01)));
         assert_eq!(parse_date("01-Nov-2026"), Some(date!(2026 - 11 - 01)));
         assert_eq!(parse_date("1 Nov 26"), Some(date!(2026 - 11 - 01)));
+        assert_eq!(parse_date("12/10/2026| 14:22"), Some(date!(2026 - 10 - 12)));
         assert_eq!(parse_date("Narration"), None);
     }
 
@@ -531,6 +553,28 @@ mod tests {
         assert_eq!(parse_amount("450.5 Dr"), Some(45_050));
         assert_eq!(parse_amount(""), None);
         assert_eq!(parse_amount("0.00"), None);
+        assert_eq!(parse_amount("Rs.450"), Some(45_000));
+        assert_eq!(parse_amount("₹43.10"), Some(4_310));
+        // A foreign spend and what it cost: the last figure is the amount, and its own sign counts.
+        assert_eq!(parse_amount("USD .50 ₹ 43.10"), Some(4_310));
+        assert_eq!(parse_amount("USD -0.50 ₹ 43.10"), Some(4_310));
+        assert_eq!(parse_amount("+ ₹ 12,000.00"), Some(1_200_000));
+    }
+
+    #[test]
+    fn hdfc_card_pdf_rows() {
+        // What the PDF reader makes of an HDFC credit card statement: date and time in one cell,
+        // "+" on payments and cashback, and a foreign spend's dollars in the amount cell.
+        let csv = "DATE & TIME,TRANSACTION DESCRIPTION,AMOUNT,PI\n\
+12/10/2026 14:22,SPOTIFY SIMUMBAI,₹ 119.00,l\n\
+14/10/2026 09:01,BPPY PYMT (Ref# 1),\"+ ₹ 12,000.00\",l\n\
+02/11/2026 03:10,FLY.IOFLY.IO,USD .50 ₹ 43.10,l\n";
+        let p = parse_for(csv, true).unwrap();
+        assert_eq!(p.skipped, 0);
+        assert_eq!(p.rows.len(), 3);
+        assert_eq!((p.rows[0].date, p.rows[0].direction, p.rows[0].amount_paise), (date!(2026 - 10 - 12), Direction::Debit, 11_900));
+        assert_eq!((p.rows[1].direction, p.rows[1].amount_paise), (Direction::Credit, 1_200_000));
+        assert_eq!((p.rows[2].date, p.rows[2].direction, p.rows[2].amount_paise), (date!(2026 - 11 - 02), Direction::Debit, 4_310));
     }
 
     #[test]

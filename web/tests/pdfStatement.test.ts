@@ -43,6 +43,24 @@ describe("statementCsv", () => {
     ]);
   });
 
+  test("reads an HDFC credit card statement: Date & Time, Transaction Description, a '+' run on credits", () => {
+    // Positions as pdf.js reports them for the real statement; the summary boxes above are left out.
+    const card: PdfItem[] = [
+      item("Domestic Transactions", 170, 151, 70),
+      item("DATE & TIME", 170, 136, 38), item("TRANSACTION DESCRIPTION", 260, 136, 83),
+      item("AMOUNT", 528, 136, 28), item("PI", 567, 136, 6),
+      item("12/10/2026| 14:22", 170, 107, 60), item("SPOTIFY SIMUMBAI", 260, 107, 70), item("C 119.00", 524, 107, 30), item("l", 568, 107, 3),
+      item("14/10/2026| 09:01", 170, 93, 60), item("BPPY PYMT (Ref# 1)", 260, 93, 80), item("+", 516, 93, 3), item("C 12,000.00", 521, 93, 35), item("l", 568, 93, 3),
+      item("15/10/2026| 10:00", 170, 64, 60), item("EMI", 241, 64, 11), item("ASSPLBangalore", 260, 64, 60), item("C 1,500.00", 524, 64, 32), item("l", 568, 64, 3),
+    ];
+    expect(statementCsv([card])?.trim().split("\n")).toEqual([
+      "DATE & TIME,TRANSACTION DESCRIPTION,AMOUNT,PI",
+      "12/10/2026 14:22,SPOTIFY SIMUMBAI,C 119.00,l",
+      '14/10/2026 09:01,BPPY PYMT (Ref# 1),"+ C 12,000.00",l',
+      '15/10/2026 10:00,EMI ASSPLBangalore,"C 1,500.00",l',
+    ]);
+  });
+
   test("a page with no transactions table gives null", () => {
     expect(statementCsv([[item("Hello", 10, 10), item("Not a statement", 10, 30)]])).toBeNull();
   });
