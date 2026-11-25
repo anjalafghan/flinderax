@@ -1,9 +1,6 @@
 //! The savings jar.
 
-#![allow(unused_imports)]
-use super::*;
-use serde::Deserialize;
-use sqlx::{FromRow, SqlitePool};
+use sqlx::SqlitePool;
 
 // ── the savings jar ───────────────────────────────────────────────────────
 

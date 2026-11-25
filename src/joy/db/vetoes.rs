@@ -1,9 +1,6 @@
 //! Slips either of us passed on.
 
-#![allow(unused_imports)]
-use super::*;
-use serde::Deserialize;
-use sqlx::{FromRow, SqlitePool};
+use sqlx::SqlitePool;
 
 // ── vetoes ────────────────────────────────────────────────────────────────
 

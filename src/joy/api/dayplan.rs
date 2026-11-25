@@ -140,8 +140,7 @@ fn ymd(d: Date) -> String {
     format!("{:04}-{:02}-{:02}", d.year(), d.month() as u8, d.day())
 }
 
-const DAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+use crate::joy::names::{DAYS_SHORT as DAYS, MONTHS_SHORT as MONTHS};
 
 /// "2026-11-04" → "Wed 4 Nov"; today → "today".
 pub fn day_label(ymd: &str, today: Date) -> String {
@@ -252,7 +251,7 @@ pub async fn build(db: &SqlitePool, couple: &str, ctx: &Ctx, row: &HistoryRow, w
     ) else {
         return Ok(None);
     };
-    let Some(a) = db::get(db, couple, row.activity_id).await? else { return Ok(None) };
+    let Some(a) = db::row_activity(db, couple, row).await? else { return Ok(None) };
     let slot = slot_on(sched, date, &row.day_kind);
     let wd = slot.weekday();
     let fit = match sched.fit(ctx, &slot, &a) {
@@ -286,7 +285,7 @@ pub async fn build(db: &SqlitePool, couple: &str, ctx: &Ctx, row: &HistoryRow, w
         after(ctx, &a, &db::visible_list(db, couple, who).await?, wd, fit.end)
     };
     let plan_b = match (sealed, row.plan_b) {
-        (false, Some(id)) => db::get(db, couple, id).await?.map(|b| PlanB {
+        (false, Some(id)) => db::visible_get_opt(db, couple, who, id).await?.map(|b| PlanB {
             title: ctx.personalize(&b.title),
             place: [b.venue.as_str(), b.area.as_str()].into_iter().filter(|x| !x.is_empty()).collect::<Vec<_>>().join(" · "),
         }),
@@ -359,7 +358,7 @@ pub async fn on_keep(
 ) -> Result<(), AppError> {
     let Some(&first) = ids.first() else { return Ok(()) };
     let Some(row) = db::history_row(db, couple, first).await? else { return Ok(()) };
-    let Some(a) = db::get(db, couple, row.activity_id).await? else { return Ok(()) };
+    let Some(a) = db::row_activity(db, couple, &row).await? else { return Ok(()) };
     if let (Some(slot), Some(sched)) = (slot, &ctx.schedule)
         && row.planned_at.is_none()
             && let Ok(fit) = sched.fit(ctx, slot, &a) {
@@ -380,7 +379,7 @@ pub async fn on_keep(
     let mut all_jobs = vec![];
     for id in ids {
         let Some(r) = db::history_row(db, couple, *id).await? else { continue };
-        let Some(act) = db::get(db, couple, r.activity_id).await? else { continue };
+        let Some(act) = db::row_activity(db, couple, &r).await? else { continue };
         let place = if act.venue.is_empty() { ctx.personalize(&act.title) } else { act.venue.clone() };
         if let Some(today) = today {
             all_jobs.extend(jobs(&act, &place, slot.map(|x| x.date), today));

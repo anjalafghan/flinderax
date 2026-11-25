@@ -1,7 +1,5 @@
 //! Linking a kept date to the bank debit that paid for it.
 
-#![allow(unused_imports)]
-use super::*;
 use serde::Serialize;
 use sqlx::SqlitePool;
 
