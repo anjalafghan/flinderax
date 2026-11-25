@@ -35,6 +35,7 @@ const result: StatementResult = {
   closing_paise: 5_513_050,
   not_on_statement: 1,
   holder_name_suggestion: "ASHA RAO",
+  linked: 0,
 };
 
 /** The mapping a 422 would carry: a layout no detector reads, with its first rows. */
@@ -49,6 +50,21 @@ const needsMapping = {
     ],
     guessed: null,
   },
+};
+
+/** One bank account to import into: a statement must name its account before it is read. */
+const getData = (url: string) =>
+  url.includes("holder-names")
+    ? { names: [] }
+    : url.includes("account/list")
+      ? [{ account_id: "a1", name: "Spending", kind: "bank" }]
+      : [];
+
+const chooseAccount = async () => {
+  await screen.findByRole("option", { name: "Spending" });
+  fireEvent.change(screen.getByLabelText(/Which account or card/), {
+    target: { value: "acct:a1" },
+  });
 };
 
 const renderImport = () => {
@@ -78,12 +94,16 @@ describe("StatementImport", () => {
 
   it("explains the privacy rule and refuses Excel files without a network call", async () => {
     const upload = spyOn(ingestApi, "uploadStatement");
-    spyOn(api, "get").mockResolvedValue({
-      data: [],
-      status: 200,
-      statusText: "OK",
-    } as never);
+    spyOn(api, "get").mockImplementation(
+      (url: string) =>
+        Promise.resolve({
+          data: getData(url),
+          status: 200,
+          statusText: "OK",
+        }) as never,
+    );
     renderImport();
+    await chooseAccount();
     expect(
       screen.getByText(/read in memory and discarded straight after import/),
     ).toBeInTheDocument();
@@ -102,7 +122,7 @@ describe("StatementImport", () => {
     spyOn(api, "get").mockImplementation(
       (url: string) =>
         Promise.resolve({
-          data: url.includes("holder-names") ? { names: [] } : [],
+          data: getData(url),
           status: 200,
           statusText: "OK",
         }) as never,
@@ -111,6 +131,7 @@ describe("StatementImport", () => {
       result,
     );
     renderImport();
+    await chooseAccount();
 
     fireEvent.change(screen.getByLabelText("Statement file"), {
       target: { files: [new File(["csv"], "statement.txt")] },
@@ -132,7 +153,7 @@ describe("StatementImport", () => {
     spyOn(api, "get").mockImplementation(
       (url: string) =>
         Promise.resolve({
-          data: url.includes("holder-names") ? { names: [] } : [],
+          data: getData(url),
           status: 200,
           statusText: "OK",
         }) as never,
@@ -150,6 +171,7 @@ describe("StatementImport", () => {
       },
     });
     renderImport();
+    await chooseAccount();
 
     fireEvent.change(screen.getByLabelText("Statement file"), {
       target: { files: [new File(["csv"], "statement.txt")] },
@@ -168,7 +190,7 @@ describe("StatementImport", () => {
     spyOn(api, "get").mockImplementation(
       (url: string) =>
         Promise.resolve({
-          data: url.includes("holder-names") ? { names: [] } : [],
+          data: getData(url),
           status: 200,
           statusText: "OK",
         }) as never,
@@ -179,6 +201,7 @@ describe("StatementImport", () => {
       holder_name_suggestion: null,
     });
     renderImport();
+    await chooseAccount();
 
     fireEvent.change(screen.getByLabelText("Statement file"), {
       target: { files: [new File(["csv"], "statement.csv")] },
@@ -195,7 +218,7 @@ describe("StatementImport", () => {
     spyOn(api, "get").mockImplementation(
       (url: string) =>
         Promise.resolve({
-          data: url.includes("holder-names") ? { names: [] } : [],
+          data: getData(url),
           status: 200,
           statusText: "OK",
         }) as never,
@@ -215,6 +238,7 @@ describe("StatementImport", () => {
       card_bill: bill,
     });
     renderImport();
+    await chooseAccount();
     fireEvent.change(screen.getByLabelText("Statement file"), {
       target: { files: [new File(["csv"], "statement.csv")] },
     });
@@ -224,7 +248,10 @@ describe("StatementImport", () => {
       "Updated the Millennia bill: ₹12,345 (minimum ₹1,234), due 30 Nov, from the statement of 10 Nov.",
     );
     // A CSV has no summary box to send.
-    expect(upload.mock.calls[0][1]).toEqual({ card_summary: null });
+    expect(upload.mock.calls[0][1]).toEqual({
+      account_id: "a1",
+      card_summary: null,
+    });
 
     cleanup();
     upload.mockResolvedValueOnce({
@@ -233,6 +260,7 @@ describe("StatementImport", () => {
       card_bill: { ...bill, status: "kept_newer", kept_since: "2026-11-12" },
     });
     renderImport();
+    await chooseAccount();
     fireEvent.change(screen.getByLabelText("Statement file"), {
       target: { files: [new File(["csv"], "statement.csv")] },
     });
@@ -247,7 +275,7 @@ describe("StatementImport", () => {
     spyOn(api, "get").mockImplementation(
       (url: string) =>
         Promise.resolve({
-          data: url.includes("holder-names") ? { names: [] } : [],
+          data: getData(url),
           status: 200,
           statusText: "OK",
         }) as never,
@@ -258,6 +286,7 @@ describe("StatementImport", () => {
       holder_name_suggestion: null,
     });
     renderImport();
+    await chooseAccount();
 
     fireEvent.change(screen.getByLabelText("Statement file"), {
       target: { files: [new File(["csv"], "statement.csv")] },
@@ -272,7 +301,7 @@ describe("StatementImport", () => {
     spyOn(api, "get").mockImplementation(
       (url: string) =>
         Promise.resolve({
-          data: url.includes("holder-names") ? { names: [] } : [],
+          data: getData(url),
           status: 200,
           statusText: "OK",
         }) as never,
@@ -281,6 +310,7 @@ describe("StatementImport", () => {
       .mockRejectedValueOnce(new Error(JSON.stringify(needsMapping)))
       .mockResolvedValueOnce(result);
     renderImport();
+    await chooseAccount();
 
     fireEvent.change(screen.getByLabelText("Statement file"), {
       target: { files: [new File(["csv"], "statement.csv")] },
@@ -312,6 +342,7 @@ describe("StatementImport", () => {
     expect(upload).toHaveBeenCalledTimes(2);
     const [, target] = upload.mock.calls[1];
     expect(target).toEqual({
+      account_id: "a1",
       card_summary: null,
       mapping: {
         header_row: 0,
@@ -337,7 +368,7 @@ describe("StatementImport", () => {
     spyOn(api, "get").mockImplementation(
       (url: string) =>
         Promise.resolve({
-          data: url.includes("holder-names") ? { names: [] } : [],
+          data: getData(url),
           status: 200,
           statusText: "OK",
         }) as never,
@@ -357,6 +388,7 @@ describe("StatementImport", () => {
       .mockRejectedValueOnce(new Error(JSON.stringify(needsMapping)))
       .mockRejectedValueOnce(new Error(JSON.stringify(otherLayout)));
     renderImport();
+    await chooseAccount();
 
     fireEvent.change(screen.getByLabelText("Statement file"), {
       target: { files: [new File(["csv"], "first.csv")] },
@@ -379,7 +411,7 @@ describe("StatementImport", () => {
     spyOn(api, "get").mockImplementation(
       (url: string) =>
         Promise.resolve({
-          data: url.includes("holder-names") ? { names: [] } : [],
+          data: getData(url),
           status: 200,
           statusText: "OK",
         }) as never,
@@ -391,6 +423,7 @@ describe("StatementImport", () => {
       known_profile: false,
     });
     renderImport();
+    await chooseAccount();
 
     fireEvent.change(screen.getByLabelText("Statement file to map"), {
       target: { files: [new File(["csv"], "statement.csv")] },
@@ -406,5 +439,52 @@ describe("StatementImport", () => {
       "Choose the column with the dates.",
     );
     expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("asks which account the statement is for before reading a file", async () => {
+    spyOn(api, "get").mockImplementation(
+      (url: string) =>
+        Promise.resolve({
+          data: getData(url),
+          status: 200,
+          statusText: "OK",
+        }) as never,
+    );
+    const upload = spyOn(ingestApi, "uploadStatement");
+    renderImport();
+    await screen.findByRole("option", { name: "Spending" });
+    fireEvent.change(screen.getByLabelText("Statement file"), {
+      target: { files: [new File(["csv"], "statement.txt")] },
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "First choose which account or card this statement is for.",
+    );
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("says how many rows it put on the account that had none", async () => {
+    spyOn(api, "get").mockImplementation(
+      (url: string) =>
+        Promise.resolve({
+          data: getData(url),
+          status: 200,
+          statusText: "OK",
+        }) as never,
+    );
+    const upload = spyOn(ingestApi, "uploadStatement").mockResolvedValue({
+      ...result,
+      added: 0,
+      duplicates: 6,
+      linked: 5,
+    });
+    renderImport();
+    await chooseAccount();
+    fireEvent.change(screen.getByLabelText("Statement file"), {
+      target: { files: [new File(["csv"], "statement.txt")] },
+    });
+    expect(
+      await screen.findByText(/5 that had no account now on this one/),
+    ).toBeInTheDocument();
+    expect(upload.mock.calls[0]?.[1]).toMatchObject({ account_id: "a1" });
   });
 });

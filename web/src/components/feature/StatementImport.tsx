@@ -292,6 +292,7 @@ function Outcome({
       `${r.upgraded} bank ${r.upgraded === 1 ? "alert" : "alerts"} confirmed`,
     );
   if (r.duplicates) parts.push(`${r.duplicates} already imported`);
+  if (r.linked) parts.push(`${r.linked} that had no account now on this one`);
   if (r.skipped) parts.push(`${r.skipped} unreadable`);
   const hasBalances = r.opening_paise !== null && r.closing_paise !== null;
   return (
@@ -631,6 +632,7 @@ export function StatementImport() {
   const saved = names.data?.names ?? [];
 
   const [target, setTarget] = useState("");
+  const targetSelect = useRef<HTMLSelectElement>(null);
   const [result, setResult] = useState<StatementResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -700,12 +702,22 @@ export function StatementImport() {
     },
   );
 
+  /** A statement with no account or card would leave every row unlinked, so one must be chosen first. */
+  const needsTarget = () => {
+    if (target) return false;
+    setResult(null);
+    setError("First choose which account or card this statement is for.");
+    targetSelect.current?.focus();
+    return true;
+  };
+
   const pick = async (picked: File | undefined) => {
     if (!picked) return;
     setResult(null);
     setError(null);
     setMapper(null);
     setMapError(null);
+    if (needsTarget()) return;
     const problem = fileProblem(picked);
     if (input.current) input.current.value = "";
     if (problem) return setError(problem);
@@ -744,6 +756,7 @@ export function StatementImport() {
     setError(null);
     setMapper(null);
     setMapError(null);
+    if (needsTarget()) return;
     const problem = fileProblem(picked);
     if (problem) return setError(problem);
     setPreviewing(true);
@@ -798,13 +811,14 @@ export function StatementImport() {
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragging(false);
+    if (needsTarget()) return;
     pick(e.dataTransfer.files[0]);
   };
 
   const onZoneKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      input.current?.click();
+      if (!needsTarget()) input.current?.click();
     }
   };
 
@@ -840,10 +854,16 @@ export function StatementImport() {
         </Label>
         <Select
           id="statement-account"
+          ref={targetSelect}
           value={target}
-          onChange={(e) => setTarget(e.target.value)}
+          onChange={(e) => {
+            setTarget(e.target.value);
+            setError(null);
+          }}
         >
-          <option value="">Not sure</option>
+          <option value="" disabled>
+            Choose one
+          </option>
           {banks.length > 0 && (
             <optgroup label="Bank accounts">
               {banks.map((a) => (
@@ -869,7 +889,8 @@ export function StatementImport() {
           Picking an account also sets its balance from the statement's newest
           line, unless you set a newer one. Picking a card counts purchases as
           spending and treats payments and refunds as money coming back, never
-          as income.
+          as income. Uploading a statement again with its account picked puts
+          any of its rows that have no account yet onto it.
         </p>
       </div>
 
@@ -888,7 +909,10 @@ export function StatementImport() {
         aria-label="Choose a statement file, or drop it here"
         aria-disabled={upload.isPending}
         onClick={() =>
-          !upload.isPending && !previewing && input.current?.click()
+          !upload.isPending &&
+          !previewing &&
+          !needsTarget() &&
+          input.current?.click()
         }
         onKeyDown={onZoneKey}
         onDragOver={(e) => {
@@ -947,7 +971,7 @@ export function StatementImport() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => mapInput.current?.click()}
+          onClick={() => !needsTarget() && mapInput.current?.click()}
           disabled={upload.isPending || previewing}
         >
           {previewing ? "Reading..." : "Map columns"}

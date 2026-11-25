@@ -217,7 +217,7 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
         <p
           aria-label={aria}
           className={cn(
-            "relative isolate m-0 self-start font-display text-[72px] font-light leading-[0.95] tracking-[-0.03em] transition-colors duration-500 sm:text-[104px] lg:text-[136px]",
+            "relative isolate m-0 self-start font-display text-[64px] font-light leading-[0.95] tracking-[-0.03em] transition-colors duration-500 sm:text-[88px] lg:text-[112px]",
             freshness === "fresh" && "text-foreground",
             freshness === "week" && "text-[hsl(var(--soft))]",
             freshness === "stale" &&

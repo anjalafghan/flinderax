@@ -396,6 +396,8 @@ function AnalyticsBody({ data }: { data: AnalyticsOut }) {
   const hasWeekdays = data.weekday_spend_paise.some((v) => v > 0);
   const hasSmallFlows =
     data.small_ticket.per_month_paise > 0 || data.own_transfers !== null;
+  const visiblePayees = data.top_payees.slice(0, 5);
+  const hiddenPayees = data.top_payees.slice(5);
 
   return (
     <>
@@ -487,7 +489,7 @@ function AnalyticsBody({ data }: { data: AnalyticsOut }) {
             </span>
           </div>
           <ul className="ledger">
-            {data.top_payees.map((p) => (
+            {visiblePayees.map((p) => (
               <li key={p.name} className="ledger-row gap-4">
                 <span className="flex min-w-0 flex-auto flex-col gap-1">
                   <span
@@ -509,32 +511,56 @@ function AnalyticsBody({ data }: { data: AnalyticsOut }) {
               </li>
             ))}
           </ul>
+          {hiddenPayees.length > 0 && (
+            <details className="rounded-2xl border border-border px-4">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium marker:hidden [&::-webkit-details-marker]:hidden">
+                <span>Show {hiddenPayees.length} more payees</span>
+                <span className="text-muted-foreground" aria-hidden>＋</span>
+              </summary>
+              <ul className="ledger pb-2">
+                {hiddenPayees.map((p) => (
+                  <li key={p.name} className="ledger-row gap-4">
+                    <span className="flex min-w-0 flex-auto flex-col gap-1">
+                      <span className="truncate text-base font-medium" title={titleCase(p.name)}>
+                        {titleCase(p.name)}
+                      </span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        {KIND_LABEL[p.kind] && <Pill className="tone-quiet">{KIND_LABEL[p.kind]}</Pill>}
+                        <span className="text-[13px] text-muted-foreground">{plural(p.count, "payment")}</span>
+                      </span>
+                    </span>
+                    <span className="font-display text-xl">{rupees(p.paise)}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </section>
       )}
 
-      {data.salary && <SalarySection salary={data.salary} />}
-      {data.sips.length > 0 && <SipsSection sips={data.sips} />}
-      {data.autopay.length > 0 && <AutopaySection autopay={data.autopay} />}
-      {hasSmallFlows && <SmallFlowsSection data={data} />}
-      {hasWeekdays && <WeekdaySection values={data.weekday_spend_paise} />}
+      {(data.salary || data.sips.length > 0 || data.autopay.length > 0 || hasSmallFlows || hasWeekdays || data.notes.length > 0) && (
+        <details className="rounded-[20px] border border-border bg-secondary/25 px-5 sm:px-6">
+          <summary className="flex min-h-14 cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm font-semibold marker:hidden [&::-webkit-details-marker]:hidden">
+            <span>More money patterns</span>
+            <span className="text-xs font-normal text-muted-foreground">Income, regular payments, and notes</span>
+          </summary>
+          <div className="flex flex-col gap-10 border-t border-border py-7">
+            {data.salary && <SalarySection salary={data.salary} />}
+            {data.sips.length > 0 && <SipsSection sips={data.sips} />}
+            {data.autopay.length > 0 && <AutopaySection autopay={data.autopay} />}
+            {hasSmallFlows && <SmallFlowsSection data={data} />}
+            {hasWeekdays && <WeekdaySection values={data.weekday_spend_paise} />}
 
-      {data.notes.length > 0 && (
-        <section
-          aria-labelledby="analytics-notes"
-          className="flex flex-col gap-4"
-        >
-          <h3
-            id="analytics-notes"
-            className="m-0 font-display text-[24px] leading-tight"
-          >
-            Notes
-          </h3>
-          <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[15px] leading-snug">
-            {data.notes.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
-        </section>
+            {data.notes.length > 0 && (
+              <section aria-labelledby="analytics-notes" className="flex flex-col gap-4">
+                <h3 id="analytics-notes" className="m-0 font-display text-[24px] leading-tight">Notes</h3>
+                <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[15px] leading-snug">
+                  {data.notes.map((n) => <li key={n}>{n}</li>)}
+                </ul>
+              </section>
+            )}
+          </div>
+        </details>
       )}
     </>
   );

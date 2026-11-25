@@ -186,7 +186,7 @@ export function Header() {
   const inSettings = pathname === "/account";
 
   return (
-    <header className="relative z-50 mx-auto w-full max-w-[1040px] px-4 pt-7 md:px-6">
+    <header className="relative z-50 mx-auto w-full max-w-[1120px] px-4 pt-5 md:px-7 md:pt-7">
       <div className="flex items-center justify-between gap-4">
         <Link
           to="/"

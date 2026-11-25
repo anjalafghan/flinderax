@@ -446,6 +446,8 @@ export interface StatementResult {
   duplicates: number;
   /** Bank-alert rows this statement confirmed. The same number as `upgraded`. */
   matched_alerts: number;
+  /** Rows already in joy with no account or card that this import put on its account or card. */
+  linked: number;
   skipped: number;
   uncategorized: number;
   first_date: string | null;
