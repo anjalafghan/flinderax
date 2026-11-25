@@ -113,7 +113,7 @@ fn add_months(d: Date, n: i64) -> Date {
 }
 
 fn parse_day(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, time::macros::format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 pub fn road(i: &Inputs) -> Road {

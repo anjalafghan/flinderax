@@ -7,7 +7,7 @@ use axum::{
     Extension, Json,
 };
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date, Duration};
+use time::{Date, Duration};
 
 use crate::{
     alerts::normalize,
@@ -59,7 +59,7 @@ pub async fn upcoming(
 }
 
 fn parse_date(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 /// `GET /api/bills/suggestions`: repeating payments that aren't fixed payments yet.

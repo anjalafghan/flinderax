@@ -83,7 +83,7 @@ fn month_index(d: Date) -> i32 {
 }
 
 fn month_label(idx: i32) -> String {
-    format!("{:04}-{:02}", idx.div_euclid(12), idx.rem_euclid(12) + 1)
+    crate::planner::dates::month_key(idx.div_euclid(12), (idx.rem_euclid(12) + 1) as u8)
 }
 
 fn median(mut values: Vec<i64>) -> i64 {

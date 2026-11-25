@@ -114,7 +114,7 @@ fn suggest(name: &str, median_paise: i64) -> Option<String> {
 /// `YYYY-MM-DD` for the date `days` before today.
 fn days_ago(days: i64) -> String {
     let d = today_local() - Duration::days(days);
-    format!("{:04}-{:02}-{:02}", d.year(), d.month() as u8, d.day())
+    crate::planner::dates::fmt_ymd(d)
 }
 
 struct Group {

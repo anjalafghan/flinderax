@@ -3,15 +3,13 @@
 //! Money is paise. No names appear in the report text.
 
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, util::is_leap_year, Date, Duration, Month};
+use time::{util::is_leap_year, Date, Duration, Month};
 
 use crate::planner::{
     checkin::{rupees, Period},
     habits::{due_status, Area, Cadence, Habit, Impact, Link, Status},
     short_date,
 };
-
-const ISO: &[time::format_description::FormatItem<'static>] = format_description!("[year]-[month]-[day]");
 
 /// A person is `due_soon` this many days before the catch-up date.
 pub const CATCH_UP_SOON_DAYS: i64 = 7;
@@ -253,7 +251,7 @@ pub fn possible_day(month: u8, day: u8) -> bool {
 }
 
 fn parse_iso(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, ISO).ok()
+    super::dates::parse_ymd_prefix(s)
 }
 
 /// Calendar text for the kind, used in titles.

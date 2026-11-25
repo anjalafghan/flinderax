@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date, Month};
+use time::{Date, Month};
 
 use super::format_inr;
 
@@ -227,7 +227,7 @@ pub fn mix_for(months: i64) -> Mix {
 
 /// Parses a `YYYY-MM-DD` date. `None` when it isn't one.
 pub fn parse_date(s: &str) -> Option<Date> {
-    Date::parse(s.trim(), format_description!("[year]-[month]-[day]")).ok()
+    super::dates::parse_ymd(s.trim())
 }
 
 /// Keeps an amount inside `0..=MAX_AMOUNT_PAISE`.

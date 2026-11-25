@@ -22,6 +22,7 @@ pub mod coming;
 pub mod couple_goals;
 pub mod wedding;
 pub mod cycle;
+pub mod dates;
 pub mod diet;
 pub mod forecast;
 pub mod goals;
@@ -686,7 +687,7 @@ pub fn undo_put_off(c: &CommitmentIn) -> Option<(i32, Option<i32>)> {
 
 /// `2026-12` for a month index.
 pub fn year_month_of(mi: i32) -> String {
-    format!("{:04}-{:02}", mi.div_euclid(12), mi.rem_euclid(12) + 1)
+    crate::planner::dates::month_key(mi.div_euclid(12), (mi.rem_euclid(12) + 1) as u8)
 }
 
 /// Everything due from today up to `payday2`, soonest first.

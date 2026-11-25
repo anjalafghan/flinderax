@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use axum::{extract::State, Extension, Json};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Date};
+use time::{Date};
 
 use crate::{
     handlers::{
@@ -155,7 +155,7 @@ pub struct CardIdPayload {
 }
 
 fn parse_db_date(ts: &str) -> Option<Date> {
-    Date::parse(ts.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(ts)
 }
 
 /// Breakdowns for all of a user's cards, or just `only_card` when given.
@@ -351,7 +351,7 @@ pub struct IdResponse {
 /// 'YYYY-MM' of today; the numbers a user types are true as of this month.
 fn current_month() -> String {
     let t = today_local();
-    format!("{:04}-{:02}", t.year(), t.month() as u8)
+    crate::planner::dates::month_key(t.year(), t.month() as u8)
 }
 
 fn validate_emi(label: &str, monthly: i64, remaining: i64, months_left: i64) -> Result<(), AppError> {

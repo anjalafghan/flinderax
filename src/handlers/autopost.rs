@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use time::{macros::format_description, Date, Duration};
+use time::{Date, Duration};
 
 use crate::{
     handlers::{common::AppError, plan::load_settings},
@@ -15,7 +15,7 @@ use crate::{
 };
 
 fn parse_date(s: &str) -> Option<Date> {
-    Date::parse(s.get(..10)?, format_description!("[year]-[month]-[day]")).ok()
+    crate::planner::dates::parse_ymd_prefix(s)
 }
 
 /// Account id -> the date its balance was last typed in. Accounts without one are never touched.
