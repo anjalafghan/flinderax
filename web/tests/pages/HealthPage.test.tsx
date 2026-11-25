@@ -127,7 +127,7 @@ describe("HealthPage", () => {
       target: { value: "2026-10-26" },
     });
     expect(
-      await screen.findByText("You're logging the week of 26 Oct."),
+      await screen.findByRole("heading", { name: "Week of 26 Oct" }),
     ).toBeInTheDocument();
     // That week had 3 walks and no home dinners logged.
     expect(await screen.findByText("3 of 4 days")).toBeInTheDocument();
@@ -135,14 +135,14 @@ describe("HealthPage", () => {
     expect(screen.queryByText("2 of 5 days")).toBeNull();
   });
 
-  it("lists the last twelve weeks with logged state and the hit share", async () => {
+  it("lists recent weeks with neutral saved and empty states", async () => {
     serve();
     renderWithProviders(<HealthPage />);
     await screen.findByText("Last 12 weeks");
     const recent = screen.getByText("Last 12 weeks")
       .parentElement as HTMLElement;
-    expect(within(recent).getAllByText("Logged")).toHaveLength(6);
-    expect(within(recent).getAllByText("Not logged")).toHaveLength(6);
+    expect(within(recent).getAllByText("Saved")).toHaveLength(6);
+    expect(within(recent).getAllByText("No entry")).toHaveLength(6);
     expect(within(recent).getByText("Week of 2 Nov")).toBeInTheDocument();
   });
 

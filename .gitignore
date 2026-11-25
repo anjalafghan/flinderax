@@ -40,3 +40,6 @@ flinderax.db-wal
 e2e/.tmp/
 test-results/
 playwright-report/
+
+# Release logs (scripts/release.sh)
+/logs/

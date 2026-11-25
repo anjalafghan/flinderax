@@ -9,13 +9,6 @@ import { movesApi } from "@/services/api";
 import { keys, usePlannerMutation } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/utils/money";
-import { cn } from "@/utils/cn";
-
-const STYLE = {
-  urgent: "[--dot:var(--over)]",
-  warn: "[--dot:var(--warn)]",
-  info: "[--dot:var(--c-sky)]",
-} as const;
 
 /** The click that tells the app what you did in your bank. */
 function LedgerButtons({ ledger }: { ledger: LedgerAction }) {
@@ -105,7 +98,7 @@ export function ActionList({
         </span>
       </div>
       {actions.length === 0 ? (
-        <p className="empty-note flex items-center gap-2 !border-good/40 !bg-good-tint !text-good">
+        <p className="empty-note flex items-center gap-2 !border-border !bg-card !text-muted-foreground">
           <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />{" "}
           Nothing to move. You're sorted.
         </p>
@@ -115,30 +108,12 @@ export function ActionList({
             <li
               key={a.text}
               data-severity={a.severity}
-              className={cn(
-                "glass relative overflow-hidden rounded-[1.25rem] px-5 py-4 text-[15px] md:px-7",
-                STYLE[a.severity],
-              )}
-              style={{
-                borderColor: "hsl(var(--dot) / 0.35)",
-                backgroundImage:
-                  "linear-gradient(100deg, hsl(var(--dot) / 0.1), transparent 55%)",
-              }}
+              className="relative overflow-hidden rounded-[1.25rem] border border-border bg-card px-5 py-4 text-[15px] md:px-7"
             >
-              {/* A coloured edge says how urgent it is before a word is read. */}
-              <span
-                aria-hidden
-                className="absolute inset-y-0 left-0 w-1.5"
-                style={{ background: "hsl(var(--dot))" }}
-              />
               <div className="flex items-start gap-4">
                 <span
                   aria-hidden
-                  className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{
-                    background: "hsl(var(--dot))",
-                    boxShadow: "0 0 16px hsl(var(--dot))",
-                  }}
+                  className="mt-2 h-2 w-2 shrink-0 rounded-full bg-muted-foreground/70"
                 />
                 <span className="text-base">{a.text}</span>
               </div>

@@ -4,15 +4,6 @@ import { Link } from "react-router-dom";
 import type { DashboardSummary } from "@/services/types";
 import { useAccounts, useIncomes } from "@/hooks/usePlanner";
 import { cn } from "@/utils/cn";
-import StarBorder from "@/components/bits/StarBorder";
-import { useTheme } from "@/context/ThemeContext";
-
-/** Each step gets its own sunrise colour: salary sun, account coral, first spend rose. */
-const STEP_TONE = [
-  { bubble: "bg-sun text-[hsl(var(--foreground))]", ring: "border-sun/50", hex: "#8a8073" },
-  { bubble: "bg-coral text-background", ring: "border-coral/50", hex: "#8a8073" },
-  { bubble: "bg-rose text-background", ring: "border-rose/50", hex: "#8a8073" },
-];
 
 /** Three steps, each a single tap away, ticking off as the data arrives. */
 export function SetupCard({ summary }: { summary: DashboardSummary }) {
@@ -41,8 +32,6 @@ export function SetupCard({ summary }: { summary: DashboardSummary }) {
   ];
   const doneCount = steps.filter((s) => s.done).length;
   const next = steps.findIndex((s) => !s.done);
-  const { theme } = useTheme();
-
   return (
     <section
       aria-labelledby="setup-title"
@@ -70,10 +59,10 @@ export function SetupCard({ summary }: { summary: DashboardSummary }) {
         aria-valuemin={0}
         aria-valuemax={steps.length}
         aria-valuenow={doneCount}
-        className="h-2.5 overflow-hidden rounded-full bg-brand-tint"
+        className="h-1.5 overflow-hidden rounded-full bg-secondary"
       >
         <span
-          className="block h-full rounded-full bg-party-gradient transition-[width] duration-700 ease-out"
+          className="block h-full rounded-full bg-foreground transition-[width] duration-700 ease-out"
           style={{
             width: `${Math.max(doneCount === 0 ? 4 : 0, (doneCount / steps.length) * 100)}%`,
           }}
@@ -82,14 +71,15 @@ export function SetupCard({ summary }: { summary: DashboardSummary }) {
 
       <ol className="m-0 flex list-none flex-col gap-2.5 p-0">
         {steps.map((s, i) => {
-          const tone = STEP_TONE[i % STEP_TONE.length];
           const body = (
             <>
               <span
                 aria-hidden
                 className={cn(
-                  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-[0_6px_16px_-6px_currentColor]",
-                  s.done ? "bg-good text-background" : tone.bubble,
+                  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold",
+                  s.done
+                    ? "border-good/30 bg-good/15 text-good"
+                    : "border-border bg-secondary text-muted-foreground",
                 )}
               >
                 {s.done ? <Check className="h-4 w-4" strokeWidth={2.5} /> : i + 1}
@@ -122,38 +112,18 @@ export function SetupCard({ summary }: { summary: DashboardSummary }) {
           const label = `${s.title}${s.done ? " (done)" : ""}`;
           return (
             <li key={s.to}>
-              {i === next ? (
-                // The one thing to do next gets a star running round its edge.
-                <StarBorder
-                  as={Link}
-                  to={s.to}
-                  viewTransition
-                  aria-label={label}
-                  radius={18}
-                  thickness={1.5}
-                  color={tone.hex}
-                  theme={theme === "dark" ? "dark" : "light"}
-                  backgroundColor="hsl(var(--brand-tint))"
-                  textColor="hsl(var(--foreground))"
-                  borderColor={`hsl(var(--brand) / 0.35)`}
-                  className="!flex min-h-[68px] w-full !justify-start gap-4 !px-4 !py-2 text-left font-normal"
-                >
-                  {body}
-                </StarBorder>
-              ) : (
-                <Link
-                  to={s.to}
-                  viewTransition
-                  aria-label={label}
-                  className={cn(
-                    "flex min-h-[68px] items-center gap-4 rounded-[18px] border bg-card/60 px-4 no-underline transition-colors hover:bg-[hsl(var(--chip))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    tone.ring,
-                    s.done && "border-good/30 opacity-70",
-                  )}
-                >
-                  {body}
-                </Link>
-              )}
+              <Link
+                to={s.to}
+                viewTransition
+                aria-label={label}
+                className={cn(
+                  "flex min-h-[68px] items-center gap-4 rounded-[18px] border bg-card px-4 no-underline transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  i === next && "border-foreground/35 bg-secondary/30",
+                  s.done && "border-good/30 opacity-70",
+                )}
+              >
+                {body}
+              </Link>
             </li>
           );
         })}

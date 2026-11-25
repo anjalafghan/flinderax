@@ -24,13 +24,13 @@ interface Entry {
 
 const SHOWN = 6;
 
-/** Each kind wears its own colour: bills coral, dates rose, birthdays sun, follow-ups sky, milestones grape. */
-const KIND: Record<Entry["kind"], { icon: LucideIcon; bubble: string }> = {
-  bill: { icon: Receipt, bubble: "bg-coral/15 text-coral" },
-  date: { icon: Heart, bubble: "bg-rose/15 text-rose" },
-  birthday: { icon: Cake, bubble: "bg-sun/20 text-[hsl(var(--foreground))] dark:text-sun" },
-  follow_up: { icon: MessageCircle, bubble: "bg-sky/15 text-sky" },
-  milestone: { icon: Flag, bubble: "bg-grape/15 text-grape" },
+/** Consistent neutral icons keep the list calm while labels carry meaning. */
+const KIND: Record<Entry["kind"], { icon: LucideIcon }> = {
+  bill: { icon: Receipt },
+  date: { icon: Heart },
+  birthday: { icon: Cake },
+  follow_up: { icon: MessageCircle },
+  milestone: { icon: Flag },
 };
 
 /** Bills, planned dates, birthdays and follow-ups in one list, soonest first. Hidden when empty. */
@@ -53,7 +53,7 @@ export function ComingUpCard() {
         className="m-0 mb-4 flex items-center gap-2.5 font-display text-[32px] leading-none"
       >
         <CalendarClock
-          className="h-6 w-6 shrink-0 text-brand"
+          className="h-6 w-6 shrink-0 text-muted-foreground"
           strokeWidth={1.6}
           aria-hidden
         />
@@ -65,12 +65,12 @@ export function ComingUpCard() {
           return (
             <li
               key={`${i.kind}-${i.on}-${i.title}`}
-              className="flex min-h-11 items-center justify-between gap-3 rounded-2xl px-1.5 text-sm transition-colors hover:bg-brand-tint"
+              className="flex min-h-11 items-center justify-between gap-3 rounded-2xl px-1.5 text-sm transition-colors hover:bg-secondary/70"
             >
               <span className="flex min-w-0 items-center gap-3">
                 <span
                   aria-hidden
-                  className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${k.bubble}`}
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground"
                 >
                   <k.icon className="h-4 w-4" strokeWidth={1.8} />
                 </span>
@@ -83,15 +83,7 @@ export function ComingUpCard() {
               </span>
               <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
                 {i.detail && <span>{i.detail}</span>}
-                <span
-                  className={
-                    i.days_away < 0
-                      ? "pill pill-coral"
-                      : i.days_away <= 1
-                        ? "pill pill-sun"
-                        : "pill"
-                  }
-                >
+                <span className="pill">
                   {i.when}
                 </span>
               </span>

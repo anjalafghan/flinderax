@@ -186,25 +186,25 @@
 
   .dark {
     /* Warm minimalism, night: espresso paper, cream ink. */
-    --background: 43 19% 7%;
+    --background: 43 16% 6%;
     --foreground: 39 33% 92%;
 
-    --card: 38 15% 10%;
+    --card: 38 13% 8%;
     --card-foreground: 39 33% 92%;
 
-    --popover: 38 15% 11%;
+    --popover: 38 13% 9%;
     --popover-foreground: 39 33% 92%;
 
     --primary: 39 33% 92%;
     --primary-foreground: 43 19% 7%;
 
-    --secondary: 38 15% 14%;
+    --secondary: 38 12% 12%;
     --secondary-foreground: 39 33% 92%;
 
-    --muted: 38 15% 14%;
+    --muted: 38 12% 12%;
     --muted-foreground: 35 10% 63%;
 
-    --accent: 38 15% 14%;
+    --accent: 38 12% 12%;
     --accent-foreground: 39 33% 92%;
 
     --destructive: 9 79% 72%;
@@ -215,7 +215,7 @@
     --ring: 39 33% 92%;
 
     --soft: 37 16% 78%;
-    --chip: 38 15% 14%;
+    --chip: 38 12% 12%;
     --good: 144 37% 65%;
     --good-tint: 144 37% 65% / 0.14;
     --warn: 36 76% 63%;
