@@ -1,0 +1,6 @@
+[advisories]
+ignore = [
+  # rsa arrives only through sqlx-mysql, which sqlx's macros list in Cargo.lock. The binary never
+  # compiles the MySQL driver (SQLite only), so the vulnerable code is not in the build.
+  "RUSTSEC-2023-0071",
+]
