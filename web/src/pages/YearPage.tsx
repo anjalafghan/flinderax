@@ -31,6 +31,7 @@ const KIND_HUE: Record<string, Hue> = {
   fee: "sun",
   maturity: "mint",
   wedding: "rose",
+  card: "sun",
   other: "grape",
 };
 const kindHue = (k: string): Hue => KIND_HUE[k] ?? "grape";
@@ -103,9 +104,7 @@ function Strip() {
             : `No month ends below zero. The lowest point is ${formatINR(data.lowest_paise)}.`}
         </p>
         <p className={NOTE}>
-          This counts your income, fixed payments and the large amounts below,
-          and what you hold now. It leaves out everyday spending, so treat it as
-          a ceiling.
+          {`It starts from what you hold now, adds your income and takes out fixed payments, card bills already owed, the large amounts below and ${formatINR(data.everyday_monthly_paise)} a month of everyday spending (your spending allowance).`}
         </p>
       </header>
       <div className="flex flex-col gap-2">
@@ -147,6 +146,14 @@ function Strip() {
                 {formatINR(m.closing_paise)}
               </span>
             </div>
+            <p className="m-0 flex flex-wrap gap-x-3 text-[12px] tabular-nums text-muted-foreground">
+              <span>{`In ${formatINR(m.income_paise + m.lumpy_in_paise)}`}</span>
+              <span>{`Bills ${formatINR(m.fixed_paise)}`}</span>
+              <span>{`Everyday ${formatINR(m.everyday_paise)}`}</span>
+              {m.lumpy_out_paise > 0 && (
+                <span>{`Large ${formatINR(m.lumpy_out_paise)}`}</span>
+              )}
+            </p>
             <div
               className="h-2 w-full overflow-hidden rounded-full bg-[hsl(var(--chip))]"
               aria-hidden="true"

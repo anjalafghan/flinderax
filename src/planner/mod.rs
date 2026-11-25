@@ -773,6 +773,13 @@ impl Period {
     }
 }
 
+/// What everyday spending takes in a month: the spending allowance less the wants already listed
+/// as fixed payments (those are counted on their own dates, so they are not counted twice).
+pub fn everyday_spending(input: &PlanInput) -> i64 {
+    let (budget, wants_listed) = budget_of(input);
+    (budget.spending_paise - wants_listed).max(0)
+}
+
 /// The monthly budget in amounts, and the part of it already listed as wants.
 fn budget_of(input: &PlanInput) -> (Budget, i64) {
     let this_month = month_index(input.today);
