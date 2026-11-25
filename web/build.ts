@@ -166,6 +166,25 @@ async function precompress(dir: string): Promise<number> {
   return files.length;
 }
 
+/**
+ * Replaces the shell's render-blocking <link rel="stylesheet"> with the css itself, then drops the file.
+ * The page paints from the first response instead of waiting for a second request (about 13 KB
+ * brotli). index.html is revalidated, so a repeat visit is one 304 and the css rides along. The CSP
+ * already allows inline styles; the Dates css is a separate file and is untouched.
+ */
+async function inlineShellCss(dir: string, html: string): Promise<string> {
+  const link = /<link rel="stylesheet"[^>]*href="\/([^"]+\.css)"[^>]*>/g;
+  let out = html;
+  for (const m of html.matchAll(link)) {
+    const file = path.join(dir, m[1]!);
+    const css = await readFile(file, "utf8");
+    if (/<\/style/i.test(css)) continue; // would end the tag early; keep the linked file
+    out = out.replace(m[0], () => `<style>${css}</style>`);
+    await rm(file, { force: true });
+  }
+  return out;
+}
+
 async function build(): Promise<boolean> {
   const started = performance.now();
   await rm(outdir, { recursive: true, force: true });
@@ -197,7 +216,8 @@ async function build(): Promise<boolean> {
   // their absolute paths as source files and fail the build.
   const html = (await readFile(indexPath, "utf8")).replace("</head>", `${HEAD_EXTRAS}</head>`);
   const devTag = isWatch ? `<script src="/dev-reload.js" defer></script>` : "";
-  await writeFile(indexPath, html.replace("</head>", `${devTag}</head>`).replaceAll("__SITE_URL__", siteUrl));
+  const finalHtml = html.replace("</head>", `${devTag}</head>`).replaceAll("__SITE_URL__", siteUrl);
+  await writeFile(indexPath, await inlineShellCss(outdir, finalHtml));
   if (isWatch) {
     await writeFile(path.join(outdir, "dev-reload.js"), DEV_RELOAD_JS);
     await writeFile(path.join(outdir, "dev-build.txt"), String(Date.now()));

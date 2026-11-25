@@ -81,8 +81,14 @@
             } catch (e) {}
         </script>
 
-        <!-- Stylesheet -->
+        <!-- Stylesheet. build.ts inlines the bundled result into this page (small once compressed), so
+             first paint does not wait for a second request. -->
         <link rel="stylesheet" href="./src/index.css" />
+        <!-- Same box as the Header (max-w 1040, px-4 / md:px-6, pt-7, 34px wordmark) so nothing shifts on mount. -->
+        <style>
+            .boot { max-width: 1040px; margin: 0 auto; padding: 1.75rem 1rem 0; font-size: 34px; line-height: 1; }
+            @media (min-width: 768px) { .boot { padding-left: 1.5rem; padding-right: 1.5rem; } }
+        </style>
 
         <!-- Structured Data (JSON-LD) for SEO -->
         <script type="application/ld+json">
@@ -110,7 +116,9 @@
     </head>
 
     <body>
-        <div id="root"></div>
+        <!-- First paint before any script runs: the wordmark in the Header's spot. React's createRoot
+             clears #root when it mounts, so this is replaced, never duplicated. -->
+        <div id="root"><div class="boot"><span class="wordmark">joy</span></div></div>
         <script type="module" src="./src/main.tsx"></script>
     </body>
 </html>
