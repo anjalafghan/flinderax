@@ -24,6 +24,7 @@ import { useRewards } from "@/services/rewards";
 import { forStreak } from "@/utils/rewards";
 import ShinyText from "@/components/bits/ShinyText";
 import { useTheme } from "@/context/ThemeContext";
+import { storageGet, storageSet } from "@/utils/storage";
 
 /**
  * Each run has its own colour: keeping up is fire, saving mint, showing up sky, dates rose.
@@ -70,19 +71,12 @@ const META: Record<
 };
 
 function seen(key: string): boolean {
-  try {
-    return localStorage.getItem(key) !== null;
-  } catch {
-    return false;
-  }
+  return storageGet(key) !== null;
 }
 
 function remember(key: string): void {
-  try {
-    localStorage.setItem(key, "1");
-  } catch {
-    // Without storage the celebration may repeat; that is harmless.
-  }
+  // Without storage the celebration may repeat; that is harmless.
+  storageSet(key, "1");
 }
 
 function Tile({ kind, streak }: { kind: StreakKind; streak: Streak }) {

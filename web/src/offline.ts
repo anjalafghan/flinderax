@@ -1,4 +1,5 @@
 import { authHeadersFor } from "@/session";
+import { storageGet } from "@/utils/storage";
 
 // Writes that must not be lost when there is no signal: a transaction typed on a phone, a new slip,
 // a check-in. Each is sent with an Idempotency-Key; if the network fails it waits on the phone with
@@ -36,7 +37,7 @@ function save(q: Queued[]) {
 }
 
 export function enqueue(item: Queued) {
-  const sessionId = localStorage.getItem("token");
+  const sessionId = storageGet("token");
   if (!sessionId) return;
   save([...loadQueue(), { ...item, sessionId }]);
 }
@@ -47,7 +48,7 @@ const post = (url: string, body: unknown, key: string) =>
     headers: {
       "Content-Type": "application/json",
       "Idempotency-Key": key,
-      ...authHeadersFor(localStorage.getItem("token")),
+      ...authHeadersFor(storageGet("token")),
     },
     body: JSON.stringify(body),
   });
@@ -62,7 +63,7 @@ export async function sendOrQueue(
   try {
     return { queued: false, response: await post(url, body, key) };
   } catch {
-    if (!localStorage.getItem("token")) return { queued: false };
+    if (!storageGet("token")) return { queued: false };
     enqueue({ key, url, body, label });
     return { queued: true };
   }
@@ -74,7 +75,7 @@ export async function flush(): Promise<{
   dropped: string[];
   left: number;
 }> {
-  const sessionId = localStorage.getItem("token");
+  const sessionId = storageGet("token");
   const all = loadQueue();
   let queue = sessionId ? all.filter((item) => item.sessionId === sessionId) : [];
   const otherSessions = all.filter((item) => item.sessionId !== sessionId);

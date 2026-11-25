@@ -2,14 +2,15 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearSession, isCookieSession } from "../session";
 import { AuthContext } from "./AuthContext";
+import { storageGet, storageSet } from "@/utils/storage";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   // A token whose expiry has passed is dropped while the state is first made, so the page never shows it as signed in.
   const [token, setToken] = useState<string | null>(() => {
-    const storedToken = localStorage.getItem("token");
-    const expiresAt = localStorage.getItem("expires_at");
+    const storedToken = storageGet("token");
+    const expiresAt = storageGet("expires_at");
     // A cookie login is renewed in its cookie, so only the server knows when it really ends (a 401).
     if (
       storedToken &&
@@ -31,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key !== "token" && event.key !== "expires_at" && event.key !== null) return;
-      const nextToken = localStorage.getItem("token");
+      const nextToken = storageGet("token");
       queryClient.clear();
       setToken(nextToken);
     };
@@ -41,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = useCallback(() => {
     // Ends the cookie on the server (best effort: a stale cookie is harmless and expires on its own).
-    if (isCookieSession(localStorage.getItem("token"))) {
+    if (isCookieSession(storageGet("token"))) {
       try {
         void fetch("/api/common/logout", {
           method: "POST",
@@ -60,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [queryClient]);
 
   useEffect(() => {
-    const expiresAt = localStorage.getItem("expires_at");
+    const expiresAt = storageGet("expires_at");
     if (
       token &&
       !isCookieSession(token) &&
@@ -74,8 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [token]);
 
   const login = (newToken: string, expiresAt: number) => {
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("expires_at", expiresAt.toString());
+    storageSet("token", newToken);
+    storageSet("expires_at", expiresAt.toString());
     setToken(newToken);
   };
 
