@@ -21,8 +21,9 @@ const HEADING_GAP = 9;
 const WRAP_LINES = 2.2;
 
 const DATE = /^\s*\d{1,2}[\s/.-]+(?:\d{1,2}|[A-Za-z]{3,9})[\s/.-]+\d{2,4}\b/;
-const DATE_HEADING = /^(?:txn\.?\s*|transaction\s*|value\s*)?date$/i;
-const TEXT_HEADING = /^(?:description|narration|particulars|transaction (?:details|remarks)|details)$/i;
+/** "Date", "Txn Date", and card statements' "Date & Time". */
+const DATE_HEADING = /^(?:txn\.?\s*|transaction\s*|value\s*)?date(?:\s*(?:&|and)\s*time)?$/i;
+const TEXT_HEADING = /^(?:description|narration|particulars|transaction (?:description|details|remarks)|details)$/i;
 /** A running-number column. The importer has no use for it. */
 const INDEX_HEADING = /^(?:#|s\.?\s?no\.?|sr\.?\s?no\.?|sl\.?\s?no\.?)$/i;
 
@@ -117,6 +118,8 @@ export function statementCsv(pages: PdfItem[][]): string | null {
       }
       const dateAt = columns.findIndex((c) => DATE_HEADING.test(c.name));
       if (dateAt >= 0 && DATE.test(cells[dateAt])) {
+        // "12/10/2026| 14:22": a bar on every line would be taken for the file's delimiter.
+        cells[dateAt] = cells[dateAt].replace(/\s*\|\s*/g, " ");
         rows.push(cells);
         last = cells;
       } else if (last && cells.every((c, i) => c === "" || i === textCol) && cells[textCol]) {
