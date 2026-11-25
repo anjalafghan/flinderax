@@ -444,8 +444,7 @@ pub struct PastMonth {
     pub budget: String,
 }
 
-const MONTHS: [&str; 12] =
-    ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+use crate::joy::names::MONTHS_LONG as MONTHS;
 
 /// "2026-10" → "October" (plus the year when it isn't this one).
 pub fn month_name(ym: &str, this_year: &str) -> String {
@@ -591,8 +590,7 @@ pub async fn settle_month(db: &SqlitePool, couple: &str, choice: Leftover) -> Re
     Ok(())
 }
 
-const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MON: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+use crate::joy::names::{DAYS_SHORT as WEEKDAYS, MONTHS_SHORT as MON};
 
 /// "YYYY-MM-DD HH:MM W" (from SQLite) → "Sat 18 Oct, 7:00 pm".
 pub fn planned_label(local: &str) -> String {

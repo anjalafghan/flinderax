@@ -140,8 +140,7 @@ fn ymd(d: Date) -> String {
     format!("{:04}-{:02}-{:02}", d.year(), d.month() as u8, d.day())
 }
 
-const DAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+use crate::joy::names::{DAYS_SHORT as DAYS, MONTHS_SHORT as MONTHS};
 
 /// "2026-11-04" → "Wed 4 Nov"; today → "today".
 pub fn day_label(ymd: &str, today: Date) -> String {

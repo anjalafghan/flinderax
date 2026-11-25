@@ -1,9 +1,6 @@
 //! Starter packs: ready-made slips a couple can add.
 
-#![allow(unused_imports)]
-use super::*;
-use serde::Deserialize;
-use sqlx::{FromRow, SqlitePool};
+use sqlx::SqlitePool;
 
 /// A pack of starter slips a couple can add: "At home", "Long distance", "Together days", "Mumbai".
 pub const PACKS: [(&str, &str, &str); 4] = [

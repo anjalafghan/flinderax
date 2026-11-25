@@ -1,8 +1,6 @@
 //! Regulars: standing dates ("Blue Tokai, Tue and Thu").
 
-#![allow(unused_imports)]
 use super::*;
-use serde::Deserialize;
 use sqlx::{FromRow, SqlitePool};
 
 // ── regulars: standing dates ("Blue Tokai, Tue and Thu") ──────────────────

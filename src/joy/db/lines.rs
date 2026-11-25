@@ -1,9 +1,6 @@
 //! The two lines each of us writes about a date.
 
-#![allow(unused_imports)]
-use super::*;
-use serde::Deserialize;
-use sqlx::{FromRow, SqlitePool};
+use sqlx::SqlitePool;
 
 // ── two lines ─────────────────────────────────────────────────────────────
 

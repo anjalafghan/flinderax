@@ -912,10 +912,7 @@ pub struct HistoryRow {
     pub day_kind: String,
 }
 
-const MONTHS: [&str; 12] = [
-    "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November",
-    "December",
-];
+use crate::joy::names::MONTHS_LONG as MONTHS;
 
 impl HistoryRow {
     /// "14 Oct"

@@ -540,8 +540,7 @@ pub async fn index(State(s): State<AppState>, Extension((user_id, _)): User) -> 
             .await?;
         items.push(ListItem { id: r.id, title: r.title, place: r.place, days: weekdays_label(&r.weekdays), usual: j.ctx.money(r.usual_cost), count });
     }
-    const LABELS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    let days = LABELS.iter().enumerate().map(|(i, l)| DayBox { value: i, label: l, checked: i == 2 || i == 4 }).collect();
+    let days = crate::joy::names::DAYS_SHORT.iter().enumerate().map(|(i, l)| DayBox { value: i, label: l, checked: i == 2 || i == 4 }).collect();
     let stopped = db::stopped_regulars(&s.db, &j.couple).await?.into_iter().map(|(id, title)| StoppedItem { id, title }).collect();
     Ok(Json(RegularsView { me_name: Me::new(&j.ctx, Some(j.who)).name, items, stopped, days }))
 }

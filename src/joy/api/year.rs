@@ -290,8 +290,7 @@ pub struct YearView {
     pub share: ShareData,
 }
 
-pub(crate) const MONTHS: [&str; 12] =
-    ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+pub(crate) use crate::joy::names::MONTHS_LONG as MONTHS;
 
 /// `GET /year` → `Go` to this year (or last year, in January when this one has barely started).
 pub async fn current(State(s): State<AppState>, Extension(_): User) -> Result<Json<Go>, AppError> {

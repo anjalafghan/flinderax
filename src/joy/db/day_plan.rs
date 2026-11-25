@@ -1,8 +1,6 @@
 //! The day-of plan: tasks, Plan B and what is next.
 
-#![allow(unused_imports)]
 use super::*;
-use serde::Deserialize;
 use sqlx::{FromRow, SqlitePool};
 
 // ── the day-of plan ───────────────────────────────────────────────────────
