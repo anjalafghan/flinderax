@@ -56,8 +56,14 @@ pub async fn snapshot(
     Extension((user_id, _)): User,
     Json(p): Json<SnapshotPayload>,
 ) -> Result<Json<SnapshotResponse>, AppError> {
-    if p.total_due_paise < 0 {
-        return Err(bad_request("total_due_paise cannot be negative"));
+    for (field, value) in [
+        ("total_due_paise", p.total_due_paise),
+        ("outstanding_paise", p.outstanding_paise),
+        ("unbilled_spent_paise", p.unbilled_spent_paise.unwrap_or(0)),
+        ("unbilled_credit_paise", p.unbilled_credit_paise.unwrap_or(0)),
+    ] {
+        crate::validate::non_negative_amount(value)
+            .map_err(|_| bad_request(format!("{field} must be between 0 and the supported maximum")))?;
     }
     ensure_card_owned(&state.db, &p.card_id, &user_id).await?;
 
@@ -352,9 +358,9 @@ fn validate_emi(label: &str, monthly: i64, remaining: i64, months_left: i64) -> 
     if label.trim().is_empty() {
         return Err(bad_request("label is required"));
     }
-    if monthly < 0 || remaining < 0 || months_left < 0 {
-        return Err(bad_request("EMI amounts and months_left cannot be negative"));
-    }
+    crate::validate::non_negative_amount(monthly).map_err(bad_request)?;
+    crate::validate::non_negative_amount(remaining).map_err(bad_request)?;
+    crate::validate::months(months_left).map_err(bad_request)?;
     Ok(())
 }
 
@@ -684,6 +690,13 @@ mod spend_tests {
 
     fn snap(d: Date, total_due: i64, exposure: i64) -> Snap {
         Snap { date: d, total_due, exposure, is_starting: false }
+    }
+
+    #[test]
+    fn emi_input_is_bounded_before_it_reaches_projection_math() {
+        assert!(validate_emi("Phone", crate::validate::MAX_AMOUNT_PAISE, crate::validate::MAX_AMOUNT_PAISE, crate::validate::MAX_MONTHS).is_ok());
+        assert!(validate_emi("Phone", crate::validate::MAX_AMOUNT_PAISE + 1, 0, 1).is_err());
+        assert!(validate_emi("Phone", 1, 0, crate::validate::MAX_MONTHS + 1).is_err());
     }
 
     #[test]

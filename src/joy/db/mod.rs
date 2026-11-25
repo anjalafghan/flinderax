@@ -659,37 +659,53 @@ pub async fn put_back(db: &SqlitePool, couple: &str, id: i64, who: usize, reason
 /// Accept a pick and return its history row. A double-tap within a minute only counts once
 /// (the second tap gets the same row back).
 pub async fn accept(db: &SqlitePool, couple: &str, id: i64, drawn_by: Option<usize>, surprise: bool) -> sqlx::Result<i64> {
+    accept_many(db, couple, &[id], drawn_by, surprise).await?.into_iter().next().ok_or(sqlx::Error::RowNotFound)
+}
+
+/// Accept several slips atomically. A paired pick must never leave only one half in history.
+pub async fn accept_many(
+    db: &SqlitePool,
+    couple: &str,
+    ids: &[i64],
+    drawn_by: Option<usize>,
+    surprise: bool,
+) -> sqlx::Result<Vec<i64>> {
     let mut tx = db.begin().await?;
-    // One statement, so two concurrent taps can't both pass the "recent?" check.
-    let inserted = sqlx::query(
-        "INSERT INTO joy_history (couple_id, activity_id, outcome, drawn_by, surprise, est_cost)
-         SELECT ?4, ?1, 'did_it', ?2, ?3, est_cost FROM joy_activities WHERE id = ?1 AND couple_id = ?4
-         AND NOT EXISTS (SELECT 1 FROM joy_history WHERE activity_id = ?1 AND outcome = 'did_it'
-                         AND picked_at > unixepoch() - 60)",
-    )
-    .bind(id)
-    .bind(drawn_by.map(|w| w as i64))
-    .bind(surprise)
-    .bind(couple)
-    .execute(&mut *tx)
-    .await?
-    .rows_affected();
-    if inserted == 1 {
-        sqlx::query("UPDATE joy_activities SET times_done = times_done + 1, last_done_at = unixepoch() WHERE id = ? AND couple_id = ?")
-            .bind(id)
-            .bind(couple)
-            .execute(&mut *tx)
-            .await?;
+    let mut accepted = Vec::with_capacity(ids.len());
+    for id in ids {
+        // One statement, so two concurrent taps can't both pass the "recent?" check.
+        let inserted = sqlx::query(
+            "INSERT INTO joy_history (couple_id, activity_id, outcome, drawn_by, surprise, est_cost)
+             SELECT ?4, ?1, 'did_it', ?2, ?3, est_cost FROM joy_activities WHERE id = ?1 AND couple_id = ?4
+             AND NOT EXISTS (SELECT 1 FROM joy_history WHERE activity_id = ?1 AND outcome = 'did_it'
+                             AND picked_at > unixepoch() - 60)",
+        )
+        .bind(id)
+        .bind(drawn_by.map(|w| w as i64))
+        .bind(surprise)
+        .bind(couple)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+        if inserted == 1 {
+            sqlx::query("UPDATE joy_activities SET times_done = times_done + 1, last_done_at = unixepoch() WHERE id = ? AND couple_id = ?")
+                .bind(id)
+                .bind(couple)
+                .execute(&mut *tx)
+                .await?;
+        }
+        let row: i64 = sqlx::query_scalar(
+            "SELECT id FROM joy_history WHERE couple_id = ? AND activity_id = ? AND outcome = 'did_it' ORDER BY id DESC LIMIT 1",
+        )
+        .bind(couple)
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)?;
+        accepted.push(row);
     }
-    let row: i64 = sqlx::query_scalar(
-        "SELECT id FROM joy_history WHERE couple_id = ? AND activity_id = ? AND outcome = 'did_it' ORDER BY id DESC LIMIT 1",
-    )
-    .bind(couple)
-    .bind(id)
-    .fetch_one(&mut *tx)
-    .await?;
     tx.commit().await?;
-    Ok(row)
+    Ok(accepted)
 }
 
 /// The (setting, main tag) of the last two dates that happened, newest first: what we just did.
@@ -1423,6 +1439,28 @@ mod tests {
             ..Default::default()
         };
         save(db, couple, None, &input, None).await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn paired_accept_rolls_back_both_history_rows_if_any_slip_is_missing() {
+        let db = test_db().await;
+        let first = add_slip(&db, "A", "First half").await;
+        assert!(accept_many(&db, "A", &[first, i64::MAX], Some(0), false).await.is_err());
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM joy_history WHERE couple_id = 'A'")
+            .fetch_one(&db).await.unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test]
+    async fn a_future_planned_keep_is_reserved_but_not_counted_as_done() {
+        let db = test_db().await;
+        let id = add_slip(&db, "A", "Future walk").await;
+        let history_id = accept(&db, "A", id, Some(0), false).await.unwrap();
+        sqlx::query("UPDATE joy_history SET planned_at = unixepoch('now', '+30 days') WHERE id = ?")
+            .bind(history_id).execute(&db).await.unwrap();
+        let row = get(&db, "A", id).await.unwrap().unwrap();
+        assert_eq!(row.times_done, 0);
+        assert!(row.last_done_at.is_some_and(|at| at > time::OffsetDateTime::now_utc().unix_timestamp()));
     }
 
     #[tokio::test]

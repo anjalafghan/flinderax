@@ -912,6 +912,19 @@ async fn learned_rules_hand_set_categories_and_layouts_can_be_reset() {
 }
 
 #[tokio::test]
+async fn account_balances_reject_values_outside_the_supported_range() {
+    let (app, _) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.90", "bounded").await;
+    let (status, _) = authed_post(&app, &t, "/api/account/create", json!({"name":"Huge", "kind":"bank", "balance_paise":100_000_000_000_001_i64})).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (status, body) = authed_post(&app, &t, "/api/account/create", json!({"name":"Good", "kind":"bank", "balance_paise":1000})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let account = serde_json::from_str::<Value>(&body).unwrap()["account_id"].as_str().unwrap().to_owned();
+    let (status, _) = authed_post(&app, &t, "/api/account/update_balance", json!({"account_id":account, "balance_paise":-100_000_000_000_001_i64})).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn a_move_with_the_same_idempotency_key_moves_the_money_once() {
     let (app, db) = test_app_with_db().await;
     let t = new_user(&app, "10.0.0.91", "mover").await;
@@ -938,6 +951,15 @@ async fn a_move_with_the_same_idempotency_key_moves_the_money_once() {
     assert_eq!(count, 1);
     let bal: i64 = sqlx::query_scalar("SELECT balance_paise FROM accounts WHERE account_id = ?").bind(&ids[0]).fetch_one(&db).await.unwrap();
     assert_eq!(bal, 900_000, "moved once");
+
+    // Reusing a key with changed details must not report the old move as success.
+    let (s, _) = authed_post(&app, &t, "/api/moves/record", body("k-1", 200_000)).await;
+    assert_eq!(s, StatusCode::CONFLICT);
+    // Moving from an account to itself must not create false coverage.
+    let same = json!({"kind":"allocation", "key":"2026-11-01", "amount_paise":100_000, "mode":"moved",
+        "from_account_id":ids[0], "to_account_id":ids[0], "idempotency_key":"same-account"});
+    let (s, _) = authed_post(&app, &t, "/api/moves/record", same).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
 
     // A different key is a different move.
     let (s, _) = authed_post(&app, &t, "/api/moves/record", body("k-2", 100_000)).await;
@@ -1030,6 +1052,12 @@ async fn card_totals_are_exact_to_the_paisa() {
     let (_, h) = authed_post(&app, &t, "/api/card/history", json!({"card_id": card})).await;
     let h: Value = serde_json::from_str(&h).unwrap();
     assert_eq!(h["histories"][1]["total_due_input"], 12_345_678.91);
+    let (s, _) = authed_post(&app, &t, "/api/card/snapshot", json!({"card_id":card, "total_due_paise":0,
+        "outstanding_paise":-1, "unbilled_spent_paise":0, "unbilled_credit_paise":0})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let (s, _) = authed_post(&app, &t, "/api/card/snapshot", json!({"card_id":card, "total_due_paise":0,
+        "outstanding_paise":100_000_000_000_001_i64, "unbilled_spent_paise":0, "unbilled_credit_paise":0})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
 }
 
 /// What a protected GET answers with, headers included.

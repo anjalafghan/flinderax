@@ -15,6 +15,8 @@ export interface Queued {
   url: string;
   body: unknown;
   label: string;
+  /** Session that created this write; legacy unscoped entries are never transmitted. */
+  sessionId?: string;
 }
 
 export function loadQueue(): Queued[] {
@@ -34,7 +36,9 @@ function save(q: Queued[]) {
 }
 
 export function enqueue(item: Queued) {
-  save([...loadQueue(), item]);
+  const sessionId = localStorage.getItem("token");
+  if (!sessionId) return;
+  save([...loadQueue(), { ...item, sessionId }]);
 }
 
 const post = (url: string, body: unknown, key: string) =>
@@ -58,6 +62,7 @@ export async function sendOrQueue(
   try {
     return { queued: false, response: await post(url, body, key) };
   } catch {
+    if (!localStorage.getItem("token")) return { queued: false };
     enqueue({ key, url, body, label });
     return { queued: true };
   }
@@ -69,7 +74,10 @@ export async function flush(): Promise<{
   dropped: string[];
   left: number;
 }> {
-  let queue = loadQueue();
+  const sessionId = localStorage.getItem("token");
+  const all = loadQueue();
+  let queue = sessionId ? all.filter((item) => item.sessionId === sessionId) : [];
+  const otherSessions = all.filter((item) => item.sessionId !== sessionId);
   let sent = 0;
   const dropped: string[] = [];
   while (queue.length > 0) {
@@ -80,11 +88,12 @@ export async function flush(): Promise<{
     } catch {
       break;
     }
-    if (res.status >= 500) break;
+    // An expired login is recoverable: retain the write until this session is authenticated again.
+    if (res.status >= 500 || res.status === 401) break;
     if (res.ok) sent += 1;
     else dropped.push(item.label);
     queue = queue.slice(1);
-    save(queue);
+    save([...otherSessions, ...queue]);
   }
   return { sent, dropped, left: queue.length };
 }

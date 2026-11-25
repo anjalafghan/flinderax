@@ -40,6 +40,7 @@ pub fn backup_dir() -> Option<PathBuf> {
 /// Makes today's copy if it doesn't exist yet. Failures are logged, never returned: a backup
 /// problem must not break the page that triggered it.
 pub async fn maybe_backup(db: &sqlx::SqlitePool, today: Date) {
+    let Some(dir) = backup_dir() else { return };
     {
         let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
         if *last == Some(today) {
@@ -47,9 +48,17 @@ pub async fn maybe_backup(db: &sqlx::SqlitePool, today: Date) {
         }
         *last = Some(today);
     }
-    let Some(dir) = backup_dir() else { return };
     if let Err(e) = run(db, &dir, today).await {
         tracing::error!("daily backup failed: {e}");
+        // A transient disk or SQLite error must not suppress every retry until tomorrow.
+        reset_failed_attempt(today);
+    }
+}
+
+fn reset_failed_attempt(today: Date) {
+    let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+    if *last == Some(today) {
+        *last = None;
     }
 }
 
@@ -79,17 +88,19 @@ pub async fn snapshot_to(db: &sqlx::SqlitePool, target: &Path) -> Result<(), Str
     Ok(())
 }
 
-/// A fresh snapshot as bytes, for the off-volume pull. The temporary file is removed afterwards
-/// and never matches the `joy-*.db` pattern the daily pruning looks at.
-pub async fn snapshot_bytes(db: &sqlx::SqlitePool) -> Result<Vec<u8>, String> {
+/// A fresh snapshot file for the off-volume pull. It is unlinked after opening so the
+/// streaming response owns the only live handle and the temporary file never reaches pruning.
+pub async fn snapshot_file(db: &sqlx::SqlitePool) -> Result<tokio::fs::File, String> {
     let dir = backup_dir().ok_or("no on-disk database")?;
     let tmp = dir.join(format!("pull-{}.tmp", std::process::id()));
-    let made = snapshot_to(db, &tmp).await;
-    let bytes = made.and_then(|_| std::fs::read(&tmp).map_err(|e| e.to_string()));
+    if let Err(error) = snapshot_to(db, &tmp).await {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(error);
+    }
+    let file = tokio::fs::File::open(&tmp).await.map_err(|e| e.to_string());
     let _ = std::fs::remove_file(&tmp);
-    bytes
+    file
 }
-
 /// Deletes all but the newest `keep()` copies (names sort by date).
 fn prune(dir: &Path) -> std::io::Result<()> {
     let mut copies: Vec<PathBuf> = std::fs::read_dir(dir)?
@@ -114,6 +125,14 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("joy-backup-{name}-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn a_failed_daily_attempt_is_eligible_for_retry() {
+        let today = time::macros::date!(2026 - 11 - 25);
+        *LAST.lock().unwrap_or_else(|e| e.into_inner()) = Some(today);
+        reset_failed_attempt(today);
+        assert_eq!(*LAST.lock().unwrap_or_else(|e| e.into_inner()), None);
     }
 
     #[test]

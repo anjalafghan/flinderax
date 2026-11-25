@@ -1033,16 +1033,17 @@ pub async fn accept(
     let Some(a) = db::drawable_get(db, couple, j.who, id).await? else { return Err(not_found("No such slip")) };
     let surprise = q.surprise == "1";
     let learned = learned(db, couple).await?;
-    let mut ids = vec![db::accept(db, couple, id, who, surprise).await?];
-    let mut paired = None;
     let db_partner_ids: Vec<i64> = db::visible_partners(db, couple, j.who, id).await?.into_iter().map(|p| p.id).collect();
-    if let Ok(with) = q.with.trim().parse::<i64>() {
+    let paired_activity = if let Ok(with) = q.with.trim().parse::<i64>() {
         // Only a real partner of this slip can ride along.
-        if let Some(p) = db::drawable_get(db, couple, j.who, with).await?.filter(|p| db_partner_ids.contains(&p.id)) {
-            ids.push(db::accept(db, couple, p.id, who, surprise).await?);
-            paired = Some(ActivityView::new(ctx, &p, &learned));
-        }
-    }
+        db::drawable_get(db, couple, j.who, with).await?.filter(|p| db_partner_ids.contains(&p.id))
+    } else {
+        None
+    };
+    let mut activity_ids = vec![id];
+    if let Some(p) = paired_activity.as_ref() { activity_ids.push(p.id); }
+    let ids = db::accept_many(db, couple, &activity_ids, who, surprise).await?;
+    let paired = paired_activity.as_ref().map(|p| ActivityView::new(ctx, p, &learned));
     // Only the exact date it was drawn for: a card left open overnight shouldn't plan another day.
     let slot = dayplan::slot_exact(db, ctx, &q.when, &q.start).await?;
     dayplan::on_keep(db, couple, ctx, &ids, slot.as_ref(), who, surprise).await?;

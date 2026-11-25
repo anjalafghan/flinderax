@@ -237,8 +237,10 @@ async function postStatement<T>(url: string, form: FormData): Promise<T> {
     headers: authHeadersFor(token),
     body: form,
   });
+  adoptRenewedToken(response);
   if (!response.ok) {
     const text = await response.text().catch(() => "");
+    if (response.status === 401 && token) handleUnauthorized();
     throw new Error(
       text
         ? errorMessageOf(text, response.status)

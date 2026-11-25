@@ -178,6 +178,7 @@ pub async fn create(
     Json(p): Json<CreateAccountPayload>,
 ) -> Result<Json<AccountIdResponse>, AppError> {
     validate(&p.name, &p.kind, &p.maturity_date)?;
+    crate::validate::bounded_amount(p.balance_paise).map_err(bad_request)?;
     validate_extras(&p.role, &p.renewal)?;
     ensure_account_owned(&state.db, &p.payout_account_id, &user_id).await?;
     let account_id = nanoid!();
@@ -252,6 +253,7 @@ pub async fn update_balance(
     Json(p): Json<UpdateBalancePayload>,
 ) -> Result<Json<StatusResponse>, AppError> {
     // Typing a balance makes it the new baseline for auto-posting.
+    crate::validate::bounded_amount(p.balance_paise).map_err(bad_request)?;
     let today = today_local().to_string();
     let res = sqlx::query!(
         "UPDATE accounts SET balance_paise = ?, balance_set_on = ?, updated_at = CURRENT_TIMESTAMP
