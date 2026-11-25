@@ -1,0 +1,8 @@
+# id | expected | merchant | last4 | date | text   (~ = none; expected: D:<paise> / C:<paise> / -). All values invented.
+sbi_upi_debit|D:25000|SWIGGY|1234|2026-11-01|Dear UPI user A/C X1234 debited by 250.0 on date 01Nov26 trf to SWIGGY Refno 430512345678. If not u? call 1800111109. -SBI
+sbi_credit|C:500000|JOHN DOE|1234|2026-11-01|Dear SBI User, your A/c X1234-credited by Rs.5000 on 01Nov26 transfer from JOHN DOE Ref No 430512345678 -SBI
+sbi_neft|C:7500000|ACME TEST LTD|1234|2026-11-07|Dear SBI User, your A/c X1234-credited by Rs.75000 on 07Nov26 by NEFT from ACME TEST LTD Ref No 430512345683 -SBI
+sbi_atm|D:200000|~|1234|2026-11-08|Dear Customer, Rs.2000 withdrawn from SBI ATM using A/c X1234 on 08Nov26. Avl Bal Rs.8,500.25 -SBI
+sbi_promo|-|||||Dear Customer, pre-approved personal loan of Rs 5,00,000 is waiting for you. Apply now at the SBI branch.
+sbi_otp|-|||||Dear Customer, OTP for online txn of Rs.1500.00 is 456123. Do not share it with anyone. -SBI
+sbi_card_spend|D:125000|BIGBASKET|5678|2026-11-10|Rs.1,250.00 spent on your SBI Card ending 5678 at BIGBASKET on 10/11/26
