@@ -506,6 +506,13 @@ fn categories_map_to_default_buckets() {
     assert_eq!(default_bucket("subscription"), Bucket::Wants);
     assert_eq!(default_bucket("bills"), Bucket::Needs);
     assert_eq!(default_bucket("gym"), Bucket::Needs);
+    for c in ["emi", "rent", "family", "phone", "internet", "transport", "car", "insurance", "health", "fees"] {
+        assert_eq!(default_bucket(c), Bucket::Needs, "{c}");
+    }
+    for c in ["shopping", "dates", "gifts", "travel"] {
+        assert_eq!(default_bucket(c), Bucket::Wants, "{c}");
+    }
+    assert_eq!(default_bucket("investment"), Bucket::Savings);
     assert_eq!(Bucket::parse("wants"), Some(Bucket::Wants));
     assert_eq!(Bucket::parse("nope"), None);
 }

@@ -1006,7 +1006,7 @@
     line-height: 1.45;
     color: var(--ink-soft);
   }
-  .write-form input:not([type="radio"]),
+  .write-form input:not([type="radio"], [type="checkbox"]),
   .write-form select,
   .notes {
     -webkit-appearance: none;
@@ -1022,12 +1022,12 @@
     font: 400 var(--step-0)/1.4 var(--font-ui);
     transition: border-color var(--t-small) var(--ease-out);
   }
-  .write-form input:not([type="radio"]):hover,
+  .write-form input:not([type="radio"], [type="checkbox"]):hover,
   .write-form select:hover,
   .notes:hover {
     border-bottom-color: var(--ink);
   }
-  .write-form input:not([type="radio"]):focus-visible,
+  .write-form input:not([type="radio"], [type="checkbox"]):focus-visible,
   .write-form select:focus-visible,
   .notes:focus-visible {
     border-color: var(--stamp);
@@ -1210,6 +1210,10 @@
   }
   .more-details:not([open]) {
     gap: 0;
+  }
+  .more-body {
+    display: grid;
+    gap: 16px;
   }
   .write-actions {
     position: sticky;

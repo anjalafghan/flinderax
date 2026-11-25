@@ -615,6 +615,22 @@ async fn month_close_sums_a_month_in_plain_words() {
 }
 
 #[tokio::test]
+async fn month_close_reports_date_money_in_paise_unchanged() {
+    // Dates money is paise (migration 20261119000018): the month close must not scale it again.
+    let (app, db) = test_app_with_db().await;
+    let t = new_user(&app, "10.0.0.73", "datecloser").await;
+    authed_post(&app, &t, "/api/couple/create", json!({})).await;
+    let couple: String = sqlx::query_scalar("SELECT couple_id FROM couples LIMIT 1").fetch_one(&db).await.unwrap();
+    sqlx::query("INSERT INTO joy_other_spending (couple_id, amount, spent_on) VALUES (?, 567000, '2026-10-18')")
+        .bind(&couple).execute(&db).await.unwrap();
+    sqlx::query("INSERT INTO joy_settings (couple_id, key, value) VALUES (?, 'monthly_budget', '1800000')")
+        .bind(&couple).execute(&db).await.unwrap();
+    let v = authed_get(&app, &t, "/api/review/month?month=2026-10").await;
+    assert_eq!(v["dates"]["spent_paise"], 567_000, "{v}");
+    assert_eq!(v["dates"]["budget_paise"], 1_800_000, "{v}");
+}
+
+#[tokio::test]
 async fn tax_tracker_counts_tagged_payments_and_entries() {
     let app = test_app().await;
     let t = new_user(&app, "10.0.0.72", "taxpayer").await;

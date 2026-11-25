@@ -484,16 +484,22 @@
 }
 .joy .mu-ghosts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-  gap: 16px 12px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 20px 24px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+.joy .mu-ghosts li {
+  min-width: 0;
+}
 .joy .mu-ghosts a {
   display: grid;
-  gap: 6px;
+  grid-template-rows: 96px auto;
+  gap: 8px;
   justify-items: center;
+  align-items: center;
+  height: 100%;
   padding: 8px 6px;
   border-radius: 8px;
   color: #3a3328;
@@ -505,18 +511,21 @@
   background: rgba(255, 255, 255, 0.45);
 }
 .joy .mu-ghosts .ksc {
-  width: auto;
-  height: 96px;
-  max-width: 100%;
+  /* as wide as 96px of height allows, but never wider than its column */
+  width: min(100%, calc(96px * var(--arn, 1)));
+  height: auto;
 }
 .joy .mu-ghosts a:hover .ksc.is-ghost .ksc-svg > svg {
   opacity: 0.75;
   filter: grayscale(0.4) contrast(0.8);
 }
 .joy .mu-ghost-t {
+  align-self: start;
+  max-width: 100%;
   font: 500 0.78rem/1.25 var(--font-ui);
   text-align: center;
-  overflow-wrap: anywhere;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 /* ── a slip's keepsake, in its corner (Slips) and on the drawn card (the jar) ── */

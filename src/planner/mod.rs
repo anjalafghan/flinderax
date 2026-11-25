@@ -91,7 +91,7 @@ impl Bucket {
 pub fn default_bucket(category: &str) -> Bucket {
     match category {
         "sip" | "rd" | "savings" | "investment" => Bucket::Savings,
-        "subscription" | "donation" | "entertainment" => Bucket::Wants,
+        "subscription" | "donation" | "entertainment" | "shopping" | "dates" | "gifts" | "travel" => Bucket::Wants,
         _ => Bucket::Needs,
     }
 }
@@ -771,6 +771,13 @@ impl Period {
     fn prorate(&self, monthly: i64) -> i64 {
         monthly * self.days_left / self.days_total
     }
+}
+
+/// What everyday spending takes in a month: the spending allowance less the wants already listed
+/// as fixed payments (those are counted on their own dates, so they are not counted twice).
+pub fn everyday_spending(input: &PlanInput) -> i64 {
+    let (budget, wants_listed) = budget_of(input);
+    (budget.spending_paise - wants_listed).max(0)
 }
 
 /// The monthly budget in amounts, and the part of it already listed as wants.

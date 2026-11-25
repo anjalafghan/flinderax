@@ -1,0 +1,167 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flinderax",
+      "runtimeExecutable": "cargo",
+      "runtimeArgs": [
+        "run"
+      ],
+      "port": 3001
+    },
+    {
+      "name": "flinderax-sanity",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/1475ec9c-6a88-4a1b-84d0-dc271b1573c4/scratchpad/sanity/flinderax.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/1475ec9c-6a88-4a1b-84d0-dc271b1573c4/scratchpad/sanity/joy-photos' STATIC_DIR='/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/1475ec9c-6a88-4a1b-84d0-dc271b1573c4/scratchpad/sanity/dist' PORT=3002 PUBLIC_URL=http://localhost:3002 SQLX_OFFLINE=true cargo run"
+      ],
+      "port": 3002
+    },
+    {
+      "name": "joy-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-LvjX6T/eabad7f7-b126-4dd6-a660-afab60c7dd9f/scratchpad/preview/joy.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-LvjX6T/eabad7f7-b126-4dd6-a660-afab60c7dd9f/scratchpad/preview/photos' PORT=3003 PUBLIC_URL=http://localhost:3003 SQLX_OFFLINE=true cargo run"
+      ],
+      "port": 3003
+    },
+    {
+      "name": "joy-lifeline",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "SIGNUP_CODE=preview-only DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-71hrMW/75bf23a1-a908-4dd3-b0e8-bd059acc3f3c/scratchpad/preview/joy.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-71hrMW/75bf23a1-a908-4dd3-b0e8-bd059acc3f3c/scratchpad/preview/photos' PORT=3004 PUBLIC_URL=http://localhost:3004 SQLX_OFFLINE=true cargo run"
+      ],
+      "port": 3004
+    },
+    {
+      "name": "motion-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-eCuy6Q/3214cc65-de3b-44e3-a827-76b5f88d1a39/scratchpad/p-preview/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-eCuy6Q/3214cc65-de3b-44e3-a827-76b5f88d1a39/scratchpad/p-preview/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3004 PUBLIC_URL=http://localhost:3004 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run"
+      ],
+      "port": 3004
+    },
+    {
+      "name": "month-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p /private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-mqgXIC/ce73076c-ff4f-4f32-90d2-23c45d8c6cea/scratchpad/mp/photos && DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-mqgXIC/ce73076c-ff4f-4f32-90d2-23c45d8c6cea/scratchpad/mp/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-mqgXIC/ce73076c-ff4f-4f32-90d2-23c45d8c6cea/scratchpad/mp/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3005 PUBLIC_URL=http://localhost:3005 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run"
+      ],
+      "port": 3005
+    },
+    {
+      "name": "nav-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-Zn5uii/ab03cd7a-fc73-4dbf-854f-13c0bdef1ed1/scratchpad/nav/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-Zn5uii/ab03cd7a-fc73-4dbf-854f-13c0bdef1ed1/scratchpad/nav/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3006 PUBLIC_URL=http://localhost:3006 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run --bin joy"
+      ],
+      "port": 3006
+    },
+    {
+      "name": "keepsake-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "3010",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/ce73076c-ff4f-4f32-90d2-23c45d8c6cea/scratchpad"
+      ],
+      "port": 3010
+    },
+    {
+      "name": "keepsake-preview-b",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "3011",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/12c831e0-3a70-4821-a0b2-e8a8e7b6d8b8/scratchpad"
+      ],
+      "port": 3011
+    },
+    {
+      "name": "keepsake-app",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/12c831e0-3a70-4821-a0b2-e8a8e7b6d8b8/scratchpad/app/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/12c831e0-3a70-4821-a0b2-e8a8e7b6d8b8/scratchpad/app/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3012 PUBLIC_URL=http://localhost:3012 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run --bin joy"
+      ],
+      "port": 3012
+    },
+    {
+      "name": "museum-app",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/anjalafghan/Documents/rust/flinderax && DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/12c831e0-3a70-4821-a0b2-e8a8e7b6d8b8/scratchpad/app/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/12c831e0-3a70-4821-a0b2-e8a8e7b6d8b8/scratchpad/app/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax-museum/web/dist' PORT=3013 PUBLIC_URL=http://localhost:3013 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run --bin joy"
+      ],
+      "port": 3013
+    },
+    {
+      "name": "reward-fund-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/anjalafghan/Documents/rust/flinderax && DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-0OeKWs/8eed3241-d154-4557-9b53-bbf4f91a1323/scratchpad/rf/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-0OeKWs/8eed3241-d154-4557-9b53-bbf4f91a1323/scratchpad/rf/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3014 PUBLIC_URL=http://localhost:3014 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run --bin joy"
+      ],
+      "port": 3014
+    },
+    {
+      "name": "ux-audit",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/anjalafghan/Documents/rust/flinderax && DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-WmfL6B/7785a5c2-c77f-4d6e-aa59-de50b38cc055/scratchpad/ux/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan--claude-spares-spare-WmfL6B/7785a5c2-c77f-4d6e-aa59-de50b38cc055/scratchpad/ux/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3020 PUBLIC_URL=http://localhost:3020 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run --bin joy"
+      ],
+      "port": 3020
+    },
+    {
+      "name": "glance-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/anjalafghan/Documents/rust/flinderax && DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/2adb72eb-94bb-421b-a37f-070a04cbcfa8/scratchpad/gp/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/2adb72eb-94bb-421b-a37f-070a04cbcfa8/scratchpad/gp/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3021 PUBLIC_URL=http://localhost:3021 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run --bin joy"
+      ],
+      "port": 3021
+    },
+    {
+      "name": "color-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/anjalafghan/Documents/rust/flinderax && DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/c83f2e51-dd94-4c54-a74d-68eb5144dff0/scratchpad/cp/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/c83f2e51-dd94-4c54-a74d-68eb5144dff0/scratchpad/cp/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3030 PUBLIC_URL=http://localhost:3030 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run --bin joy"
+      ],
+      "port": 3030
+    },
+    {
+      "name": "fixes-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/anjalafghan/Documents/rust/flinderax && DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/9a52b7f5-867a-4f25-b610-781c562d4a66/scratchpad/fx/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/9a52b7f5-867a-4f25-b610-781c562d4a66/scratchpad/fx/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3040 PUBLIC_URL=http://localhost:3040 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run --bin joy"
+      ],
+      "port": 3040
+    },
+    {
+      "name": "fixed-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/anjalafghan/Documents/rust/flinderax && DATABASE_URL='sqlite:///private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/26b256bb-beb6-4e8f-98cf-7bb1a7b74af8/scratchpad/fp/app.db?mode=rwc' JOY_PHOTOS_DIR='/private/tmp/claude-501/-Users-anjalafghan-Documents-rust-flinderax/26b256bb-beb6-4e8f-98cf-7bb1a7b74af8/scratchpad/fp/photos' STATIC_DIR='/Users/anjalafghan/Documents/rust/flinderax/web/dist' PORT=3050 PUBLIC_URL=http://localhost:3050 SIGNUP_CODE=preview-code PASETO_KEY=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= SQLX_OFFLINE=true cargo run --bin joy"
+      ],
+      "port": 3050
+    }
+  ]
+}

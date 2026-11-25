@@ -112,9 +112,12 @@ pub fn sinking_funds(input: &PlanInput) -> Vec<SinkingFund> {
                 (Freq::Every { first, .. }, Some(from)) if today_mi < first => from,
                 _ => crate::planner::month_index(due),
             };
-            let months_left = (saved_by - today_mi).max(0);
             let period = c.freq.period_months();
-            let months_saved = (period - i64::from(months_left)).clamp(0, period);
+            // Saving runs for the `period` months before it is due, but never from before its start
+            // month ("start saving from"): a bill started late has less put by when it falls due.
+            let round_start = saved_by - period as i32;
+            let from = c.start_month.map_or(round_start, |s| s.max(round_start));
+            let months_saved = i64::from(today_mi - from).clamp(0, period);
             Some(SinkingFund { label: c.label.clone(), amount_paise: c.amount, due, saved_paise: c.amount * months_saved / period })
         })
         .collect();
@@ -197,6 +200,18 @@ mod tests {
         let i = input(date!(2026 - 11 - 08), vec![commitment("Gym", 12_000, 5, Freq::Yearly, Some(3))], vec![]);
         let f = sinking_funds(&i);
         assert_eq!((f[0].due, f[0].saved_paise), (date!(2027 - 03 - 05), 800_000));
+    }
+
+    #[test]
+    fn sinking_fund_counts_only_from_the_month_saving_starts() {
+        // Due in March, saving started in January: by today (February) only January is put by.
+        let mut gym = commitment("Gym", 12_000, 5, Freq::Yearly, Some(3));
+        gym.start_month = Some(crate::planner::month_index(date!(2027 - 01 - 01)));
+        let f = sinking_funds(&input(date!(2027 - 02 - 10), vec![gym.clone()], vec![]));
+        assert_eq!((f[0].due, f[0].saved_paise), (date!(2027 - 03 - 05), 100_000));
+        // Before the start month nothing is saved yet.
+        let f = sinking_funds(&input(date!(2026 - 12 - 10), vec![gym], vec![]));
+        assert_eq!(f[0].saved_paise, 0);
     }
 
     #[test]

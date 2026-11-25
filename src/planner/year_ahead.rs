@@ -1,6 +1,7 @@
-//! The year ahead: twelve months of income, fixed payments and the large one-off outflows (premiums,
-//! tax, wedding payments, maturities), with the money you would hold at the end of each month.
-//! Pure: the handler gathers the pieces and passes `today`. All money is integer paise.
+//! The year ahead: twelve months of income, fixed payments, everyday spending and the large one-off
+//! amounts (premiums, tax, wedding payments, card bills already owed, maturities), with the money you
+//! would hold at the end of each month. Pure: the handler gathers the pieces and passes `today`. All
+//! money is integer paise.
 
 use serde::Serialize;
 use time::{Date, Month};
@@ -50,10 +51,12 @@ pub struct MonthRow {
     pub income_paise: i64,
     /// Fixed payments falling in the month (monthly ones and yearly ones due then).
     pub fixed_paise: i64,
+    /// Everyday spending expected in the month (the allowance; the first month only from today).
+    pub everyday_paise: i64,
     pub lumpy_out_paise: i64,
     pub lumpy_in_paise: i64,
     pub net_paise: i64,
-    /// What you would hold at the end of the month if nothing else were spent.
+    /// What you would hold at the end of the month, everyday spending included.
     pub closing_paise: i64,
     /// The month ends below zero.
     pub short: bool,
@@ -68,6 +71,8 @@ pub struct YearView {
     /// The lowest closing balance over the year.
     pub lowest_paise: i64,
     pub total_lumpy_out_paise: i64,
+    /// The everyday spending counted for each full month.
+    pub everyday_monthly_paise: i64,
 }
 
 fn first_of_month(y: i32, m: Month) -> Date {
@@ -95,9 +100,25 @@ fn lumpy_dates(l: &Lumpy, from: Date, to: Date) -> Vec<Date> {
     out
 }
 
+/// `monthly` for the days of the month from `start` on (all of it from the 1st), rounded down.
+fn rest_of_month(monthly: i64, start: Date, end: Date) -> i64 {
+    let days_total = i64::from(start.month().length(start.year()));
+    let days_left = (end - start).whole_days().clamp(0, days_total);
+    monthly.saturating_mul(days_left) / days_total
+}
+
 /// Twelve months from the month of `today`. The first month counts only from today on. `opening` is
-/// what you hold now. Fixed payments of `commitments` and `incomes` are expanded by their day of month.
-pub fn year_view(today: Date, opening_paise: i64, incomes: &[IncomeIn], commitments: &[CommitmentIn], lumpy: &[Lumpy]) -> YearView {
+/// what you hold now. Fixed payments of `commitments` and `incomes` are expanded by their day of month;
+/// `everyday_monthly` is what day-to-day spending takes each month, spread evenly over its days.
+pub fn year_view(
+    today: Date,
+    opening_paise: i64,
+    incomes: &[IncomeIn],
+    commitments: &[CommitmentIn],
+    lumpy: &[Lumpy],
+    everyday_monthly_paise: i64,
+) -> YearView {
+    let everyday_monthly_paise = everyday_monthly_paise.max(0);
     let mut months = Vec::with_capacity(MONTHS);
     let mut balance = opening_paise;
     let mut lowest = opening_paise;
@@ -115,6 +136,7 @@ pub fn year_view(today: Date, opening_paise: i64, incomes: &[IncomeIn], commitme
             .iter()
             .map(|c| c.amount.saturating_mul(commitment_dates(c, start, end).len() as i64))
             .sum();
+        let everyday = rest_of_month(everyday_monthly_paise, start, end);
 
         let mut items: Vec<LumpyOut> = Vec::new();
         for l in lumpy {
@@ -126,7 +148,7 @@ pub fn year_view(today: Date, opening_paise: i64, incomes: &[IncomeIn], commitme
         let out: i64 = items.iter().filter(|x| x.direction == Direction::Out).map(|x| x.amount_paise).sum();
         let inn: i64 = items.iter().filter(|x| x.direction == Direction::In).map(|x| x.amount_paise).sum();
 
-        let net = income + inn - fixed - out;
+        let net = income + inn - fixed - everyday - out;
         balance = balance.saturating_add(net);
         lowest = lowest.min(balance);
         total_out += out;
@@ -139,6 +161,7 @@ pub fn year_view(today: Date, opening_paise: i64, incomes: &[IncomeIn], commitme
             month,
             income_paise: income,
             fixed_paise: fixed,
+            everyday_paise: everyday,
             lumpy_out_paise: out,
             lumpy_in_paise: inn,
             net_paise: net,
@@ -147,7 +170,7 @@ pub fn year_view(today: Date, opening_paise: i64, incomes: &[IncomeIn], commitme
             lumpy: items,
         });
     }
-    YearView { months, first_short_month: first_short, lowest_paise: lowest, total_lumpy_out_paise: total_out }
+    YearView { months, first_short_month: first_short, lowest_paise: lowest, total_lumpy_out_paise: total_out, everyday_monthly_paise }
 }
 
 /// What to set aside each month, from now until `on`, for a one-off outflow (rounded up). 0 when
@@ -205,7 +228,7 @@ mod tests {
 
     #[test]
     fn covers_twelve_months_starting_this_one() {
-        let v = year_view(TODAY, 0, &[], &[], &[]);
+        let v = year_view(TODAY, 0, &[], &[], &[], 0);
         assert_eq!(v.months.len(), 12);
         assert_eq!(v.months[0].month, "2026-11");
         assert_eq!(v.months[11].month, "2027-10");
@@ -214,14 +237,14 @@ mod tests {
     #[test]
     fn the_first_month_counts_only_from_today() {
         // Pay on the 1st has passed this month; the next one is 1 Dec.
-        let v = year_view(TODAY, 0, &[income(100_000, 1)], &[], &[]);
+        let v = year_view(TODAY, 0, &[income(100_000, 1)], &[], &[], 0);
         assert_eq!(v.months[0].income_paise, 0);
         assert_eq!(v.months[1].income_paise, 100_000);
     }
 
     #[test]
     fn a_large_one_off_shows_in_its_month_and_flags_a_shortfall() {
-        let v = year_view(TODAY, 100_000, &[income(50_000, 1)], &[], &[lumpy(date!(2027 - 03 - 10), 400_000, false)]);
+        let v = year_view(TODAY, 100_000, &[income(50_000, 1)], &[], &[lumpy(date!(2027 - 03 - 10), 400_000, false)], 0);
         let march = v.months.iter().find(|m| m.month == "2027-03").unwrap();
         assert_eq!(march.lumpy_out_paise, 400_000);
         assert_eq!(march.lumpy.len(), 1);
@@ -232,7 +255,7 @@ mod tests {
 
     #[test]
     fn closing_balance_carries_forward() {
-        let v = year_view(TODAY, 10_000, &[income(5_000, 1)], &[commitment(2_000, 5, Freq::Monthly, None)], &[]);
+        let v = year_view(TODAY, 10_000, &[income(5_000, 1)], &[commitment(2_000, 5, Freq::Monthly, None)], &[], 0);
         assert_eq!(v.months[0].closing_paise, 10_000, "1 and 5 Nov already passed");
         assert_eq!(v.months[1].closing_paise, 10_000 + 3_000);
         assert_eq!(v.months[2].closing_paise, 10_000 + 6_000);
@@ -241,7 +264,7 @@ mod tests {
 
     #[test]
     fn a_yearly_commitment_only_lands_in_its_due_month() {
-        let v = year_view(TODAY, 0, &[], &[commitment(120_000, 10, Freq::Yearly, Some(3))], &[]);
+        let v = year_view(TODAY, 0, &[], &[commitment(120_000, 10, Freq::Yearly, Some(3))], &[], 0);
         let hit: Vec<&str> = v.months.iter().filter(|m| m.fixed_paise > 0).map(|m| m.month.as_str()).collect();
         assert_eq!(hit, vec!["2027-03"]);
     }
@@ -249,7 +272,7 @@ mod tests {
     #[test]
     fn a_bill_every_four_months_lands_three_times_in_the_year() {
         let first = crate::planner::month_index(TODAY) + 1; // December
-        let v = year_view(TODAY, 0, &[], &[commitment(600_000, 10, Freq::Every { months: 4, first }, None)], &[]);
+        let v = year_view(TODAY, 0, &[], &[commitment(600_000, 10, Freq::Every { months: 4, first }, None)], &[], 0);
         let hit: Vec<&str> = v.months.iter().filter(|m| m.fixed_paise > 0).map(|m| m.month.as_str()).collect();
         assert_eq!(hit, vec!["2026-12", "2027-04", "2027-08"]);
     }
@@ -257,7 +280,7 @@ mod tests {
     #[test]
     fn a_yearly_lumpy_item_repeats_each_year_but_only_once_in_the_window() {
         let l = lumpy(date!(2025 - 12 - 20), 30_000, true);
-        let v = year_view(TODAY, 0, &[], &[], &[l]);
+        let v = year_view(TODAY, 0, &[], &[], &[l], 0);
         let hits: Vec<&str> = v.months.iter().filter(|m| m.lumpy_out_paise > 0).map(|m| m.month.as_str()).collect();
         assert_eq!(hits, vec!["2026-12"]);
     }
@@ -265,7 +288,7 @@ mod tests {
     #[test]
     fn a_yearly_item_not_started_yet_waits_for_its_first_date() {
         let l = lumpy(date!(2028 - 01 - 15), 30_000, true);
-        let v = year_view(TODAY, 0, &[], &[], &[l]);
+        let v = year_view(TODAY, 0, &[], &[], &[l], 0);
         assert_eq!(v.total_lumpy_out_paise, 0);
     }
 
@@ -274,7 +297,7 @@ mod tests {
         let mut l = lumpy(date!(2027 - 02 - 01), 500_000, false);
         l.direction = Direction::In;
         l.kind = "maturity".into();
-        let v = year_view(TODAY, 0, &[], &[], &[l]);
+        let v = year_view(TODAY, 0, &[], &[], &[l], 0);
         let feb = v.months.iter().find(|m| m.month == "2027-02").unwrap();
         assert_eq!(feb.lumpy_in_paise, 500_000);
         assert_eq!(feb.net_paise, 500_000);
@@ -283,8 +306,27 @@ mod tests {
 
     #[test]
     fn a_past_one_off_is_ignored() {
-        let v = year_view(TODAY, 0, &[], &[], &[lumpy(date!(2026 - 01 - 01), 99, false)]);
+        let v = year_view(TODAY, 0, &[], &[], &[lumpy(date!(2026 - 01 - 01), 99, false)], 0);
         assert_eq!(v.total_lumpy_out_paise, 0);
+    }
+
+    #[test]
+    fn everyday_spending_comes_out_of_every_month_and_only_the_rest_of_this_one() {
+        // 16 Nov: 15 of November's 30 days are left.
+        let v = year_view(TODAY, 1_000_000, &[], &[], &[], 30_000);
+        assert_eq!(v.months[0].everyday_paise, 15_000);
+        assert_eq!(v.months[1].everyday_paise, 30_000);
+        assert_eq!(v.months[0].closing_paise, 985_000);
+        assert_eq!(v.months[1].closing_paise, 955_000);
+        assert_eq!(v.everyday_monthly_paise, 30_000);
+        assert_eq!(v.months.iter().map(|m| m.everyday_paise).sum::<i64>(), 15_000 + 11 * 30_000);
+    }
+
+    #[test]
+    fn everyday_spending_can_be_what_runs_a_month_short() {
+        let v = year_view(TODAY, 0, &[income(100_000, 1)], &[commitment(40_000, 5, Freq::Monthly, None)], &[], 80_000);
+        assert_eq!(v.months[1].net_paise, 100_000 - 40_000 - 80_000);
+        assert_eq!(v.first_short_month.as_deref(), Some("2026-11"), "half of November's spending with no pay left");
     }
 
     #[test]

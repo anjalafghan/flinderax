@@ -13,11 +13,12 @@ it, registers it and does the rest (no list to edit). Example:
 
 Shapes take a `cls` so a moment can move them. Every moment adds its own reduced-motion rule.
 """
-import itertools, math
+import inspect, itertools, math
 import frame
 from frame import grain, torn  # noqa: F401  (re-exported for slip modules)
 
 REGISTRY = {}  # board file -> (scene id, slip key, visit, batch, name); build.py merges it
+KIND = {}  # scene id -> the kit object it was built with (stub, tag, …): build.py groups them
 
 FONTS = 'family=Young+Serif&amp;family=Kalam:wght@400;700&amp;family=Space+Mono:wght@400;700&amp;family=Permanent+Marker&amp;family=Caveat:wght@600;700&amp;family=Gochi+Hand&amp;family=Fraunces:ital,opsz,wght@0,9..144,500..800;1,9..144,400..700&amp;family=Shippori+Mincho:wght@600;800'
 FACE = {'serif': "'Young Serif', serif", 'hand': 'Kalam, cursive', 'mono': "'Space Mono', monospace", 'marker': "'Permanent Marker', cursive",
@@ -58,6 +59,7 @@ def board(sid, title, *, batch, palette, name, verbs, svg, motion=(), key=None, 
     if moving:
         rules += '@media (prefers-reduced-motion:reduce){' + ','.join(moving) + '{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}'
     file = f'{sid}.dc.html'
+    KIND[sid] = next(('cutout' if f.filename.endswith('cutouts.py') else f.function for f in inspect.stack(0)[1:] if f.filename.endswith(('objects.py', 'cutouts.py'))), 'bespoke')
     REGISTRY[file] = (sid, (key or title).lower(), visit, batch, name)
     frame.write(file, title=f'{title} keepsake', fonts=FONTS, css=rules, svg=(f'<defs>{defs}</defs>' if defs else '') + svg,
                 focus=ctabg, bg=f'radial-gradient(ellipse 55% 65% at 34% 48%, {stops[0]} 0%, {stops[1]} 58%, {stops[2]} 100%)',

@@ -132,6 +132,33 @@ def font_faces(base):
     return '\n'.join(f'@font-face {{ font-family: "{f}"; font-style: {st}; font-weight: {w}; font-display: swap; src: url("{base}/{n}.woff2") format("woff2"); }}' for f, w, st, n in FONTS)
 
 
+# pairs looked at and accepted as different objects although their outlines match (none yet)
+ALIKE_OK = []
+
+
+def look_alikes(picked):
+    """Keepsakes that read as the same object at a glance: by the kit shape they were built from, and by
+    silhouette (check.ts compares each closed drawing's outline and light/dark, as the grey ghost in the jar)."""
+    import kit
+    sids = {REGISTRY[b][0] for b in picked}
+    by_kind = {}
+    for sid, kind in kit.KIND.items():
+        if sid in sids:
+            by_kind.setdefault(kind, []).append(sid)
+    shared = {k: v for k, v in by_kind.items() if len(v) > 1 and k not in ('bespoke', 'cutout')}
+    print(f'kit shapes used more than once: {sum(len(v) for v in shared.values())} scenes in {len(shared)} shapes')
+    for k, v in sorted(shared.items(), key=lambda kv: -len(kv[1])):
+        print(f'  {k} ×{len(v)}: ' + ', '.join(sorted(v)))
+    path = os.path.join(OUT, 'silhouettes.json')
+    clusters = [c for c in (json.load(open(path)) if os.path.exists(path) else [])
+                if not any(set(ok) >= set(c) for ok in ALIKE_OK)]
+    print(f'same silhouette at a glance: {len(clusters)} clusters, {sum(len(c) for c in clusters)} scenes'
+          + ('' if clusters else ' (none)'))
+    for c in clusters:
+        print(f'  ×{len(c)}: ' + ', '.join(sorted(c, key=lambda s: (kit.KIND.get(s, ""), s))) + '  [' + ', '.join(sorted({kit.KIND.get(s, "bespoke") for s in c})) + ']')
+    return clusters
+
+
 def main():
     batch = sys.argv[1] if len(sys.argv) > 1 else None
     got = collect()
@@ -224,9 +251,13 @@ figcaption{{padding:4px 6px;color:#fff;font-weight:600}}.tile.bad{{outline:4px s
                         moves = True
             if moves:
                 report.setdefault(sid, {'crop': [0, 0, 600, 600], 'issues': []})['issues'].append(f'.{cls} is placed with transform="…" and moved by CSS: it will jump')
+    import kit
     for sid, rep in report.items():
-        rep['issues'] = [i for i in rep['issues'] if not any(a in i for a in ACCEPTED.get(sid, []))]
+        # a die-cut's biggest part may be a rectangle, but its outline follows the whole drawing
+        ok = ACCEPTED.get(sid, []) + (['plain rectangle'] if kit.KIND.get(sid) == 'cutout' else [])
+        rep['issues'] = [i for i in rep['issues'] if not any(a in i for a in ok)]
     bad = {sid: rep['issues'] for sid, rep in report.items() if rep['issues']}
+    look_alikes(picked)
     print(f'{len(picked)} boards, {len(REGISTRY)} scenes in the app. Sheets: out/sheet-closed.png, out/sheet-open.png')
     for sid, issues in bad.items():
         print(f'  {sid}: ' + '; '.join(issues))

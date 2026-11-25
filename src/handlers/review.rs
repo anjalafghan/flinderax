@@ -101,10 +101,11 @@ async fn dates_facts(db: &sqlx::SqlitePool, user_id: &str, month: &str) -> Resul
     if let Some((couple, who)) = crate::handlers::couple::couple_of(db, user_id).await? {
         let payload = crate::handlers::joy::local_payload(db, &couple, Some(who)).await?;
         let partner = crate::handlers::joy::partner_covers(db, &couple, who, &payload).await?;
-        let spent = crate::joy::db::spent_in_month(db, &couple, month).await? * 100;
+        // Dates money is paise since migration 20261119000018; no conversion.
+        let spent = crate::joy::db::spent_in_month(db, &couple, month).await?;
         let standing = payload.monthly_budget;
         let row = crate::joy::db::month_budget(db, &couple, month).await?;
-        let budget = row.map(|(base, carry)| base + carry).or(standing).map(|b| b * 100);
+        let budget = row.map(|(base, carry)| base + carry).or(standing);
         if spent == 0 && budget.is_none() {
             return Ok(None);
         }

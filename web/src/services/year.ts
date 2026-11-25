@@ -19,6 +19,8 @@ export interface MonthRow {
   month: string;
   income_paise: number;
   fixed_paise: number;
+  /** Everyday spending expected in the month (this month only from today). */
+  everyday_paise: number;
   lumpy_out_paise: number;
   lumpy_in_paise: number;
   net_paise: number;
@@ -32,6 +34,8 @@ export interface YearView {
   first_short_month: string | null;
   lowest_paise: number;
   total_lumpy_out_paise: number;
+  /** Everyday spending counted for each full month. */
+  everyday_monthly_paise: number;
 }
 
 export interface Outflow {

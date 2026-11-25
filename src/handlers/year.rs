@@ -16,7 +16,11 @@ use crate::{
         dashboard::load_input,
     },
     models::AppState,
-    planner::year_ahead::{next_occurrence, set_aside_monthly, year_view, Direction, Lumpy, YearView},
+    planner::{
+        everyday_spending,
+        year_ahead::{next_occurrence, set_aside_monthly, year_view, Direction, Lumpy, YearView},
+        CardIn,
+    },
     validate,
 };
 
@@ -103,13 +107,31 @@ async fn wedding_lumpy(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<Lumpy
         .collect())
 }
 
-/// `GET /api/year`: the twelve-month view, built on the same inputs as Safe to Spend.
+/// Card bills already run up: the unpaid statement and what has been spent since, each on its due
+/// date (today when the date is unknown or past). The cash to pay them is still in the opening
+/// balance, so they have to come out of it.
+fn card_bills(cards: &[CardIn], today: Date) -> Vec<Lumpy> {
+    let mut out = Vec::new();
+    for c in cards {
+        for (amount, due, what) in [(c.due_now, c.due_date, "bill"), (c.next_bill_est, c.next_due_date, "next bill so far")] {
+            if amount > 0 {
+                let on = due.filter(|d| *d >= today).unwrap_or(today);
+                out.push(Lumpy { on, label: format!("{}: {what}", c.name), amount_paise: amount, direction: Direction::Out, yearly: false, kind: "card".into() });
+            }
+        }
+    }
+    out
+}
+
+/// `GET /api/year`: the twelve-month view, built on the same inputs as Safe to Spend. Everyday
+/// spending is the spending allowance, and card bills already owed come out on their due dates.
 pub async fn view(State(state): State<AppState>, Extension((user_id, _)): User) -> Result<Json<YearView>, AppError> {
     let today = today_local();
     let input = load_input(&state.db, &user_id, today).await?;
     let opening: i64 = input.accounts.iter().filter(|a| !a.locked).map(|a| a.balance).sum();
-    let lumpy = lumpy_for(&state.db, &user_id).await?;
-    Ok(Json(year_view(today, opening, &input.incomes, &input.commitments, &lumpy)))
+    let mut lumpy = lumpy_for(&state.db, &user_id).await?;
+    lumpy.extend(card_bills(&input.cards, today));
+    Ok(Json(year_view(today, opening, &input.incomes, &input.commitments, &lumpy, everyday_spending(&input))))
 }
 
 /// `GET /api/year/outflows`

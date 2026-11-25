@@ -1,5 +1,7 @@
 """Batch 6: slips 169-214 (at home, games apart)."""
 from objects import *  # noqa: F401,F403
+from cutouts import cutout  # noqa: F401
+from things import *  # noqa: F401,F403
 
 B = 'b6'
 
@@ -21,8 +23,7 @@ seedpacket('herbbox', 'Start a herb box together', batch=B, palette='moss', name
            rows=['basil, mint, coriander', 'water: whoever is up first', 'cook with it in a month'], packet='#d6e8c4', seed_col='#3a2a1a', art=(('leaf', 0, -40, 1.6),))
 sticker('tiedye', 'Tie-dye T-shirts', batch=B, palette='lilac', name='A tie-dye swatch sticker from the T-shirts we made for each other', head='tie-dyed',
         sub='made by you, worn by me', shape='blob', col='#8a3fa0', art=[('flower', 0, -70, .9, '#f2c230', '#e0245e')])
-badge('cranes', 'Fold a hundred paper cranes', batch=B, palette='paper', name='A paper crane rosette for the hundred cranes we folded and strung up', head='cranes',
-      big='100', sub='one fold, then a race', ribbon=('#e46f2a', '#2f6db5'), art=[('crane', 0, 86, .9)])
+paper_crane('cranes', 'Fold a hundred paper cranes', batch=B, palette='sea', name='One folded paper crane on its thread, tagged 1 of 100')
 scorecard('seriescalls', 'Start a series, only on calls', batch=B, palette='night', name='An episode tracker for the show we only watch together on calls', head='Our show, calls only',
           sub='no watching ahead', rows=['episode 1', 'episode 2', 'episode 3', 'episode 4 (you dozed)'], cols=('watched',), marks=[('✓',), ('✓',), ('✓',), ('½',)], shape='card')
 scorecard('scavengercall', 'Video-call scavenger hunt', batch=B, palette='brick', name='A scavenger hunt list from a video call, first to show it wins', head='Show me...',
@@ -48,16 +49,13 @@ menu('reversedinner', 'Reverse dinner: dessert first, starter last', batch=B, pa
      sub='dessert first', panels=(['1. dessert', 'your pick', 'for me'], ['2. main', 'the usual', ''], ['3. starter', 'last, finally', 'cold by now']), ticks=[(0, 0), (1, 0), (2, 0)], accent='#7a1a16')
 scorecard('paperplanes', 'Paper plane distance contest', batch=B, palette='sea', name="A paper plane flight log from the hallway contest", head='Flight log',
           sub='three planes each, same spot', rows=['plane 1', 'plane 2', 'plane 3', 'loser makes chai'], cols=('me', 'you'), marks=[('3m', '4m'), ('5m', '2m'), ('6m', '6m'), ('', '✓')], circle=3, shape='card')
-badge('rangoli', 'Rangoli battle on the living-room floor', batch=B, palette='ochre', name='A rangoli rosette from the one-hour battle on the living-room floor', head='Rangoli',
-      big='1 hour', sub='no stencils, judged by us', ribbon=('#e0245e', '#f2c230'), art=[('marigold', 0, 86, .9)])
-handstamp('mehendi', "Mehendi on each other's hands, symbols only", batch=B, palette='brick', name="A hand with mehendi symbols drawn by the other, no words", stamp_text='moon, vine, us',
-          sub='symbols only, an hour to dry', skin='#c98a64', ink='#7a2a12', verbs=('Let it dry', 'Wash it off'))
+rangoli_plate('rangoli', 'Rangoli battle on the living-room floor', batch=B, palette='ochre', name='A steel plate of rangoli colours and the lotus border we raced to finish')
+henna_cone('mehendi', "Mehendi on each other's hands, symbols only", batch=B, palette='brick', name='A mehendi cone, and the moon and vine we drew on each other, no words')
 stub('sockpuppet', 'Sock-puppet argument-off', batch=B, palette='plum', name='A debate card from the sock-puppet argument about whether dosa is a snack or a meal',
      head='Dosa: snack or meal?', sub='SOCK PUPPETS ONLY', rows=['me (left sock): meal', 'you (right sock): snack', 'winner: the dosa'], band='#5d3564', paper_='#fbf0f4', stub_text='DEBATE', shape='torn')
 stub('spaceship', 'Cardboard spaceship voyage', batch=B, palette='navy', name='A boarding pass for our cardboard spaceship voyage around the flat', head='Flight to the kitchen',
      sub='CARDBOARD SPACESHIP', rows=['gate: the hall', 'planet: the balcony', 'snacks on board'], band='#1f2b4d', paper_='#eef0f8', art=[('star', 260, 150, .6, '#e9c46a')], stub_text='BOARDING')
-envelope_('houserules', 'Write five house rules and sign them', batch=B, palette='paper', name='A charter of five house rules, signed by both of us', front='the house rules, signed',
-          letter=['1. no sad songs before 10', '2. last chapati is shared', '3. whoever cooks, rests', '4. hugs before phones', '5. signed: us'], seal='#3a2a5a')
+house_scroll('houserules', 'Write five house rules and sign them', batch=B, palette='kraft', name='A scroll of our five house rules, signed by both of us and sealed')
 mapcard('memorypalace', 'Memory palace walk', batch=B, palette='kraft', name='A floor key of the flat with a memory pinned in each room', head='Our memory palace',
         route='M50 300 C100 250 140 260 180 200 S260 140 320 160 S380 90 390 60', pins=[(180, 200, 'the first fight'), (320, 160, 'the cake'), (390, 60, 'the rain')], land='#f3e6c8')
 envelope_('tiffinswap', 'Tiffin swap for tomorrow', batch=B, palette='ochre', name='A note tucked into the tiffin we packed for each other', front='open at lunch',

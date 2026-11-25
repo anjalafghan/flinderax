@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="149 42 319 446" aria-hidden="true" focusable="false"><style>.joy .ksc-cranes .cr{transform-box:fill-box;transform-origin:50% 0%}
+.joy .ksc-cranes.open .cr{animation:k76_cranes 2.2s ease-in-out 0s 1}
+@keyframes k76_cranes{0%,100%{transform:rotate(0)}20%{transform:rotate(5deg)}45%{transform:rotate(-4.0deg)}70%{transform:rotate(2.25deg)}88%{transform:rotate(-1.0deg)}}
+.joy .ksc-cranes .wl,.joy .ksc-cranes .wr{transform-box:fill-box}
+.joy .ksc-cranes .wl{transform-origin:50% 100%}
+.joy .ksc-cranes .wr{transform-origin:50% 100%}
+.joy .ksc-cranes.open .wl{animation:fl_cranes .5s ease-in-out 4 alternate}
+.joy .ksc-cranes.open .wr{animation:fl_cranes .5s ease-in-out 4 alternate}
+@keyframes fl_cranes{to{transform:scaleY(.35)}}
+@media (prefers-reduced-motion:reduce){.joy .ksc-cranes .wl,.joy .ksc-cranes .wr,.joy .ksc-cranes .cr{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}}</style><g class="cr"><g transform="translate(300 270) rotate(4) scale(0.9)"><path d="M-4 -240 V30" stroke="#efe4cf" stroke-width="2"></path><circle cx="-4" cy="110" r="10" fill="#c0392b"></circle><path d="M-4 80 V100 M-4 120 V150" stroke="#efe4cf" stroke-width="2"></path><g class="wl"><path d="M-40 30 L40 30 L-30 -120 Z" fill="#e46f2a"></path><path d="M0 30 L-30 -120" stroke="#c4561c" stroke-width="2"></path></g><g class="wr"><path d="M-40 30 L40 30 L60 -110 Z" fill="#f29a5a"></path></g><path d="M-150 10 L-40 30 L0 60 Z" fill="#c4561c"></path><path d="M-40 30 L40 30 L0 80 Z" fill="#f29a5a"></path><path d="M40 30 L130 -40 L150 -50 L140 -30 L0 60 Z" fill="#c4561c"></path><path d="M150 -50 L170 -40 L146 -36 Z" fill="#e46f2a"></path><path d="M-150 10 L-110 0 L-40 30 Z" fill="#e46f2a"></path><g transform="translate(-4 150) rotate(6)"><path d="M-40 0 H40 V60 L0 74 L-40 60 Z" fill="#fbf6ea"></path><text x="0" y="30" font-family="Kalam, cursive" font-size="17.5" fill="#2b2b30" text-anchor="middle">1 of 100</text><text x="0" y="50" font-family="'Space Mono', monospace" font-size="8" fill="#2b2b30" text-anchor="middle">folded at midnight</text></g></g></g></svg>

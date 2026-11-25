@@ -147,7 +147,7 @@ export function EditCardModal({
     },
     onError: (error: unknown) => {
       toast.error(
-        error instanceof Error && error.message.startsWith("Statement")
+        error instanceof Error && error.message
           ? error.message
           : "Failed to update card",
       );
@@ -158,8 +158,17 @@ export function EditCardModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 p-4">
-      <Card className="w-full max-w-md animate-in fade-in zoom-in duration-200">
+    // Scrolls when taller than the screen; `m-auto` centres it without cutting off the top.
+    <div
+      className="fixed inset-0 z-50 flex overflow-y-auto overscroll-contain bg-foreground/30 p-4"
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+    >
+      <Card
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit card"
+        className="m-auto w-full max-w-md animate-in fade-in zoom-in duration-200"
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-[24px]">
             <span className="brand-text">Edit card</span>
@@ -168,13 +177,21 @@ export function EditCardModal({
             variant="ghost"
             size="icon"
             onClick={onClose}
+            aria-label="Close"
             className="h-8 w-8 rounded-full"
           >
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="form-grid">
+          <form
+            className="form-grid"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateMutation.mutate();
+            }}
+          >
             <div className="field col-span-full">
               <Label>Card Name / Nickname</Label>
               <Input
@@ -303,6 +320,7 @@ export function EditCardModal({
 
             <div className="col-span-full flex gap-2 pt-1 sm:justify-end">
               <Button
+                type="button"
                 variant="outline"
                 className="flex-1 sm:flex-none"
                 onClick={onClose}
@@ -310,14 +328,14 @@ export function EditCardModal({
                 Cancel
               </Button>
               <Button
+                type="submit"
                 className="flex-1 sm:flex-none"
-                onClick={() => updateMutation.mutate()}
                 disabled={updateMutation.isPending}
               >
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>
