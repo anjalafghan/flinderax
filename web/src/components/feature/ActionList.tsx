@@ -85,6 +85,28 @@ export function ActionList({
 }: {
   actions: DashboardSummary["actions"];
 }) {
+  const visibleActions = actions.slice(0, 3);
+  const remainingActions = actions.slice(3);
+  const rows = (items: typeof actions) => items.map((a) => (
+    <li
+      key={a.text}
+      data-severity={a.severity}
+      className="relative overflow-hidden rounded-[1.25rem] border border-border bg-card px-5 py-4 text-[15px] md:px-7"
+    >
+      <div className="flex items-start gap-4">
+        <span
+          aria-hidden
+          className={`mt-2 h-2 w-2 shrink-0 rounded-full ${a.severity === "urgent" ? "bg-over" : a.severity === "warn" ? "bg-warn" : "bg-muted-foreground/70"}`}
+        />
+        <span className="min-w-0 flex-1 text-base">{a.text}</span>
+        <span className="sr-only">
+          {a.severity === "urgent" ? "Needs attention" : a.severity === "warn" ? "Worth a look" : "Information"}
+        </span>
+      </div>
+      {a.ledger && <LedgerButtons ledger={a.ledger} />}
+    </li>
+  ));
+
   return (
     <section aria-label="Do this" className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
@@ -103,24 +125,20 @@ export function ActionList({
           Nothing to move. You're sorted.
         </p>
       ) : (
-        <ul className="space-y-3">
-          {actions.map((a) => (
-            <li
-              key={a.text}
-              data-severity={a.severity}
-              className="relative overflow-hidden rounded-[1.25rem] border border-border bg-card px-5 py-4 text-[15px] md:px-7"
-            >
-              <div className="flex items-start gap-4">
-                <span
-                  aria-hidden
-                  className="mt-2 h-2 w-2 shrink-0 rounded-full bg-muted-foreground/70"
-                />
-                <span className="text-base">{a.text}</span>
-              </div>
-              {a.ledger && <LedgerButtons ledger={a.ledger} />}
-            </li>
-          ))}
+        <ul className="m-0 list-none space-y-3 p-0">
+          {rows(visibleActions)}
         </ul>
+      )}
+      {remainingActions.length > 0 && (
+        <details className="rounded-[1.25rem] border border-border bg-card px-5 md:px-7">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium marker:hidden [&::-webkit-details-marker]:hidden">
+            <span>Show {remainingActions.length} more {remainingActions.length === 1 ? "action" : "actions"}</span>
+            <span aria-hidden className="text-muted-foreground">＋</span>
+          </summary>
+          <ul className="m-0 list-none space-y-3 pb-4 pl-0">
+            {rows(remainingActions)}
+          </ul>
+        </details>
       )}
     </section>
   );

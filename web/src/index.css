@@ -256,7 +256,7 @@
 
 @layer components {
   .page {
-    @apply mx-auto w-full max-w-[1040px] px-4 py-8 md:px-6 md:py-12;
+    @apply mx-auto w-full max-w-[1120px] px-4 py-7 md:px-7 md:py-10;
   }
   /* Reading-width pages: same left edge as the wordmark and tabs, content capped at 48rem. */
   .page-narrow > * {
@@ -285,10 +285,10 @@
     font-family: var(--font-display);
     font-style: normal;
     font-weight: 400;
-    @apply text-4xl leading-none tracking-tight md:text-5xl;
+    @apply text-4xl leading-[1.04] tracking-tight md:text-5xl;
   }
   .page-sub {
-    @apply mt-3 text-sm text-muted-foreground md:text-base;
+    @apply mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground md:text-base;
   }
   /* The quiet metadata voice: small, muted, sentence case. */
   .eyebrow,
@@ -344,6 +344,11 @@
   .tone-quiet {
     color: hsl(var(--muted-foreground));
     background: hsl(var(--chip));
+  }
+
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 3px;
   }
 }
 

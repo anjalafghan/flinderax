@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import StarBorder from "@/components/bits/StarBorder";
 import { useSection } from "@/theme/useSection";
+import { formatINR, toPaise } from "@/utils/money";
 import type { DecideView, Opt } from "./api";
 import { toggleSetting, toggleStart, type Filters } from "./form";
 
@@ -74,6 +75,17 @@ export default function Sentence({
   const formRef = useRef<HTMLFormElement>(null);
   const hasWhens = v.whens.length > 0;
   const bothIn = v.middle.both_in;
+  const selectedWhen = v.whens.find((o) => o.value === f.when)?.label ?? "Tonight";
+  const selectedMood = v.tags.find((o) => o.value === f.tag)?.label ?? "Any mood";
+  const budgetPaise = toPaise(f.budget);
+  const budgetLabel = budgetPaise && budgetPaise > 0 ? formatINR(budgetPaise) : "Any budget";
+  const preferenceCount = [
+    f.settings.length > 0,
+    f.max_duration !== "",
+    f.max_km !== "",
+    f.energy !== "",
+    f.fresh === "1",
+  ].filter(Boolean).length;
   // The Draw button is the star of the page: a rose spark laps its rim.
   const { colors, dark } = useSection();
   const star = {
@@ -159,6 +171,17 @@ export default function Sentence({
           <span>Rain likely tonight ({v.rain}%), so cozy ones float up.</span>
         </p>
       )}
+      <details className="jar-preferences">
+        <summary>
+          <span className="jar-preferences-copy">
+            <strong>Make it fit tonight</strong>
+            <span>{selectedWhen} · {budgetLabel} · {selectedMood}</span>
+          </span>
+          <span className="jar-preferences-action">
+            {preferenceCount ? `${preferenceCount} set` : "Preferences"}
+            <span aria-hidden>＋</span>
+          </span>
+        </summary>
       <p className="sentence">
         {hasWhens ? (
           <>
@@ -296,6 +319,7 @@ export default function Sentence({
         )}
         .
       </p>
+      </details>
 
       <div className="draw-row">
         {bothIn && (
