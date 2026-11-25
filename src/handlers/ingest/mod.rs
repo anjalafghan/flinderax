@@ -1062,6 +1062,43 @@ mod statement_tests {
     }
 
     #[tokio::test]
+    async fn reimporting_with_an_account_links_rows_an_untargeted_import_left_unlinked() {
+        let rows = "05/11/26,SALARYFORTHEMONTHOFOCT2026,05/11/26,,5000.00,,5000.00\r\n\
+06/11/26,UPI-ASHA RAO-98XXXXXX12@YESCRED-KKBK0001234-612345678904-PAID VIA CRED,06/11/26,3000.00,,612345678904,2000.00\r\n";
+        let state = test_state().await;
+        sqlx::query("INSERT INTO accounts (account_id, user_id, name, kind) VALUES ('acctC', 'u', 'C', 'bank')").execute(&state.db).await.unwrap();
+        let first = import(&state, &csv(rows), None).await;
+        assert_eq!((first.added, first.linked), (2, 0));
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM transactions WHERE account_id IS NULL AND card_id IS NULL").await, 2);
+
+        let again = import(&state, &csv(rows), Some("acctB")).await;
+        assert_eq!((again.added, again.duplicates, again.linked), (0, 2, 2));
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM transactions WHERE account_id = 'acctB'").await, 2);
+
+        // A row already on an account is never moved, by a later import to another one or to none.
+        let other = import(&state, &csv(rows), Some("acctC")).await;
+        assert_eq!((other.duplicates, other.linked), (2, 0));
+        import(&state, &csv(rows), None).await;
+        assert_eq!(count(&state.db, "SELECT COUNT(*) FROM transactions WHERE account_id = 'acctB'").await, 2);
+    }
+
+    #[tokio::test]
+    async fn a_targeted_import_links_the_alert_it_confirms_when_the_alert_had_no_account() {
+        let state = test_state().await;
+        sqlx::query(
+            "INSERT INTO transactions (txn_id, user_id, occurred_on, direction, amount_paise, source, dedupe_key)
+             VALUES ('alert-bare', 'u', '2026-11-05', 'credit', 500000, 'sms', 'fp:bare')",
+        )
+        .execute(&state.db)
+        .await
+        .unwrap();
+        let res = import(&state, &csv("05/11/26,SALARYFORTHEMONTHOFOCT2026,05/11/26,,5000.00,,5000.00\r\n"), Some("acctB")).await;
+        assert_eq!((res.upgraded, res.added, res.linked), (1, 0, 1));
+        let acct: Option<String> = sqlx::query_scalar("SELECT account_id FROM transactions WHERE txn_id = 'alert-bare'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(acct.as_deref(), Some("acctB"));
+    }
+
+    #[tokio::test]
     async fn newest_first_statement_sets_the_real_closing_balance() {
         // Newest first, two lines on the last day: the day's first line (listed last) is not the closing one.
         let rows = "06/11/26,UPI-STREAMCO-STREAMCO@YBL-YESB0YBLUPI-612345678905-SUBSCRIPTION DEBIT,06/11/26,499.00,,612345678905,500.00\r\n\

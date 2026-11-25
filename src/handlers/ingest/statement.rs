@@ -37,6 +37,8 @@ pub struct StatementResult {
     pub matched_alerts: usize,
     /// Bank-alert transactions that the statement confirmed (kept, with the statement's reference and text).
     pub upgraded: usize,
+    /// Rows already in joy with no account or card that this import put on its account or card.
+    pub linked: usize,
     /// Rows under the header that could not be read.
     pub skipped: usize,
     /// Rows this import left without a category.
@@ -473,9 +475,9 @@ impl Importer<'_> {
             .bind(&dedupe_key)
             .fetch_optional(&mut *conn)
             .await?;
-        if exists.is_some() {
+        if let Some(txn_id) = exists {
             self.res.duplicates += 1;
-            return Ok(());
+            return self.link(conn, &txn_id).await;
         }
 
         let prepared = self.prepare(row);
@@ -485,10 +487,33 @@ impl Importer<'_> {
         }
     }
 
+    /// A row this import found already in joy but on no account or card (an earlier import with no
+    /// target, or an alert without the last digits) goes on this import's account or card. A row
+    /// already on one is never moved.
+    async fn link(&mut self, conn: &mut sqlx::SqliteConnection, txn_id: &str) -> Result<(), AppError> {
+        if self.target.account_id.is_none() && self.target.card_id.is_none() {
+            return Ok(());
+        }
+        let done = sqlx::query(
+            "UPDATE transactions SET account_id = ?, card_id = ?, last4 = COALESCE(last4, ?)
+             WHERE txn_id = ? AND user_id = ? AND account_id IS NULL AND card_id IS NULL",
+        )
+        .bind(&self.target.account_id)
+        .bind(&self.target.card_id)
+        .bind(&self.target.last4)
+        .bind(txn_id)
+        .bind(self.user_id)
+        .execute(conn)
+        .await?;
+        self.res.linked += done.rows_affected() as usize;
+        Ok(())
+    }
+
     /// The statement is the source of truth for a row a bank alert recorded: its posting date,
     /// reference and narration replace the alert's, which is kept rather than doubled.
     async fn confirm(&mut self, conn: &mut sqlx::SqliteConnection, p: &Prepared, txn_id: String, on_statement: bool, existing: &str) -> Result<(), AppError> {
         self.claimed.insert(txn_id.clone());
+        self.link(conn, &txn_id).await?;
         if on_statement {
             // Already confirmed by an earlier import of this statement.
             self.res.duplicates += 1;
@@ -655,6 +680,7 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
             added: 0,
             duplicates: 0,
             matched_alerts: 0,
+            linked: 0,
             upgraded: 0,
             skipped: parsed.skipped,
             uncategorized: 0,
