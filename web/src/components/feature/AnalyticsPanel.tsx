@@ -12,14 +12,29 @@ import {
 import { formatDay } from "@/utils/dates";
 import { formatINR } from "@/utils/money";
 import { cn } from "@/utils/cn";
+import { categoryColor } from "@/utils/categoryColors";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Colours come from the theme tokens so the chart reads in light and dark.
-const IN_COLOR = "hsl(var(--good))";
-const OUT_COLOR = "hsl(var(--foreground))";
-const INVESTED_COLOR = "hsl(var(--muted-foreground) / 0.35)";
+// Money in is mint, spending coral, investing sky: the same meaning everywhere on Money.
+const IN_COLOR = "linear-gradient(180deg, hsl(var(--c-mint)), hsl(var(--c-teal)))";
+const OUT_COLOR = "linear-gradient(180deg, hsl(var(--c-coral)), hsl(var(--c-sun)))";
+const INVESTED_COLOR = "hsl(var(--c-sky))";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -37,12 +52,21 @@ const monthYear = (ym: string) => {
 
 function ordinal(n: number): string {
   const suffix =
-    n % 100 >= 11 && n % 100 <= 13 ? "th" : n % 10 === 1 ? "st" : n % 10 === 2 ? "nd" : n % 10 === 3 ? "rd" : "th";
+    n % 100 >= 11 && n % 100 <= 13
+      ? "th"
+      : n % 10 === 1
+        ? "st"
+        : n % 10 === 2
+          ? "nd"
+          : n % 10 === 3
+            ? "rd"
+            : "th";
   return `${n}${suffix}`;
 }
 
 /** "ASHA STORES" -> "Asha Stores". */
-const titleCase = (s: string) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+const titleCase = (s: string) =>
+  s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 /** The usual salary days: a short list, or the span when there are many. */
 function daysLabel(days: number[]): string {
@@ -58,7 +82,13 @@ const KIND_LABEL: Record<AnalyticsPayee["kind"], string | null> = {
   person: null,
 };
 
-function Pill({ className, children }: { className?: string; children: ReactNode }) {
+function Pill({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <span
       className={cn(
@@ -71,12 +101,22 @@ function Pill({ className, children }: { className?: string; children: ReactNode
   );
 }
 
-function Fact({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Fact({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="flex min-w-[120px] flex-1 flex-col gap-1">
       <dt className="text-[13px] text-muted-foreground">{label}</dt>
       <dd className="m-0 font-display text-[28px] leading-none">{value}</dd>
-      {hint && <span className="text-[13px] text-muted-foreground">{hint}</span>}
+      {hint && (
+        <span className="text-[13px] text-muted-foreground">{hint}</span>
+      )}
     </div>
   );
 }
@@ -84,7 +124,11 @@ function Fact({ label, value, hint }: { label: string; value: string; hint?: str
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <li className="flex items-center gap-2">
-      <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-[3px]" style={{ background: color }} />
+      <span
+        aria-hidden
+        className="inline-block h-2.5 w-2.5 rounded-[3px]"
+        style={{ background: color }}
+      />
       {label}
     </li>
   );
@@ -92,12 +136,21 @@ function Legend({ color, label }: { color: string; label: string }) {
 
 /** Twelve months of money in (green) against money out (spend, with invested stacked on top, muted). */
 function MonthlyChart({ months }: { months: AnalyticsMonth[] }) {
-  const peak = Math.max(1, ...months.map((m) => Math.max(m.income_paise, m.spend_paise + m.invested_paise)));
+  const peak = Math.max(
+    1,
+    ...months.map((m) =>
+      Math.max(m.income_paise, m.spend_paise + m.invested_paise),
+    ),
+  );
   const height = (paise: number) => `${(paise / peak) * 100}%`;
 
   return (
     <div className="flex flex-col gap-4">
-      <div role="img" aria-label="Money in and out, last 12 months" className="flex h-44 items-stretch gap-2">
+      <div
+        role="img"
+        aria-label="Money in and out, last 12 months"
+        className="flex h-44 items-stretch gap-2"
+      >
         {months.map((m) => {
           const out = m.spend_paise + m.invested_paise;
           return (
@@ -107,16 +160,29 @@ function MonthlyChart({ months }: { months: AnalyticsMonth[] }) {
               className="flex min-w-0 flex-1 flex-col gap-2"
             >
               <div className="flex min-h-0 flex-1 items-end justify-center gap-[3px]">
-                <div className="w-2 rounded-t-[3px]" style={{ height: height(m.income_paise), background: IN_COLOR }} />
+                <div
+                  className="w-2 rounded-t-[3px]"
+                  style={{
+                    height: height(m.income_paise),
+                    background: IN_COLOR,
+                  }}
+                />
                 <div
                   className="flex w-2 flex-col overflow-hidden rounded-t-[3px]"
                   style={{ height: height(out) }}
                 >
-                  <div style={{ flex: m.invested_paise, background: INVESTED_COLOR }} />
+                  <div
+                    style={{
+                      flex: m.invested_paise,
+                      background: INVESTED_COLOR,
+                    }}
+                  />
                   <div style={{ flex: m.spend_paise, background: OUT_COLOR }} />
                 </div>
               </div>
-              <span className="text-center text-[10px] leading-none text-muted-foreground">{monthAbbr(m.month)}</span>
+              <span className="text-center text-[10px] leading-none text-muted-foreground">
+                {monthAbbr(m.month)}
+              </span>
             </div>
           );
         })}
@@ -133,7 +199,12 @@ function MonthlyChart({ months }: { months: AnalyticsMonth[] }) {
 function SavingsBlock({ bps }: { bps: number | null }) {
   return (
     <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
-      <p className="m-0 font-display text-[72px] leading-[0.9] tracking-[-0.03em]">
+      <p
+        className={cn(
+          "m-0 font-display text-[72px] leading-[0.9] tracking-[-0.03em]",
+          bps === null ? "text-muted-foreground" : "brand-text",
+        )}
+      >
         {bps === null ? "—" : `${Math.round(bps / 100)}%`}
       </p>
       <p className="m-0 max-w-[30ch] text-sm text-muted-foreground">
@@ -149,13 +220,23 @@ function SalarySection({ salary }: { salary: AnalyticsSalary }) {
   const missing = salary.missing_months;
   return (
     <section aria-labelledby="analytics-salary" className="flex flex-col gap-4">
-      <h3 id="analytics-salary" className="m-0 font-display text-[24px] leading-tight">
+      <h3
+        id="analytics-salary"
+        className="m-0 font-display text-[24px] leading-tight"
+      >
         Salary
       </h3>
       <dl className="m-0 flex flex-wrap gap-x-6 gap-y-5">
-        <Fact label="Usually" value={salary.usual || daysLabel(salary.typical_days)} />
+        <Fact
+          label="Usually"
+          value={salary.usual || daysLabel(salary.typical_days)}
+        />
         <Fact label="Average" value={rupees(salary.avg_paise)} />
-        <Fact label="Last" value={rupees(salary.last_paise)} hint={formatDay(salary.last_on)} />
+        <Fact
+          label="Last"
+          value={rupees(salary.last_paise)}
+          hint={formatDay(salary.last_on)}
+        />
         <Fact label="Next expected" value={formatDay(salary.next_expected)} />
       </dl>
       <p className="m-0 text-[13px] leading-snug text-muted-foreground">
@@ -172,7 +253,10 @@ function SipsSection({ sips }: { sips: AnalyticsOut["sips"] }) {
   return (
     <section aria-labelledby="analytics-sips" className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-4">
-        <h3 id="analytics-sips" className="m-0 font-display text-[24px] leading-tight">
+        <h3
+          id="analytics-sips"
+          className="m-0 font-display text-[24px] leading-tight"
+        >
           SIPs
         </h3>
         <span className="font-display text-2xl">{`${rupees(monthly)} a month`}</span>
@@ -196,22 +280,33 @@ function SipsSection({ sips }: { sips: AnalyticsOut["sips"] }) {
 
 function AutopaySection({ autopay }: { autopay: AnalyticsOut["autopay"] }) {
   return (
-    <section aria-labelledby="analytics-autopay" className="flex flex-col gap-4">
-      <h3 id="analytics-autopay" className="m-0 font-display text-[24px] leading-tight">
+    <section
+      aria-labelledby="analytics-autopay"
+      className="flex flex-col gap-4"
+    >
+      <h3
+        id="analytics-autopay"
+        className="m-0 font-display text-[24px] leading-tight"
+      >
         AutoPay
       </h3>
       <ul className="ledger">
         {autopay.map((a) => (
           <li key={a.name} className="ledger-row">
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate text-base font-medium" title={titleCase(a.name)}>
+              <span
+                className="truncate text-base font-medium"
+                title={titleCase(a.name)}
+              >
                 {titleCase(a.name)}
               </span>
               <span className="text-[13px] text-muted-foreground">
                 {`${plural(a.count, "payment")} · last ${formatDay(a.last_on)}`}
               </span>
             </span>
-            <span className="font-display text-xl">{rupees(a.amount_paise)}</span>
+            <span className="font-display text-xl">
+              {rupees(a.amount_paise)}
+            </span>
           </li>
         ))}
       </ul>
@@ -223,7 +318,10 @@ function SmallFlowsSection({ data }: { data: AnalyticsOut }) {
   const { own_transfers: own, small_ticket: small } = data;
   return (
     <section aria-labelledby="analytics-small" className="flex flex-col gap-4">
-      <h3 id="analytics-small" className="m-0 font-display text-[24px] leading-tight">
+      <h3
+        id="analytics-small"
+        className="m-0 font-display text-[24px] leading-tight"
+      >
         Small payments and transfers
       </h3>
       <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[15px] leading-snug">
@@ -245,20 +343,42 @@ function SmallFlowsSection({ data }: { data: AnalyticsOut }) {
 function WeekdaySection({ values }: { values: number[] }) {
   const peak = Math.max(1, ...values);
   return (
-    <section aria-labelledby="analytics-weekday" className="flex flex-col gap-4">
-      <h3 id="analytics-weekday" className="m-0 font-display text-[24px] leading-tight">
+    <section
+      aria-labelledby="analytics-weekday"
+      className="flex flex-col gap-4"
+    >
+      <h3
+        id="analytics-weekday"
+        className="m-0 font-display text-[24px] leading-tight"
+      >
         Weekday spending
       </h3>
-      <div role="img" aria-label="Spending by weekday, last 90 days" className="flex h-28 items-stretch gap-2">
+      <div
+        role="img"
+        aria-label="Spending by weekday, last 90 days"
+        className="flex h-28 items-stretch gap-2"
+      >
         {values.map((v, i) => (
-          <div key={WEEKDAYS[i]} title={`${WEEKDAYS[i]}: ${rupees(v)}`} className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <div
+            key={WEEKDAYS[i]}
+            title={`${WEEKDAYS[i]}: ${rupees(v)}`}
+            className="flex min-w-0 flex-1 flex-col gap-1.5"
+          >
             <div className="flex min-h-0 flex-1 items-end">
               <div
-                className="w-full rounded-t-[4px]"
-                style={{ height: `${(v / peak) * 100}%`, background: OUT_COLOR }}
+                className="w-full rounded-t-[6px] transition-[height] duration-700"
+                style={{
+                  height: `${(v / peak) * 100}%`,
+                  background:
+                    v === peak
+                      ? OUT_COLOR
+                      : "linear-gradient(180deg, hsl(var(--c-grape) / 0.7), hsl(var(--c-sky) / 0.5))",
+                }}
               />
             </div>
-            <span className="text-center text-[11px] leading-none text-muted-foreground">{WEEKDAYS[i]}</span>
+            <span className="text-center text-[11px] leading-none text-muted-foreground">
+              {WEEKDAYS[i]}
+            </span>
           </div>
         ))}
       </div>
@@ -270,9 +390,12 @@ function WeekdaySection({ values }: { values: number[] }) {
 function AnalyticsBody({ data }: { data: AnalyticsOut }) {
   // "Uncategorized" isn't a place money went: show it as a prompt, and the bars without it.
   const unsorted = data.categories.find((c) => c.category === "uncategorized");
-  const categories = data.categories.filter((c) => c.category !== "uncategorized").slice(0, 6);
+  const categories = data.categories
+    .filter((c) => c.category !== "uncategorized")
+    .slice(0, 6);
   const hasWeekdays = data.weekday_spend_paise.some((v) => v > 0);
-  const hasSmallFlows = data.small_ticket.per_month_paise > 0 || data.own_transfers !== null;
+  const hasSmallFlows =
+    data.small_ticket.per_month_paise > 0 || data.own_transfers !== null;
 
   return (
     <>
@@ -285,17 +408,28 @@ function AnalyticsBody({ data }: { data: AnalyticsOut }) {
       </section>
 
       {(categories.length > 0 || unsorted) && (
-        <section aria-labelledby="analytics-categories" className="flex flex-col gap-4">
+        <section
+          aria-labelledby="analytics-categories"
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1">
-            <h3 id="analytics-categories" className="m-0 font-display text-[24px] leading-tight">
+            <h3
+              id="analytics-categories"
+              className="m-0 font-display text-[24px] leading-tight"
+            >
               Where the money goes
             </h3>
-            <span className="text-[13px] text-muted-foreground">Last 90 days</span>
+            <span className="text-[13px] text-muted-foreground">
+              Last 90 days
+            </span>
           </div>
           {unsorted && (
             <p className="tone-warn m-0 rounded-[18px] px-5 py-4 text-sm leading-snug">
               {`${rupees(unsorted.paise)} across ${plural(unsorted.count, "payment")} (${Math.round(unsorted.share_bps / 100)}%) isn't categorised yet. `}
-              <Link to="/spending" className="font-medium underline underline-offset-4">
+              <Link
+                to="/spending"
+                className="font-medium underline underline-offset-4"
+              >
                 Categorise a few payees
               </Link>
               {" and joy remembers them, including for past payments."}
@@ -305,13 +439,30 @@ function AnalyticsBody({ data }: { data: AnalyticsOut }) {
             {categories.map((c) => (
               <li key={c.category} className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between gap-4 text-[15px]">
-                  <span className="capitalize">{c.category}</span>
+                  <span className="flex items-center gap-2 capitalize">
+                    <span
+                      aria-hidden
+                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: categoryColor(c.category) }}
+                    />
+                    {c.category}
+                  </span>
                   <span className="shrink-0 text-[13px] text-muted-foreground">
                     {`${rupees(c.paise)} · ${Math.round(c.share_bps / 100)}%`}
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-chip" aria-hidden>
-                  <div className="h-full rounded-full" style={{ width: `${c.share_bps / 100}%`, background: OUT_COLOR }} />
+                <div
+                  className="h-2.5 overflow-hidden rounded-full"
+                  style={{ background: categoryColor(c.category, 0.15) }}
+                  aria-hidden
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${c.share_bps / 100}%`,
+                      background: `linear-gradient(90deg, ${categoryColor(c.category, 0.7)}, ${categoryColor(c.category)})`,
+                    }}
+                  />
                 </div>
               </li>
             ))}
@@ -320,23 +471,38 @@ function AnalyticsBody({ data }: { data: AnalyticsOut }) {
       )}
 
       {data.top_payees.length > 0 && (
-        <section aria-labelledby="analytics-payees" className="flex flex-col gap-4">
+        <section
+          aria-labelledby="analytics-payees"
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1">
-            <h3 id="analytics-payees" className="m-0 font-display text-[24px] leading-tight">
+            <h3
+              id="analytics-payees"
+              className="m-0 font-display text-[24px] leading-tight"
+            >
               Top payees
             </h3>
-            <span className="text-[13px] text-muted-foreground">Last 90 days</span>
+            <span className="text-[13px] text-muted-foreground">
+              Last 90 days
+            </span>
           </div>
           <ul className="ledger">
             {data.top_payees.map((p) => (
               <li key={p.name} className="ledger-row gap-4">
                 <span className="flex min-w-0 flex-auto flex-col gap-1">
-                  <span className="truncate text-base font-medium" title={titleCase(p.name)}>
+                  <span
+                    className="truncate text-base font-medium"
+                    title={titleCase(p.name)}
+                  >
                     {titleCase(p.name)}
                   </span>
                   <span className="flex flex-wrap items-center gap-2">
-                    {KIND_LABEL[p.kind] && <Pill className="tone-quiet">{KIND_LABEL[p.kind]}</Pill>}
-                    <span className="text-[13px] text-muted-foreground">{plural(p.count, "payment")}</span>
+                    {KIND_LABEL[p.kind] && (
+                      <Pill className="tone-quiet">{KIND_LABEL[p.kind]}</Pill>
+                    )}
+                    <span className="text-[13px] text-muted-foreground">
+                      {plural(p.count, "payment")}
+                    </span>
                   </span>
                 </span>
                 <span className="font-display text-xl">{rupees(p.paise)}</span>
@@ -353,8 +519,14 @@ function AnalyticsBody({ data }: { data: AnalyticsOut }) {
       {hasWeekdays && <WeekdaySection values={data.weekday_spend_paise} />}
 
       {data.notes.length > 0 && (
-        <section aria-labelledby="analytics-notes" className="flex flex-col gap-4">
-          <h3 id="analytics-notes" className="m-0 font-display text-[24px] leading-tight">
+        <section
+          aria-labelledby="analytics-notes"
+          className="flex flex-col gap-4"
+        >
+          <h3
+            id="analytics-notes"
+            className="m-0 font-display text-[24px] leading-tight"
+          >
             Notes
           </h3>
           <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[15px] leading-snug">
@@ -373,7 +545,12 @@ export function AnalyticsPanel() {
   const { data, isLoading, isError, refetch } = useAnalytics();
 
   if (isLoading) {
-    return <div className="h-64 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading your money" />;
+    return (
+      <div
+        className="h-64 animate-pulse rounded-[28px] bg-muted/40"
+        aria-label="Loading your money"
+      />
+    );
   }
   if (isError || !data) {
     return (
@@ -391,10 +568,13 @@ export function AnalyticsPanel() {
   return (
     <section
       aria-labelledby="analytics-title"
-      className="flex flex-col gap-12 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10"
+      className="glass flex flex-col gap-12 rounded-[28px] px-6 py-8 sm:px-12 sm:py-10"
     >
       <header className="flex flex-col gap-2">
-        <h2 id="analytics-title" className="m-0 font-display text-[32px] leading-none">
+        <h2
+          id="analytics-title"
+          className="m-0 font-display brand-text text-[32px] leading-none"
+        >
           Your money, from your statements
         </h2>
         {coverage && (
@@ -408,10 +588,12 @@ export function AnalyticsPanel() {
         <AnalyticsBody data={data} />
       ) : (
         <div className="flex flex-col items-start gap-4">
-          <p className="empty-note m-0 w-full">Upload a statement to see this.</p>
+          <p className="empty-note m-0 w-full">
+            Upload a statement to see this.
+          </p>
           <Link
             to="/spending"
-            className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground no-underline"
+            className="inline-flex min-h-11 items-center rounded-full bg-brand-gradient px-5 text-sm font-semibold no-underline"
           >
             Go to Spending
           </Link>

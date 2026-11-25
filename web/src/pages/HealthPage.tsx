@@ -17,12 +17,32 @@ export default function HealthPage() {
       <main className="page page-narrow stack">
         <div>
           <h1 className="page-title">Health</h1>
-          <p className="page-sub">Food, a few habits and a yearly check-up. Nothing you have to log every day.</p>
+          <p className="page-sub">
+            Food, a few habits and a yearly check-up. Nothing you have to log
+            every day.
+          </p>
+          {/* A key to the cards' colours below. */}
+          <div className="mt-3 flex flex-wrap gap-2" aria-hidden>
+            <span className="pill pill-sun">This week</span>
+            <span className="pill pill-grape">Habits</span>
+            <span className="pill pill-coral">Food money</span>
+            <span className="pill pill-mint">Body</span>
+          </div>
         </div>
 
-        {diet.isLoading && <div className="h-64 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading your health" />}
+        {diet.isLoading && (
+          <div
+            className="h-64 animate-pulse rounded-[28px] bg-muted/40"
+            aria-label="Loading your health"
+          />
+        )}
 
-        {diet.isError && !o && <Retry message="Couldn't load your health details." onRetry={() => void diet.refetch()} />}
+        {diet.isError && !o && (
+          <Retry
+            message="Couldn't load your health details."
+            onRetry={() => void diet.refetch()}
+          />
+        )}
 
         {o && (
           <>

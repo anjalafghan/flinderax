@@ -34,15 +34,24 @@ export default function SpendingPage() {
       <main className="page stack page-narrow">
         <div>
           <h1 className="page-title">Spending</h1>
-          <p className="page-sub">Upload your bank statement to bring everything in; bank alerts fill the gaps in between. Fix a category and the app learns it.</p>
+          <p className="page-sub">
+            Upload your bank statement to bring everything in; bank alerts fill
+            the gaps in between. Fix a category and the app learns it.
+          </p>
         </div>
 
         <section aria-label="Add transactions">
           <Card>
             <CardHeader className="pb-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="font-display text-[32px] leading-none">Add transactions</h2>
-                <div role="tablist" aria-label="How to add" className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1 sm:w-auto">
+                <h2 className="font-display brand-text text-[32px] leading-none">
+                  Add transactions
+                </h2>
+                <div
+                  role="tablist"
+                  aria-label="How to add"
+                  className="grid grid-cols-3 gap-1 rounded-xl border border-brand/20 bg-brand-tint p-1 sm:w-auto"
+                >
                   {ADD_MODES.map((m) => (
                     <button
                       key={m.id}
@@ -50,8 +59,10 @@ export default function SpendingPage() {
                       aria-selected={addMode === m.id}
                       onClick={() => setAddMode(m.id)}
                       className={cn(
-                        "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors",
-                        addMode === m.id ? "bg-card text-foreground" : "text-muted-foreground hover:text-foreground",
+                        "inline-flex h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors",
+                        addMode === m.id
+                          ? "bg-brand-gradient shadow-[0_8px_18px_-10px_hsl(var(--brand)/0.8)]"
+                          : "text-muted-foreground hover:bg-brand-tint hover:text-brand-ink",
                       )}
                     >
                       <m.icon className="h-4 w-4" aria-hidden />
@@ -65,14 +76,22 @@ export default function SpendingPage() {
               <UnrecognizedInbox />
               {addMode === "paste" && (
                 <>
-                  <p className="max-w-prose text-sm leading-snug text-muted-foreground">Missed one? Copy the bank's message and paste it here.</p>
+                  <p className="max-w-prose text-sm leading-snug text-muted-foreground">
+                    Missed one? Copy the bank's message and paste it here.
+                  </p>
                   <PasteAlert />
                 </>
               )}
               {addMode === "upload" && (
                 <>
                   <p className="max-w-prose text-sm leading-snug text-muted-foreground">
-                    Upload the statement PDF from your bank (Kotak, for one) and it is read on this device. For HDFC, download it from NetBanking as <span className="font-medium text-foreground">Delimited (.txt)</span>. Nothing is added twice, so overlapping periods are fine.
+                    Upload the statement PDF from your bank (Kotak, for one) and
+                    it is read on this device. For HDFC, download it from
+                    NetBanking as{" "}
+                    <span className="font-medium text-foreground">
+                      Delimited (.txt)
+                    </span>
+                    . Nothing is added twice, so overlapping periods are fine.
                   </p>
                   <StatementImport />
                 </>
@@ -82,18 +101,35 @@ export default function SpendingPage() {
           </Card>
         </section>
 
-        <SpendingOverview summary={summary} isLoading={isLoading} isError={isError} />
+        <SpendingOverview
+          summary={summary}
+          isLoading={isLoading}
+          isError={isError}
+        />
 
-        <TransactionList uncategorizedOnly={uncategorizedOnly} onUncategorizedOnlyChange={setUncategorizedOnly} />
-
+        <TransactionList
+          uncategorizedOnly={uncategorizedOnly}
+          onUncategorizedOnlyChange={setUncategorizedOnly}
+        />
 
         <details className="group glass rounded-[28px]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 md:px-8">
             <span>
-              <span className="block font-semibold">Rules</span>
-              <span className="block text-sm leading-snug text-muted-foreground">Category rules</span>
+              <span className="flex items-center gap-2 font-semibold">
+                <span
+                  aria-hidden
+                  className="inline-block h-2.5 w-2.5 rounded-full bg-grape"
+                />
+                Rules
+              </span>
+              <span className="block text-sm leading-snug text-muted-foreground">
+                Category rules
+              </span>
             </span>
-            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+            <ChevronDown
+              className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+              aria-hidden
+            />
           </summary>
           <div className="stack border-t border-border p-6 md:p-8">
             <p className="text-sm text-muted-foreground">
@@ -104,7 +140,9 @@ export default function SpendingPage() {
               .
             </p>
             <section aria-label="Rules" className="space-y-3">
-              <h2 className="font-display text-[32px] leading-none">Rules</h2>
+              <h2 className="font-display brand-text text-[32px] leading-none">
+                Rules
+              </h2>
               <SpendingRules />
             </section>
           </div>

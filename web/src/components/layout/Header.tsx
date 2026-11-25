@@ -1,8 +1,22 @@
 import { useLayoutEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ClipboardCheck, Heart, Route, Settings, Sun, Wallet, type LucideIcon } from "lucide-react";
+import {
+  ClipboardCheck,
+  Heart,
+  Route,
+  Settings,
+  Sun,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/utils/cn";
 import { ScrollFade } from "@/components/ui/scroll-fade";
+
+/** Tab styling: one ink look for every tab. */
+const INK = { text: "text-foreground", hover: "hover:text-foreground", fill: "bg-foreground", glow: "" };
+const TAB_TONE: Record<string, { text: string; hover: string; fill: string; glow: string }> = {
+  "/": INK, "/money": INK, "/life": INK, "/joy": INK, "/week": INK,
+};
 
 interface Tab {
   to: string;
@@ -22,10 +36,40 @@ interface SubTab {
 
 const TABS: Tab[] = [
   { to: "/", label: "Today", icon: Sun, prefixes: ["/"] },
-  { to: "/money", label: "Money", icon: Wallet, prefixes: ["/money", "/cards", "/accounts", "/spending", "/plan", "/working"] },
-  { to: "/life", label: "Life", icon: Route, prefixes: ["/life", "/glance", "/wedding", "/year", "/what-if", "/work", "/health"] },
+  {
+    to: "/money",
+    label: "Money",
+    icon: Wallet,
+    prefixes: [
+      "/money",
+      "/cards",
+      "/accounts",
+      "/spending",
+      "/plan",
+      "/working",
+    ],
+  },
+  {
+    to: "/life",
+    label: "Life",
+    icon: Route,
+    prefixes: [
+      "/life",
+      "/glance",
+      "/wedding",
+      "/year",
+      "/what-if",
+      "/work",
+      "/health",
+    ],
+  },
   { to: "/joy", label: "Us", icon: Heart, prefixes: ["/joy", "/people"] },
-  { to: "/week", label: "Review", icon: ClipboardCheck, prefixes: ["/week", "/review", "/checkin"] },
+  {
+    to: "/week",
+    label: "Review",
+    icon: ClipboardCheck,
+    prefixes: ["/week", "/review", "/checkin"],
+  },
 ];
 
 /** The pages inside a tab, keyed by the tab's path. Every tab but Today has them, in the same style. */
@@ -75,15 +119,20 @@ const SUBTABS: Record<string, { label: string; items: SubTab[] }> = {
   },
 };
 
-const under = (pathname: string, p: string) => pathname === p || pathname.startsWith(`${p}/`);
+const under = (pathname: string, p: string) =>
+  pathname === p || pathname.startsWith(`${p}/`);
 
 /** The tab whose prefixes match the path. "/" only matches exactly, so it doesn't light up everything. */
 function activeTab(pathname: string): Tab | undefined {
-  return TABS.find((t) => t.prefixes.some((p) => (p === "/" ? pathname === "/" : under(pathname, p))));
+  return TABS.find((t) =>
+    t.prefixes.some((p) => (p === "/" ? pathname === "/" : under(pathname, p))),
+  );
 }
 
 function subtabOn(t: SubTab, pathname: string): boolean {
-  return t.exact ? pathname === t.to || pathname === `${t.to}/` : t.prefixes.some((p) => under(pathname, p));
+  return t.exact
+    ? pathname === t.to || pathname === `${t.to}/`
+    : t.prefixes.some((p) => under(pathname, p));
 }
 
 /** The open tab's pages as an underline bar. On a phone it scrolls sideways and keeps the current one in view. */
@@ -98,28 +147,33 @@ export function SubTabs() {
   if (!group) return null;
   return (
     <nav aria-label={group.label} className="mt-6">
-      <div className="-mx-4 border-b border-border md:mx-0">
-      <ScrollFade watch={pathname} className="gap-6 px-4 py-0 md:gap-8 md:px-0">
-        {group.items.map((t) => {
-          const on = subtabOn(t, pathname);
-          return (
-            <Link
-              key={t.to}
-              ref={on ? current : undefined}
-              to={t.to}
-              viewTransition
-              aria-current={on ? "page" : undefined}
-              className={cn(
-                "relative inline-flex min-h-11 shrink-0 items-center whitespace-nowrap text-sm no-underline transition-colors",
-                "after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-foreground after:transition-transform after:origin-left",
-                on ? "font-medium text-foreground after:scale-x-100" : "text-muted-foreground after:scale-x-0 hover:text-foreground",
-              )}
-            >
-              {t.label}
-            </Link>
-          );
-        })}
-      </ScrollFade>
+      <div className="-mx-4 border-b border-brand/20 md:mx-0">
+        <ScrollFade
+          watch={pathname}
+          className="gap-6 px-4 py-0 md:gap-8 md:px-0"
+        >
+          {group.items.map((t) => {
+            const on = subtabOn(t, pathname);
+            return (
+              <Link
+                key={t.to}
+                ref={on ? current : undefined}
+                to={t.to}
+                viewTransition
+                aria-current={on ? "page" : undefined}
+                className={cn(
+                  "relative inline-flex min-h-11 shrink-0 items-center whitespace-nowrap text-sm no-underline transition-colors",
+                  "after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:rounded-full after:bg-[linear-gradient(90deg,hsl(var(--brand)),hsl(var(--brand-2)))] after:transition-transform after:duration-300 after:origin-left",
+                  on
+                    ? "font-medium text-brand-ink after:scale-x-100"
+                    : "text-muted-foreground after:scale-x-0 hover:text-brand-ink hover:after:scale-x-50",
+                )}
+              >
+                {t.label}
+              </Link>
+            );
+          })}
+        </ScrollFade>
       </div>
     </nav>
   );
@@ -134,11 +188,18 @@ export function Header() {
   return (
     <header className="relative z-50 mx-auto w-full max-w-[1040px] px-4 pt-7 md:px-6">
       <div className="flex items-center justify-between gap-4">
-        <Link to="/" className="wordmark inline-flex min-h-11 min-w-11 items-center text-[34px] leading-none no-underline" aria-label="joy, today">
+        <Link
+          to="/"
+          className="wordmark inline-flex min-h-11 min-w-11 items-center text-[34px] leading-none no-underline"
+          aria-label="joy, today"
+        >
           joy
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-0.5 rounded-full border border-border bg-card p-1 md:flex">
+        <nav
+          aria-label="Main"
+          className="hidden items-center gap-0.5 rounded-full border border-brand/20 bg-card/80 p-1 shadow-[0_10px_30px_-16px_hsl(var(--brand)/.5)] backdrop-blur md:flex"
+        >
           {TABS.map((t) => {
             const on = current?.to === t.to;
             return (
@@ -148,8 +209,10 @@ export function Header() {
                 viewTransition
                 aria-current={on ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-9 items-center rounded-full px-4 text-sm no-underline transition-colors",
-                  on ? "bg-foreground font-medium text-background" : "text-muted-foreground hover:text-foreground",
+                  "inline-flex h-9 items-center rounded-full px-4 text-sm no-underline transition-all duration-300",
+                  on
+                    ? cn(TAB_TONE[t.to]?.fill, TAB_TONE[t.to]?.glow, "font-medium text-background")
+                    : cn("text-muted-foreground hover:bg-brand-tint", TAB_TONE[t.to]?.hover),
                 )}
               >
                 {t.label}
@@ -164,11 +227,15 @@ export function Header() {
           aria-label="Settings"
           aria-current={inSettings ? "page" : undefined}
           className={cn(
-            "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border no-underline transition-colors hover:bg-[hsl(var(--chip))]",
-            inSettings && "bg-[hsl(var(--chip))]",
+            "group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-brand/25 bg-card/70 text-brand-ink no-underline backdrop-blur transition-colors hover:bg-brand-tint",
+            inSettings && "bg-brand-gradient border-transparent text-brand-fg",
           )}
         >
-          <Settings className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
+          <Settings
+            className="h-[18px] w-[18px] transition-transform duration-500 group-hover:rotate-90"
+            strokeWidth={1.5}
+            aria-hidden
+          />
         </Link>
       </div>
       <SubTabs />
@@ -185,7 +252,7 @@ export function TabBar() {
       aria-label="Main"
       className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 md:hidden"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-5 rounded-full border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
+      <ul className="mx-auto grid max-w-md grid-cols-5 rounded-full border border-brand/20 bg-card/90 p-1 shadow-[0_12px_32px_-12px_hsl(var(--brand)/.45)] backdrop-blur">
         {TABS.map((t) => {
           const active = current?.to === t.to;
           return (
@@ -196,11 +263,22 @@ export function TabBar() {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] no-underline transition-colors",
-                  active ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
+                  active
+                    ? cn("font-semibold", TAB_TONE[t.to]?.text)
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-[hsl(var(--chip))]")}>
-                  <t.icon className="h-5 w-5" strokeWidth={active ? 2 : 1.5} aria-hidden />
+                <span
+                  className={cn(
+                    "flex h-7 w-12 items-center justify-center rounded-full transition-all duration-300",
+                    active ? cn(TAB_TONE[t.to]?.fill, TAB_TONE[t.to]?.glow, "scale-110 text-background") : TAB_TONE[t.to]?.text,
+                  )}
+                >
+                  <t.icon
+                    className="h-5 w-5"
+                    strokeWidth={active ? 2 : 1.5}
+                    aria-hidden
+                  />
                 </span>
                 <span>{t.label}</span>
               </Link>

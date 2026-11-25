@@ -1,5 +1,21 @@
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
-import { addCustomDate, addSaving, addSpend, deleteSaving, deleteSpend, keepGoal, rollover, setBudget, setGoal } from "./api";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
+import {
+  addCustomDate,
+  addSaving,
+  addSpend,
+  deleteSaving,
+  deleteSpend,
+  keepGoal,
+  rollover,
+  setBudget,
+  setGoal,
+} from "./api";
 import { useKept } from "./ctx";
 import { useStateFrom } from "../components/useStateFrom";
 import { isBudgetHash, isoToday, type RolloverChoice } from "./helpers";
@@ -19,7 +35,11 @@ function useFill(pct: number): number {
 }
 
 const bar = (pct: number) => ({ "--pct": pct }) as CSSProperties;
-const MONEY = { inputMode: "numeric", pattern: "[0-9, ]*", autoComplete: "off" } as const;
+const MONEY = {
+  inputMode: "numeric",
+  pattern: "[0-9, ]*",
+  autoComplete: "off",
+} as const;
 
 function Err({ text }: { text: string }) {
   return text ? (
@@ -44,8 +64,11 @@ function BudgetBar({ v }: { v: HistoryView }) {
   return (
     <div className={`budget-line${budget.over ? " is-over" : ""}`}>
       <p>
-        <strong>{budget.spent}</strong> of {budget.budget} spent on dates this month
-        {budget.over && <span className="k-worth hand"> · over budget, worth it</span>}
+        <strong>{budget.spent}</strong> of {budget.budget} spent on dates this
+        month
+        {budget.over && (
+          <span className="k-worth hand"> · over budget, worth it</span>
+        )}
       </p>
       <span className="budget-bar" style={bar(fill)} aria-hidden="true" />
     </div>
@@ -57,23 +80,41 @@ function RolloverForm({ v }: { v: HistoryView }) {
   const { busy, err, act } = useAction();
   const r = v.budget.rollover;
   if (!r) return null;
-  const choose = (choice: RolloverChoice) => act(async () => finish(await rollover(choice), { focus: "#k-budget" }));
+  const choose = (choice: RolloverChoice) =>
+    act(async () => finish(await rollover(choice), { focus: "#k-budget" }));
   return (
     <div className="k-budget-form">
       <p>
         {r.month} is over: {r.spent} of {r.budget}, so {r.left} left.
       </p>
-      <p className="k-hint">Left over from {r.month}: choose what happens to it.</p>
+      <p className="k-hint">
+        Left over from {r.month}: choose what happens to it.
+      </p>
       <div className="k-inline">
-        <button className="k-btn" type="button" disabled={busy} onClick={() => void choose("roll")}>
+        <button
+          className="k-btn"
+          type="button"
+          disabled={busy}
+          onClick={() => void choose("roll")}
+        >
           Roll {r.left} over
         </button>
         {v.savings.goal && (
-          <button className="k-btn" type="button" disabled={busy} onClick={() => void choose("save")}>
+          <button
+            className="k-btn"
+            type="button"
+            disabled={busy}
+            onClick={() => void choose("save")}
+          >
             Put it in the savings jar
           </button>
         )}
-        <button className="k-btn" type="button" disabled={busy} onClick={() => void choose("fresh")}>
+        <button
+          className="k-btn"
+          type="button"
+          disabled={busy}
+          onClick={() => void choose("fresh")}
+        >
           Start fresh
         </button>
       </div>
@@ -88,7 +129,9 @@ function BudgetEdit({ v, hash }: { v: HistoryView; hash: string }) {
   const input = useRef<HTMLInputElement>(null);
   const summary = useRef<HTMLElement>(null);
   const fold = useFold(false, () => input.current?.focus());
-  const [amount, setAmount] = useStateFrom(v.budget.budget_raw, [v.budget.budget_raw]);
+  const [amount, setAmount] = useStateFrom(v.budget.budget_raw, [
+    v.budget.budget_raw,
+  ]);
 
   // Landing on #budget opens the editor and puts the cursor in it.
   const { setOpen } = fold;
@@ -97,7 +140,10 @@ function BudgetEdit({ v, hash }: { v: HistoryView; hash: string }) {
     setOpen(true);
     requestAnimationFrame(() => {
       input.current?.focus({ preventScroll: true });
-      input.current?.closest("details")?.scrollIntoView({ block: "center", behavior: reduced() ? "auto" : "smooth" });
+      input.current?.closest("details")?.scrollIntoView({
+        block: "center",
+        behavior: reduced() ? "auto" : "smooth",
+      });
     });
   }, [hash, setOpen]);
 
@@ -134,7 +180,12 @@ function BudgetEdit({ v, hash }: { v: HistoryView; hash: string }) {
           <button className="k-btn" type="submit" disabled={busy}>
             Save
           </button>
-          <button className="k-btn" type="button" disabled={busy} onClick={() => setAmount(v.budget.budget_raw)}>
+          <button
+            className="k-btn"
+            type="button"
+            disabled={busy}
+            onClick={() => setAmount(v.budget.budget_raw)}
+          >
             Revert
           </button>
         </div>
@@ -157,7 +208,12 @@ const KINDS: [string, string][] = [
 ];
 
 /** One tap fills the name for the days people most often want to mark. */
-const SUGGESTIONS = ["The day we met", "Our first date", "Our first trip", "Just because"];
+const SUGGESTIONS = [
+  "The day we met",
+  "Our first date",
+  "Our first trip",
+  "Just because",
+];
 
 /** A day we want to remember that never was a slip: the day we met, a first date, an evening out.
  * It lands in Kept, ready for photos, a rating and lines. */
@@ -193,10 +249,31 @@ export function CustomDateFold({ fold }: { fold: ReturnType<typeof useFold> }) {
         <label className="k-label" htmlFor="custom-title">
           What happened?
         </label>
-        <input className="k-field k-add-title" id="custom-title" name="title" type="text" maxLength={80} required autoComplete="off" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The day we met" />
-        <div className="k-inline k-add-ideas" role="group" aria-label="Quick names">
+        <input
+          className="k-field k-add-title"
+          id="custom-title"
+          name="title"
+          type="text"
+          maxLength={80}
+          required
+          autoComplete="off"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. The day we met"
+        />
+        <div
+          className="k-inline k-add-ideas"
+          role="group"
+          aria-label="Quick names"
+        >
           {SUGGESTIONS.map((t) => (
-            <button key={t} className="btn btn-quiet" type="button" aria-pressed={title === t} onClick={() => setTitle(t)}>
+            <button
+              key={t}
+              className="btn btn-quiet"
+              type="button"
+              aria-pressed={title === t}
+              onClick={() => setTitle(t)}
+            >
               {t}
             </button>
           ))}
@@ -205,9 +282,21 @@ export function CustomDateFold({ fold }: { fold: ReturnType<typeof useFold> }) {
           When?
         </label>
         <div className="k-inline">
-          <input className="k-field" id="custom-on" name="on" type="date" max={today} value={on} onChange={(e) => setOn(e.target.value)} />
+          <input
+            className="k-field"
+            id="custom-on"
+            name="on"
+            type="date"
+            max={today}
+            value={on}
+            onChange={(e) => setOn(e.target.value)}
+          />
           {on !== today && (
-            <button className="btn btn-quiet" type="button" onClick={() => setOn(today)}>
+            <button
+              className="btn btn-quiet"
+              type="button"
+              onClick={() => setOn(today)}
+            >
               Today
             </button>
           )}
@@ -215,26 +304,59 @@ export function CustomDateFold({ fold }: { fold: ReturnType<typeof useFold> }) {
         <details className="k-add-more">
           <summary>Where, what kind, what it cost (optional)</summary>
           <div className="k-inline">
-            <input className="k-field" name="place" type="text" maxLength={80} autoComplete="off" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Where?" aria-label="Where" />
-            <select className="k-field" name="setting" value={setting} onChange={(e) => setSetting(e.target.value)} aria-label="Kind of date">
+            <input
+              className="k-field"
+              name="place"
+              type="text"
+              maxLength={80}
+              autoComplete="off"
+              value={place}
+              onChange={(e) => setPlace(e.target.value)}
+              placeholder="Where?"
+              aria-label="Where"
+            />
+            <select
+              className="k-field"
+              name="setting"
+              value={setting}
+              onChange={(e) => setSetting(e.target.value)}
+              aria-label="Kind of date"
+            >
               {KINDS.map(([k, l]) => (
                 <option key={k} value={k}>
                   {l}
                 </option>
               ))}
             </select>
-            <input className="k-field" name="cost" type="text" {...MONEY} value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Cost" aria-label="What it cost" />
+            <input
+              className="k-field"
+              name="cost"
+              type="text"
+              {...MONEY}
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              placeholder="Cost"
+              aria-label="What it cost"
+            />
           </div>
         </details>
         <div className="k-inline">
           <button className="k-btn" type="submit" disabled={busy}>
             Keep this day
           </button>
-          <button className="k-btn" type="button" disabled={busy} onClick={reset}>
+          <button
+            className="k-btn"
+            type="button"
+            disabled={busy}
+            onClick={reset}
+          >
             Clear
           </button>
         </div>
-        <p className="k-hint">It goes straight into Kept for photos, a rating and your lines. It won’t be added to the jar.</p>
+        <p className="k-hint">
+          It goes straight into Kept for photos, a rating and your lines. It
+          won’t be added to the jar.
+        </p>
         <Err text={err} />
       </form>
     </details>
@@ -266,9 +388,36 @@ function OtherSpendFold({ v }: { v: HistoryView }) {
           What we spent
         </label>
         <div className="k-inline">
-          <input className="k-field" id="spend-amount" name="amount" type="text" {...MONEY} required value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 1800" />
-          <input className="k-field" name="note" type="text" maxLength={80} autoComplete="off" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Where? (optional)" aria-label="Where" />
-          <input className="k-field" name="on" type="date" value={on} onChange={(e) => setOn(e.target.value)} aria-label="Date (blank is today)" />
+          <input
+            className="k-field"
+            id="spend-amount"
+            name="amount"
+            type="text"
+            {...MONEY}
+            required
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="e.g. 1800"
+          />
+          <input
+            className="k-field"
+            name="note"
+            type="text"
+            maxLength={80}
+            autoComplete="off"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Where? (optional)"
+            aria-label="Where"
+          />
+          <input
+            className="k-field"
+            name="on"
+            type="date"
+            value={on}
+            onChange={(e) => setOn(e.target.value)}
+            aria-label="Date (blank is today)"
+          />
           <button className="k-btn" type="submit" disabled={busy}>
             Add
           </button>
@@ -285,7 +434,9 @@ function OtherSpendFold({ v }: { v: HistoryView }) {
             Clear
           </button>
         </div>
-        <p className="k-hint">Counts toward this month’s budget. Leave the date blank for today.</p>
+        <p className="k-hint">
+          Counts toward this month’s budget. Leave the date blank for today.
+        </p>
         <Err text={err} />
       </form>
       {v.other_spend.length > 0 && (
@@ -299,7 +450,14 @@ function OtherSpendFold({ v }: { v: HistoryView }) {
                 type="button"
                 disabled={busy}
                 aria-label={`Remove ${o.amount}`}
-                onClick={() => window.confirm("Delete this spend?") && void act(async () => finish(await deleteSpend(o.id), { focus: "#k-spend-list, #k-budget" }))}
+                onClick={() =>
+                  window.confirm("Delete this spend?") &&
+                  void act(async () =>
+                    finish(await deleteSpend(o.id), {
+                      focus: "#k-spend-list, #k-budget",
+                    }),
+                  )
+                }
               >
                 Remove
               </button>
@@ -318,7 +476,10 @@ function Savings({ s }: { s: SavingsState }) {
   const keepAct = useAction();
   const goalFold = useFold();
   const putFold = useFold();
-  const [goal, setGoalId] = useStateFrom(s.choices.find((c) => c.selected)?.value ?? "", [s.choices]);
+  const [goal, setGoalId] = useStateFrom(
+    s.choices.find((c) => c.selected)?.value ?? "",
+    [s.choices],
+  );
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const g = s.goal;
@@ -331,7 +492,9 @@ function Savings({ s }: { s: SavingsState }) {
       await finish(go, {
         after: () => {
           const hit = /#(k\d+)$/.exec(go.to);
-          const stamp = hit ? document.querySelector<HTMLElement>(`#${hit[1]} .k-stamp`) : null;
+          const stamp = hit
+            ? document.querySelector<HTMLElement>(`#${hit[1]} .k-stamp`)
+            : null;
           buzz(12);
           if (stamp && !reduced() && "animate" in stamp) {
             stamp.animate(
@@ -339,7 +502,12 @@ function Savings({ s }: { s: SavingsState }) {
                 { opacity: 0, transform: "scale(1.8) rotate(-10deg)" },
                 { opacity: 1, transform: "scale(1) rotate(0)" },
               ],
-              { duration: 480, delay: 200, easing: "cubic-bezier(.34,1.5,.64,1)", fill: "backwards" },
+              {
+                duration: 480,
+                delay: 200,
+                easing: "cubic-bezier(.34,1.5,.64,1)",
+                fill: "backwards",
+              },
             );
           }
         },
@@ -362,22 +530,40 @@ function Savings({ s }: { s: SavingsState }) {
           {g.ready ? (
             <div className="k-budget-form">
               <p className="k-insight">It’s saved up. Time to go.</p>
-              <button className="k-btn k-btn-stamp" type="button" disabled={keepAct.busy} onClick={() => void keep()}>
+              <button
+                className="k-btn k-btn-stamp"
+                type="button"
+                disabled={keepAct.busy}
+                onClick={() => void keep()}
+              >
                 It’s a date
               </button>
-              <p className="k-hint">Stamps it into Kept and pays {g.cost} from the jar. That part won’t count against the month it happens in.</p>
+              <p className="k-hint">
+                Stamps it into Kept and pays {g.cost} from the jar. That part
+                won’t count against the month it happens in.
+              </p>
               <Err text={keepAct.err} />
             </div>
           ) : (
-            <p className="k-hint">{g.to_go}. A month’s leftover can go in here too.</p>
+            <p className="k-hint">
+              {g.to_go}. A month’s leftover can go in here too.
+            </p>
           )}
         </>
       ) : (
-        <p className="k-hint">{s.saved_raw > 0 && `${s.saved} put aside. `}Pick something to save for, then put money aside until it’s covered.</p>
+        <p className="k-hint">
+          {s.saved_raw > 0 && `${s.saved} put aside. `}Pick something to save
+          for, then put money aside until it’s covered.
+        </p>
       )}
-      <p className="k-hint">The savings jar is for a slip too big for one month, like a trip. A month’s leftover can go in too.</p>
+      <p className="k-hint">
+        The savings jar is for a slip too big for one month, like a trip. A
+        month’s leftover can go in too.
+      </p>
       <details className="k-budget-edit" {...goalFold.props}>
-        <summary>{g ? "Save for something else" : "Choose what to save for"}</summary>
+        <summary>
+          {g ? "Save for something else" : "Choose what to save for"}
+        </summary>
         <form
           className="k-budget-form"
           onSubmit={(e) => {
@@ -393,7 +579,13 @@ function Savings({ s }: { s: SavingsState }) {
             Saving for
           </label>
           <div className="k-inline">
-            <select className="k-field k-goal" id="goal" name="id" value={goal} onChange={(e) => setGoalId(e.target.value)}>
+            <select
+              className="k-field k-goal"
+              id="goal"
+              name="id"
+              value={goal}
+              onChange={(e) => setGoalId(e.target.value)}
+            >
               <option value="">Nothing for now</option>
               {s.choices.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -427,8 +619,28 @@ function Savings({ s }: { s: SavingsState }) {
             How much
           </label>
           <div className="k-inline">
-            <input className="k-field" id="save-amount" name="amount" type="text" {...MONEY} required value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 2000" />
-            <input className="k-field" name="note" type="text" maxLength={80} autoComplete="off" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" aria-label="Note" />
+            <input
+              className="k-field"
+              id="save-amount"
+              name="amount"
+              type="text"
+              {...MONEY}
+              required
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="e.g. 2000"
+            />
+            <input
+              className="k-field"
+              name="note"
+              type="text"
+              maxLength={80}
+              autoComplete="off"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Note (optional)"
+              aria-label="Note"
+            />
             <button className="k-btn" type="submit" disabled={putAct.busy}>
               Add
             </button>
@@ -448,7 +660,14 @@ function Savings({ s }: { s: SavingsState }) {
                     type="button"
                     disabled={putAct.busy}
                     aria-label={`Take back ${m.amount}`}
-                    onClick={() => window.confirm("Delete this saving?") && void putAct.act(async () => finish(await deleteSaving(m.id), { focus: "#k-saving-list, #k-savings-h" }))}
+                    onClick={() =>
+                      window.confirm("Delete this saving?") &&
+                      void putAct.act(async () =>
+                        finish(await deleteSaving(m.id), {
+                          focus: "#k-saving-list, #k-savings-h",
+                        }),
+                      )
+                    }
                   >
                     Take back
                   </button>

@@ -6,25 +6,45 @@ import { keys, useMoves, usePlannerMutation } from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/utils/money";
 
-const LABEL = { moved: "Moved", already_covered: "Already there", skipped: "Skipped" } as const;
+const LABEL = {
+  moved: "Moved",
+  already_covered: "Already there",
+  skipped: "Skipped",
+} as const;
 
 export function RecentMoves() {
   const { data } = useMoves();
-  const undo = usePlannerMutation(movesApi.undo, [keys.moves, keys.accounts], { success: "Undone" });
+  const undo = usePlannerMutation(movesApi.undo, [keys.moves, keys.accounts], {
+    success: "Undone",
+  });
   const [all, setAll] = useState(false);
   if (!data || data.length === 0) return null;
   return (
     <section aria-label="Recent moves" className="space-y-4">
-      <h2 className="font-display text-[32px] leading-none tracking-tight">What you've recorded</h2>
+      <h2 className="font-display brand-text text-[32px] leading-none tracking-tight">
+        What you've recorded
+      </h2>
       <ul className="ledger glass rounded-[28px] px-5 py-2 md:px-6">
         {(all ? data : data.slice(0, 8)).map((m) => (
           <li key={m.move_id} className="ledger-row text-sm">
             <div className="min-w-0">
-              <p className="font-medium">
-                {LABEL[m.mode]} {formatINR(m.amount_paise)}
+              <p className="flex items-center gap-2 font-medium">
+                <span
+                  className={
+                    m.mode === "moved"
+                      ? "pill pill-mint"
+                      : m.mode === "already_covered"
+                        ? "pill pill-sky"
+                        : "pill pill-sun"
+                  }
+                >
+                  {LABEL[m.mode]}
+                </span>
+                <span className="tabular-nums">{formatINR(m.amount_paise)}</span>
               </p>
               <p className="text-[13px] text-muted-foreground">
-                {m.kind === "allocation" ? "Savings top-up" : "Card bill"} · {m.created_at.slice(0, 10)}
+                {m.kind === "allocation" ? "Savings top-up" : "Card bill"} ·{" "}
+                {m.created_at.slice(0, 10)}
               </p>
             </div>
             <Button

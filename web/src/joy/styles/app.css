@@ -1,76 +1,309 @@
 /* Flinderax-side glue for the Dates section. Joy's own CSS is untouched; this only fits it into the app. */
-.joy { overflow-x: clip; }
-.joy .top { top: 0; }
-.joy * { font-synthesis-weight: none; }
+.joy {
+  overflow-x: clip;
+}
+.joy .top {
+  top: 0;
+}
+.joy * {
+  font-synthesis-weight: none;
+}
 /* One row for every Dates page. On a phone it scrolls sideways instead of wrapping onto a second
    row, so the jar and "Draw a slip" stay near the top. */
 .joy .top nav {
-  flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    #000 calc(100% - 28px),
+    transparent
+  );
   mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
   padding-right: 24px;
 }
-.joy .top nav::-webkit-scrollbar { display: none; }
-.joy .top nav a { flex: 0 0 auto; white-space: nowrap; }
-.joy .top nav a[aria-current="page"] { color: var(--ink); }
-.joy .top nav a[aria-current="page"]::after { transform: scaleX(1); }
-.joy .nav-middle-link { gap: 6px; }
-.joy .nav-middle-link svg { width: 22px; height: 11px; }
+.joy .top nav::-webkit-scrollbar {
+  display: none;
+}
+.joy .top nav a {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.joy .top nav a[aria-current="page"] {
+  color: var(--ink);
+}
+.joy .top nav a[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+.joy .nav-middle-link {
+  gap: 6px;
+}
+.joy .nav-middle-link svg {
+  width: 22px;
+  height: 11px;
+}
 /* the phone tab bar is fixed to the bottom: keep the toast above it */
-.joy .toast-region { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 5.5rem); }
-@media (min-width: 768px) { .joy .toast-region { bottom: max(16px, env(safe-area-inset-bottom)); } }
-.joy main { padding-bottom: 120px; }
-.joy main:focus { outline: none; }
+.joy .toast-region {
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 5.5rem);
+}
+@media (min-width: 768px) {
+  .joy .toast-region {
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+.joy main {
+  padding-bottom: 120px;
+}
+.joy main:focus {
+  outline: none;
+}
 /* the envelope has no app chrome: a layer above the header and tab bar */
-.joy.joy-bare { position: fixed; inset: 0; z-index: 60; overflow-y: auto; overflow-x: clip; }
-.joy.joy-bare main { padding-bottom: 64px; }
+.joy.joy-bare {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow-y: auto;
+  overflow-x: clip;
+}
+.joy.joy-bare main {
+  padding-bottom: 64px;
+}
 
-.joy .set-page { display: grid; gap: 22px; padding-top: 14px; }
-.joy .set-page h1 { font-size: var(--step-3); }
+.joy .set-page {
+  display: grid;
+  gap: 22px;
+  padding-top: 14px;
+}
+.joy .set-page h1 {
+  font-size: var(--step-3);
+}
 .joy .set-card {
-  display: grid; gap: 12px; padding: 18px 16px; background: var(--slip); color: var(--ink);
-  border: 1px solid var(--rule); border-radius: 24px;
+  display: grid;
+  gap: 12px;
+  padding: 18px 16px;
+  background: var(--slip);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 24px;
 }
-.joy .set-card h2 { font-size: var(--step-1); }
-.joy .set-card p { margin: 0; }
-.joy .set-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
-.joy .set-row .field { flex: 1 1 160px; }
+.joy .set-card h2 {
+  font-size: var(--step-1);
+}
+.joy .set-card p {
+  margin: 0;
+}
+.joy .set-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+.joy .set-row .field {
+  flex: 1 1 160px;
+}
 .joy .set-input {
-  -webkit-appearance: none; appearance: none; width: 100%; min-height: 48px; padding: 8px 14px;
-  background: var(--paper); border: 1.5px solid var(--rule); border-radius: 12px; color: var(--ink);
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 14px;
+  background: var(--paper);
+  border: 1.5px solid var(--rule);
+  border-radius: 12px;
+  color: var(--ink);
 }
-.joy .set-input:focus-visible { border-color: var(--ink); }
-.joy .set-card label { font-weight: 600; font-size: var(--step--1); }
-.joy .code-big { font: 700 var(--step-2)/1.1 var(--font-display); letter-spacing: .08em; color: var(--stamp); overflow-wrap: anywhere; }
-.joy .set-msg { font-size: var(--step--1); color: var(--ink-soft); min-height: 1.2em; }
-.joy .set-err { color: var(--stamp); font-weight: 600; }
-.joy .settle-big { font: 600 var(--step-2)/1.15 var(--font-display); }
-.joy .settle-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: var(--step--1); }
-.joy .settle-list li { display: flex; justify-content: space-between; gap: 10px; align-items: center; border-top: 1px dashed var(--rule); padding-top: 6px; }
-.joy .settle-list .btn { padding: 4px 12px; min-height: 0; font-size: var(--step--1); flex: 0 0 auto; }
-.joy .leave-box { border: 1.5px solid var(--stamp); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
-.joy .btn-danger { background: var(--stamp); border-color: var(--stamp); color: var(--stamp-ink); }
-.joy .waiting-bar { margin: 8px 0 0; font-size: var(--step--1); color: var(--ink-soft); }
-.joy .onboard { text-align: center; padding: 18px 8px 32px; display: grid; gap: 14px; justify-items: center; }
-.joy .onboard .join-form { display: grid; gap: 10px; width: min(100%, 320px); text-align: left; }
-.joy .onboard-acts { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-.joy .loading { padding: 40px 0; text-align: center; color: var(--ink-soft); }
-.joy .placeholder-page { padding-top: 24px; display: grid; gap: 10px; }
-.joy .placeholder-page h1 { font-size: var(--step-3); }
-.joy .status-line { min-height: 1.4em; }
-.joy .top .wordmark { display: none; }
+.joy .set-input:focus-visible {
+  border-color: var(--ink);
+}
+.joy .set-card label {
+  font-weight: 600;
+  font-size: var(--step--1);
+}
+.joy .code-big {
+  font: 700 var(--step-2)/1.1 var(--font-display);
+  letter-spacing: 0.08em;
+  color: var(--stamp);
+  overflow-wrap: anywhere;
+}
+.joy .set-msg {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  min-height: 1.2em;
+}
+.joy .set-err {
+  color: var(--stamp);
+  font-weight: 600;
+}
+.joy .settle-big {
+  font: 600 var(--step-2)/1.15 var(--font-display);
+}
+.joy .settle-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: var(--step--1);
+}
+.joy .settle-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px dashed var(--rule);
+  padding-top: 6px;
+}
+.joy .settle-list .btn {
+  padding: 4px 12px;
+  min-height: 0;
+  font-size: var(--step--1);
+  flex: 0 0 auto;
+}
+.joy .leave-box {
+  border: 1.5px solid var(--stamp);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.joy .btn-danger {
+  background: var(--stamp);
+  border-color: var(--stamp);
+  color: var(--stamp-ink);
+}
+.joy .waiting-bar {
+  margin: 8px 0 0;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+.joy .onboard {
+  text-align: center;
+  padding: 18px 8px 32px;
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+.joy .onboard .join-form {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 320px);
+  text-align: left;
+}
+.joy .onboard-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.joy .loading {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--ink-soft);
+}
+.joy .placeholder-page {
+  padding-top: 24px;
+  display: grid;
+  gap: 10px;
+}
+.joy .placeholder-page h1 {
+  font-size: var(--step-3);
+}
+.joy .status-line {
+  min-height: 1.4em;
+}
+.joy .top .wordmark {
+  display: none;
+}
 
 /* The empty-jar drawing is also used by the Gate on the Jar page, outside .p-slips, where the
    slips.css rules don't reach: style it for the whole Dates section. */
-.joy .empty-jar-art { width: 190px; height: auto; margin: 6px auto 18px; overflow: visible; }
-.joy .empty-jar-art path { fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.joy .empty-jar-art .lid { fill: var(--stamp); stroke: var(--ink); }
-.joy .empty-jar-art .glass { fill: var(--slip); }
-.joy .empty-jar-art .shine { stroke: var(--rule); stroke-width: 3; }
-.joy .empty-jar-art .floor { stroke: var(--rule); }
-.joy .empty-jar-art .lone-slip { fill: var(--tint-local); stroke-width: 1.6; opacity: 0; }
+.joy .empty-jar-art {
+  width: 190px;
+  height: auto;
+  margin: 6px auto 18px;
+  overflow: visible;
+}
+.joy .empty-jar-art path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.joy .empty-jar-art .lid {
+  fill: var(--stamp);
+  stroke: var(--ink);
+}
+.joy .empty-jar-art .glass {
+  fill: var(--slip);
+}
+.joy .empty-jar-art .shine {
+  stroke: var(--rule);
+  stroke-width: 3;
+}
+.joy .empty-jar-art .floor {
+  stroke: var(--rule);
+}
+.joy .empty-jar-art .lone-slip {
+  fill: var(--tint-local);
+  stroke-width: 1.6;
+  opacity: 0;
+}
 
 /* Dates' own settings cards shown inside the app's single Settings page: no page chrome of their own. */
-.joy.joy-embed { min-height: 0; background: transparent; overflow: visible; }
-.joy .top { justify-content: flex-start; }
-.joy .top nav { padding-left: 0; }
+.joy.joy-embed {
+  min-height: 0;
+  background: transparent;
+  overflow: visible;
+}
+.joy .top {
+  justify-content: flex-start;
+}
+.joy .top nav {
+  padding-left: 0;
+}
+
+/* ── colour pass: big numbers and titles in the Us section's rose, kept slips in their kind ── */
+.joy :is(.mu-title, .write-h, .k-empty-h, .y-title-empty) {
+  background: var(--party-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding-bottom: 0.06em;
+}
+/* the odometer numbers roll with transforms, so they wear a flat colour, not clipped gradient */
+.joy .k-count,
+.joy .y-count {
+  color: var(--stamp);
+  text-shadow: 0 10px 34px hsl(var(--brand) / 0.28);
+}
+.joy .k-count::after {
+  background: var(--party-gradient);
+}
+.joy .k-eyebrow,
+.joy .y-sub {
+  color: hsl(var(--brand-ink));
+}
+.joy .k-slip {
+  background: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--tint) 40%, var(--slip)) 0%,
+    color-mix(in srgb, var(--tint) 12%, var(--slip)) 45%,
+    var(--slip) 100%
+  );
+  box-shadow:
+    var(--shadow-slip),
+    0 18px 34px -26px color-mix(in srgb, var(--tint) 95%, transparent);
+}
+.joy .k-polaroid {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--ink) 16%, transparent),
+    0 16px 30px -18px color-mix(in srgb, var(--tint, var(--stamp)) 90%, transparent);
+  transition: transform var(--t-small) var(--ease-spring);
+}
+@media (hover: hover) {
+  .joy .k-polaroid:hover {
+    transform: rotate(0deg) scale(1.02);
+  }
+}

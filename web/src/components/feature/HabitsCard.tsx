@@ -1,11 +1,22 @@
 import { useState } from "react";
-import { Briefcase, FileUp, HeartPulse, Shield, Target, Users, Utensils, Wallet, type LucideIcon } from "lucide-react";
+import {
+  Briefcase,
+  FileUp,
+  HeartPulse,
+  Shield,
+  Target,
+  Users,
+  Utensils,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { useHabits, type Habit } from "@/services/habits";
 import { formatDay } from "@/utils/dates";
 import { cn } from "@/utils/cn";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const AREA_ICON: Record<Habit["area"], LucideIcon> = {
   data: FileUp,
@@ -18,6 +29,21 @@ const AREA_ICON: Record<Habit["area"], LucideIcon> = {
   work: Briefcase,
 };
 
+/** Each area has its own party colour, so a glance tells money from health from people. */
+const AREA_C: Record<Habit["area"], string> = {
+  data: "sky",
+  money: "mint",
+  food: "sun",
+  goals: "grape",
+  protection: "teal",
+  health: "coral",
+  people: "rose",
+  work: "berry",
+};
+
+/** Text in the area colour; sun is too pale for words on paper, so it reads in the warn amber. */
+const ink = (c: string) => (c === "sun" ? "hsl(var(--warn))" : `hsl(var(--c-${c}))`);
+
 const CADENCE_LABEL: Record<Habit["cadence"], string> = {
   once: "Once",
   weekly: "Weekly",
@@ -29,30 +55,54 @@ const CADENCE_LABEL: Record<Habit["cadence"], string> = {
 const STATUS: Record<Habit["status"], { label: string; tone: string }> = {
   overdue: { label: "Overdue", tone: "tone-over" },
   due_soon: { label: "Due soon", tone: "tone-warn" },
-  ok: { label: "On track", tone: "tone-quiet" },
+  ok: { label: "On track", tone: "tone-good" },
 };
 
 const SHOWN_BY_DEFAULT = 5;
 
 function dueLine(h: Habit): string | null {
   if (!h.due_on) return null;
-  return h.status === "overdue" ? `Overdue since ${formatDay(h.due_on)}` : `Due ${formatDay(h.due_on)}`;
+  return h.status === "overdue"
+    ? `Overdue since ${formatDay(h.due_on)}`
+    : `Due ${formatDay(h.due_on)}`;
 }
 
 function HabitRow({ habit }: { habit: Habit }) {
   const Icon = AREA_ICON[habit.area];
+  const c = AREA_C[habit.area];
   const status = STATUS[habit.status];
   const due = dueLine(habit);
   return (
     <li className="ledger-row grid grid-cols-[36px_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[36px_minmax(0,1fr)_auto] sm:items-center">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-chip">
-        <Icon className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+        style={{
+          background: `hsl(var(--c-${c}) / 0.16)`,
+          color: ink(c),
+          boxShadow: `inset 0 0 0 1px hsl(var(--c-${c}) / 0.3)`,
+        }}
+      >
+        <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden />
       </span>
       <span className="flex min-w-0 flex-col gap-1">
-        <span className="text-[15px] font-medium leading-snug">{habit.title}</span>
-        <span className="text-[13px] leading-snug text-muted-foreground">{habit.why}</span>
-        <span className="text-[13px] text-muted-foreground">
-          {[CADENCE_LABEL[habit.cadence], due].filter(Boolean).join(" · ")}
+        <span className="text-[15px] font-medium leading-snug">
+          {habit.title}
+        </span>
+        <span className="text-[13px] leading-snug text-muted-foreground">
+          {habit.why}
+        </span>
+        <span className="flex flex-wrap items-center gap-x-0.5 text-[13px] text-muted-foreground">
+          <span
+            className="inline-flex items-center rounded-full px-2 py-px text-xs font-medium"
+            style={{
+              background: `hsl(var(--c-${c}) / 0.14)`,
+              color: ink(c),
+            }}
+          >
+            {CADENCE_LABEL[habit.cadence]}
+          </span>
+          {/* The separator stays in the text so the line still reads "Monthly · Due 12 Nov". */}
+          {due && <span>{`\u00a0·\u00a0${due}`}</span>}
         </span>
       </span>
       <span className="col-start-2 flex flex-wrap items-center gap-2 sm:col-start-3 sm:flex-col sm:items-end">
@@ -67,7 +117,7 @@ function HabitRow({ habit }: { habit: Habit }) {
         {habit.action && (
           <Link
             to={habit.action.to}
-            className="inline-flex min-h-9 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground no-underline transition-colors hover:bg-chip"
+            className="inline-flex min-h-11 items-center rounded-full border border-brand/30 bg-brand-tint px-4 text-sm font-semibold text-brand-ink no-underline transition-colors hover:border-brand/60"
           >
             {habit.action.label}
           </Link>
@@ -85,7 +135,7 @@ export function HabitsCard() {
   if (!data) {
     // Errors are not critical here: with no data to show, the card simply stays hidden.
     return isLoading ? (
-      <div className="mt-6 h-40 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading habits" />
+      <Skeleton className="mt-6 h-40 rounded-[28px]" label="Loading habits" />
     ) : null;
   }
 
@@ -98,13 +148,18 @@ export function HabitsCard() {
   return (
     <section
       aria-labelledby="habits-title"
-      className="mt-6 flex flex-col gap-6 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10"
+      className="glass mt-6 flex flex-col gap-6 rounded-[28px] px-6 py-8 sm:px-12 sm:py-10"
     >
       <header className="flex flex-col gap-2">
-        <h2 id="habits-title" className="m-0 font-display text-[32px] leading-none">
+        <h2
+          id="habits-title"
+          className="brand-text m-0 font-display text-[32px] leading-none"
+        >
           Your habits
         </h2>
-        <p className="m-0 text-sm text-muted-foreground">What to do and when, from your own numbers</p>
+        <p className="m-0 text-sm text-muted-foreground">
+          What to do and when, from your own numbers
+        </p>
       </header>
 
       <ul className="ledger">

@@ -19,16 +19,31 @@ export function UnrecognizedInbox() {
   const items = inbox.data?.items ?? [];
   if (items.length === 0) return null;
   return (
-    <section aria-label="Messages we couldn't read" className="space-y-2 rounded-lg border border-dashed p-3 text-sm">
+    <section
+      aria-label="Messages we couldn't read"
+      className="space-y-2 rounded-lg border border-dashed border-sun/60 bg-sun/10 p-3 text-sm"
+    >
       <p className="font-medium">
-        {items.length} {items.length === 1 ? "message" : "messages"} we couldn't read
+        {items.length} {items.length === 1 ? "message" : "messages"} we couldn't
+        read
       </p>
-      <p className="text-muted-foreground">These are missing from your spending. Add each by hand, then dismiss it.</p>
+      <p className="text-muted-foreground">
+        These are missing from your spending. Add each by hand, then dismiss it.
+      </p>
       <ul className="space-y-2">
         {items.map((i) => (
-          <li key={i.alert_id} className="flex items-start justify-between gap-3">
+          <li
+            key={i.alert_id}
+            className="flex items-start justify-between gap-3"
+          >
             <span className="break-words text-muted-foreground">{i.text}</span>
-            <Button type="button" variant="outline" size="sm" disabled={dismiss.isPending} onClick={() => dismiss.mutate(i.alert_id)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={dismiss.isPending}
+              onClick={() => dismiss.mutate(i.alert_id)}
+            >
               Dismiss
             </Button>
           </li>

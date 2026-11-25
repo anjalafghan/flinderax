@@ -4,7 +4,11 @@ import { ChevronLeft, ChevronRight, Layers, Trash2 } from "lucide-react";
 
 import { ingestApi } from "@/services/api";
 import type { Txn } from "@/services/types";
-import { INGEST_INVALIDATE, useTransactions, usePlannerMutation } from "@/hooks/usePlanner";
+import {
+  INGEST_INVALIDATE,
+  useTransactions,
+  usePlannerMutation,
+} from "@/hooks/usePlanner";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -22,6 +26,7 @@ import {
   sourceLabel,
 } from "@/utils/spending";
 import { cn } from "@/utils/cn";
+import { categoryColor } from "@/utils/categoryColors";
 import { ResetButton } from "@/components/ui/reset-button";
 import { SwipeSorter } from "@/components/feature/SwipeSorter";
 
@@ -45,7 +50,8 @@ function TransactionRow({
 }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const name = txn.merchant ?? "Unknown";
-  const where = sourceDetail(txn.source_name, txn.last4) ?? sourceLabel(txn.source);
+  const where =
+    sourceDetail(txn.source_name, txn.last4) ?? sourceLabel(txn.source);
   const credit = txn.direction === "credit";
 
   const pick = (category: string) => {
@@ -56,22 +62,42 @@ function TransactionRow({
   return (
     <li className="space-y-3 border-t border-border py-4 first:border-t-0 first:pt-1">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
+          {/* The category's colour, so a scroll down the month reads at a glance. */}
+          <span
+            aria-hidden
+            className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold"
+            style={{
+              background: categoryColor(draft?.category ?? txn.category, 0.18),
+              color: categoryColor(draft?.category ?? txn.category),
+              boxShadow: `inset 0 0 0 2px ${categoryColor(draft?.category ?? txn.category, 0.45)}`,
+            }}
+          >
+            {name.slice(0, 1).toUpperCase()}
+          </span>
+          <div className="min-w-0">
           <p className="truncate text-sm font-medium">{name}</p>
           <p className="truncate text-xs text-muted-foreground">
             {formatDay(txn.occurred_on)} · {where}
           </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <p
             className={cn(
-              "text-sm font-semibold tabular-nums",
-              credit ? "text-good" : "text-foreground",
+              "pill text-sm font-semibold tabular-nums",
+              credit ? "pill-mint" : "pill-coral",
             )}
           >
             {signedAmount(txn)}
           </p>
-          <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={`Delete ${name}`} onClick={onDelete}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            aria-label={`Delete ${name}`}
+            onClick={onDelete}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -92,7 +118,11 @@ function TransactionRow({
       </Select>
 
       {!draft && txn.category_locked && (
-        <ResetButton label="Back to automatic" disabled={saving} onReset={onAutomatic} />
+        <ResetButton
+          label="Back to automatic"
+          disabled={saving}
+          onReset={onAutomatic}
+        />
       )}
 
       {draft && (
@@ -103,7 +133,9 @@ function TransactionRow({
                 type="checkbox"
                 className="h-4 w-4"
                 checked={draft.remember}
-                onChange={(e) => setDraft({ ...draft, remember: e.target.checked })}
+                onChange={(e) =>
+                  setDraft({ ...draft, remember: e.target.checked })
+                }
               />
               Remember for {txn.merchant}
             </label>
@@ -111,12 +143,19 @@ function TransactionRow({
             <span className="text-muted-foreground">Only this transaction</span>
           )}
           <div className="ml-auto flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setDraft(null)} disabled={saving}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDraft(null)}
+              disabled={saving}
+            >
               Cancel
             </Button>
             <Button
               size="sm"
-              onClick={() => onSave(draft.category, txn.merchant ? draft.remember : false)}
+              onClick={() =>
+                onSave(draft.category, txn.merchant ? draft.remember : false)
+              }
               disabled={saving}
             >
               {saving ? "Saving..." : "Save"}
@@ -142,8 +181,13 @@ export function TransactionList({
   const [toDelete, setToDelete] = useState<Txn | null>(null);
   const [sorting, setSorting] = useState(false);
 
-  const update = usePlannerMutation(ingestApi.updateCategory, INGEST_INVALIDATE);
-  const remove = usePlannerMutation(ingestApi.removeTxn, INGEST_INVALIDATE, { success: "Transaction deleted" });
+  const update = usePlannerMutation(
+    ingestApi.updateCategory,
+    INGEST_INVALIDATE,
+  );
+  const remove = usePlannerMutation(ingestApi.removeTxn, INGEST_INVALIDATE, {
+    success: "Transaction deleted",
+  });
 
   const save = (txn: Txn, category: string, remember: boolean) => {
     update.mutate(
@@ -151,7 +195,9 @@ export function TransactionList({
       {
         onSuccess: (res) => {
           if (res.recategorized > 0) {
-            toast.success(`Sorted! Also updated ${plural(res.recategorized, "other", "others")}`);
+            toast.success(
+              `Sorted! Also updated ${plural(res.recategorized, "other", "others")}`,
+            );
           } else {
             toast.success("Sorted!");
           }
@@ -161,7 +207,12 @@ export function TransactionList({
   };
 
   // The swipe sorter saves quietly (a toast per swipe would pile up); a failure brings the card back.
-  const sortOne = (txn: Txn, category: string, remember: boolean, undo: () => void) => {
+  const sortOne = (
+    txn: Txn,
+    category: string,
+    remember: boolean,
+    undo: () => void,
+  ) => {
     update.mutate(
       { txn_id: txn.txn_id, category, merchant: txn.merchant, remember },
       { onError: () => undo() },
@@ -170,22 +221,43 @@ export function TransactionList({
   const unlock = usePlannerMutation(ingestApi.unlock, INGEST_INVALIDATE);
   const automatic = (txn: Txn) =>
     unlock.mutate(txn.txn_id, {
-      onSuccess: (res) => toast.success(res.category === "uncategorized" ? "Back to automatic. It has no category yet." : `Back to automatic: ${categoryLabel(res.category)}`),
+      onSuccess: (res) =>
+        toast.success(
+          res.category === "uncategorized"
+            ? "Back to automatic. It has no category yet."
+            : `Back to automatic: ${categoryLabel(res.category)}`,
+        ),
     });
   const unsorted = (txns ?? []).filter((t) => t.category === "uncategorized");
 
-  const shown = (txns ?? []).filter((t) => !uncategorizedOnly || t.category === "uncategorized");
+  const shown = (txns ?? []).filter(
+    (t) => !uncategorizedOnly || t.category === "uncategorized",
+  );
   const isCurrent = month === thisMonth;
 
   return (
-    <section id="transactions" aria-label="Transactions" className="scroll-mt-20 space-y-4">
+    <section
+      id="transactions"
+      aria-label="Transactions"
+      className="scroll-mt-20 space-y-4"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-[32px] leading-none">Transactions</h2>
+        <h2 className="font-display brand-text text-[32px] leading-none">
+          Transactions
+        </h2>
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            aria-label="Previous month"
+            onClick={() => setMonth(shiftMonth(month, -1))}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="min-w-36 text-center text-sm font-medium tabular-nums">{monthTitle(month)}</span>
+          <span className="pill min-w-36 justify-center text-sm font-medium tabular-nums">
+            {monthTitle(month)}
+          </span>
           <Button
             variant="outline"
             size="icon"
@@ -196,7 +268,12 @@ export function TransactionList({
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-          {!isCurrent && <ResetButton label="This month" onReset={() => setMonth(thisMonth)} />}
+          {!isCurrent && (
+            <ResetButton
+              label="This month"
+              onReset={() => setMonth(thisMonth)}
+            />
+          )}
         </div>
       </div>
 
@@ -210,19 +287,38 @@ export function TransactionList({
           Uncategorized only
         </Button>
         {unsorted.length > 0 && !sorting && (
-          <Button size="sm" variant="outline" className="ml-2 gap-2" onClick={() => setSorting(true)}>
-            <Layers className="h-4 w-4" aria-hidden /> {unsorted.length === 1 ? "Sort this one" : `Sort ${unsorted.length} one by one`}
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-2 gap-2"
+            onClick={() => setSorting(true)}
+          >
+            <Layers className="h-4 w-4" aria-hidden />{" "}
+            {unsorted.length === 1
+              ? "Sort this one"
+              : `Sort ${unsorted.length} one by one`}
           </Button>
         )}
       </div>
 
-      {sorting && txns && <SwipeSorter queue={unsorted} all={txns} onCategorise={sortOne} onClose={() => setSorting(false)} />}
+      {sorting && txns && (
+        <SwipeSorter
+          queue={unsorted}
+          all={txns}
+          onCategorise={sortOne}
+          onClose={() => setSorting(false)}
+        />
+      )}
 
-      {isLoading && <div className="h-24 animate-pulse rounded-xl bg-muted/40" />}
-      {isError && <p className="text-sm text-destructive">Couldn't load transactions.</p>}
+      {isLoading && (
+        <div className="h-24 animate-pulse rounded-xl bg-muted/40" />
+      )}
+      {isError && (
+        <p className="text-sm text-destructive">Couldn't load transactions.</p>
+      )}
 
-      {txns && (
-        shown.length === 0 ? (
+      {txns &&
+        (shown.length === 0 ? (
           <p className="empty-note">
             {uncategorizedOnly
               ? "All caught up. Nothing left to categorize!"
@@ -234,22 +330,25 @@ export function TransactionList({
               <TransactionRow
                 key={t.txn_id}
                 txn={t}
-                saving={update.isPending && update.variables?.txn_id === t.txn_id}
+                saving={
+                  update.isPending && update.variables?.txn_id === t.txn_id
+                }
                 onSave={(category, remember) => save(t, category, remember)}
                 onDelete={() => setToDelete(t)}
                 onAutomatic={() => automatic(t)}
               />
             ))}
           </ul>
-        )
-      )}
+        ))}
 
       <ConfirmationModal
         isOpen={toDelete !== null}
         onClose={() => setToDelete(null)}
         onConfirm={() => {
           if (!toDelete) return;
-          remove.mutate(toDelete.txn_id, { onSettled: () => setToDelete(null) });
+          remove.mutate(toDelete.txn_id, {
+            onSettled: () => setToDelete(null),
+          });
         }}
         title="Delete transaction?"
         description={

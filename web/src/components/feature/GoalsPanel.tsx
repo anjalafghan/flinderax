@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Archive, Pencil, PiggyBank } from "lucide-react";
 
 import type { Goal, GoalInput } from "@/services/types";
-import { useArchiveGoal, useContribute, useGoals, useSaveGoal } from "@/hooks/usePlanner";
+import {
+  useArchiveGoal,
+  useContribute,
+  useGoals,
+  useSaveGoal,
+} from "@/hooks/usePlanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +17,18 @@ import { Select } from "@/components/ui/select";
 import { formatDay } from "@/utils/dates";
 import { formatINR, paiseToInput, toPaise } from "@/utils/money";
 import { cn } from "@/utils/cn";
-import { GOAL_STATUS_LABEL, GOAL_STATUS_TONE, monthsCoveredLabel, progressPercent } from "@/utils/planner";
+import SloshGauge from "@/components/bits/SloshGauge";
+import {
+  colorForId,
+  partyColor,
+  PARTY_HEX,
+} from "@/utils/categoryColors";
+import {
+  GOAL_STATUS_LABEL,
+  GOAL_STATUS_TONE,
+  monthsCoveredLabel,
+  progressPercent,
+} from "@/utils/planner";
 import { useArchivedGoals, useUnarchiveGoal } from "@/hooks/usePlanner";
 import { EmptyScene } from "@/components/ui/EmptyScene";
 import { celebrate } from "@/utils/motion";
@@ -29,7 +45,9 @@ interface GoalFormProps {
 
 function GoalForm({ initial, onDone }: GoalFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [target, setTarget] = useState(initial ? paiseToInput(initial.target_paise) : "");
+  const [target, setTarget] = useState(
+    initial ? paiseToInput(initial.target_paise) : "",
+  );
   const [date, setDate] = useState(initial?.target_date ?? "");
   const [priority, setPriority] = useState(String(initial?.priority ?? 3));
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +73,11 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
   };
 
   return (
-    <form onSubmit={submit} className="form-grid border-t border-border pt-6" noValidate>
+    <form
+      onSubmit={submit}
+      className="form-grid border-t border-border pt-6"
+      noValidate
+    >
       <div className="field col-span-full">
         <Label htmlFor={`goal-name-${initial?.id ?? "new"}`}>Name</Label>
         <Input
@@ -74,7 +96,9 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
         />
       </div>
       <div className="field">
-        <Label htmlFor={`goal-date-${initial?.id ?? "new"}`}>By (optional)</Label>
+        <Label htmlFor={`goal-date-${initial?.id ?? "new"}`}>
+          By (optional)
+        </Label>
         <Input
           id={`goal-date-${initial?.id ?? "new"}`}
           type="date"
@@ -83,7 +107,9 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
         />
       </div>
       <div className="field">
-        <Label htmlFor={`goal-priority-${initial?.id ?? "new"}`}>Priority</Label>
+        <Label htmlFor={`goal-priority-${initial?.id ?? "new"}`}>
+          Priority
+        </Label>
         <Select
           id={`goal-priority-${initial?.id ?? "new"}`}
           value={priority}
@@ -96,7 +122,11 @@ function GoalForm({ initial, onDone }: GoalFormProps) {
           ))}
         </Select>
       </div>
-      {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="col-span-full text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <div className="form-actions">
         <Button type="button" variant="ghost" onClick={onDone}>
           Cancel
@@ -118,15 +148,27 @@ function ContributeForm({ goal, onDone }: { goal: Goal; onDone: () => void }) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const paise = toPaise(amount);
-    if (paise === null || paise === 0) return setError("Type an amount. Use a minus sign to take money out.");
+    if (paise === null || paise === 0)
+      return setError("Type an amount. Use a minus sign to take money out.");
     setError(null);
-    contribute.mutate({ goal_id: goal.id, amount_paise: paise }, { onSuccess: onDone });
+    contribute.mutate(
+      { goal_id: goal.id, amount_paise: paise },
+      { onSuccess: onDone },
+    );
   };
   return (
-    <form onSubmit={submit} className="flex flex-wrap items-end gap-3" noValidate>
+    <form
+      onSubmit={submit}
+      className="flex flex-wrap items-end gap-3"
+      noValidate
+    >
       <div className="field min-w-0 flex-1">
         <Label htmlFor={`contrib-${goal.id}`}>Amount put in</Label>
-        <MoneyInput id={`contrib-${goal.id}`} value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <MoneyInput
+          id={`contrib-${goal.id}`}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
       </div>
       <div className="flex gap-2">
         <Button type="button" size="sm" variant="ghost" onClick={onDone}>
@@ -136,7 +178,11 @@ function ContributeForm({ goal, onDone }: { goal: Goal; onDone: () => void }) {
           Save
         </Button>
       </div>
-      {error && <p role="alert" className="w-full text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="w-full text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </form>
   );
 }
@@ -155,22 +201,52 @@ function GoalItem({ goal }: { goal: Goal }) {
   }, [done]);
 
   const onArchive = () => {
-    if (window.confirm(`Archive "${goal.name}"? It will leave this list.`)) archive.mutate(goal.id);
+    if (window.confirm(`Archive "${goal.name}"? It will leave this list.`))
+      archive.mutate(goal.id);
   };
+
+  // Each goal keeps its own colour; a reached goal turns mint.
+  const color = done ? "mint" : colorForId(goal.id);
 
   return (
     <li className="space-y-3 border-t border-border py-5 text-sm first:border-t-0 first:pt-1">
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="truncate text-[15px] font-medium" title={goal.name}>{goal.name}</p>
+        <div aria-hidden className="shrink-0">
+          <SloshGauge
+            value={pct}
+            liquidColor={PARTY_HEX[color]}
+            glassColor="hsl(var(--muted))"
+            width={48}
+            height={68}
+            radius={14}
+            ticks={4}
+            showValue={false}
+            ariaLabel={`${goal.name} tank`}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-medium" title={goal.name}>
+            {goal.name}
+          </p>
           <p className="text-[13px] text-muted-foreground tabular-nums">
             {formatINR(goal.saved_paise)} of {formatINR(goal.target_paise)}
-            {goal.target_date && !done && ` · by ${formatDay(goal.target_date)}`}
-            {goal.months_left != null && !done && ` · ${goal.months_left} months left`}
-            {done && goal.reached_by && ` · reached ${formatDay(goal.reached_by)}`}
+            {goal.target_date &&
+              !done &&
+              ` · by ${formatDay(goal.target_date)}`}
+            {goal.months_left != null &&
+              !done &&
+              ` · ${goal.months_left} months left`}
+            {done &&
+              goal.reached_by &&
+              ` · reached ${formatDay(goal.reached_by)}`}
           </p>
         </div>
-        <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold", GOAL_STATUS_TONE[goal.status])}>
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold",
+            GOAL_STATUS_TONE[goal.status],
+          )}
+        >
           {GOAL_STATUS_LABEL[goal.status]}
         </span>
       </div>
@@ -181,15 +257,27 @@ function GoalItem({ goal }: { goal: Goal }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pct}
-        className="h-2 w-full overflow-hidden rounded-full bg-muted"
+        className="h-2.5 w-full overflow-hidden rounded-full"
+        style={{ background: partyColor(color, 0.15) }}
       >
-        <div className="h-full rounded-full bg-good transition-[width]" style={{ width: `${pct}%` }} />
+        <div
+          className="h-full rounded-full transition-[width] duration-700"
+          style={{
+            width: `${pct}%`,
+            background: `linear-gradient(90deg, ${partyColor(color, 0.65)}, ${partyColor(color)})`,
+          }}
+        />
       </div>
 
-      <RewardChips rewards={forGoal(rewards?.rewards, goal.id)} goalName={goal.name} />
+      <RewardChips
+        rewards={forGoal(rewards?.rewards, goal.id)}
+        goalName={goal.name}
+      />
 
       {!done && goal.this_month_paise > 0 && (
-        <p className="font-medium">This month: put in {formatINR(goal.this_month_paise)}</p>
+        <p className="font-medium">
+          This month: put in {formatINR(goal.this_month_paise)}
+        </p>
       )}
 
       {goal.status === "behind" && goal.fixes.length > 0 && (
@@ -203,20 +291,38 @@ function GoalItem({ goal }: { goal: Goal }) {
         </div>
       )}
 
-      {mode === "contribute" && <ContributeForm goal={goal} onDone={() => setMode("none")} />}
-      {mode === "edit" && <GoalForm initial={goal} onDone={() => setMode("none")} />}
+      {mode === "contribute" && (
+        <ContributeForm goal={goal} onDone={() => setMode("none")} />
+      )}
+      {mode === "edit" && (
+        <GoalForm initial={goal} onDone={() => setMode("none")} />
+      )}
 
       {mode === "none" && (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => setMode("contribute")}>
-            <PiggyBank className="mr-1.5 h-4 w-4" />
-            I put money in
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setMode("contribute")}
+          >
+            <PiggyBank className="mr-1.5 h-4 w-4" />I put money in
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => setMode("edit")} aria-label={`Edit ${goal.name}`}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setMode("edit")}
+            aria-label={`Edit ${goal.name}`}
+          >
             <Pencil className="mr-1.5 h-4 w-4" />
             Edit
           </Button>
-          <Button size="sm" variant="ghost" onClick={onArchive} disabled={archive.isPending} aria-label={`Archive ${goal.name}`}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onArchive}
+            disabled={archive.isPending}
+            aria-label={`Archive ${goal.name}`}
+          >
             <Archive className="mr-1.5 h-4 w-4" />
             Archive
           </Button>
@@ -235,7 +341,9 @@ function ArchivedGoals() {
   if (!data || data.length === 0) return null;
   return (
     <details className="rounded-2xl border border-border px-4 py-3 text-sm">
-      <summary className="cursor-pointer font-medium">Archived goals ({data.length})</summary>
+      <summary className="cursor-pointer font-medium">
+        Archived goals ({data.length})
+      </summary>
       <ul className="ledger mt-2">
         {data.map((g) => (
           <li key={g.goal_id} className="ledger-row">
@@ -245,7 +353,12 @@ function ArchivedGoals() {
                 {formatINR(g.saved_paise)} of {formatINR(g.target_paise)}
               </span>
             </span>
-            <Button size="sm" variant="outline" disabled={restore.isPending} onClick={() => restore.mutate(g.goal_id)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={restore.isPending}
+              onClick={() => restore.mutate(g.goal_id)}
+            >
               Restore
             </Button>
           </li>
@@ -264,42 +377,60 @@ export function GoalsPanel() {
   return (
     <Card id="goals" className="scroll-mt-24">
       <CardHeader className="space-y-2 pb-4">
-        <CardTitle className="text-[32px]">Goals</CardTitle>
-        <p className="text-sm text-muted-foreground max-w-prose">Things you are saving for. Money put in here is set aside each month.</p>
+        <CardTitle className="text-[32px]">
+          <span className="brand-text">Goals</span>
+        </CardTitle>
+        <p className="text-sm text-muted-foreground max-w-prose">
+          Things you are saving for. Money put in here is set aside each month.
+        </p>
         {covered && (
-          <p className="pt-1 text-sm font-medium">
+          <p className="pill pill-sky w-fit text-sm font-medium">
             Emergency cover: <span className="tabular-nums">{covered}</span>
           </p>
         )}
       </CardHeader>
       <CardContent className="space-y-6">
-        {isLoading && <p className="text-sm text-muted-foreground">Loading goals...</p>}
-        {isError && <p className="text-sm text-destructive">Could not load goals. Try again in a moment.</p>}
-
-        {data?.emergency_suggested_paise != null && data.emergency_suggested_paise > 0 && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-chip p-5 text-sm sm:flex-row sm:items-center sm:justify-between">
-            <p className="font-medium">Start an emergency fund of {formatINR(data.emergency_suggested_paise)} (6 months of needs)</p>
-            <Button
-              size="sm"
-              className="shrink-0 self-start sm:self-auto"
-              disabled={save.isPending}
-              onClick={() =>
-                save.mutate({
-                  name: "Emergency fund",
-                  kind: "emergency",
-                  target_paise: data.emergency_suggested_paise!,
-                  priority: 1,
-                  target_date: null,
-                  account_id: null,
-                })
-              }
-            >
-              Start it
-            </Button>
-          </div>
+        {isLoading && (
+          <p className="text-sm text-muted-foreground">Loading goals...</p>
+        )}
+        {isError && (
+          <p className="text-sm text-destructive">
+            Could not load goals. Try again in a moment.
+          </p>
         )}
 
-        {data && data.goals.length === 0 && <EmptyScene scene="sprout" title="No goals yet">Plant one: a trip, a wedding, a rainy-day fund.</EmptyScene>}
+        {data?.emergency_suggested_paise != null &&
+          data.emergency_suggested_paise > 0 && (
+            <div className="flex flex-col gap-3 rounded-2xl border border-grape/30 bg-grape/10 p-5 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <p className="font-medium">
+                Start an emergency fund of{" "}
+                {formatINR(data.emergency_suggested_paise)} (6 months of needs)
+              </p>
+              <Button
+                size="sm"
+                className="shrink-0 self-start sm:self-auto"
+                disabled={save.isPending}
+                onClick={() =>
+                  save.mutate({
+                    name: "Emergency fund",
+                    kind: "emergency",
+                    target_paise: data.emergency_suggested_paise!,
+                    priority: 1,
+                    target_date: null,
+                    account_id: null,
+                  })
+                }
+              >
+                Start it
+              </Button>
+            </div>
+          )}
+
+        {data && data.goals.length === 0 && (
+          <EmptyScene scene="sprout" title="No goals yet">
+            Plant one: a trip, a wedding, a rainy-day fund.
+          </EmptyScene>
+        )}
         {data && data.goals.length > 0 && (
           <ul className="ledger">
             {data.goals.map((g) => (
@@ -310,7 +441,8 @@ export function GoalsPanel() {
 
         {data && data.unallocated_paise > 0 && (
           <p className="rounded-md bg-muted p-4 text-sm">
-            {formatINR(data.unallocated_paise)} of this month's savings not assigned yet.
+            {formatINR(data.unallocated_paise)} of this month's savings not
+            assigned yet.
           </p>
         )}
 

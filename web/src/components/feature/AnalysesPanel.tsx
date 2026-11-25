@@ -14,13 +14,29 @@ export function AnalysesPanel() {
 
   return (
     <section aria-labelledby="analyses-title" className="space-y-3">
-      <h2 id="analyses-title" className="m-0 font-display text-[32px] leading-none">
+      <h2
+        id="analyses-title"
+        className="m-0 font-display brand-text text-[32px] leading-none"
+      >
         Analyses
       </h2>
-      {q.isLoading && <div className="h-24 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading analyses" />}
-      {q.isError && !q.data && <Retry message="Couldn't load your analyses." onRetry={() => void q.refetch()} />}
+      {q.isLoading && (
+        <div
+          className="h-24 animate-pulse rounded-[28px] bg-muted/40"
+          aria-label="Loading analyses"
+        />
+      )}
+      {q.isError && !q.data && (
+        <Retry
+          message="Couldn't load your analyses."
+          onRetry={() => void q.refetch()}
+        />
+      )}
       {q.data && items.length === 0 && (
-        <p className="empty-note m-0">Nothing here yet. Ask Claude, through the connector, to analyse your money and save what it finds.</p>
+        <p className="empty-note m-0">
+          Nothing here yet. Ask Claude, through the connector, to analyse your
+          money and save what it finds.
+        </p>
       )}
       {items.map((a) => (
         <Card key={a.id}>
@@ -42,7 +58,9 @@ export function AnalysesPanel() {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-            <p className="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed">{a.body}</p>
+            <p className="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed">
+              {a.body}
+            </p>
           </CardContent>
         </Card>
       ))}

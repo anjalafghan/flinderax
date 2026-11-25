@@ -1,12 +1,19 @@
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { useForecast, type Basis, type Forecast, type GoalForecast, type YearBand } from "@/services/forecast";
+import {
+  useForecast,
+  type Basis,
+  type Forecast,
+  type GoalForecast,
+  type YearBand,
+} from "@/services/forecast";
 import { formatDay } from "@/utils/dates";
 import { cn } from "@/utils/cn";
 import { formatCompactINR, formatINR } from "@/utils/money";
 
-const SECTION = "flex flex-col gap-10 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10";
+const SECTION =
+  "flex flex-col gap-10 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10";
 
 // Chart geometry, in SVG user units.
 const W = 600;
@@ -24,12 +31,18 @@ const percent = (bps: number) => Math.round(bps / 100);
 type Tone = "good" | "warn" | "over";
 
 /** Likely at 80 and up, possible from 50, unlikely below. */
-const toneFor = (pct: number): Tone => (pct >= 80 ? "good" : pct >= 50 ? "warn" : "over");
+const toneFor = (pct: number): Tone =>
+  pct >= 80 ? "good" : pct >= 50 ? "warn" : "over";
 
-const BAR_FILL: Record<Tone, string> = { good: "bg-good", warn: "bg-warn", over: "bg-over" };
+const BAR_FILL: Record<Tone, string> = {
+  good: "bg-gradient-to-r from-mint to-teal",
+  warn: "bg-gradient-to-r from-sun to-coral",
+  over: "bg-gradient-to-r from-coral to-rose",
+};
 
 /** "2028-02-10" -> "10 Feb 2028", or "Now" for goals with no date. */
-const whenLabel = (when: string | null): string => (when ? `${formatDay(when)} ${when.slice(0, 4)}` : "Now");
+const whenLabel = (when: string | null): string =>
+  when ? `${formatDay(when)} ${when.slice(0, 4)}` : "Now";
 
 function Pill({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
@@ -53,8 +66,12 @@ function BasisLine({ basis }: { basis: Basis }) {
   return (
     <div className="flex flex-col gap-2 text-sm text-muted-foreground">
       <p className="m-0">{text}</p>
-      {basis.note && <p className="m-0 text-[13px] leading-snug">{basis.note}</p>}
-      {basis.calibration_note && <p className="m-0 text-[13px] leading-snug">{basis.calibration_note}</p>}
+      {basis.note && (
+        <p className="m-0 text-[13px] leading-snug">{basis.note}</p>
+      )}
+      {basis.calibration_note && (
+        <p className="m-0 text-[13px] leading-snug">{basis.calibration_note}</p>
+      )}
     </div>
   );
 }
@@ -71,9 +88,12 @@ function LikelihoodMeter({ label, bps }: { label: string; bps: number }) {
         aria-valuemax={100}
         aria-valuenow={pct}
         aria-valuetext={`${pct}% likely`}
-        className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-chip"
+        className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-chip"
       >
-        <div className={cn("h-full rounded-full", BAR_FILL[tone])} style={{ width: `${pct}%` }} />
+        <div
+          className={cn("h-full rounded-full", BAR_FILL[tone])}
+          style={{ width: `${pct}%` }}
+        />
       </div>
       <Pill tone={tone}>{`${pct}% likely`}</Pill>
     </div>
@@ -85,7 +105,9 @@ function GoalRow({ goal }: { goal: GoalForecast }) {
     <li className="flex flex-col gap-4 border-t border-border py-6 first:border-t-0 first:pt-1">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="text-[17px] font-medium">{goal.label}</span>
-        <span className="text-[13px] text-muted-foreground">{whenLabel(goal.when)}</span>
+        <span className="text-[13px] text-muted-foreground">
+          {whenLabel(goal.when)}
+        </span>
       </div>
 
       <LikelihoodMeter label={goal.label} bps={goal.likelihood_bps} />
@@ -99,7 +121,10 @@ function GoalRow({ goal }: { goal: GoalForecast }) {
         <ul className="m-0 flex list-none flex-col gap-2 p-0 text-[15px] leading-snug">
           {goal.levers.map((l) => (
             <li key={l.text} className="flex gap-3">
-              <span aria-hidden className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
+              <span
+                aria-hidden
+                className="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand"
+              />
               <span>{l.text}</span>
             </li>
           ))}
@@ -131,11 +156,15 @@ function FanChart({ path }: { path: YearBand[] }) {
   const top = Math.max(1, ...path.map((p) => p.p90_paise));
   const plotH = H - PAD_TOP - PAD_BOTTOM;
 
-  const x = (i: number) => (n === 1 ? W / 2 : PAD_X + (i / (n - 1)) * (W - 2 * PAD_X));
+  const x = (i: number) =>
+    n === 1 ? W / 2 : PAD_X + (i / (n - 1)) * (W - 2 * PAD_X);
   const y = (paise: number) => PAD_TOP + (1 - paise / top) * plotH;
 
   const upper = path.map((p, i) => `${x(i)},${y(p.p90_paise)}`);
-  const lower = path.map((p, i) => ({ p, i })).reverse().map(({ p, i }) => `${x(i)},${y(p.p10_paise)}`);
+  const lower = path
+    .map((p, i) => ({ p, i }))
+    .reverse()
+    .map(({ p, i }) => `${x(i)},${y(p.p10_paise)}`);
   const band = [...upper, ...lower].join(" ");
   const median = path.map((p, i) => `${x(i)},${y(p.p50_paise)}`).join(" ");
 
@@ -152,7 +181,12 @@ function FanChart({ path }: { path: YearBand[] }) {
         aria-label={label}
         className="block h-auto w-full overflow-visible"
       >
-        <text x={PAD_X} y={PAD_TOP - 8} className="text-[12px]" style={{ fill: "hsl(var(--muted-foreground))" }}>
+        <text
+          x={PAD_X}
+          y={PAD_TOP - 8}
+          className="text-[12px]"
+          style={{ fill: "hsl(var(--muted-foreground))" }}
+        >
           {formatCompactINR(top)}
         </text>
         <line
@@ -162,14 +196,24 @@ function FanChart({ path }: { path: YearBand[] }) {
           y2={H - PAD_BOTTOM}
           style={{ stroke: "hsl(var(--border))" }}
         />
-        <polygon points={band} style={{ fill: "hsl(var(--good) / 0.16)" }} />
+        <defs>
+          <linearGradient id="fan-band" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stopColor="hsl(var(--brand))" stopOpacity={0.12} />
+            <stop offset="100%" stopColor="hsl(var(--brand-2))" stopOpacity={0.28} />
+          </linearGradient>
+          <linearGradient id="fan-line" gradientUnits="userSpaceOnUse" x1={0} x2={W} y1={0} y2={0}>
+            <stop offset="0%" stopColor="hsl(var(--brand))" />
+            <stop offset="100%" stopColor="hsl(var(--brand-2))" />
+          </linearGradient>
+        </defs>
+        <polygon points={band} style={{ fill: "url(#fan-band)" }} />
         <polyline
           points={median}
           fill="none"
           strokeWidth={2.5}
           strokeLinejoin="round"
           strokeLinecap="round"
-          style={{ stroke: "hsl(var(--good))" }}
+          style={{ stroke: "url(#fan-line)" }}
         />
         {yearTicks(path).map((i) => {
           const anchor = i === 0 ? "start" : i === n - 1 ? "end" : "middle";
@@ -188,7 +232,8 @@ function FanChart({ path }: { path: YearBand[] }) {
         })}
       </svg>
       <figcaption className="text-[13px] text-muted-foreground">
-        The shaded band is the middle 80% of simulated outcomes. The line is the middle case.
+        The shaded band is the middle 80% of simulated outcomes. The line is the
+        middle case.
       </figcaption>
     </figure>
   );
@@ -198,13 +243,18 @@ function ForecastBody({ data }: { data: Forecast }) {
   return (
     <section aria-labelledby="forecast-title" className={SECTION}>
       <header className="flex flex-col gap-3">
-        <h2 id="forecast-title" className="m-0 font-display text-[32px] leading-none">
+        <h2
+          id="forecast-title"
+          className="m-0 font-display brand-text text-[32px] leading-none"
+        >
           Will you get there?
         </h2>
         <p className="m-0 text-base">{data.summary}</p>
         <BasisLine basis={data.basis} />
         {!data.saved_profile && (
-          <p className="empty-note m-0">Add your goals below for a forecast of them.</p>
+          <p className="empty-note m-0">
+            Add your goals below for a forecast of them.
+          </p>
         )}
       </header>
 
@@ -219,8 +269,12 @@ function ForecastBody({ data }: { data: Forecast }) {
       {data.path.length > 0 && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <h3 className="m-0 font-display text-[24px] leading-tight">Your goal pots over time</h3>
-            <span className="text-[13px] text-muted-foreground">All goals together, in each year</span>
+            <h3 className="m-0 font-display text-[24px] leading-tight">
+              Your goal pots over time
+            </h3>
+            <span className="text-[13px] text-muted-foreground">
+              All goals together, in each year
+            </span>
           </div>
           <FanChart path={data.path} />
         </div>
@@ -234,7 +288,8 @@ function ForecastBody({ data }: { data: Forecast }) {
 function fundingLine(goal: GoalForecast): string {
   const funded = rupees(goal.funded_monthly_paise);
   const needed = rupees(goal.needed_monthly_paise);
-  if (goal.funded_monthly_paise > goal.needed_monthly_paise) return `Gets ${funded} a month, more than the ${needed} it needs.`;
+  if (goal.funded_monthly_paise > goal.needed_monthly_paise)
+    return `Gets ${funded} a month, more than the ${needed} it needs.`;
   return `Getting ${funded} of the ${needed} a month it needs.`;
 }
 
@@ -242,7 +297,12 @@ export function ForecastPanel() {
   const { data, isLoading, isError, refetch } = useForecast();
 
   if (isLoading) {
-    return <div className="h-64 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading your forecast" />;
+    return (
+      <div
+        className="h-64 animate-pulse rounded-[28px] bg-muted/40"
+        aria-label="Loading your forecast"
+      />
+    );
   }
   if (isError || !data) {
     return (

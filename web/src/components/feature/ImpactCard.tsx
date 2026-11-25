@@ -4,21 +4,55 @@ import { formatINR } from "@/utils/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/utils/cn";
 
-function Option({ title, a }: { title: string; a: Absorption }) {
+/** Savings take the cut in sky, spending in coral, the same colours those pots wear elsewhere. */
+function Option({
+  title,
+  a,
+  c,
+}: {
+  title: string;
+  a: Absorption;
+  c: "sky" | "coral";
+}) {
   const rows: [string, number, number][] = [
-    ["Savings top-up to the reserve", a.from_rest_savings_paise, a.rest_savings_after_paise],
+    [
+      "Savings top-up to the reserve",
+      a.from_rest_savings_paise,
+      a.rest_savings_after_paise,
+    ],
     ["SIP", a.from_sip_paise, a.sip_after_paise],
     ["Spending allowance", a.from_spending_paise, a.spending_after_paise],
   ];
   return (
-    <div className="space-y-3 glass rounded-2xl p-4 text-sm">
-      <p className="font-semibold">{title}</p>
+    <div
+      className="space-y-3 rounded-2xl border p-4 text-sm"
+      style={{
+        borderColor: `hsl(var(--c-${c}) / 0.35)`,
+        background: `linear-gradient(150deg, hsl(var(--c-${c}) / 0.14), hsl(var(--card)) 70%)`,
+      }}
+    >
+      <p className="flex items-center gap-2 font-semibold">
+        <span
+          aria-hidden
+          className="h-2.5 w-2.5 rounded-full"
+          style={{ background: `hsl(var(--c-${c}))` }}
+        />
+        {title}
+      </p>
       <ul className="space-y-2">
         {rows.map(([label, cut, after]) => (
-          <li key={label} className={cn("flex justify-between gap-3", cut === 0 && "text-muted-foreground")}>
+          <li
+            key={label}
+            className={cn(
+              "flex justify-between gap-3",
+              cut === 0 && "text-muted-foreground",
+            )}
+          >
             <span className="min-w-0">{label}</span>
             <span className="shrink-0 tabular-nums">
-              {cut > 0 ? `−${formatINR(cut)} → ${formatINR(after)}` : "untouched"}
+              {cut > 0
+                ? `−${formatINR(cut)} → ${formatINR(after)}`
+                : "untouched"}
             </span>
           </li>
         ))}
@@ -40,14 +74,24 @@ export function ImpactCard({ impact }: { impact: ItemImpact }) {
       <CardHeader className="space-y-2 pb-4">
         <CardTitle className="text-[24px]">{impact.name}</CardTitle>
         {impact.monthly_paise > 0 && (
-          <p className="text-sm text-muted-foreground">Costs {formatINR(impact.monthly_paise)} a month. Who gives way?</p>
+          <p className="text-sm text-muted-foreground">
+            Costs {formatINR(impact.monthly_paise)} a month. Who gives way?
+          </p>
         )}
       </CardHeader>
       <CardContent className="space-y-6">
         {impact.savings_first && impact.spending_first && (
           <div className="grid gap-4 md:grid-cols-2">
-            <Option title="Savings take the cut" a={impact.savings_first} />
-            <Option title="Spending takes the cut" a={impact.spending_first} />
+            <Option
+              title="Savings take the cut"
+              a={impact.savings_first}
+              c="sky"
+            />
+            <Option
+              title="Spending takes the cut"
+              a={impact.spending_first}
+              c="coral"
+            />
           </div>
         )}
         {impact.savings_first_thresholds.length > 0 && (
@@ -57,14 +101,16 @@ export function ImpactCard({ impact }: { impact: ItemImpact }) {
               {impact.savings_first_thresholds.slice(0, 3).map((t, i, all) => (
                 <li key={t.label}>
                   <span className="font-medium text-foreground tabular-nums">
-                    {formatINR(i === 0 ? 0 : all[i - 1].up_to_paise)} to {formatINR(t.up_to_paise)}
+                    {formatINR(i === 0 ? 0 : all[i - 1].up_to_paise)} to{" "}
+                    {formatINR(t.up_to_paise)}
                   </span>
                   : {t.label.charAt(0).toLowerCase() + t.label.slice(1)}
                 </li>
               ))}
               <li>
                 <span className="font-medium text-foreground tabular-nums">
-                  Above {formatINR(impact.savings_first_thresholds[3].up_to_paise)}
+                  Above{" "}
+                  {formatINR(impact.savings_first_thresholds[3].up_to_paise)}
                 </span>
                 : an FD would have to be touched
               </li>
@@ -73,25 +119,36 @@ export function ImpactCard({ impact }: { impact: ItemImpact }) {
         )}
         {impact.maturity_value_paise > 0 && (
           <p className="text-sm">
-            Worth <span className="font-semibold tabular-nums">{formatINR(impact.maturity_value_paise)}</span> at maturity.
+            Worth{" "}
+            <span className="font-semibold tabular-nums text-[hsl(var(--foreground))] dark:text-mint">
+              {formatINR(impact.maturity_value_paise)}
+            </span>{" "}
+            at maturity.
           </p>
         )}
         {g && (
           <div
             className={cn(
               "glass space-y-1 rounded-2xl p-4 text-sm",
-              g.gap_paise >= 0 ? "border-good/40 bg-good-tint" : "border-warn/40 bg-warn-tint",
+              g.gap_paise >= 0
+                ? "border-good/40 bg-good-tint"
+                : "border-warn/40 bg-warn-tint",
             )}
           >
             <p className="font-semibold">
-              Goal {formatINR(g.target_paise)} by {formatDay(g.target_date)} {g.target_date.slice(0, 4)}
+              Goal {formatINR(g.target_paise)} by {formatDay(g.target_date)}{" "}
+              {g.target_date.slice(0, 4)}
             </p>
             <p className="leading-snug">
               {g.gap_paise >= 0
                 ? `On track: ${formatINR(g.gap_paise)} ahead.`
                 : `Short by ${formatINR(-g.gap_paise)}.`}
               {g.required_monthly_paise != null && g.gap_paise < 0 && (
-                <> You'd need about {formatINR(g.required_monthly_paise)} a month to get there.</>
+                <>
+                  {" "}
+                  You'd need about {formatINR(g.required_monthly_paise)} a month
+                  to get there.
+                </>
               )}
             </p>
           </div>

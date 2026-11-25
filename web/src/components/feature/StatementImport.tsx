@@ -28,6 +28,8 @@ import { Button } from "@/components/ui/button";
 import { ResetButton } from "@/components/ui/reset-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import BorderGlow from "@/components/bits/BorderGlow";
+import { FileUp } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { formatDay } from "@/utils/dates";
 import { formatINR } from "@/utils/money";
@@ -871,6 +873,15 @@ export function StatementImport() {
         </p>
       </div>
 
+      {/* The drop zone glows in the money colours as the pointer nears its edge. */}
+      <BorderGlow
+        backgroundColor="hsl(var(--card))"
+        borderRadius={18}
+        glowColor="165 80 60"
+        colors={["#8a8073", "#8a8073", "#8a8073"]}
+        glowRadius={28}
+        className="w-full border-transparent"
+      >
       <div
         role="button"
         tabIndex={0}
@@ -886,10 +897,18 @@ export function StatementImport() {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`flex flex-col items-center gap-1 rounded-[18px] border border-dashed px-5 py-8 text-center transition-colors ${
-          dragging ? "border-primary bg-accent" : "border-border"
-        } ${upload.isPending || previewing ? "pointer-events-none opacity-60" : "cursor-pointer hover:bg-accent/40"}`}
+        className={`flex flex-col items-center gap-1 rounded-[18px] border-2 border-dashed px-5 py-8 text-center transition-colors ${
+          dragging
+            ? "border-brand bg-brand-tint"
+            : "border-brand/35 bg-[radial-gradient(80%_120%_at_50%_0%,hsl(var(--brand-tint)),transparent_70%)]"
+        } ${upload.isPending || previewing ? "pointer-events-none opacity-60" : "cursor-pointer hover:bg-brand-tint/60"}`}
       >
+        <span
+          aria-hidden
+          className={`mb-2 grid h-12 w-12 place-items-center rounded-2xl bg-brand-gradient shadow-[0_12px_28px_-14px_hsl(var(--brand))] transition-transform ${dragging ? "-translate-y-1 scale-110" : ""}`}
+        >
+          <FileUp className="h-6 w-6" />
+        </span>
         <p className="font-display text-xl">
           {upload.isPending
             ? "Importing..."
@@ -901,6 +920,7 @@ export function StatementImport() {
           or click to choose a PDF, .txt or .csv file, up to 5 MB
         </p>
       </div>
+      </BorderGlow>
       <input
         ref={input}
         type="file"

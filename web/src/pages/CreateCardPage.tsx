@@ -8,7 +8,13 @@ import api from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { ResetButton } from "@/components/ui/reset-button";
 import { Header } from "@/components/layout/Header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -36,6 +42,17 @@ function hexToRgb(hex: string): [number, number, number] {
     : [0, 0, 0];
 }
 
+/** Ready-made card faces: two colours each, for the gradient. */
+const LOOKS: { name: string; from: string; to: string }[] = [
+  { name: "Midnight", from: "#1e293b", to: "#334155" },
+  { name: "Ocean", from: "#0369a1", to: "#14b8a6" },
+  { name: "Emerald", from: "#065f46", to: "#10b981" },
+  { name: "Sunset", from: "#f97316", to: "#e11d48" },
+  { name: "Royal", from: "#4c1d95", to: "#8b5cf6" },
+  { name: "Rose gold", from: "#b76e79", to: "#f5c6a5" },
+  { name: "Onyx", from: "#0a0a0a", to: "#3f3f46" },
+];
+
 export default function CreateCardPage() {
   const navigate = useNavigate();
 
@@ -52,7 +69,10 @@ export default function CreateCardPage() {
 
   const createCardMutation = useMutation({
     mutationFn: async () => {
-      if ((statementDay.trim() && parseDay(statementDay) === null) || (dueDay.trim() && parseDay(dueDay) === null)) {
+      if (
+        (statementDay.trim() && parseDay(statementDay) === null) ||
+        (dueDay.trim() && parseDay(dueDay) === null)
+      ) {
         throw new Error("Statement day and due day must be between 1 and 31");
       }
       if (creditLimit.trim() && toPaise(creditLimit) === null) {
@@ -75,7 +95,11 @@ export default function CreateCardPage() {
       navigate("/cards");
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error && error.message.startsWith("Statement") ? error.message : "Failed to create card");
+      toast.error(
+        error instanceof Error && error.message.startsWith("Statement")
+          ? error.message
+          : "Failed to create card",
+      );
       console.error(error);
     },
   });
@@ -93,21 +117,21 @@ export default function CreateCardPage() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Cards
           </Button>
           <h1 className="page-title">Add a card</h1>
-          <p className="page-sub">
-            Enter card details and customize its look.
-          </p>
+          <p className="page-sub">Enter card details and customize its look.</p>
         </div>
 
         {/* Preview */}
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-[24px]">Preview</CardTitle>
+            <CardTitle className="text-[24px]">
+            <span className="brand-text">Preview</span>
+          </CardTitle>
             <CardDescription className="max-w-prose leading-snug">
               This is how your card will appear on the dashboard.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center rounded-xl bg-chip p-8">
+            <div className="flex items-center justify-center rounded-xl bg-[radial-gradient(90%_90%_at_50%_0%,hsl(var(--brand-tint)),hsl(var(--chip)))] p-8">
               <CreditCard
                 id="preview"
                 name={name || "CARD NAME"}
@@ -160,31 +184,85 @@ export default function CreateCardPage() {
 
               <div className="form-grid col-span-full border-t border-border pt-6">
                 <div className="col-span-full flex items-center gap-1.5">
-                  <p className="text-sm font-medium">Billing cycle (optional)</p>
+                  <p className="text-sm font-medium">
+                    Billing cycle (optional)
+                  </p>
                   <InfoTip text="Used to work out when each bill is due. Find the statement date and due date on your card's bank page." />
                 </div>
                 <div className="field">
                   <Label htmlFor="statement-day">Statement day</Label>
-                  <Input id="statement-day" inputMode="numeric" maxLength={2} placeholder="e.g. 23" value={statementDay} onChange={(e) => setStatementDay(e.target.value)} />
+                  <Input
+                    id="statement-day"
+                    inputMode="numeric"
+                    maxLength={2}
+                    placeholder="e.g. 23"
+                    value={statementDay}
+                    onChange={(e) => setStatementDay(e.target.value)}
+                  />
                 </div>
                 <div className="field">
                   <Label htmlFor="due-day">Due day</Label>
-                  <Input id="due-day" inputMode="numeric" maxLength={2} placeholder="e.g. 13" value={dueDay} onChange={(e) => setDueDay(e.target.value)} />
+                  <Input
+                    id="due-day"
+                    inputMode="numeric"
+                    maxLength={2}
+                    placeholder="e.g. 13"
+                    value={dueDay}
+                    onChange={(e) => setDueDay(e.target.value)}
+                  />
                 </div>
                 <div className="field">
                   <Label htmlFor="credit-limit">Credit limit</Label>
-                  <MoneyInput id="credit-limit" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
+                  <MoneyInput
+                    id="credit-limit"
+                    value={creditLimit}
+                    onChange={(e) => setCreditLimit(e.target.value)}
+                  />
                 </div>
                 <div className="field">
                   <Label htmlFor="pay-from">Bill is paid from</Label>
-                  <Select id="pay-from" value={payFrom} onChange={(e) => setPayFrom(e.target.value)}>
+                  <Select
+                    id="pay-from"
+                    value={payFrom}
+                    onChange={(e) => setPayFrom(e.target.value)}
+                  >
                     <option value="">Reserve account</option>
-                    {accounts?.filter((a) => !a.locked).map((a) => (
-                      <option key={a.account_id} value={a.account_id}>{a.name}</option>
-                    ))}
+                    {accounts
+                      ?.filter((a) => !a.locked)
+                      .map((a) => (
+                        <option key={a.account_id} value={a.account_id}>
+                          {a.name}
+                        </option>
+                      ))}
                   </Select>
                 </div>
               </div>
+
+              {/* One tap to a ready-made look; the pickers below fine-tune it. */}
+              <fieldset className="field col-span-full">
+                <legend className="text-sm font-medium">Quick looks</legend>
+                <div className="flex flex-wrap gap-2">
+                  {LOOKS.map((l) => (
+                    <button
+                      key={l.name}
+                      type="button"
+                      aria-label={`${l.name} look`}
+                      aria-pressed={
+                        primaryColor === l.from && secondaryColor === l.to
+                      }
+                      title={l.name}
+                      onClick={() => {
+                        setPrimaryColor(l.from);
+                        setSecondaryColor(l.to);
+                      }}
+                      className="h-11 w-16 rounded-xl border-2 border-transparent shadow-sm transition-transform hover:-translate-y-0.5 aria-pressed:border-foreground"
+                      style={{
+                        background: `linear-gradient(135deg, ${l.from}, ${l.to})`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </fieldset>
 
               <div className="field">
                 <Label htmlFor="primary-color">Primary Color</Label>

@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { defaultBucket } from "@/utils/buckets";
 import { formatDay } from "@/utils/dates";
 import { formatINR } from "@/utils/money";
+import { cn } from "@/utils/cn";
 import {
   coveredLine,
   daysBetween,
@@ -33,7 +34,37 @@ const KIND_LABEL: Record<Bill["kind"], string> = {
   date: "Date",
 };
 
+/** How close a bill is, as a colour: today or tomorrow is rose, this week sun, later calm sky. */
+function urgency(days: number): { tile: string; dot: string; text: string } {
+  if (days <= 1)
+    return {
+      tile: "bg-gradient-to-br from-coral to-rose text-background shadow-[0_10px_24px_-14px_hsl(var(--c-rose))]",
+      dot: "bg-rose",
+      text: "text-over",
+    };
+  if (days <= 7)
+    return {
+      tile: "bg-gradient-to-br from-sun to-coral text-background shadow-[0_10px_24px_-14px_hsl(var(--c-sun))]",
+      dot: "bg-sun",
+      text: "text-warn",
+    };
+  return {
+    tile: "bg-sky/15 text-sky",
+    dot: "bg-sky",
+    text: "text-muted-foreground",
+  };
+}
+
+const KIND_PILL: Record<Bill["kind"], string> = {
+  monthly: "pill-sky",
+  yearly: "pill-grape",
+  periodic: "pill-rose",
+  card_bill: "pill-coral",
+  date: "pill-rose",
+};
+
 function BillRow({ bill }: { bill: Bill }) {
+  const tone = urgency(daysBetween(localIsoDate(), bill.date));
   const covered = coveredLine(bill, formatINR);
   const [day, mon] = formatDay(bill.date).split(" ");
   const putOff = usePutOff();
@@ -41,17 +72,28 @@ function BillRow({ bill }: { bill: Bill }) {
   const canPutOff = bill.kind === "periodic" && bill.commitment_id !== null;
   return (
     <li className="ledger-row gap-5 md:gap-6">
-      <span className="flex w-14 shrink-0 flex-col items-start">
-        <span className="font-serif-num text-4xl leading-[0.9]">{day}</span>
-        <span className="eyebrow">{mon}</span>
+      <span
+        className={cn(
+          "flex w-14 shrink-0 flex-col items-center rounded-2xl px-1 py-2",
+          tone.tile,
+        )}
+      >
+        <span className="font-serif-num text-3xl leading-[0.9]">{day}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider opacity-90">
+          {mon}
+        </span>
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-medium" title={bill.label}>
           {bill.label}
         </p>
         <p className="text-[13px] text-muted-foreground">
-          {KIND_LABEL[bill.kind]}
-          {covered && <span className="block text-primary">{covered}</span>}
+          <span className={cn("pill", KIND_PILL[bill.kind])}>
+            {KIND_LABEL[bill.kind]}
+          </span>
+          {covered && (
+            <span className="mt-1 block text-brand-ink">{covered}</span>
+          )}
         </p>
         {canPutOff && (
           <Button
@@ -99,13 +141,14 @@ function SuggestionCard({ s }: { s: BillSuggestion }) {
   return (
     <li className="space-y-3 border-t border-border py-4 text-sm first:border-t-0 first:pt-1">
       <p className="leading-snug">
+        <span aria-hidden className="mr-1.5 inline-block h-2 w-2 rounded-full bg-grape align-middle" />
         Looks like a subscription:{" "}
         <span className="font-semibold">{s.merchant}</span>{" "}
         <span className="tabular-nums">{formatINR(s.amount_paise)}</span>{" "}
         {every}
       </p>
       {s.was_paise !== null && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">
+        <p className="pill pill-sun">
           went up from {formatINR(s.was_paise)}
         </p>
       )}
@@ -154,7 +197,7 @@ function SinkingFundRow({ f }: { f: SinkingFund }) {
         className="h-2 w-full overflow-hidden rounded-full bg-muted"
       >
         <div
-          className="h-full rounded-full bg-emerald-500"
+          className="h-full rounded-full bg-gradient-to-r from-mint to-sky transition-[width] duration-700"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -176,9 +219,11 @@ export function BillsPanel() {
   return (
     <Card id="bills" className="scroll-mt-24">
       <CardHeader className="pb-4">
-        <CardTitle className="text-[32px]">Bills</CardTitle>
+        <CardTitle className="text-[32px]">
+          <span className="brand-text">Bills</span>
+        </CardTitle>
         {data && (
-          <p className="font-serif-num text-4xl">
+          <p className="font-serif-num text-4xl text-brand-ink">
             {formatINR(data.total_paise)}{" "}
             <span className="text-sm font-medium text-muted-foreground">
               due in the next 30 days
@@ -200,7 +245,7 @@ export function BillsPanel() {
         )}
         {weeks.map((w) => (
           <section key={w.key} aria-label={w.label} className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <h3 className="eyebrow text-xs font-semibold uppercase tracking-wide">
               {w.label}
             </h3>
             <ul className="ledger">
@@ -276,12 +321,17 @@ export function DueSoonCard() {
       <ul className="m-0 list-none p-0">
         {soon.map((b) => {
           const covered = coveredLine(b, formatINR);
+          const tone = urgency(daysBetween(today, b.date));
           return (
             <li
               key={`${b.date}-${b.label}-${b.kind}`}
               className="flex items-center gap-5 border-t border-border py-[18px]"
             >
-              <span className="w-16 shrink-0 text-sm text-muted-foreground">
+              <span className="flex w-16 shrink-0 items-center gap-2 text-sm text-muted-foreground">
+                <span
+                  aria-hidden
+                  className={cn("h-2.5 w-2.5 shrink-0 rounded-full", tone.dot)}
+                />
                 {formatDay(b.date)}
               </span>
               <span className="flex min-w-0 flex-auto flex-col gap-0.5">
@@ -289,7 +339,10 @@ export function DueSoonCard() {
                   {b.label}
                 </span>
                 <span className="text-[13px] text-muted-foreground">
-                  {KIND_LABEL[b.kind]} · {inDays(daysBetween(today, b.date))}
+                  {KIND_LABEL[b.kind]} ·{" "}
+                  <span className={cn("font-medium", tone.text)}>
+                    {inDays(daysBetween(today, b.date))}
+                  </span>
                   {covered && <> · {covered}</>}
                 </span>
               </span>

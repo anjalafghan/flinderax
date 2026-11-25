@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { Header } from "@/components/layout/Header";
+import { hue, ink, type Hue } from "@/components/feature/life/hue";
+import { CountOdometer } from "@/components/feature/life/flair";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,12 +12,93 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
 import type { Choice } from "@/services/lifeline";
 import { ResetButton } from "@/components/ui/reset-button";
-import { STAGES, stageLabel, useAddLead, useClearLeads, useRemoveLead, useSaveLead, useWork, type Lead, type LeadInput, type Stage } from "@/services/work";
+import {
+  STAGES,
+  stageLabel,
+  stepsThisWeek,
+  useAddLead,
+  useClearLeads,
+  useRemoveLead,
+  useSaveLead,
+  useWork,
+  type Lead,
+  type LeadInput,
+  type Stage,
+} from "@/services/work";
 import { formatDay } from "@/utils/dates";
 import { formatINR, paiseToInput, toPaise } from "@/utils/money";
 import { Retry } from "@/components/ui/retry";
 
-const PANEL = "flex flex-col gap-6 rounded-[28px] border border-border bg-card px-6 py-8 sm:px-12 sm:py-10";
+const PANEL =
+  "relative flex flex-col gap-6 overflow-hidden rounded-[28px] border px-6 py-8 sm:px-12 sm:py-10";
+
+/** Each stage of the search has a colour: an idea grape, applied sky, interviewing sun, an offer mint. */
+const STAGE_HUE: Record<Stage, Hue> = {
+  idea: "grape",
+  applied: "sky",
+  interview: "sun",
+  offer: "mint",
+  closed: "coral",
+};
+
+/** A panel washed in one colour, with a bright stripe down its left edge. */
+const panelStyle = (h: Hue) => ({
+  borderColor: hue(h, 0.32),
+  background: `linear-gradient(160deg, ${hue(h, 0.13)}, transparent 55%), hsl(var(--card))`,
+});
+
+function Stripe({ h }: { h: Hue }) {
+  return (
+    <span
+      aria-hidden
+      className="absolute inset-y-0 left-0 w-1.5"
+      style={{ background: hue(h) }}
+    />
+  );
+}
+
+/** The search in four numbers that roll in. */
+function Stats({ leads }: { leads: Lead[] }) {
+  const open = leads.filter((l) => l.stage !== "closed").length;
+  const tiles: { label: string; value: number; h: Hue }[] = [
+    { label: "Open leads", value: open, h: "grape" },
+    {
+      label: "Interviewing",
+      value: leads.filter((l) => l.stage === "interview").length,
+      h: "sun",
+    },
+    {
+      label: "Offers",
+      value: leads.filter((l) => l.stage === "offer").length,
+      h: "mint",
+    },
+    { label: "Steps due this week", value: stepsThisWeek(leads).length, h: "sky" },
+  ];
+  return (
+    <dl className="m-0 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {tiles.map((t) => (
+        <div
+          key={t.label}
+          className="relative flex flex-col gap-1 overflow-hidden rounded-[20px] border px-4 py-4"
+          style={panelStyle(t.h)}
+        >
+          <span
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-1"
+            style={{ background: hue(t.h) }}
+          />
+          <dt className="text-[13px] text-muted-foreground">{t.label}</dt>
+          <dd
+            className="m-0 font-display text-[34px] leading-none"
+            style={{ color: ink(t.h) }}
+          >
+            <CountOdometer value={t.value} />
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 interface Draft {
   company: string;
@@ -27,7 +110,15 @@ interface Draft {
   note: string;
 }
 
-const blank: Draft = { company: "", role: "", stage: "idea", take_home: "", next_step: "", next_on: "", note: "" };
+const blank: Draft = {
+  company: "",
+  role: "",
+  stage: "idea",
+  take_home: "",
+  next_step: "",
+  next_on: "",
+  note: "",
+};
 
 const toDraft = (l: Lead): Draft => ({
   company: l.company,
@@ -45,7 +136,8 @@ function toInput(d: Draft): LeadInput {
   let pay: number | null = null;
   if (d.take_home.trim() !== "") {
     pay = toPaise(d.take_home);
-    if (pay === null || pay <= 0) throw new Error("Take-home: enter a plain rupee amount, like 220000.");
+    if (pay === null || pay <= 0)
+      throw new Error("Take-home: enter a plain rupee amount, like 220000.");
   }
   return {
     company: d.company.trim(),
@@ -65,7 +157,14 @@ function nextMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function LeadForm({ id, start, busy, submitLabel, onSubmit, onCancel }: {
+function LeadForm({
+  id,
+  start,
+  busy,
+  submitLabel,
+  onSubmit,
+  onCancel,
+}: {
   id: string;
   start: Draft;
   busy: boolean;
@@ -75,7 +174,8 @@ function LeadForm({ id, start, busy, submitLabel, onSubmit, onCancel }: {
 }) {
   const [d, setD] = useState<Draft>(start);
   const [error, setError] = useState<string | null>(null);
-  const set = (k: keyof Draft) => (e: { target: { value: string } }) => setD((x) => ({ ...x, [k]: e.target.value }));
+  const set = (k: keyof Draft) => (e: { target: { value: string } }) =>
+    setD((x) => ({ ...x, [k]: e.target.value }));
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -84,7 +184,9 @@ function LeadForm({ id, start, busy, submitLabel, onSubmit, onCancel }: {
       setError(null);
       onSubmit(lead, () => setD(blank));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Check the details and try again.");
+      setError(
+        err instanceof Error ? err.message : "Check the details and try again.",
+      );
     }
   };
 
@@ -92,15 +194,31 @@ function LeadForm({ id, start, busy, submitLabel, onSubmit, onCancel }: {
     <form onSubmit={submit} noValidate className="form-grid">
       <div className="field">
         <Label htmlFor={`${id}-company`}>Company</Label>
-        <Input id={`${id}-company`} value={d.company} onChange={set("company")} maxLength={60} />
+        <Input
+          id={`${id}-company`}
+          value={d.company}
+          onChange={set("company")}
+          maxLength={60}
+        />
       </div>
       <div className="field">
         <Label htmlFor={`${id}-role`}>Role</Label>
-        <Input id={`${id}-role`} value={d.role} onChange={set("role")} maxLength={60} />
+        <Input
+          id={`${id}-role`}
+          value={d.role}
+          onChange={set("role")}
+          maxLength={60}
+        />
       </div>
       <div className="field">
         <Label htmlFor={`${id}-stage`}>Stage</Label>
-        <Select id={`${id}-stage`} value={d.stage} onChange={(e) => setD((x) => ({ ...x, stage: e.target.value as Stage }))}>
+        <Select
+          id={`${id}-stage`}
+          value={d.stage}
+          onChange={(e) =>
+            setD((x) => ({ ...x, stage: e.target.value as Stage }))
+          }
+        >
           {STAGES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
@@ -110,20 +228,42 @@ function LeadForm({ id, start, busy, submitLabel, onSubmit, onCancel }: {
       </div>
       <div className="field">
         <Label htmlFor={`${id}-pay`}>Take-home a month (₹)</Label>
-        <MoneyInput id={`${id}-pay`} value={d.take_home} onChange={set("take_home")} />
-        <p className="m-0 text-[13px] leading-snug text-muted-foreground">Expected or offered. With it, you can see the job on your life line.</p>
+        <MoneyInput
+          id={`${id}-pay`}
+          value={d.take_home}
+          onChange={set("take_home")}
+        />
+        <p className="m-0 text-[13px] leading-snug text-muted-foreground">
+          Expected or offered. With it, you can see the job on your life line.
+        </p>
       </div>
       <div className="field">
         <Label htmlFor={`${id}-step`}>Next step</Label>
-        <Input id={`${id}-step`} value={d.next_step} onChange={set("next_step")} maxLength={80} placeholder="Send CV, prepare for round 2" />
+        <Input
+          id={`${id}-step`}
+          value={d.next_step}
+          onChange={set("next_step")}
+          maxLength={80}
+          placeholder="Send CV, prepare for round 2"
+        />
       </div>
       <div className="field">
         <Label htmlFor={`${id}-on`}>By when</Label>
-        <Input id={`${id}-on`} type="date" value={d.next_on} onChange={set("next_on")} />
+        <Input
+          id={`${id}-on`}
+          type="date"
+          value={d.next_on}
+          onChange={set("next_on")}
+        />
       </div>
       <div className="field col-span-full">
         <Label htmlFor={`${id}-note`}>Note</Label>
-        <Input id={`${id}-note`} value={d.note} onChange={set("note")} maxLength={280} />
+        <Input
+          id={`${id}-note`}
+          value={d.note}
+          onChange={set("note")}
+          maxLength={280}
+        />
       </div>
       {error && (
         <p role="alert" className="col-span-full m-0 text-sm text-destructive">
@@ -150,11 +290,22 @@ function LeadRow({ lead }: { lead: Lead }) {
   const remove = useRemoveLead();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fail = (e: unknown) => setError(e instanceof Error && e.message ? e.message : "That didn't work. Try again.");
+  const fail = (e: unknown) =>
+    setError(
+      e instanceof Error && e.message
+        ? e.message
+        : "That didn't work. Try again.",
+    );
 
   const onLifeLine = () => {
     if (lead.take_home_paise === null) return;
-    const choice: Choice = { kind: "job_switch", month: nextMonth(), take_home_paise: lead.take_home_paise, gap_months: 0, raise_bps: null };
+    const choice: Choice = {
+      kind: "job_switch",
+      month: nextMonth(),
+      take_home_paise: lead.take_home_paise,
+      gap_months: 0,
+      raise_bps: null,
+    };
     navigate("/life", { state: { choice } });
   };
 
@@ -167,7 +318,12 @@ function LeadRow({ lead }: { lead: Lead }) {
           busy={save.isPending}
           submitLabel="Save"
           onCancel={() => setEditing(false)}
-          onSubmit={(next) => save.mutate({ id: lead.id, lead: next }, { onSuccess: () => setEditing(false), onError: fail })}
+          onSubmit={(next) =>
+            save.mutate(
+              { id: lead.id, lead: next },
+              { onSuccess: () => setEditing(false), onError: fail },
+            )
+          }
         />
         {error && (
           <p role="alert" className="m-0 pt-3 text-sm text-destructive">
@@ -180,8 +336,14 @@ function LeadRow({ lead }: { lead: Lead }) {
 
   const details = [
     lead.role,
-    lead.take_home_paise !== null ? `${formatINR(lead.take_home_paise)} a month` : "",
-    lead.next_step ? `Next: ${lead.next_step}${lead.next_on ? ` by ${formatDay(lead.next_on)}` : ""}` : lead.next_on ? `Next step by ${formatDay(lead.next_on)}` : "",
+    lead.take_home_paise !== null
+      ? `${formatINR(lead.take_home_paise)} a month`
+      : "",
+    lead.next_step
+      ? `Next: ${lead.next_step}${lead.next_on ? ` by ${formatDay(lead.next_on)}` : ""}`
+      : lead.next_on
+        ? `Next step by ${formatDay(lead.next_on)}`
+        : "",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -189,17 +351,29 @@ function LeadRow({ lead }: { lead: Lead }) {
   return (
     <li className="flex flex-col gap-3 border-t border-border py-5 first:border-t-0 first:pt-1">
       <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-[15px] font-medium">{lead.company}</span>
-        {details && <span className="text-[13px] text-muted-foreground">{details}</span>}
-        {lead.note && <span className="text-[13px] text-muted-foreground">{lead.note}</span>}
+        <span className="text-[17px] font-semibold">{lead.company}</span>
+        {details && (
+          <span className="text-[13px] text-muted-foreground">{details}</span>
+        )}
+        {lead.note && (
+          <span className="text-[13px] text-muted-foreground">{lead.note}</span>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {lead.take_home_paise !== null && (
-          <Button variant="outline" className="h-11 rounded-full" onClick={onLifeLine}>
+          <Button
+            variant="outline"
+            className="h-11 rounded-full"
+            onClick={onLifeLine}
+          >
             See it on my life line
           </Button>
         )}
-        <Button variant="outline" className="h-11 rounded-full" onClick={() => setEditing(true)}>
+        <Button
+          variant="outline"
+          className="h-11 rounded-full"
+          onClick={() => setEditing(true)}
+        >
           Edit
         </Button>
         <Button
@@ -229,9 +403,16 @@ export default function WorkPage() {
   const add = useAddLead();
   const [error, setError] = useState<string | null>(null);
   const leads = work.data?.leads ?? [];
-  const groups = STAGES.map((s) => ({ stage: s.value, leads: leads.filter((l) => l.stage === s.value) })).filter((g) => g.leads.length > 0);
+  const groups = STAGES.map((s) => ({
+    stage: s.value,
+    leads: leads.filter((l) => l.stage === s.value),
+  })).filter((g) => g.leads.length > 0);
   // Furthest along first, as the server sorts them.
-  groups.sort((a, b) => leads.findIndex((l) => l.stage === a.stage) - leads.findIndex((l) => l.stage === b.stage));
+  groups.sort(
+    (a, b) =>
+      leads.findIndex((l) => l.stage === a.stage) -
+      leads.findIndex((l) => l.stage === b.stage),
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -239,13 +420,26 @@ export default function WorkPage() {
       <main className="page page-narrow stack">
         <header>
           <h1 className="page-title">Work</h1>
-          <p className="page-sub">Your job search: a few leads, one next step each, and what an offer would do to your life line.</p>
+          <p className="page-sub">
+            Your job search: a few leads, one next step each, and what an offer
+            would do to your life line.
+          </p>
         </header>
 
-        {work.isLoading && <div className="h-48 animate-pulse rounded-[28px] bg-muted/40" aria-label="Loading your leads" />}
-        {work.isError && !work.data && (
-          <Retry message="Couldn't load your leads." onRetry={() => void work.refetch()} />
+        {work.isLoading && (
+          <div
+            className="h-48 animate-pulse rounded-[28px] bg-muted/40"
+            aria-label="Loading your leads"
+          />
         )}
+        {work.isError && !work.data && (
+          <Retry
+            message="Couldn't load your leads."
+            onRetry={() => void work.refetch()}
+          />
+        )}
+
+        {work.data && leads.length > 0 && <Stats leads={leads} />}
 
         {work.data && leads.length > 0 && (
           <div>
@@ -258,13 +452,39 @@ export default function WorkPage() {
           </div>
         )}
 
-        {work.data && leads.length === 0 && <p className="empty-note m-0">No leads yet. Add the first company you would like to work for.</p>}
+        {work.data && leads.length === 0 && (
+          <p className="empty-note m-0">
+            No leads yet. Add the first company you would like to work for.
+          </p>
+        )}
 
         {groups.map((g) => (
-          <section key={g.stage} aria-labelledby={`work-${g.stage}`} className={PANEL}>
-            <h2 id={`work-${g.stage}`} className="m-0 font-display text-[32px] leading-none">
-              {stageLabel(g.stage)}
-            </h2>
+          <section
+            key={g.stage}
+            aria-labelledby={`work-${g.stage}`}
+            className={PANEL}
+            style={panelStyle(STAGE_HUE[g.stage])}
+          >
+            <Stripe h={STAGE_HUE[g.stage]} />
+            <div className="flex items-center justify-between gap-3">
+              <h2
+                id={`work-${g.stage}`}
+                className="m-0 font-display text-[32px] leading-none"
+                style={{ color: ink(STAGE_HUE[g.stage]) }}
+              >
+                {stageLabel(g.stage)}
+              </h2>
+              <span
+                aria-hidden
+                className="grid h-9 min-w-9 place-items-center rounded-full px-2 text-sm font-semibold"
+                style={{
+                  background: hue(STAGE_HUE[g.stage], 0.22),
+                  color: ink(STAGE_HUE[g.stage]),
+                }}
+              >
+                {g.leads.length}
+              </span>
+            </div>
             <ul className="m-0 list-none p-0">
               {g.leads.map((l) => (
                 <LeadRow key={l.id} lead={l} />
@@ -273,8 +493,14 @@ export default function WorkPage() {
           </section>
         ))}
 
-        <section aria-labelledby="work-add" className={PANEL}>
-          <h2 id="work-add" className="m-0 font-display text-[32px] leading-none">
+        <section
+          aria-labelledby="work-add"
+          className={`glass ${PANEL}`}
+        >
+          <h2
+            id="work-add"
+            className="brand-text m-0 font-display text-[32px] leading-none"
+          >
             Add a lead
           </h2>
           <LeadForm
@@ -288,7 +514,12 @@ export default function WorkPage() {
                   setError(null);
                   reset();
                 },
-                onError: (e) => setError(e instanceof Error && e.message ? e.message : "Couldn't add the lead. Try again."),
+                onError: (e) =>
+                  setError(
+                    e instanceof Error && e.message
+                      ? e.message
+                      : "Couldn't add the lead. Try again.",
+                  ),
               })
             }
           />
