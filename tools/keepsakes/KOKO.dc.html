@@ -1,600 +1,159 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>KOKO keepsake</title>
-    <script src="./support.js"></script>
-  </head>
-  <body>
-    <x-dc>
-      <helmet>
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&amp;family=Newsreader:ital,opsz,wght@0,6..72,400..800;1,6..72,400..600&amp;family=Figtree:wght@500..700&amp;display=swap"
-        />
-        <style>
-          body {
-            margin: 0;
-          }
-          .scene {
-            display: block;
-            padding: 0;
-            border: 0;
-            background: none;
-            cursor: pointer;
-            filter: drop-shadow(0 2px 2px rgba(40, 22, 8, 0.32))
-              drop-shadow(0 16px 22px rgba(40, 22, 8, 0.26));
-          }
-          .scene:focus-visible,
-          .cta:focus-visible {
-            outline: 2px solid #2f4a33;
-            outline-offset: 6px;
-            border-radius: 8px;
-          }
-          .scene svg {
-            display: block;
-            overflow: visible;
-          }
-          .flap-out,
-          .flap-in,
-          .sticks,
-          .ice,
-          .surface {
-            transform-box: fill-box;
-          }
-          .flap-out,
-          .flap-in {
-            transform-origin: 50% 0;
-          }
-          .ice,
-          .surface {
-            transform-origin: 50% 50%;
-          }
-          .flap-out {
-            transform: scaleY(1);
-            transition: transform 0.26s ease-in 0.5s;
-          }
-          .flap-in {
-            transform: scaleY(0);
-            transition: transform 0.3s ease-out 0.2s;
-          }
-          .sticks {
-            transform: translateY(0);
-            transition: transform 0.45s cubic-bezier(0.5, 0, 0.75, 0);
-          }
-          .note {
-            opacity: 0;
-            transition: opacity 0.2s linear 0.1s;
-          }
-          .open .flap-out {
-            transform: scaleY(0);
-            transition-delay: 0s;
-          }
-          .open .flap-in {
-            transform: scaleY(-1);
-            transition-delay: 0.26s;
-          }
-          .open .sticks {
-            transform: translateY(-136px);
-            transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.25, 1) 0.5s;
-          }
-          .open .note {
-            opacity: 1;
-            transition-delay: 0.3s;
-          }
-          .note-hide {
-            transition: opacity 0.2s linear 0.5s;
-          }
-          .open .note-hide {
-            opacity: 0;
-            transition-delay: 0s;
-          }
-          .open .ice {
-            animation: ice 1.6s ease-in-out 0.9s;
-          }
-          .open .surface {
-            animation: surf 1.6s ease-in-out 0.9s;
-          }
-          @keyframes ice {
-            0%,
-            100% {
-              transform: rotate(0) translateY(0);
-            }
-            35% {
-              transform: rotate(16deg) translateY(5px);
-            }
-            70% {
-              transform: rotate(-5deg) translateY(-2px);
-            }
-          }
-          @keyframes surf {
-            0%,
-            100% {
-              transform: scaleY(1);
-            }
-            35% {
-              transform: scaleY(2);
-            }
-            70% {
-              transform: scaleY(0.7);
-            }
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .flap-out,
-            .flap-in,
-            .sticks,
-            .note {
-              transition-duration: 0.01s !important;
-              transition-delay: 0s !important;
-            }
-            .open .ice,
-            .open .surface {
-              animation: none;
-            }
-          }
-          .cta {
-            justify-self: start;
-            min-height: 44px;
-            padding: 0 20px;
-            border: 1.5px solid #2f4a33;
-            border-radius: 999px;
-            background: #2f4a33;
-            color: #f3ead8;
-            font:
-              600 15px/1 "Figtree",
-              sans-serif;
-            cursor: pointer;
-          }
-          .cta:hover {
-            background: #243a28;
-          }
-        </style>
-      </helmet>
-      <div
-        style="
-          width: 960px;
-          height: 700px;
-          box-sizing: border-box;
-          display: grid;
-          grid-template-columns: 600px minmax(0, 1fr);
-          align-items: center;
-          gap: 32px;
-          padding: 40px 56px 40px 40px;
-          background: radial-gradient(
-            ellipse 55% 65% at 34% 48%,
-            #c99c6c 0%,
-            #b3855a 58%,
-            #9a6e47 100%
-          );
-          font-family: &quot;Figtree&quot;, system-ui, sans-serif;
-          color: #2a1c10;
-        "
-      >
-        <button
-          type="button"
-          class="{{sceneCls}}"
-          onClick="{{toggle}}"
-          aria-expanded="{{open}}"
-          aria-label="KOKO chopstick sleeve from Dress up for KOKO, 17 November 2026, five stars. {{ctaLabel}}."
-        >
-          <svg
-            viewBox="0 0 600 600"
-            width="600"
-            height="600"
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id="k-paper" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#dfad48"></stop>
-                <stop offset=".6" stop-color="#d6a13a"></stop>
-                <stop offset="1" stop-color="#c38c2c"></stop>
-              </linearGradient>
-              <linearGradient id="k-edge" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#fff2cc" stop-opacity=".22"></stop>
-                <stop offset=".15" stop-color="#fff2cc" stop-opacity="0"></stop>
-                <stop offset=".85" stop-color="#5a3a10" stop-opacity="0"></stop>
-                <stop offset="1" stop-color="#5a3a10" stop-opacity=".22"></stop>
-              </linearGradient>
-              <linearGradient id="k-crease" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#4a2e0c" stop-opacity=".35"></stop>
-                <stop offset="1" stop-color="#4a2e0c" stop-opacity="0"></stop>
-              </linearGradient>
-              <linearGradient id="k-inside" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#f6efe0"></stop>
-                <stop offset="1" stop-color="#e8dcc2"></stop>
-              </linearGradient>
-              <linearGradient id="k-stick" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#24140e"></stop>
-                <stop offset=".45" stop-color="#4a2c1f"></stop>
-                <stop offset=".6" stop-color="#5e3a28"></stop>
-                <stop offset="1" stop-color="#24140e"></stop>
-              </linearGradient>
-              <linearGradient id="k-whisky" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#c8701f"></stop>
-                <stop offset=".6" stop-color="#9a4612"></stop>
-                <stop offset="1" stop-color="#5e2508"></stop>
-              </linearGradient>
-              <linearGradient id="k-glass" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#fff" stop-opacity=".36"></stop>
-                <stop offset=".25" stop-color="#fff" stop-opacity=".08"></stop>
-                <stop offset=".8" stop-color="#fff" stop-opacity=".05"></stop>
-                <stop offset="1" stop-color="#fff" stop-opacity=".3"></stop>
-              </linearGradient>
-              <filter id="k-grain" x="0" y="0" width="100%" height="100%">
-                <feTurbulence
-                  type="fractalNoise"
-                  baseFrequency=".85"
-                  numOctaves="2"
-                  stitchTiles="stitch"
-                ></feTurbulence>
-                <feColorMatrix
-                  values="0 0 0 0 .2  0 0 0 0 .12  0 0 0 0 .05  0 0 0 .16 0"
-                ></feColorMatrix>
-                <feComposite in2="SourceGraphic" operator="in"></feComposite>
-              </filter>
-              <clipPath id="k-body">
-                <rect x="0" y="0" width="112" height="400"></rect>
-              </clipPath>
-              <clipPath id="k-above">
-                <rect x="-60" y="-400" width="232" height="400"></rect>
-              </clipPath>
-              <clipPath id="k-glassclip">
-                <path d="M420 382 L532 382 L525 540 L427 540 Z"></path>
-              </clipPath>
-              <path
-                id="k-leaf"
-                d="M0 0 C6 -10 22 -14 34 -12 C24 -4 12 2 0 0 Z"
-              ></path>
-            </defs>
+<head>
+<meta charset="utf-8">
+<title>KOKO keepsake</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&amp;family=Newsreader:ital,opsz,wght@0,6..72,400..800;1,6..72,400..600&amp;family=Figtree:wght@500..700&amp;display=swap">
+<style>
+body{margin:0}
+.scene{display:block;padding:0;border:0;background:none;cursor:pointer;filter:drop-shadow(0 2px 2px rgba(40,22,8,.32)) drop-shadow(0 16px 22px rgba(40,22,8,.26))}
+.scene:focus-visible,.cta:focus-visible{outline:2px solid #2f4a33;outline-offset:6px;border-radius:8px}
+.scene svg{display:block;overflow:visible}
+.flap-out,.flap-in,.sticks,.ice,.surface{transform-box:fill-box}
+.flap-out,.flap-in{transform-origin:50% 0}
+.ice,.surface{transform-origin:50% 50%}
+.flap-out{transform:scaleY(1);transition:transform .26s ease-in .5s}
+.flap-in{transform:scaleY(0);transition:transform .3s ease-out .2s}
+.sticks{transform:translateY(0);transition:transform .45s cubic-bezier(.5,0,.75,0)}
+.note{opacity:0;transition:opacity .2s linear .1s}
+.open .flap-out{transform:scaleY(0);transition-delay:0s}
+.open .flap-in{transform:scaleY(-1);transition-delay:.26s}
+.open .sticks{transform:translateY(-136px);transition:transform .7s cubic-bezier(.2,.8,.25,1) .5s}
+.open .note{opacity:1;transition-delay:.3s}
+.note-hide{transition:opacity .2s linear .5s}
+.open .note-hide{opacity:0;transition-delay:0s}
+.open .ice{animation:ice 1.6s ease-in-out .9s}
+.open .surface{animation:surf 1.6s ease-in-out .9s}
+@keyframes ice{0%,100%{transform:rotate(0) translateY(0)}35%{transform:rotate(16deg) translateY(5px)}70%{transform:rotate(-5deg) translateY(-2px)}}
+@keyframes surf{0%,100%{transform:scaleY(1)}35%{transform:scaleY(2)}70%{transform:scaleY(.7)}}
+@media (prefers-reduced-motion:reduce){.flap-out,.flap-in,.sticks,.note{transition-duration:.01s!important;transition-delay:0s!important}.open .ice,.open .surface{animation:none}}
+.cta{justify-self:start;min-height:44px;padding:0 20px;border:1.5px solid #2f4a33;border-radius:999px;background:#2f4a33;color:#f3ead8;font:600 15px/1 'Figtree',sans-serif;cursor:pointer}
+.cta:hover{background:#243a28}
+</style>
+</helmet>
+<div style="width: 960px; height: 700px; box-sizing: border-box; display: grid; grid-template-columns: 600px minmax(0, 1fr); align-items: center; gap: 32px; padding: 40px 56px 40px 40px; background: radial-gradient(ellipse 55% 65% at 34% 48%, #c99c6c 0%, #b3855a 58%, #9a6e47 100%); font-family: 'Figtree', system-ui, sans-serif; color: #2a1c10;">
 
-            <!-- the sleeve, leaning across the board -->
-            <g transform="translate(150 150) rotate(-11) scale(1.18)">
-              <!-- body: ochre paper, a sparse bamboo-leaf print -->
-              <rect
-                x="0"
-                y="0"
-                width="112"
-                height="400"
-                fill="url(#k-paper)"
-              ></rect>
-              <g fill="#2f4a33" opacity=".46" clip-path="url(#k-body)">
-                <use
-                  href="#k-leaf"
-                  transform="translate(70 104) rotate(-28)"
-                ></use>
-                <use
-                  href="#k-leaf"
-                  transform="translate(84 118) rotate(12) scale(.8)"
-                ></use>
-                <use
-                  href="#k-leaf"
-                  transform="translate(10 310) rotate(-150) scale(.9)"
-                ></use>
-                <use
-                  href="#k-leaf"
-                  transform="translate(96 352) rotate(-60) scale(.7)"
-                ></use>
-                <path
-                  d="M104 96 L60 400"
-                  stroke="#2f4a33"
-                  stroke-width="1.4"
-                  fill="none"
-                ></path>
-              </g>
-              <rect
-                x="0"
-                y="0"
-                width="112"
-                height="400"
-                filter="url(#k-grain)"
-              ></rect>
-              <rect
-                x="0"
-                y="0"
-                width="112"
-                height="400"
-                fill="url(#k-edge)"
-              ></rect>
-              <path
-                d="M0 0 V400"
-                stroke="#f5d68c"
-                stroke-width="1.6"
-                opacity=".8"
-              ></path>
-              <!-- our note, under the flap -->
-              <g
-                class="note"
-                font-family="Newsreader, Georgia, serif"
-                font-style="italic"
-                font-size="13.5"
-                fill="#3b241b"
-                text-anchor="middle"
-              >
-                <text x="56" y="30">gave sushi</text>
-                <text x="56" y="47">another chance,</text>
-                <text x="56" y="64">loved it</text>
-              </g>
-              <!-- KOKO, printed -->
-              <g
-                font-family="'Shippori Mincho', Georgia, serif"
-                font-weight="800"
-                font-size="32"
-                fill="#3b241b"
-                text-anchor="middle"
-              >
-                <text x="50" y="148">K</text>
-                <text x="50" y="186">O</text>
-                <text x="50" y="224">K</text>
-                <text x="50" y="262">O</text>
-              </g>
-              <text
-                transform="translate(96 206) rotate(90)"
-                font-family="'Shippori Mincho', Georgia, serif"
-                font-weight="600"
-                font-size="9"
-                letter-spacing="1.4"
-                fill="#3b241b"
-                text-anchor="middle"
-              >
-                Oberoi Garden City
-              </text>
-              <!-- the date, stamped in bamboo green -->
-              <g transform="translate(52 316) rotate(-8)">
-                <circle
-                  r="19"
-                  fill="none"
-                  stroke="#2f4a33"
-                  stroke-width="2"
-                ></circle>
-                <circle
-                  r="15.5"
-                  fill="none"
-                  stroke="#2f4a33"
-                  stroke-width=".8"
-                ></circle>
-                <text
-                  y="2"
-                  font-family="'Shippori Mincho', serif"
-                  font-weight="800"
-                  font-size="14"
-                  fill="#2f4a33"
-                  text-anchor="middle"
-                >
-                  17
-                </text>
-                <text
-                  y="11"
-                  font-family="Figtree, sans-serif"
-                  font-weight="600"
-                  font-size="6.5"
-                  letter-spacing=".8"
-                  fill="#2f4a33"
-                  text-anchor="middle"
-                >
-                  Nov
-                </text>
-              </g>
-              <!-- a soy-sauce drop, the way it happens -->
-              <path
-                d="M18 360 c4-6 14-6 16 1 c2 6-4 11-10 10 c-6 0-9-5-6-11 z"
-                fill="#5b3a21"
-                opacity=".28"
-              ></path>
-              <path
-                d="M38 374 a2.4 2.4 0 1 0 .1 0 z"
-                fill="#5b3a21"
-                opacity=".25"
-              ></path>
-              <!-- the flap: printed side out when closed, the cream inside when it opens -->
-              <g class="flap-out">
-                <path
-                  d="M0 0 L112 0 L112 24 L56 82 L0 24 Z"
-                  fill="url(#k-paper)"
-                ></path>
-                <path
-                  d="M0 0 L112 0 L112 24 L56 82 L0 24 Z"
-                  filter="url(#k-grain)"
-                ></path>
-                <path
-                  d="M0 24 L56 82 L112 24"
-                  fill="none"
-                  stroke="#9f6f22"
-                  stroke-width="1"
-                ></path>
-              </g>
-              <path
-                d="M0 24 L56 82 L112 24 L112 34 L56 92 L0 34 Z"
-                fill="url(#k-crease)"
-                class="note-hide"
-              ></path>
-              <g class="flap-in">
-                <path
-                  d="M0 0 L112 0 L112 24 L56 82 L0 24 Z"
-                  fill="url(#k-inside)"
-                ></path>
-                <path
-                  d="M0 0 L112 0"
-                  stroke="#d5c6a6"
-                  stroke-width="1.2"
-                ></path>
-              </g>
-              <!-- the chopsticks, out of the sleeve once it opens -->
-              <g clip-path="url(#k-above)">
-                <g class="sticks">
-                  <g transform="translate(38 6) rotate(-2)">
-                    <path
-                      d="M0 0 L13 0 L10 300 L4 300 Z"
-                      fill="url(#k-stick)"
-                    ></path>
-                  </g>
-                  <g transform="translate(58 10) rotate(3)">
-                    <path
-                      d="M0 0 L13 0 L10 300 L4 300 Z"
-                      fill="url(#k-stick)"
-                    ></path>
-                  </g>
-                </g>
-              </g>
-            </g>
+<button type="button" class="{{sceneCls}}" onClick="{{toggle}}" aria-expanded="{{open}}" aria-label="KOKO chopstick sleeve from Dress up for KOKO, 17 November 2026, five stars. {{ctaLabel}}.">
+<svg viewBox="0 0 600 600" width="600" height="600" aria-hidden="true">
+<defs>
+<linearGradient id="k-paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dfad48"></stop><stop offset=".6" stop-color="#d6a13a"></stop><stop offset="1" stop-color="#c38c2c"></stop></linearGradient>
+<linearGradient id="k-edge" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff2cc" stop-opacity=".22"></stop><stop offset=".15" stop-color="#fff2cc" stop-opacity="0"></stop><stop offset=".85" stop-color="#5a3a10" stop-opacity="0"></stop><stop offset="1" stop-color="#5a3a10" stop-opacity=".22"></stop></linearGradient>
+<linearGradient id="k-crease" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a2e0c" stop-opacity=".35"></stop><stop offset="1" stop-color="#4a2e0c" stop-opacity="0"></stop></linearGradient>
+<linearGradient id="k-inside" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6efe0"></stop><stop offset="1" stop-color="#e8dcc2"></stop></linearGradient>
+<linearGradient id="k-stick" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#24140e"></stop><stop offset=".45" stop-color="#4a2c1f"></stop><stop offset=".6" stop-color="#5e3a28"></stop><stop offset="1" stop-color="#24140e"></stop></linearGradient>
+<linearGradient id="k-whisky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c8701f"></stop><stop offset=".6" stop-color="#9a4612"></stop><stop offset="1" stop-color="#5e2508"></stop></linearGradient>
+<linearGradient id="k-glass" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".36"></stop><stop offset=".25" stop-color="#fff" stop-opacity=".08"></stop><stop offset=".8" stop-color="#fff" stop-opacity=".05"></stop><stop offset="1" stop-color="#fff" stop-opacity=".3"></stop></linearGradient>
+<filter id="k-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"></feTurbulence><feColorMatrix values="0 0 0 0 .2  0 0 0 0 .12  0 0 0 0 .05  0 0 0 .16 0"></feColorMatrix><feComposite in2="SourceGraphic" operator="in"></feComposite></filter>
+<clipPath id="k-body"><rect x="0" y="0" width="112" height="400"></rect></clipPath>
+<clipPath id="k-above"><rect x="-60" y="-400" width="232" height="400"></rect></clipPath>
+<clipPath id="k-glassclip"><path d="M420 382 L532 382 L525 540 L427 540 Z"></path></clipPath>
+<path id="k-leaf" d="M0 0 C6 -10 22 -14 34 -12 C24 -4 12 2 0 0 Z"></path>
+</defs>
 
-            <!-- the whisky, one big cube -->
-            <g>
-              <ellipse
-                cx="476"
-                cy="548"
-                rx="66"
-                ry="10"
-                fill="#2a1a0c"
-                opacity=".3"
-              ></ellipse>
-              <g clip-path="url(#k-glassclip)">
-                <rect
-                  x="416"
-                  y="452"
-                  width="120"
-                  height="96"
-                  fill="url(#k-whisky)"
-                ></rect>
-                <g transform="translate(450 424)">
-                  <g class="ice">
-                    <rect
-                      width="54"
-                      height="50"
-                      rx="10"
-                      fill="#f4fbfd"
-                      fill-opacity=".5"
-                      stroke="#fff"
-                      stroke-opacity=".85"
-                      stroke-width="1.5"
-                    ></rect>
-                    <path
-                      d="M9 11 L24 9 M11 19 L17 18"
-                      stroke="#fff"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      opacity=".85"
-                    ></path>
-                  </g>
-                </g>
-                <rect
-                  x="416"
-                  y="452"
-                  width="120"
-                  height="96"
-                  fill="#b5601a"
-                  opacity=".35"
-                ></rect>
-                <ellipse
-                  class="surface"
-                  cx="476"
-                  cy="453"
-                  rx="55"
-                  ry="5"
-                  fill="#e59a48"
-                  opacity=".9"
-                ></ellipse>
-              </g>
-              <path
-                d="M420 382 L532 382 L525 540 L427 540 Z"
-                fill="url(#k-glass)"
-                stroke="#fff"
-                stroke-opacity=".65"
-                stroke-width="2.2"
-              ></path>
-              <ellipse
-                cx="476"
-                cy="382"
-                rx="56"
-                ry="6"
-                fill="none"
-                stroke="#fff"
-                stroke-opacity=".7"
-                stroke-width="2"
-              ></ellipse>
-              <path
-                d="M427 516 L525 516 L525 540 L427 540 Z"
-                fill="#fff"
-                opacity=".2"
-              ></path>
-              <path
-                d="M427 516 L525 516"
-                stroke="#fff"
-                stroke-opacity=".45"
-                stroke-width="1.5"
-              ></path>
-              <path
-                d="M431 392 L437 510"
-                stroke="#fff"
-                stroke-width="3.5"
-                stroke-linecap="round"
-                opacity=".5"
-              ></path>
-              <path
-                d="M518 396 L515 470"
-                stroke="#fff"
-                stroke-width="2"
-                stroke-linecap="round"
-                opacity=".3"
-              ></path>
-            </g>
-          </svg>
-        </button>
+<!-- the sleeve, leaning across the board -->
+<g transform="translate(150 150) rotate(-11) scale(1.18)">
+<!-- body: ochre paper, a sparse bamboo-leaf print -->
+<rect x="0" y="0" width="112" height="400" fill="url(#k-paper)"></rect>
+<g fill="#2f4a33" opacity=".46" clip-path="url(#k-body)">
+<use href="#k-leaf" transform="translate(70 104) rotate(-28)"></use>
+<use href="#k-leaf" transform="translate(84 118) rotate(12) scale(.8)"></use>
+<use href="#k-leaf" transform="translate(10 310) rotate(-150) scale(.9)"></use>
+<use href="#k-leaf" transform="translate(96 352) rotate(-60) scale(.7)"></use>
+<path d="M104 96 L60 400" stroke="#2f4a33" stroke-width="1.4" fill="none"></path>
+</g>
+<rect x="0" y="0" width="112" height="400" filter="url(#k-grain)"></rect>
+<rect x="0" y="0" width="112" height="400" fill="url(#k-edge)"></rect>
+<path d="M0 0 V400" stroke="#f5d68c" stroke-width="1.6" opacity=".8"></path>
+<!-- our note, under the flap -->
+<g class="note" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="13.5" fill="#3b241b" text-anchor="middle">
+<text x="56" y="30">gave sushi</text>
+<text x="56" y="47">another chance,</text>
+<text x="56" y="64">loved it</text>
+</g>
+<!-- KOKO, printed -->
+<g font-family="'Shippori Mincho', Georgia, serif" font-weight="800" font-size="32" fill="#3b241b" text-anchor="middle">
+<text x="50" y="148">K</text><text x="50" y="186">O</text><text x="50" y="224">K</text><text x="50" y="262">O</text>
+</g>
+<text transform="translate(96 206) rotate(90)" font-family="'Shippori Mincho', Georgia, serif" font-weight="600" font-size="9" letter-spacing="1.4" fill="#3b241b" text-anchor="middle">Oberoi Garden City</text>
+<!-- the date, stamped in bamboo green -->
+<g transform="translate(52 316) rotate(-8)">
+<circle r="19" fill="none" stroke="#2f4a33" stroke-width="2"></circle>
+<circle r="15.5" fill="none" stroke="#2f4a33" stroke-width=".8"></circle>
+<text y="2" font-family="'Shippori Mincho', serif" font-weight="800" font-size="14" fill="#2f4a33" text-anchor="middle">17</text>
+<text y="11" font-family="Figtree, sans-serif" font-weight="600" font-size="6.5" letter-spacing=".8" fill="#2f4a33" text-anchor="middle">Nov</text>
+</g>
+<!-- a soy-sauce drop, the way it happens -->
+<path d="M18 360 c4-6 14-6 16 1 c2 6-4 11-10 10 c-6 0-9-5-6-11 z" fill="#5b3a21" opacity=".28"></path>
+<path d="M38 374 a2.4 2.4 0 1 0 .1 0 z" fill="#5b3a21" opacity=".25"></path>
+<!-- the flap: printed side out when closed, the cream inside when it opens -->
+<g class="flap-out">
+<path d="M0 0 L112 0 L112 24 L56 82 L0 24 Z" fill="url(#k-paper)"></path>
+<path d="M0 0 L112 0 L112 24 L56 82 L0 24 Z" filter="url(#k-grain)"></path>
+<path d="M0 24 L56 82 L112 24" fill="none" stroke="#9f6f22" stroke-width="1"></path>
+</g>
+<path d="M0 24 L56 82 L112 24 L112 34 L56 92 L0 34 Z" fill="url(#k-crease)" class="note-hide"></path>
+<g class="flap-in">
+<path d="M0 0 L112 0 L112 24 L56 82 L0 24 Z" fill="url(#k-inside)"></path>
+<path d="M0 0 L112 0" stroke="#d5c6a6" stroke-width="1.2"></path>
+</g>
+<!-- the chopsticks, out of the sleeve once it opens -->
+<g clip-path="url(#k-above)"><g class="sticks">
+<g transform="translate(38 6) rotate(-2)">
+<path d="M0 0 L13 0 L10 300 L4 300 Z" fill="url(#k-stick)"></path>
+</g>
+<g transform="translate(58 10) rotate(3)">
+<path d="M0 0 L13 0 L10 300 L4 300 Z" fill="url(#k-stick)"></path>
+</g>
+</g></g>
+</g>
 
-        <div style="display: grid; gap: 16px; max-width: 30ch">
-          <h1
-            style="
-              margin: 0;
-              font:
-                700 36px/1.05 &quot;Newsreader&quot;,
-                Georgia,
-                serif;
-              color: #1f140a;
-              text-wrap: balance;
-            "
-          >
-            Dress up for KOKO
-          </h1>
-          <p
-            style="
-              margin: 0;
-              font:
-                italic 400 19px/1.45 &quot;Newsreader&quot;,
-                Georgia,
-                serif;
-              color: #2a1c10;
-            "
-          >
-            The sleeve our chopsticks came in, and the whisky we toasted with.
-            What we thought of the sushi is folded inside.
-          </p>
-          <button
-            type="button"
-            class="cta"
-            onClick="{{toggle}}"
-            aria-expanded="{{open}}"
-          >
-            {{ctaLabel}}
-          </button>
-        </div>
-      </div>
-    </x-dc>
-    <script
-      type="text/x-dc"
-      data-dc-script
-      data-props='{"$preview":{"width":960,"height":700}}'
-    >
-      class Component extends DCLogic {
-        constructor(props) { super(props); this.state = { open: false }; }
-        renderVals() {
-          const open = this.state.open;
-          return {
-            open: open ? 'true' : 'false',
-            sceneCls: 'scene' + (open ? ' open' : ''),
-            ctaLabel: open ? 'Fold it back' : 'Open the sleeve',
-            toggle: () => this.setState({ open: !open }),
-          };
-        }
-      }
-    </script>
-  </body>
+<!-- the whisky, one big cube -->
+<g>
+<ellipse cx="476" cy="548" rx="66" ry="10" fill="#2a1a0c" opacity=".3"></ellipse>
+<g clip-path="url(#k-glassclip)">
+<rect x="416" y="452" width="120" height="96" fill="url(#k-whisky)"></rect>
+<g transform="translate(450 424)"><g class="ice">
+<rect width="54" height="50" rx="10" fill="#f4fbfd" fill-opacity=".5" stroke="#fff" stroke-opacity=".85" stroke-width="1.5"></rect>
+<path d="M9 11 L24 9 M11 19 L17 18" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".85"></path>
+</g></g>
+<rect x="416" y="452" width="120" height="96" fill="#b5601a" opacity=".35"></rect>
+<ellipse class="surface" cx="476" cy="453" rx="55" ry="5" fill="#e59a48" opacity=".9"></ellipse>
+</g>
+<path d="M420 382 L532 382 L525 540 L427 540 Z" fill="url(#k-glass)" stroke="#fff" stroke-opacity=".65" stroke-width="2.2"></path>
+<ellipse cx="476" cy="382" rx="56" ry="6" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2"></ellipse>
+<path d="M427 516 L525 516 L525 540 L427 540 Z" fill="#fff" opacity=".2"></path>
+<path d="M427 516 L525 516" stroke="#fff" stroke-opacity=".45" stroke-width="1.5"></path>
+<path d="M431 392 L437 510" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".5"></path>
+<path d="M518 396 L515 470" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".3"></path>
+</g>
+</svg>
+</button>
+
+<div style="display: grid; gap: 16px; max-width: 30ch;">
+<h1 style="margin: 0; font: 700 36px/1.05 'Newsreader', Georgia, serif; color: #1f140a; text-wrap: balance;">Dress up for KOKO</h1>
+<p style="margin: 0; font: italic 400 19px/1.45 'Newsreader', Georgia, serif; color: #2a1c10;">The sleeve our chopsticks came in, and the whisky we toasted with. What we thought of the sushi is folded inside.</p>
+<button type="button" class="cta" onClick="{{toggle}}" aria-expanded="{{open}}">{{ctaLabel}}</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":700}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { open: false }; }
+  renderVals() {
+    const open = this.state.open;
+    return {
+      open: open ? 'true' : 'false',
+      sceneCls: 'scene' + (open ? ' open' : ''),
+      ctaLabel: open ? 'Fold it back' : 'Open the sleeve',
+      toggle: () => this.setState({ open: !open }),
+    };
+  }
+}
+</script>
+</body>
 </html>

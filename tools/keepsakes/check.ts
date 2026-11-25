@@ -248,4 +248,150 @@ await page.evaluate(() =>
 await settle();
 await page.screenshot({ path: join(out, "sheet-closed.png"), fullPage: true });
 writeFileSync(join(out, "report.json"), JSON.stringify(report, null, 1));
+
+// Silhouettes: what each closed keepsake looks like as a grey ghost in the museum's jar grid. Each one's
+// opaque shape (cut to its own box, on a 20×20 grid) and a coarse 6×6 map of how light or dark it is.
+// Two keepsakes read as the same object when their shapes overlap closely, at about the same
+// proportions, with light and dark in the same places. Clusters go to silhouettes.json; build.py lists them.
+await page.addStyleTag({
+  content:
+    "body,.tile{background:transparent!important;outline:none!important}figcaption{visibility:hidden}",
+});
+const shot = await page.screenshot({ fullPage: true, omitBackground: true });
+type Sil = { mask: number[]; aspect: number; luma: number[] };
+const sils: Record<string, Sil> = await page.evaluate(
+  async ({ png, crops }) => {
+    const img = new Image();
+    img.src = "data:image/png;base64," + png;
+    await img.decode();
+    const cv = document.createElement("canvas");
+    cv.width = img.width;
+    cv.height = img.height;
+    const cx = cv.getContext("2d", { willReadFrequently: true })!;
+    cx.drawImage(img, 0, 0);
+    const res: Record<string, { mask: number[]; aspect: number; luma: number[] }> = {};
+    const N = 20,
+      L = 6;
+    for (const tile of document.querySelectorAll<HTMLElement>(".tile")) {
+      const id = tile.dataset.id!;
+      const R = tile.querySelector("svg")!.getBoundingClientRect();
+      const k = R.width / 600,
+        c = crops[id]!;
+      const x0 = Math.max(0, Math.floor(R.left + window.scrollX + c[0] * k)),
+        y0 = Math.max(0, Math.floor(R.top + window.scrollY + c[1] * k));
+      const w = Math.max(1, Math.ceil(c[2] * k)),
+        h = Math.max(1, Math.ceil(c[3] * k));
+      const d = cx.getImageData(x0, y0, w, h).data;
+      let bx0 = w,
+        by0 = h,
+        bx1 = -1,
+        by1 = -1;
+      for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++)
+          if (d[(y * w + x) * 4 + 3]! > 160) {
+            if (x < bx0) bx0 = x;
+            if (x > bx1) bx1 = x;
+            if (y < by0) by0 = y;
+            if (y > by1) by1 = y;
+          }
+      if (bx1 < 0) {
+        res[id] = { mask: [], aspect: 1, luma: [] };
+        continue;
+      }
+      const bw = bx1 - bx0 + 1,
+        bh = by1 - by0 + 1;
+      const cell = (n: number, fx: number, fy: number) => {
+        let on = 0,
+          all = 0,
+          lum = 0;
+        const xa = bx0 + Math.floor((fx * bw) / n),
+          xb = bx0 + Math.floor(((fx + 1) * bw) / n),
+          ya = by0 + Math.floor((fy * bh) / n),
+          yb = by0 + Math.floor(((fy + 1) * bh) / n);
+        for (let y = ya; y < Math.max(yb, ya + 1); y++)
+          for (let x = xa; x < Math.max(xb, xa + 1); x++) {
+            const i = (y * w + x) * 4;
+            all++;
+            if (d[i + 3]! > 160) {
+              on++;
+              lum += 0.3 * d[i]! + 0.59 * d[i + 1]! + 0.11 * d[i + 2]!;
+            }
+          }
+        return { on: on / all, lum: on ? lum / on / 255 : -1 };
+      };
+      const mask: number[] = [],
+        luma: number[] = [];
+      for (let fy = 0; fy < N; fy++)
+        for (let fx = 0; fx < N; fx++) mask.push(cell(N, fx, fy).on > 0.5 ? 1 : 0);
+      for (let fy = 0; fy < L; fy++)
+        for (let fx = 0; fx < L; fx++) luma.push(cell(L, fx, fy).lum);
+      res[id] = { mask, aspect: bw / bh, luma };
+    }
+    return res;
+  },
+  {
+    png: shot.toString("base64"),
+    crops: Object.fromEntries(
+      Object.entries(report).map(([id, r]) => [id, r.crop]),
+    ),
+  },
+);
+writeFileSync(join(out, "silhouettes-raw.json"), JSON.stringify(sils));
+// the jar grid as the museum shows it: grey ghosts about 96px tall, cut to each crop, with their ids
+await page.evaluate((crops) => {
+  document.body.style.cssText =
+    "display:grid;grid-template-columns:repeat(14,104px);gap:6px;padding:10px;background:#efe7d8!important";
+  for (const t of document.querySelectorAll<HTMLElement>(".tile")) {
+    const c = crops[t.dataset.id!]!;
+    const svg = t.querySelector("svg")!;
+    svg.setAttribute("viewBox", c.join(" "));
+    svg.style.cssText = `width:${Math.min(100, (96 * c[2]) / c[3])}px;height:96px;overflow:hidden;filter:grayscale(1) sepia(.25) contrast(.85) brightness(1.02);opacity:.72`;
+    t.style.cssText = "background:transparent;padding:0;display:grid;justify-items:center";
+    const f = t.querySelector("figcaption")! as HTMLElement;
+    f.style.cssText = "visibility:visible;color:#3a3328;font:10px system-ui;padding:0";
+  }
+}, Object.fromEntries(Object.entries(report).map(([id, r]) => [id, r.crop])));
+await page.setViewportSize({ width: 1600, height: 400 });
+await page.screenshot({ path: join(out, "sheet-ghost.png"), fullPage: true });
+const same = (a: Sil, b: Sil) => {
+  if (!a.mask.length || !b.mask.length) return false;
+  let both = 0,
+    any = 0;
+  a.mask.forEach((v, i) => {
+    both += v & b.mask[i]!;
+    any += v | b.mask[i]!;
+  });
+  const iou = any ? both / any : 0;
+  const prop = Math.min(a.aspect, b.aspect) / Math.max(a.aspect, b.aspect);
+  // light and dark: mean difference where both have something
+  let diff = 0,
+    n = 0;
+  a.luma.forEach((v, i) => {
+    const u = b.luma[i]!;
+    if (v >= 0 && u >= 0) {
+      diff += Math.abs(v - u);
+      n++;
+    }
+  });
+  // calibrated on the kit: two stubs, two coins or two postcards score 0.93+; different die-cut things score under 0.85
+  return iou >= 0.86 && prop >= 0.82 && (n ? diff / n : 1) <= 0.16;
+};
+// complete linkage: a keepsake joins a cluster only when it looks like every one already in it
+const clusters: string[][] = [];
+for (const id of Object.keys(sils).sort()) {
+  const c = clusters.find((c) => c.every((o) => same(sils[o]!, sils[id]!)));
+  if (c) c.push(id);
+  else clusters.push([id]);
+}
+const groups = Object.fromEntries(clusters.map((c) => [c[0]!, c]));
+writeFileSync(
+  join(out, "silhouettes.json"),
+  JSON.stringify(
+    Object.values(groups)
+      .filter((g) => g.length > 1)
+      .sort((a, b) => b.length - a.length),
+    null,
+    1,
+  ),
+);
 await browser.close();

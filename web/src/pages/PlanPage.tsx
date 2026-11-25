@@ -48,17 +48,41 @@ import { cn } from "@/utils/cn";
 import { GuidanceCard } from "@/components/feature/GuidanceCard";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 
+// Fixed-payment categories, most used first: drawn from what this household actually pays on a
+// fixed day (EMIs, house, phone and internet, office travel, the car, insurance, fees like the CA).
+// Each lands in a bucket by default (`defaultBucket`), which the user can change.
 const CATEGORIES = [
   "bills",
-  "gym",
+  "emi",
   "house",
+  "rent",
+  "family",
+  "phone",
+  "internet",
+  "transport",
+  "car",
+  "insurance",
+  "health",
+  "gym",
+  "fees",
   "sip",
   "rd",
+  "investment",
   "subscription",
-  "donation",
   "entertainment",
+  "shopping",
+  "dates",
+  "gifts",
+  "travel",
+  "donation",
   "other",
 ];
+/** Abbreviations the chips would otherwise show as "Emi", "Sip", "Rd". */
+const CATEGORY_LABEL: Record<string, string> = {
+  emi: "EMI",
+  sip: "SIP",
+  rd: "RD",
+};
 const BUCKETS: Bucket[] = ["needs", "savings", "wants"];
 const MONTHS = [
   "Jan",
@@ -292,8 +316,8 @@ function CommitmentRow({
             ` · ${formatINR(Math.floor(c.amount_paise / 12))}/month set aside`}
           {everyFew &&
             ` · ${formatINR(Math.floor(c.amount_paise / c.every_months))}/month set aside`}
-          {c.start_month && ` · from ${c.start_month}`}
-          {c.end_month && ` · until ${c.end_month}`}
+          {c.start_month && ` · saving from ${formatYearMonth(c.start_month)}`}
+          {c.end_month && ` · until ${formatYearMonth(c.end_month)}`}
         </p>
         </div>
       </div>
@@ -333,11 +357,18 @@ function CommitmentRow({
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
-      {tooSoon && (
+      {c.active && (
         <StartSaving
           c={c}
+          openAtFirst={tooSoon}
           pending={update.isPending}
-          onSave={(first) => update.mutate({ ...c, first_month: first })}
+          onSave={(month) =>
+            update.mutate(
+              everyFew
+                ? { ...c, first_month: firstBuyMonth(month, c.every_months) }
+                : { ...c, start_month: month || null },
+            )
+          }
         />
       )}
     </li>
@@ -374,28 +405,45 @@ function everyFewPreview(
 }
 
 /**
- * For a payment every few months whose first one comes before a full round of saving could: pick
- * the month saving starts, and the first one moves to after it.
+ * "Start saving from" for any fixed payment, in Needs, Spending or Savings. For a payment every few
+ * months it moves the first buy to a full round of saving after that month; for a monthly or yearly
+ * one it is the payment's first month, so nothing is set aside or due before it. Offered up front
+ * when a payment every few months comes before a full round of saving could.
  */
 function StartSaving({
   c,
+  openAtFirst,
   onSave,
   pending,
 }: {
   c: Commitment;
-  onSave: (firstMonth: string) => void;
+  openAtFirst: boolean;
+  onSave: (month: string) => void;
   pending: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const [from, setFrom] = useState(thisYearMonth());
+  const everyFew = c.frequency === "monthly" && c.every_months > 1;
+  const [open, setOpen] = useState(openAtFirst);
+  const [from, setFrom] = useState(
+    everyFew ? thisYearMonth() : (c.start_month ?? thisYearMonth()),
+  );
   if (!open) {
+    // Its own line under the row, so long rows don't push it to the side.
     return (
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        Start saving from...
-      </Button>
+      <div className="w-full">
+        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          {c.start_month && !everyFew
+            ? `Saving from ${formatYearMonth(c.start_month)}...`
+            : "Start saving from..."}
+        </Button>
+      </div>
     );
   }
-  const first = firstBuyMonth(from || thisYearMonth(), c.every_months);
+  const month = from || thisYearMonth();
+  const preview = everyFew
+    ? `First buy in ${formatYearMonth(firstBuyMonth(month, c.every_months))}`
+    : c.frequency === "yearly"
+      ? `${formatINR(Math.floor(c.amount_paise / 12))} a month set aside from ${formatYearMonth(month)}`
+      : `First payment in ${formatYearMonth(month)}`;
   return (
     <div className="flex w-full flex-wrap items-center gap-2 text-[13px]">
       <Label htmlFor={`save-from-${c.commitment_id}`}>Start saving from</Label>
@@ -406,19 +454,30 @@ function StartSaving({
         value={from}
         onChange={(e) => setFrom(e.target.value)}
       />
-      <span className="text-muted-foreground">
-        First buy in {formatYearMonth(first)}
-      </span>
+      <span className="text-muted-foreground">{preview}</span>
       <Button
         size="sm"
         disabled={pending || !from}
         onClick={() => {
-          onSave(first);
+          onSave(from);
           setOpen(false);
         }}
       >
         Save
       </Button>
+      {!everyFew && c.start_month && (
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pending}
+          onClick={() => {
+            onSave("");
+            setOpen(false);
+          }}
+        >
+          Start now
+        </Button>
+      )}
       <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
         Cancel
       </Button>
@@ -655,7 +714,10 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
               onChange={(c) =>
                 setF({ ...f, category: c, bucket: defaultBucket(c) })
               }
-              options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+              options={CATEGORIES.map((c) => ({
+                value: c,
+                label: CATEGORY_LABEL[c] ?? c,
+              }))}
             />
           </div>
           <div className="field">
@@ -686,8 +748,10 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
             />
           </div>
           <div className="form-grid col-span-full">
+            {/* A payment every few months saved up from now has its own "Start saving from" above. */}
+            {(f.yearly || Number(f.every) === 1 || f.saving !== "start") && (
             <div className="field">
-              <Label htmlFor="cm-start">First month</Label>
+              <Label htmlFor="cm-start">Start saving from</Label>
               <Input
                 id="cm-start"
                 type="month"
@@ -695,6 +759,7 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
                 onChange={(e) => setF({ ...f, start: e.target.value })}
               />
             </div>
+            )}
             <div className="field">
               <Label htmlFor="cm-end">Last month</Label>
               <Input

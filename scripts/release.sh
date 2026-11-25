@@ -37,6 +37,9 @@ if [[ "${1:-}" == "--run" ]]; then
   }
   trap fail ERR
   trap 'echo "==> stopped"; status_set "state=failed" "step=stopped" "finished=$(date +%s)"; cleanup; exit 1' INT TERM
+  # Keep the Mac awake until this script exits: a sleeping Mac drops the connection to the builder and
+  # the deploy hangs. -i stops idle sleep; -s also stops system sleep while on power.
+  command -v caffeinate >/dev/null && { caffeinate -is -w $$ & }
 
   step "worktree"
   git -C "$ROOT" worktree add --detach "$WT" develop
@@ -74,8 +77,23 @@ if [[ "${1:-}" == "--run" ]]; then
     act git -C "$ROOT" branch -f master HEAD
   fi
 
-  step "fly deploy"
-  act fly deploy --depot=false
+  # Fast path: compile on this Mac (minutes, deps cached in target/) and ship a copy-only image.
+  # Slow path, when cargo-zigbuild isn't installed: Fly's remote builder compiles from source (~35 min).
+  # (`cargo zigbuild --version` is rejected by cargo-zigbuild 0.24, so look for the binary itself.)
+  if command -v zig >/dev/null && command -v cargo-zigbuild >/dev/null; then
+    step "build on this Mac"
+    STAGE="$WT/.prebuilt"
+    bash "$ROOT/scripts/build-prebuilt.sh" "$STAGE"
+    # Build the tiny image with local Docker when it answers; otherwise Fly's builder (it only copies files).
+    if docker info >/dev/null 2>&1; then BUILDER=--local-only; else BUILDER=--remote-only; fi
+    step "fly deploy (prebuilt, $BUILDER)"
+    (cd "$STAGE" && act fly deploy --depot=false "$BUILDER")
+  else
+    echo "note: cargo-zigbuild not found, so Fly's builder compiles from source (slow)."
+    echo "      For fast deploys: brew install zig && cargo install cargo-zigbuild --locked"
+    step "fly deploy"
+    act fly deploy --depot=false
+  fi
 
   step "health check"
   for i in $(seq 1 12); do

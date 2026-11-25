@@ -91,7 +91,7 @@ impl Bucket {
 pub fn default_bucket(category: &str) -> Bucket {
     match category {
         "sip" | "rd" | "savings" | "investment" => Bucket::Savings,
-        "subscription" | "donation" | "entertainment" => Bucket::Wants,
+        "subscription" | "donation" | "entertainment" | "shopping" | "dates" | "gifts" | "travel" => Bucket::Wants,
         _ => Bucket::Needs,
     }
 }

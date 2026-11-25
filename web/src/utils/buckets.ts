@@ -5,7 +5,17 @@ import type { Bucket } from "@/services/types";
 export function defaultBucket(category: string): Bucket {
   if (["sip", "rd", "savings", "investment"].includes(category))
     return "savings";
-  if (["subscription", "donation", "entertainment"].includes(category))
+  if (
+    [
+      "subscription",
+      "donation",
+      "entertainment",
+      "shopping",
+      "dates",
+      "gifts",
+      "travel",
+    ].includes(category)
+  )
     return "wants";
   return "needs";
 }

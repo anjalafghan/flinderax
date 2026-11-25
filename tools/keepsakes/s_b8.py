@@ -1,5 +1,7 @@
 """Batch 8: slips 263-298 (festivals, forts and treks, weekends away, the hotel restaurants)."""
 from objects import *  # noqa: F401,F403
+from cutouts import cutout  # noqa: F401
+from things import *  # noqa: F401,F403
 
 B = 'b8'
 

@@ -1,120 +1,105 @@
 """Batch 3: slips 22-72."""
 from objects import *  # noqa: F401,F403
+from cutouts import cutout  # noqa: F401
+from things import *  # noqa: F401,F403
 
 B = 'b3'
 
 coin('imagicaa', 'Amusement park day', batch=B, palette='plum', name='A gold Imagicaa ride token with a rollercoaster loop on it',
      top='Imagicaa, Khopoli', big='1 RIDE', bottom='keep arms inside', back_big='again!', back_small='one more go',
      art=[('ghat', 0, -78, .5, '#5a3a10', '#e9c46a')], verbs=('Toss the token', 'Pocket it'))
-mapcard('ranibaug', 'Zoo visit', batch=B, palette='moss', name='A zoo map of Rani Baug with a penguin and our route round it',
-        head='Rani Baug, Byculla', route='M40 320 C80 280 100 200 160 190 S250 150 300 110 S380 60 390 40',
-        pins=[(160, 190, 'elephants'), (300, 110, 'penguins!')], labels=[(90, 60, 'closed Wednesdays', 0)],
-        art=[('penguin', 340, 190, 1.6), ('flamingo', 60, 300, 1.1), ('leaf', 200, 300, .9, '#6a9a4a'), ('bird', 180, 60, .9)])
-scorecard('aquarium', 'Aquarium date', batch=B, palette='sea', name='A fish-ID card from Taraporewala Aquarium with the fish we spotted ticked',
-          head='Spotted at Taraporewala', sub='Marine Drive, fish ID card', rows=['clownfish', 'a very slow turtle', 'the moray in the rocks', 'the one that stared back'],
-          cols=('me', 'you'), marks=[('✓', '✓'), ('✓', ''), ('', '✓'), ('✓', '✓')], circle=3, shape='card', art=[('fish', 270, 40, .6, '#e46f2a')])
-stub('planetarium', 'Planetarium show', batch=B, palette='navy', name='A star-chart ticket from Nehru Planetarium', head='Nehru Planetarium',
-     sub='SKY THEATRE, WORLI', rows=['show at 4:30, dome seats', 'lean back, look up', 'closed Mondays'], band='#1f2b4d', paper_='#eef0f8',
-     art=[('stars', 240, 150, .9, '#1f2b4d'), ('moon', 270, 120, .5, '#e9c46a')], note='we found Orion', verbs=('Dim the dome', 'Lights up'))
-postcard('aer', 'Mumbai skyline view', batch=B, palette='night', name='A postcard of the Worli skyline at sunset from 34 floors up',
-         scene=[('skyline', 90, 150, 1.6, '#2b3a63'), ('skyline', 260, 152, 1.4, '#36467a'), ('sun', 180, 120, .9, '#f6a04d'), ('cocktail', 320, 110, .5, '#e0245e')],
-         sky=('#f7b267', '#f4845f'), ground='#1f2b4d', caption='34 floors up', message=['Aer, Four Seasons.', 'We got there an hour', 'before sunset and', 'watched the sea go pink.'], to='to us, Worli')
-keytag('worlibike', 'Cycling at Worli Sea Face', batch=B, palette='sea', name='A rental key on a blue fob from Anytime Cycling at Worli Sea Face', head='Anytime Cycling', number='cycle no. 14', tag_col='#2f6db5')
+cutout('ranibaug', 'Zoo visit', batch=B, palette='moss', kind='charm', name='A penguin charm on a key ring from Rani Baug, with a little flamingo beside it',
+       parts=[('penguin', -20, -30, 3.6), ('flamingo', 70, -10, 2.2)], head='Rani Baug', sub='closed Wednesdays', ribbon='#2f6d57', banner=(0, 90, -3))
+cutout('aquarium', 'Aquarium date', batch=B, palette='sea', kind='sticker', name='A sticker of a clownfish and a slow turtle-green bubble from Taraporewala Aquarium',
+       parts=[('fish', -20, -40, 3.4, '#e46f2a'), ('fish', 70, 20, 1.6, '#2f6db5'), ('drop', -90, 20, 1.2, '#bfe3f2'), ('drop', -70, -100, .8, '#bfe3f2')], head='Taraporewala', sub='the one that stared back', ribbon='#2f6db5', banner=(0, 80, -2))
+cutout('planetarium', 'Planetarium show', batch=B, palette='navy', kind='pin', name='An enamel pin of the planetarium dome under a crescent moon and Orion',
+       parts=[('dome', 0, 0, 3.4, '#eef0f8', '#1f2b4d'), ('moon', -80, -110, 1.4, '#e9c46a'), ('star', 70, -120, .9, '#f1c84b'), ('star', 110, -80, .6, '#f1c84b')], head='Nehru Planetarium', sub='we found Orion', ribbon='#1f2b4d', banner=(0, 110, -2))
+cutout('aer', 'Mumbai skyline view', batch=B, palette='night', kind='magnet', name='A skyline magnet of Worli at sunset, a cocktail on the ledge, 34 floors up',
+       parts=[('sun', 0, -50, 2.8, '#f6a04d'), ('skyline', 0, 0, 3.6, '#2b3a63'), ('cocktail', 120, -10, 1.4, '#e0245e')], head='Aer, 34 floors up', sub='Four Seasons, Worli', ribbon='#22354c', banner=(0, 100, -2))
+cutout('worlibike', 'Cycling at Worli Sea Face', batch=B, palette='sea', kind='charm', name='A bicycle charm on a key ring from Anytime Cycling at Worli Sea Face',
+       parts=[('bicycle', 0, -10, 3.6, '#2f6db5', '#1d2b30')], head='Worli Sea Face', sub='cycle no. 14', ribbon='#2f6db5', banner=(0, 80, -2))
 tag('sgnp', 'Cycling in Sanjay Gandhi National Park', batch=B, palette='moss', name='A forest trail permit tag from Sanjay Gandhi National Park',
     head='SGNP trail permit', rows=['Borivali gate', 'two cycles, two hours', 'watch for the langurs'], stamp_word='ENTRY', stamp_sub='before 9', paper_='#e3ecd0',
     ink='#24401f', ink2='#2f6d57', art=[('leaf', 230, 40, .5)])
-badge('midnightride', 'Midnight cycling ride', batch=B, palette='navy', name='A midnight brevet badge for the 25 km ride from Colaba',
-      head='Midnight ride', big='25 km', sub='Colaba, 10 pm to 5 am', ribbon=('#1f2b4d', '#f2c230'), face='#eef0f8', art=[('moon', 70, -70, .45), ('bicycle', 0, 86, .55)])
+cutout('midnightride', 'Midnight cycling ride', batch=B, palette='navy', kind='patch', name='An embroidered patch of a bicycle under the moon for the 25 km midnight ride from Colaba',
+       parts=[('moon', 60, -90, 2.2, '#f5edc8'), ('bicycle', 0, 0, 3.4, '#f2c230', '#eef0f8'), ('stars', -70, -90, 1.6)], head='25 km, midnight', sub='Colaba, 10 pm to 5 am', ribbon='#1f2b4d', back=(150, 120, -20, '#2b3a63'), banner=(0, 100, -2))
 postcard('marinedrive', 'Sunset date at Marine Drive', batch=B, palette='sea', name="A Queen's Necklace postcard of Marine Drive",
          scene=[('sun', 180, 130, 1, '#f6a04d'), ('necklace', 180, 172, 3.2, '#ffe08a', '#2b3a63'), ('waves', 90, 200, .8, '#ffffff')],
          sky=('#f9c784', '#e7766b'), ground='#36567a', caption="the Queen's Necklace", message=['On the sea wall', 'near Chowpatty, a gola', 'each, kala khatta.', 'Then the lights came on.'], to='to us')
-postcard('lonavala', 'Long drive to Lonavala', batch=B, palette='ghat', name="A postcard of the Lonavala ghats: mist, the winding road, Tiger's Point and a chikki stop",
-         scene=[('ghat', 120, 140, 2.2, '#3c3c3c', '#4f7a45'), ('mist', 250, 90, 1.2), ('mist', 70, 70, .9), ('hills', 300, 150, 1.4, '#6f8a64', '#4f6a45'), ('sun', 300, 50, .5, '#f6d08a')],
-         sky=('#c9d6c4', '#e9ddc0'), ground='#3f553b', caption="Tiger's Point", message=['Old highway, all', 'the hairpins. Chikki', 'at Maganlal, mist at', "Tiger's Point, chai."], to='to us, Lonavala', stamp_art=('ghat',))
-stub('ellora', 'Ajanta & Ellora caves weekend', batch=B, palette='clay', name='A ticket to Ellora and Ajanta with a fragment of a cave painting',
-     head='Ellora + Ajanta', sub='CAVE 16, KAILASA', rows=['Ellora first, Ajanta next day', 'closed Mon (Ajanta), Tue (Ellora)', 'base: Sambhajinagar'],
-     band='#7a4a2a', paper_='#f1e3c4', ink='#3a2414', art=[('cave', 250, 150, .8, '#b08a5a', '#3a2414')], stub_text='2 ADULTS', shape='torn')
-stub('maisonpvr', 'Movie in a recliner theatre', batch=B, palette='ink', name='A recliner-seat ticket from Maison PVR', head='Maison PVR',
-     sub='JIO WORLD DRIVE, BKC', rows=['recliners G7 + G8', 'blanket, popcorn, feet up', 'evening show'], band='#2a2238', paper_='#f6efe3',
-     art=[('star', 260, 150, .6, '#e9c46a')], stub_text='RECLINER', note='fell asleep for 4 minutes', shape='scallop')
-media('pokemon', 'Play Pokémon Emerald together', batch=B, palette='pine', name='A game cartridge with our team and starters written on its label',
-      kind='cartridge', head='EMERALD', rows=['our save file', 'starters: Treecko, Mudkip', 'nuzlocke: on', 'badges: 3 so far', 'do not overwrite'],
-      shell='#1f8a5a', paper_='#f6efe0', verbs=('Load the save', 'Turn it off'))
+cutout('lonavala', 'Long drive to Lonavala', batch=B, palette='ghat', kind='magnet', name="A magnet of the Lonavala ghat road winding up into the mist, with a slab of chikki",
+       parts=[('ghat', 0, -30, 3.6, '#3c3c3c', '#4f7a45'), ('mist', -40, -70, 1.6), ('chocolate', 120, 40, 1.0, '#c98a3a', '#f2c230')], head="Tiger's Point", sub='chikki at Maganlal', ribbon='#3f553b', banner=(-20, 90, -2))
+cutout('ellora', 'Ajanta & Ellora caves weekend', batch=B, palette='clay', kind='pin', name='An enamel pin of the Kailasa temple carved down into the rock at Ellora',
+       parts=[('temple', 0, -30, 3.8, '#e8c48a', '#7a4a2a'), ('hills', -100, 20, 1.6, '#b08a5a', '#7a5a3a'), ('hills', 100, 20, 1.6, '#b08a5a', '#7a5a3a')], head='Ellora + Ajanta', sub='cave 16, Kailasa', ribbon='#7a4a2a', banner=(0, 90, -2))
+cutout('maisonpvr', 'Movie in a recliner theatre', batch=B, palette='ink', kind='sticker', name='A sticker of a popcorn bucket and a film reel from the recliners at Maison PVR',
+       parts=[('cup', -40, -20, 3.4, '#f6efe3', '#f2c230'), ('record', 80, -50, 1.8, '#2a2238', '#e9c46a')], head='Maison PVR', sub='recliners G7 + G8', ribbon='#2a2238', banner=(0, 80, -2))
+cutout('pokemon', 'Play Pokémon Emerald together', batch=B, palette='pine', kind='charm', name='A green game-controller charm for our shared Pokémon Emerald save',
+       parts=[('gamepad', 0, -20, 3.6, '#1f8a5a', '#f2c230')], head='EMERALD', sub='badges: 3 so far', ribbon='#0b2216', banner=(0, 70, -2))
 media('hindirap', 'Hindi rap listening session', key='Hindi rap listening session (watch {b} react)', batch=B, palette='slate',
       name='A cassette with a ten-track Hindi rap tape and its J-card', kind='cassette', head='10 TRACKS', rows=['side A: watch the reaction'],
       shell='#1b1b1e', paper_='#f2c230', ink='#16161a')
-label('cooktogether', 'Cook together', batch=B, palette='brick', name='A recipe card tucked in a spice tin for a cuisine neither of us had cooked',
-      kind='box', head='first time cooking', rows=['a cuisine neither of us', 'had tried before', 'splash marks: several'], glass_='#c0392b', paper_='#fbf6ea', fx='steam')
-badge('jigsaw', 'Do a physical jigsaw puzzle together', batch=B, palette='paper', name='The last jigsaw piece, kept as a badge', head='piece 1000',
-      big='DONE', sub='found it under the sofa', ribbon=('#2f6db5', '#e8b923'), art=[('puzzle', 0, 86, .9, '#2f6db5')], verbs=('Press it in', 'Lift it out'))
-strip('sketch', 'Draw / sketch together', batch=B, palette='paper', name='Two ten-minute portraits of each other, side by side on a sketch strip',
-      frames=[('#f6f1e4', '#f6f1e4', [('heart', 75, 60, .5, '#2b2b30')]), ('#f6f1e4', '#f6f1e4', [('star', 75, 60, .5, '#2b2b30')])], caption='10 minutes each', verbs=('Draw it in', 'Rub it out'))
-tag('clayset', 'Clay set — make things together', batch=B, palette='clay', name='A tag tied to the little clay creatures we made', head='made of clay',
-    rows=['two creatures, unnamed', 'air-dried overnight', 'paint them next time'], stamp_word='DRY', stamp_sub='by morning', paper_='#e7c9a6', art=[('dumpling', 230, 40, .5, '#c47a4a', '#a65a30')])
-stub('prithvi', 'A play at Prithvi Theatre', batch=B, palette='brick', name='A Prithvi Theatre playbill-ticket with an Irish coffee ring', head='Prithvi Theatre',
-     sub='JUHU, THRUST STAGE', rows=['row C, as close as it gets', 'Irish coffee at the café first', 'house full'], band='#7a1a16', paper_='#f6eddc',
-     art=[('cup', 260, 160, .6, '#f6f3ec', '#6b3a1f')], note='the café after, obviously')
-stub('elephanta', 'Ferry to Elephanta Caves', batch=B, palette='sea', name='A ferry boarding token to Elephanta and the Shiva cave', head='Gateway to Elephanta',
-     sub='FERRY, ONE HOUR EACH WAY', rows=['first boat around 9', 'the toy train up the jetty', 'closed Mondays'], band='#2f6db5', paper_='#eef4f6',
-     art=[('ferry', 250, 160, .7), ('cave', 210, 150, .45, '#9a8a78', '#2a221a')], stub_text='RETURN')
-lanyard('flamingo', 'Flamingo boat ride', batch=B, palette='sea', name='A flamingo boat pass for Thane Creek', head='Flamingo boat', sub='Thane Creek, high tide',
-        big='pink!', card='#f48aa6', ink='#3a1a28', art=[('flamingo', -60, 290, .8, '#ffffff', '#3a1a28'), ('waves', 50, 300, .6, '#ffffff')])
-mapcard('kanheri', 'Hike to Kanheri Caves', batch=B, palette='moss', name='A rubbing of Kanheri carvings with the forest route up from the gate',
-        head='Kanheri, inside SGNP', route='M30 330 C60 300 90 260 140 250 S220 200 250 160 S320 100 360 70', pins=[(140, 250, 'shuttle'), (360, 70, 'cave 3')],
-        labels=[(200, 340, '7 km forest walk', 0)], art=[('cave', 320, 140, 1.9, '#8a7a68', '#2a221a'), ('leaf', 70, 190, 1.1), ('leaf', 230, 290, .9, '#6a9a4a'), ('bird', 140, 50, .8)])
-meal('mohammedali', 'Late-night food walk on Mohammed Ali Road', batch=B, palette='brick', name='Malpua on grease paper with kebabs, from the night walk on Mohammed Ali Road',
-     base='paper', base_col=('#f3e3c0', '#c9a87a'), items=[('kebab', 270, 250, 2.6), ('kebab', 290, 300, 2.5, '#7a3e1a'), ('dosa', 290, 390, 2.6, '#d9963a', '#f3e3c0'), ('lantern', 450, 220, 1.4, '#f2c230'), ('moon', 160, 230, .9)],
-     tag_head='Mohammed Ali Road', tag_sub='malpua, kebabs, phirni, after 9')
-stub('matheran', 'Matheran day trip', batch=B, palette='ghat', name='A toy train ticket from Neral to Matheran', head='Neral to Matheran', sub='TOY TRAIN, NO CARS UP TOP',
-     rows=['narrow gauge, two coaches', 'then red mud paths', 'horse or walk, we walked'], band='#c8362a', paper_='#f6eddc', art=[('train', 250, 160, .6)], stub_text='MATHERAN', shape='torn')
-label('childhood', "Cook a dish from each other's childhood", batch=B, palette='kraft', name="A jar labelled with the secret ingredient from each other's childhood recipe",
-      kind='jar', head="mum's secret", rows=['one dish each', 'from when we were small', 'called home to check'], glass_='#c99c6c', paper_='#fbf6ea', fx='steam')
+cutout('cooktogether', 'Cook together', batch=B, palette='brick', kind='magnet', name='A fridge magnet of a masala dabba and a chilli from the night we cooked a cuisine neither of us knew',
+       parts=[('spicetin', -20, -20, 3.2), ('chili', 100, -70, 1.6)], head='first time cooking', sub='splash marks: several', ribbon='#843b1f', banner=(0, 100, -2))
+cutout('jigsaw', 'Do a physical jigsaw puzzle together', batch=B, palette='paper', kind='charm', name='The last jigsaw piece, found under the sofa, hung as a charm',
+       parts=[('puzzle', 0, -30, 4.2, '#2f6db5')], head='piece 1000', sub='found under the sofa', ribbon='#3a2a5a', banner=(0, 90, -2))
+cutout('sketch', 'Draw / sketch together', batch=B, palette='paper', kind='sticker', name='A sticker of a pencil and a brush crossed over a heart: ten-minute portraits of each other',
+       parts=[('pencil', -50, -30, 3.0), ('brush', 50, -30, 2.8, '#c47a3a', '#3a2a5a'), ('heart', 0, 20, 1.2, '#e0245e')], head='10 minutes each', sub='no erasing', ribbon='#3a2a5a', banner=(0, 100, -2))
+cutout('clayset', 'Clay set — make things together', batch=B, palette='clay', kind='patch', name='An embroidered patch of the two lumpy clay pots we made, air-dried overnight',
+       parts=[('pot', -50, -10, 2.8, '#c47a4a', '#a65a30'), ('pot', 60, 0, 2.2, '#b5683a', '#7a3a1a')], head='made of clay', sub='two creatures, unnamed', ribbon='#7e6c53', banner=(0, 90, -2))
+cutout('prithvi', 'A play at Prithvi Theatre', batch=B, palette='brick', kind='pin', name='An enamel pin of a lamp over the thrust stage at Prithvi, and an Irish coffee',
+       parts=[('lantern', -40, -40, 3.0, '#f2c230', '#3a1a0c'), ('cup', 70, 10, 2.0, '#f6f3ec', '#6b3a1f')], head='Prithvi Theatre', sub='row C, house full', ribbon='#7a1a16', banner=(0, 100, -2))
+cutout('elephanta', 'Ferry to Elephanta Caves', batch=B, palette='sea', kind='magnet', name='A fridge magnet of the Elephanta ferry crossing to the Shiva cave',
+       parts=[('cave', 0, -50, 3.0, '#9a8a78', '#2a221a'), ('waves', 0, 30, 3.2, '#2f6db5'), ('ferry', -10, 40, 2.4)], head='Elephanta', sub='first boat around 9', ribbon='#2f6db5')
+cutout('flamingo', 'Flamingo boat ride', batch=B, palette='sea', kind='charm', name='A pink flamingo charm from the boat ride on Thane Creek',
+       parts=[('flamingo', 0, -40, 4.2, '#f48aa6', '#3a1a28'), ('waves', 0, 60, 2.6, '#2f6db5')], head='Thane Creek', sub='high tide, all pink', ribbon='#c2507a', banner=(0, 120, -2))
+cutout('kanheri', 'Hike to Kanheri Caves', batch=B, palette='moss', kind='patch', name='A trail patch of the Kanheri caves in the forest with leaves around it',
+       parts=[('cave', 0, -10, 3.4, '#8a7a68', '#2a221a'), ('leaf', -110, -60, 1.6), ('leaf', 110, -40, 1.4, '#6a9a4a')], head='Kanheri', sub='7 km forest walk', ribbon='#3e5036', banner=(0, 90, -2))
+cutout('mohammedali', 'Late-night food walk on Mohammed Ali Road', batch=B, palette='brick', kind='sticker', name='A sticker of a hanging lantern, a crescent moon and a kebab from the night walk on Mohammed Ali Road',
+       parts=[('lantern', -70, -40, 2.6, '#f2c230'), ('moon', 60, -90, 1.6), ('kebab', 30, 20, 2.6)], head='Mohammed Ali Road', sub='malpua, kebabs, after 9', ribbon='#843b1f', banner=(0, 100, -2))
+cutout('matheran', 'Matheran day trip', batch=B, palette='ghat', kind='charm', name='A toy-train charm from Neral to Matheran',
+       parts=[('train', 0, -20, 3.8, '#c8362a', '#f2c230'), ('hills', 0, -80, 2.6, '#6f8a64', '#4f6a45')], head='Neral to Matheran', sub='no cars up top', ribbon='#c8362a', banner=(0, 70, -2))
+cutout('childhood', "Cook a dish from each other's childhood", batch=B, palette='kraft', name="A jar charm holding the secret ingredient from each other's childhood dish", kind='charm',
+       parts=[('jar', 0, -20, 3.4, '#e9c9a0', '#8a5a2e'), ('heart', 0, -10, 1.2, '#c0392b')], head="mum's secret", sub='called home to check', ribbon='#2f4a33', banner=(0, 100, -2))
 envelope_('oneyear', 'Write letters to open in a year', batch=B, palette='kraft', name='A sealed envelope marked do not open for a year', front='open in one year, not before',
           letter=['Dear us,', 'if you are reading this', 'it has been a year.', 'Did we keep the promise?', 'There is a photo inside.'], art=[('heart', 180, 136, .4, '#ffffff')])
 polaroid('firstdate', 'Recreate your first date at home', batch=B, palette='plum', name='An instant photo from recreating our first date at home', scene=[('candle', 90, 150, 1.2), ('candle', 170, 150, 1.2), ('heart', 130, 70, 1), ('plate', 130, 200, 1.4)], sky=('#5d3564', '#a86a8a'), ground='#3a2030', caption='first date, take two')
-scorecard('livingkaraoke', 'Bollywood karaoke night in the living room', batch=B, palette='plum', name='A living-room karaoke score card, each song out of ten',
-          head='Living-room karaoke', sub='pick a decade, score each other', rows=['the 90s duet', 'the sad one', 'the dance number', 'the one we both forgot'],
-          cols=('me', 'you'), marks=[('9', '8'), ('7', '10'), ('10', '9'), ('5', '6')], circle=2, art=[('mic', 290, 40, .6)])
-scorecard('tastetest', 'Blind taste test', batch=B, palette='ochre', name='A blind taste-test grid with five hidden samples', head='Blind taste test',
-          sub='labels hidden, loser plans next', rows=['sample A', 'sample B', 'sample C', 'sample D', 'sample E'], cols=('me', 'you'),
-          marks=[('3', '4'), ('5', '2'), ('1', '1'), ('4', '5'), ('2', '3')], circle=1, shape='card')
-media('playlists', 'Make each other a playlist', batch=B, palette='lilac', name='A mixtape J-card with the ten songs we picked for each other', kind='cassette',
-      head='FOR YOU', rows=['ten songs, one reason each'], shell='#6f5282', paper_='#f7eefb', ink='#2b1d33')
+cutout('livingkaraoke', 'Bollywood karaoke night in the living room', batch=B, palette='plum', kind='pin', name='An enamel pin of a microphone with music notes from living-room karaoke',
+       parts=[('mic', -10, -20, 3.6, '#e9c9e0', '#3a1430'), ('note', 80, -70, 1.8, '#f2c230'), ('note', -90, -90, 1.2, '#f2c230')], head='living-room karaoke', sub='the 90s duet: 9/10', ribbon='#5d3564', banner=(0, 110, -2))
+cutout('tastetest', 'Blind taste test', batch=B, palette='ochre', kind='magnet', name='A magnet of five spoons in a row for five hidden samples, one blindfold',
+       parts=[('spoon', -80, -30, 2.0), ('spoon', -40, -40, 2.0), ('spoon', 0, -44, 2.0), ('spoon', 40, -40, 2.0), ('spoon', 80, -30, 2.0)], head='Blind taste test', sub='loser plans the next one', ribbon='#a86a2c', banner=(0, 80, -2))
+cutout('playlists', 'Make each other a playlist', batch=B, palette='lilac', kind='charm', name='A little mixtape charm: ten songs we picked for each other',
+       parts=[('cassette', 0, -20, 3.4, '#6f5282', '#f7eefb')], head='FOR YOU', sub='ten songs, one reason each', ribbon='#553d66', banner=(0, 80, -2))
 bookmark('bookclub', 'Start a two-person book club', batch=B, palette='moss', name='A bookmark with a tassel in the book our two-person club is reading', head='Book club of two', rows=['a chapter a day', 'Sundays, with chai'], strip_col='#2f6d57')
-label('chapelroad', 'Street-art walk around Chapel Road', batch=B, palette='brick', name='A spray-paint can labelled for the Chapel Road murals', kind='bottle',
-      head='Chapel Road', rows=['Bandra mural lanes', 'morning light', 'breakfast after'], glass_='#2aa3a8', paper_='#f6efe0', fx='sparkle')
-postcard('banganga', 'Banganga Tank and the Walkeshwar lanes', batch=B, palette='sea', name='A postcard of the Banganga tank steps and temples',
-         scene=[('temple', 90, 120, 1, '#e8b923', '#b5452c'), ('temple', 270, 118, .9, '#f1e7d0', '#7a4a2a'), ('waves', 180, 190, 1.4, '#ffffff'), ('bird', 180, 60, .6, '#3a3a3a')],
-         sky=('#cfe3ea', '#f3e1c4'), ground='#5a8fa0', caption='Banganga', message=['Steps all the way', 'down to the water.', 'Hidden in Malabar Hill.', 'Went early, so quiet.'], to='to us')
+cutout('chapelroad', 'Street-art walk around Chapel Road', batch=B, palette='brick', kind='sticker', name='A sticker of a spray can mid-spray and a painted eye from the Chapel Road murals',
+       parts=[('spray', -40, -10, 3.4, '#2aa3a8'), ('heart', 70, -80, 1.6, '#f2c230'), ('star', 90, -10, 1.2, '#e0245e')], head='Chapel Road', sub='Bandra mural lanes', ribbon='#2aa3a8', banner=(0, 110, -2))
+cutout('banganga', 'Banganga Tank and the Walkeshwar lanes', batch=B, palette='sea', kind='magnet', name='A magnet of the temple spire over the stepped Banganga tank',
+       parts=[('temple', 0, -40, 3.4, '#e8b923', '#b5452c'), ('waves', 0, 50, 2.8, '#5a8fa0'), ('bird', 90, -110, 1.2)], head='Banganga', sub='steps down to the water', ribbon='#326174', banner=(0, 110, -2))
 specimen('hanginggardens', 'Morning at the Hanging Gardens', batch=B, palette='moss', name='A pressed hibiscus from the Hanging Gardens, taped on a specimen card', head='Hanging Gardens', rows=['hibiscus, pressed flat', 'Malabar Hill, early morning'], item=('flower', '#d6334a', '#f2c230'))
 receipt('kyani', 'Breakfast at Kyani & Co.', batch=B, palette='clay', name='An old Irani café bill from Kyani & Co.', head='Kyani & Co.', sub='Irani café, Dhobi Talao',
         rows=[('bun maska', '×2'), ('akuri', '×1'), ('Irani chai', '×2'), ('mawa cake', '×1')], total=('paid', 'cash'), note='since 1904', art=[('cup', 470, 420, .9, '#f6f3ec', '#8a5a2e'), ('steam', 470, 380, .6)])
-sticker('jehangir', 'Jehangir Art Gallery and a Kala Ghoda wander', batch=B, palette='paper', name='A gallery entry sticker from Jehangir Art Gallery', head='Jehangir', sub='Kala Ghoda, free entry', shape='blob', col='#3a2a5a')
-tag('sassoon', 'Sunrise at Sassoon Docks', batch=B, palette='sea', name='A fish-market crate tag from Sassoon Docks at dawn', head='Sassoon Docks',
-    rows=['5 am, closed shoes', 'bombil, pomfret, prawns', 'the gulls get there first'], stamp_word='DAWN', stamp_sub='Colaba', paper_='#dfe9ee', ink='#1d2b30', ink2='#2f6db5', art=[('fish', 236, 40, .5, '#5a8fa0')])
-meal('juhu', 'Juhu Beach street-food evening', batch=B, palette='sea', name='A paper plate of pav bhaji and a gola from Juhu Beach at dusk', base='paper',
-     base_col=('#f6f3ec', '#c9c4b8'), items=[('plate', 280, 330, 3.6, '#f6f3ec', '#d8641e'), ('scoop', 450, 250, 2.2, '#e0245e', '#f6f3ec'), ('sun', 170, 220, 1.1, '#f6a04d'), ('waves', 300, 450, 1.6, '#5aa4d6')],
-     tag_head='Juhu Beach', tag_sub='pav bhaji, gola, sand at dusk')
-stub('operahouse', 'A show at the Royal Opera House', batch=B, palette='red', name='A box ticket for the Royal Opera House', head='Royal Opera House',
-     sub='GIRGAON, SINCE 1911', rows=['box seats, gilded', 'dressed up a little', 'the chandelier'], band='#7a1a16', paper_='#f6eddc',
-     art=[('dome', 250, 155, .7, '#f1e7d0', '#7a1a16')], stub_text='BOX 2', shape='scallop')
+cutout('jehangir', 'Jehangir Art Gallery and a Kala Ghoda wander', batch=B, palette='paper', kind='pin', name='An enamel pin of a paint palette from the Jehangir Art Gallery',
+       parts=[('flower', -30, -40, 2.2, '#3a2a5a', '#e8b923'), ('heart', 50, -20, 1.6, '#c0392b')], head='Jehangir', sub='Kala Ghoda', ribbon='#3a2a5a', back=(120, 90, -30, '#f6efe0'), banner=(0, 70, -2))
+cutout('sassoon', 'Sunrise at Sassoon Docks', batch=B, palette='sea', kind='patch', name='An embroidered patch of a bombil fish and the dawn sun over Sassoon Docks',
+       parts=[('sun', 40, -60, 2.2, '#f2b33d'), ('fish', -10, 10, 3.6, '#5a8fa0', '#fff'), ('bird', -80, -70, 1.4)], head='Sassoon Docks', sub='5 am, the gulls first', ribbon='#1d2b30')
+cutout('juhu', 'Juhu Beach street-food evening', batch=B, palette='sea', kind='sticker', name='A sticker of a kala khatta gola and a palm against the Juhu sunset',
+       parts=[('sun', 40, -40, 2.6, '#f6a04d'), ('palm', -70, -30, 2.8), ('scoop', 40, 10, 2.6, '#7a1a2e', '#f6f3ec')], head='Juhu Beach', sub='pav bhaji, gola, dusk', ribbon='#326174', banner=(0, 110, -2))
+cutout('operahouse', 'A show at the Royal Opera House', batch=B, palette='red', kind='pin', name='An enamel pin of the Royal Opera House chandelier',
+       parts=[('bell', 0, -40, 3.0, '#e9c46a'), ('lights', 0, 20, 2.6, '#ffe08a', '#7a1a16')], head='Royal Opera House', sub='box seats, since 1911', ribbon='#7a1a16', banner=(0, 100, -2))
 keytag('escaperoom', 'Escape room challenge', batch=B, palette='ink', name='The brass key that got us out of the escape room', head='ROOM 3', number='out, 4 min left', tag_col='#d9a84a', ink='#3a2408')
 scorecard('bowling', 'Bowling night', batch=B, palette='slate', name='A bowling score sheet for two games', head='Bowling night', sub='loser buys the fries',
           rows=['frame 1-3', 'frame 4-6', 'frame 7-9', 'frame 10', 'total'], cols=('me', 'you'), marks=[('X', '9'), ('7', 'X'), ('X', 'X'), ('9', '8'), ('142', '138')], circle=4, shape='card')
-sticker('icecream', 'Ice-cream crawl', batch=B, palette='lilac', name='A star sticker from our three-stop ice-cream crawl', head='3 scoops', sub='3 places, 1 strange flavour', shape='star', col='#f2a3b9', ink='#5a1838', art=[('scoop', 0, -70, .9, '#fff3b0', '#d9a85c')])
-scorecard('karnala', 'Karnala Bird Sanctuary hike', batch=B, palette='moss', name='A field-guide page from Karnala with the birds we ticked', head='Karnala birds',
-          sub='up to the fort pinnacle', rows=['paradise flycatcher', 'a hornbill (maybe)', 'drongo', 'kingfisher by the stream'], cols=('saw', ''),
-          marks=[('✓',), ('✓',), ('✓',), ('',)], shape='card', art=[('bird', 290, 40, .7, '#2f6d57')])
-coin('vasaifort', 'Vasai Fort and the beach', batch=B, palette='clay', name='A heavy old key token from Vasai Fort', top='Vasai Fort', big='1560s',
-     bottom='Portuguese ruins', back_big='beach', back_small='then the sea', face='#c9a46e', rim='#7a5a30', ink='#3a2414', art=[('fort', 0, -78, .5, '#7a5a30', '#3a2414')])
-badge('kolad', 'River rafting at Kolad', batch=B, palette='sea', name='A rafting helmet sticker from the Kundalika at Kolad', head='Kundalika',
-      big='RAPIDS', sub='Kolad, monsoon water', ribbon=('#e46f2a', '#2f6db5'), face='#f2f6f8', scallop=False, art=[('waves', 0, 86, .9, '#2f6db5')])
-stub('alibaug', 'A slow weekend in Alibaug', batch=B, palette='sea', name='A Gateway to Mandwa ferry ticket for a slow Alibaug weekend', head='Gateway to Mandwa',
-     sub='FERRY, THEN THE BEACH', rows=['homestay by the sand', 'no plans past sunset', 'Alibaug weekend'], band='#2f6db5', paper_='#eef4f6', art=[('boat', 255, 150, .7)], stub_text='MANDWA', shape='torn')
-handstamp('blanketfort', 'Blanket fort and a movie inside it', batch=B, palette='lilac', name='The stamp on a hand for entry to our blanket fort, glowing when the lights go down', stamp_text='FORT', sub='phones stay outside', ink='#f2c230')
-envelope_('36questions', 'The 36 questions', batch=B, palette='plum', name='An envelope of the 36 questions, the last one still sealed', front='questions 1 to 36',
-          letter=['set I: 1 to 12', 'set II: 13 to 24', 'set III: 25 to 36', 'then four minutes,', 'eyes only'], seal='#5d3564')
-label('spanight', 'Spa night at home', batch=B, palette='lilac', name='A bottle of massage oil with a menu for spa night at home', kind='bottle',
-      head='Spa night', rows=['face masks', 'a foot soak', 'one slow massage each'], glass_='#c9a0dc', paper_='#fbf6ff', fx='bubbles')
+cutout('icecream', 'Ice-cream crawl', batch=B, palette='lilac', kind='sticker', name='A sticker of three cones, one per stop on our ice-cream crawl',
+       parts=[('scoop', -70, -30, 2.6, '#f2a3b9', '#d9a85c'), ('scoop', 0, -50, 2.8, '#fff3b0', '#d9a85c'), ('scoop', 70, -30, 2.6, '#8a5a3a', '#d9a85c')], head='3 scoops', sub='1 strange flavour', ribbon='#5a1838', banner=(0, 70, -3))
+cutout('karnala', 'Karnala Bird Sanctuary hike', batch=B, palette='moss', kind='patch', name='A birding patch of a paradise flycatcher on a branch at Karnala',
+       parts=[('olive', 0, 20, 3.2, '#4f8a3a', '#3e5036'), ('bird', -30, -60, 2.6, '#2f6d57'), ('peak', 100, -50, 1.4, '#7a8a6a')], head='Karnala birds', sub='a hornbill (maybe)', ribbon='#2f6d57', banner=(0, 100, -2))
+cutout('vasaifort', 'Vasai Fort and the beach', batch=B, palette='clay', kind='magnet', name='A magnet of the ruined Portuguese walls of Vasai Fort with a palm growing through them',
+       parts=[('fort', -20, -10, 3.0, '#c9a46e', '#3a2414'), ('palm', 90, -60, 2.6), ('shell', -120, 50, 1.0)], head='Vasai Fort', sub='1560s, then the sea', ribbon='#7a5a30', banner=(0, 100, -2))
+cutout('kolad', 'River rafting at Kolad', batch=B, palette='sea', kind='patch', name='A rafting patch: a paddle over white water on the Kundalika at Kolad',
+       parts=[('waves', 0, 0, 3.6, '#2f6db5'), ('cricket', -10, -40, 2.4, '#e46f2a', '#2f6db5')], head='Kundalika rapids', sub='Kolad, monsoon water', ribbon='#e46f2a', back=(150, 90, -10, '#dfe9ee'), banner=(0, 100, -2))
+cutout('alibaug', 'A slow weekend in Alibaug', batch=B, palette='sea', kind='charm', name='A sailboat charm from the Mandwa ferry and a slow Alibaug weekend',
+       parts=[('boat', 0, -30, 3.8, '#2f6db5', '#f4ecd8'), ('shell', 80, 40, 1.2)], head='Mandwa', sub='no plans past sunset', ribbon='#2f6db5', banner=(0, 80, -2))
+blanket_fort('blanketfort', 'Blanket fort and a movie inside it', batch=B, palette='lilac', name='The corner of our blanket fort, pegged to a string, with the fairy lights that came on for the movie')
+question_deck('36questions', 'The 36 questions', batch=B, palette='plum', name='The 36 questions as a fanned deck of cards, the last one turned up')
+cutout('spanight', 'Spa night at home', batch=B, palette='lilac', kind='sticker', name='A sticker of a lotus, a candle and oil drops for spa night at home',
+       parts=[('lotus', -30, -20, 3.2, '#c9a0dc', '#8a6a9c'), ('candle', 90, -10, 1.8), ('drop', -110, -80, 1.0, '#c9a0dc')], head='Spa night', sub='masks, soak, slow', ribbon='#6f5282', banner=(0, 90, -2))
 badge('bakeoff', 'Two-person bake-off', batch=B, palette='ochre', name="A judge's rosette from our two-person bake-off", head='Bake-off',
       big='1st', sub='same recipe, one oven', ribbon=('#2f6db5', '#e8b923'), art=[('cake', 0, 86, .9)])

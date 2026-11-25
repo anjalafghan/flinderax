@@ -1,5 +1,7 @@
 """Batch 9: slips 299-333 (the restaurants, bars and cafés near the office and home)."""
 from objects import *  # noqa: F401,F403
+from cutouts import cutout  # noqa: F401
+from things import *  # noqa: F401,F403
 
 B = 'b9'
 
