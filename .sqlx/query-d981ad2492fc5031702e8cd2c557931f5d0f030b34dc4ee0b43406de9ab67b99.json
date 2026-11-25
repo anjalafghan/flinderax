@@ -1,71 +1,81 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT label, amount_paise, day_of_month, account_id, bucket, frequency, due_month, every_months, first_month, to_account_id,\n                  active AS \"active: bool\", start_month, end_month\n           FROM commitments WHERE user_id = ?",
+  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id, bucket,\n                  frequency, due_month, every_months, first_month, to_account_id, active AS \"active: bool\", start_month, end_month,\n                  waiting_from\n           FROM commitments\n           WHERE user_id = ? AND active = 1 AND (account_id IS NOT NULL OR to_account_id IS NOT NULL)",
   "describe": {
     "columns": [
       {
-        "name": "label",
+        "name": "commitment_id!",
         "ordinal": 0,
         "type_info": "Text"
       },
       {
-        "name": "amount_paise",
+        "name": "label",
         "ordinal": 1,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "day_of_month",
+        "name": "amount_paise",
         "ordinal": 2,
         "type_info": "Integer"
       },
       {
-        "name": "account_id",
+        "name": "day_of_month",
         "ordinal": 3,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "bucket",
+        "name": "account_id",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "frequency",
+        "name": "bucket",
         "ordinal": 5,
         "type_info": "Text"
       },
       {
-        "name": "due_month",
+        "name": "frequency",
         "ordinal": 6,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "every_months",
+        "name": "due_month",
         "ordinal": 7,
         "type_info": "Integer"
       },
       {
-        "name": "first_month",
+        "name": "every_months",
         "ordinal": 8,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "to_account_id",
+        "name": "first_month",
         "ordinal": 9,
         "type_info": "Text"
       },
       {
-        "name": "active: bool",
+        "name": "to_account_id",
         "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "active: bool",
+        "ordinal": 11,
         "type_info": "Integer"
       },
       {
         "name": "start_month",
-        "ordinal": 11,
+        "ordinal": 12,
         "type_info": "Text"
       },
       {
         "name": "end_month",
-        "ordinal": 12,
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "waiting_from",
+        "ordinal": 14,
         "type_info": "Text"
       }
     ],
@@ -73,6 +83,7 @@
       "Right": 1
     },
     "nullable": [
+      true,
       false,
       false,
       false,
@@ -84,9 +95,10 @@
       true,
       true,
       false,
+      true,
       true,
       true
     ]
   },
-  "hash": "9d23b1af15be5cb6e16feaa380416eef5630fef786eceb4f0563c13d9ff06383"
+  "hash": "d981ad2492fc5031702e8cd2c557931f5d0f030b34dc4ee0b43406de9ab67b99"
 }

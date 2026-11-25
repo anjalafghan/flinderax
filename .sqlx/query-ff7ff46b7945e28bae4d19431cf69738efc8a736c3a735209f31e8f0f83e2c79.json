@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE commitments SET first_month = ?, waiting_from = ? WHERE commitment_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "ff7ff46b7945e28bae4d19431cf69738efc8a736c3a735209f31e8f0f83e2c79"
+}

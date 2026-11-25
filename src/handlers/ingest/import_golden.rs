@@ -81,7 +81,7 @@ fn card_mapping() -> Mapping {
 }
 
 fn input(csv: String, account: Option<&str>, card: Option<&str>, mapping: Option<Mapping>) -> StatementInput {
-    StatementInput { csv, account_id: account.map(String::from), card_id: card.map(String::from), mapping }
+    StatementInput { csv, account_id: account.map(String::from), card_id: card.map(String::from), mapping, card_summary: None }
 }
 
 async fn run_step(db: &sqlx::SqlitePool, name: &str, user: &str, input: StatementInput) -> serde_json::Value {

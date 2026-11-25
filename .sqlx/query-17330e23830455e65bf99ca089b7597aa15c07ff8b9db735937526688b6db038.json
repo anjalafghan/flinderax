@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id, bucket,\n                  frequency, due_month, every_months, first_month, to_account_id, active AS \"active: bool\", start_month, end_month\n           FROM commitments\n           WHERE user_id = ? AND active = 1 AND (account_id IS NOT NULL OR to_account_id IS NOT NULL)",
+  "query": "SELECT commitment_id AS \"commitment_id!\", label, amount_paise, day_of_month, account_id, bucket, frequency, due_month,\n                  every_months, first_month, to_account_id, active AS \"active: bool\", start_month, end_month, waiting_from\n           FROM commitments WHERE user_id = ?",
   "describe": {
     "columns": [
       {
@@ -72,6 +72,11 @@
         "name": "end_month",
         "ordinal": 13,
         "type_info": "Text"
+      },
+      {
+        "name": "waiting_from",
+        "ordinal": 14,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -91,8 +96,9 @@
       true,
       false,
       true,
+      true,
       true
     ]
   },
-  "hash": "cada77ce6ea7ba40950a55f8255a963b5beea032ffafd4fa322d31b0ba2a7840"
+  "hash": "17330e23830455e65bf99ca089b7597aa15c07ff8b9db735937526688b6db038"
 }

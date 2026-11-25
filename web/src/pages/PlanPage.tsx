@@ -4,7 +4,16 @@ import { Trash2 } from "lucide-react";
 
 import { planApi } from "@/services/api";
 import type { Account, Bucket, Commitment, Income } from "@/services/types";
-import { keys, useAccounts, useCommitments, useIncomes, usePlannerMutation, useResetSettings, useSettings, useSummary } from "@/hooks/usePlanner";
+import {
+  keys,
+  useAccounts,
+  useCommitments,
+  useIncomes,
+  usePlannerMutation,
+  useResetSettings,
+  useSettings,
+  useSummary,
+} from "@/hooks/usePlanner";
 import { ResetButton } from "@/components/ui/reset-button";
 import { Header } from "@/components/layout/Header";
 import { AffordPanel } from "@/components/feature/AffordPanel";
@@ -20,23 +29,60 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/select";
 import { ChipGroup } from "@/components/ui/chips";
 import { Stepper } from "@/components/ui/stepper";
-import { formatINR, formatPercent, paiseToInput, parseAmountOrPercent, toPaise } from "@/utils/money";
-import { ordinal } from "@/utils/dates";
+import {
+  formatINR,
+  formatPercent,
+  paiseToInput,
+  parseAmountOrPercent,
+  toPaise,
+} from "@/utils/money";
+import {
+  addMonths,
+  firstBuyMonth,
+  formatYearMonth,
+  ordinal,
+  thisYearMonth,
+} from "@/utils/dates";
 import { BUCKET_HELP, BUCKET_LABEL, defaultBucket } from "@/utils/buckets";
 import { cn } from "@/utils/cn";
 import { GuidanceCard } from "@/components/feature/GuidanceCard";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 
-const CATEGORIES = ["bills", "gym", "house", "sip", "rd", "subscription", "donation", "entertainment", "other"];
+const CATEGORIES = [
+  "bills",
+  "gym",
+  "house",
+  "sip",
+  "rd",
+  "subscription",
+  "donation",
+  "entertainment",
+  "other",
+];
 const BUCKETS: Bucket[] = ["needs", "savings", "wants"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 const parseDay = (v: string): number | null => {
   const n = Number(v);
   return v.trim() && Number.isInteger(n) && n >= 1 && n <= 31 ? n : null;
 };
 const accountName = (accounts: Account[], id: string | null) =>
-  id ? (accounts.find((a) => a.account_id === id)?.name ?? "Unknown account") : "Any account";
+  id
+    ? (accounts.find((a) => a.account_id === id)?.name ?? "Unknown account")
+    : "Any account";
 
 // ---------- income ----------
 
@@ -44,20 +90,33 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
   const { data: incomes } = useIncomes();
   const [f, setF] = useState({ label: "", amount: "", day: "", account: "" });
   const [error, setError] = useState<string | null>(null);
-  const create = usePlannerMutation(planApi.createIncome, [keys.incomes], { success: "Income added. Nice!" });
-  const remove = usePlannerMutation(planApi.removeIncome, [keys.incomes], { success: "Income removed" });
+  const create = usePlannerMutation(planApi.createIncome, [keys.incomes], {
+    success: "Income added. Nice!",
+  });
+  const remove = usePlannerMutation(planApi.removeIncome, [keys.incomes], {
+    success: "Income removed",
+  });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const amount = toPaise(f.amount);
     const day = parseDay(f.day);
     if (!f.label.trim() || amount === null || amount <= 0 || day === null) {
-      return setError("Add a name, a positive amount and the day of the month (1-31).");
+      return setError(
+        "Add a name, a positive amount and the day of the month (1-31).",
+      );
     }
     setError(null);
     create.mutate(
-      { label: f.label.trim(), amount_paise: amount, day_of_month: day, account_id: f.account || null },
-      { onSuccess: () => setF({ label: "", amount: "", day: "", account: "" }) },
+      {
+        label: f.label.trim(),
+        amount_paise: amount,
+        day_of_month: day,
+        account_id: f.account || null,
+      },
+      {
+        onSuccess: () => setF({ label: "", amount: "", day: "", account: "" }),
+      },
     );
   };
 
@@ -65,16 +124,21 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
     <Card id="income" className="scroll-mt-24">
       <CardHeader className="pb-4">
         <CardTitle className="text-[32px]">Income</CardTitle>
-        <p className="max-w-prose text-sm text-muted-foreground">Your next payday sets the "until" date for Safe to Spend.</p>
+        <p className="max-w-prose text-sm text-muted-foreground">
+          Your next payday sets the "until" date for Safe to Spend.
+        </p>
       </CardHeader>
       <CardContent className="space-y-6">
         <ul className="ledger">
           {incomes?.map((i: Income) => (
             <li key={i.income_id} className="ledger-row">
               <div className="min-w-0">
-                <p className="truncate text-[15px] font-medium" title={i.label}>{i.label}</p>
+                <p className="truncate text-[15px] font-medium" title={i.label}>
+                  {i.label}
+                </p>
                 <p className="text-[13px] leading-snug text-muted-foreground">
-                  {formatINR(i.amount_paise)} on the {ordinal(i.day_of_month)}, into {accountName(accounts, i.account_id)}
+                  {formatINR(i.amount_paise)} on the {ordinal(i.day_of_month)},
+                  into {accountName(accounts, i.account_id)}
                 </p>
               </div>
               <Button
@@ -82,32 +146,66 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
                 size="icon"
                 className="h-9 w-9 shrink-0"
                 aria-label={`Remove ${i.label}`}
-                onClick={() => window.confirm(`Remove "${i.label}"?`) && remove.mutate(i.income_id)}
+                onClick={() =>
+                  window.confirm(`Remove "${i.label}"?`) &&
+                  remove.mutate(i.income_id)
+                }
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </li>
           ))}
         </ul>
-        {incomes?.length === 0 && <p className="empty-note">No income yet. Add your salary below.</p>}
-        <form onSubmit={submit} className="form-grid border-t border-border pt-6" noValidate>
+        {incomes?.length === 0 && (
+          <p className="empty-note">No income yet. Add your salary below.</p>
+        )}
+        <form
+          onSubmit={submit}
+          className="form-grid border-t border-border pt-6"
+          noValidate
+        >
           <div className="field">
             <Label htmlFor="inc-label">Name</Label>
-            <Input id="inc-label" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} placeholder="Salary" />
+            <Input
+              id="inc-label"
+              value={f.label}
+              onChange={(e) => setF({ ...f, label: e.target.value })}
+              placeholder="Salary"
+            />
           </div>
           <div className="field">
             <Label htmlFor="inc-amount">Amount</Label>
-            <MoneyInput id="inc-amount" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
+            <MoneyInput
+              id="inc-amount"
+              value={f.amount}
+              onChange={(e) => setF({ ...f, amount: e.target.value })}
+            />
           </div>
           <div className="field">
             <Label htmlFor="inc-day">Day of month</Label>
-            <Input id="inc-day" inputMode="numeric" maxLength={2} value={f.day} onChange={(e) => setF({ ...f, day: e.target.value })} placeholder="30" />
+            <Input
+              id="inc-day"
+              inputMode="numeric"
+              maxLength={2}
+              value={f.day}
+              onChange={(e) => setF({ ...f, day: e.target.value })}
+              placeholder="30"
+            />
           </div>
           <div className="field">
             <Label htmlFor="inc-account">Credited to</Label>
-            <AccountSelect id="inc-account" accounts={accounts} value={f.account} onChange={(v) => setF({ ...f, account: v })} />
+            <AccountSelect
+              id="inc-account"
+              accounts={accounts}
+              value={f.account}
+              onChange={(v) => setF({ ...f, account: v })}
+            />
           </div>
-          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="col-span-full text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="form-actions">
             <ResetButton
               label="Clear"
@@ -128,26 +226,51 @@ function IncomeSection({ accounts }: { accounts: Account[] }) {
 
 // ---------- commitments ----------
 
-function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) {
-  const refresh = [keys.commitments];
+function CommitmentRow({
+  c,
+  accounts,
+}: {
+  c: Commitment;
+  accounts: Account[];
+}) {
+  const refresh = [keys.commitments, keys.bills];
   const update = usePlannerMutation(planApi.updateCommitment, refresh);
-  const remove = usePlannerMutation(planApi.removeCommitment, refresh, { success: "Removed" });
+  const remove = usePlannerMutation(planApi.removeCommitment, refresh, {
+    success: "Removed",
+  });
   const everyFew = c.frequency === "monthly" && c.every_months > 1;
   const when =
     c.frequency === "yearly"
       ? `yearly${c.due_month ? ` in ${MONTHS[c.due_month - 1]}` : ", month not set"} on the ${ordinal(c.day_of_month)}`
       : everyFew
-        ? `every ${c.every_months} months${c.first_month ? ` from ${c.first_month}` : ""} on the ${ordinal(c.day_of_month)}`
+        ? `every ${c.every_months} months${c.first_month ? ` from ${formatYearMonth(c.first_month)}` : ""} on the ${ordinal(c.day_of_month)}`
         : `on the ${ordinal(c.day_of_month)}`;
+  // Its first one comes sooner than a full round of saving: offer to start saving now instead.
+  const now = thisYearMonth();
+  const tooSoon =
+    everyFew &&
+    c.active &&
+    !!c.first_month &&
+    c.first_month >= now &&
+    c.first_month < addMonths(now, c.every_months);
   return (
-    <li className={cn("ledger-row flex-wrap text-sm", !c.active && "opacity-60")}>
+    <li
+      className={cn("ledger-row flex-wrap text-sm", !c.active && "opacity-60")}
+    >
       <div className="min-w-0">
-        <p className="truncate text-[15px] font-medium" title={c.label}>{c.label}</p>
+        <p className="truncate text-[15px] font-medium" title={c.label}>
+          {c.label}
+        </p>
         <p className="text-[13px] leading-snug text-muted-foreground">
-          {formatINR(c.amount_paise)} {when} · {accountName(accounts, c.account_id)}
-          {c.to_account_id && ` → ${accountName(accounts, c.to_account_id)}`} · {BUCKET_LABEL[c.bucket]}
-          {c.frequency === "yearly" && ` · ${formatINR(Math.floor(c.amount_paise / 12))}/month set aside`}
-          {everyFew && ` · ${formatINR(Math.floor(c.amount_paise / c.every_months))}/month set aside`}
+          {formatINR(c.amount_paise)} {when} ·{" "}
+          {accountName(accounts, c.account_id)}
+          {c.to_account_id &&
+            ` → ${accountName(accounts, c.to_account_id)}`} ·{" "}
+          {BUCKET_LABEL[c.bucket]}
+          {c.frequency === "yearly" &&
+            ` · ${formatINR(Math.floor(c.amount_paise / 12))}/month set aside`}
+          {everyFew &&
+            ` · ${formatINR(Math.floor(c.amount_paise / c.every_months))}/month set aside`}
           {c.start_month && ` · from ${c.start_month}`}
           {c.end_month && ` · until ${c.end_month}`}
         </p>
@@ -157,11 +280,22 @@ function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) 
           aria-label={`Bucket for ${c.label}`}
           className="h-9 w-auto px-2 text-xs"
           value={c.bucket}
-          onChange={(e) => update.mutate({ ...c, bucket: e.target.value as Bucket })}
+          onChange={(e) =>
+            update.mutate({ ...c, bucket: e.target.value as Bucket })
+          }
         >
-          {BUCKETS.map((b) => <option key={b} value={b}>{BUCKET_LABEL[b]}</option>)}
+          {BUCKETS.map((b) => (
+            <option key={b} value={b}>
+              {BUCKET_LABEL[b]}
+            </option>
+          ))}
         </Select>
-        <Button variant="outline" size="sm" onClick={() => update.mutate({ ...c, active: !c.active })} disabled={update.isPending}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => update.mutate({ ...c, active: !c.active })}
+          disabled={update.isPending}
+        >
           {c.active ? "Pause" : "Resume"}
         </Button>
         <Button
@@ -169,35 +303,149 @@ function CommitmentRow({ c, accounts }: { c: Commitment; accounts: Account[] }) 
           size="icon"
           className="h-9 w-9"
           aria-label={`Remove ${c.label}`}
-          onClick={() => window.confirm(`Remove "${c.label}"?`) && remove.mutate(c.commitment_id)}
+          onClick={() =>
+            window.confirm(`Remove "${c.label}"?`) &&
+            remove.mutate(c.commitment_id)
+          }
         >
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
+      {tooSoon && (
+        <StartSaving
+          c={c}
+          pending={update.isPending}
+          onSave={(first) => update.mutate({ ...c, first_month: first })}
+        />
+      )}
     </li>
+  );
+}
+
+interface EveryFewFields {
+  saving: "start" | "saved";
+  saveFrom: string;
+  nextDue: string;
+}
+
+/** The first month a payment every few months falls due: after a full round of saving, or the month given. */
+function everyFewFirstMonth(f: EveryFewFields, every: number): string | null {
+  return f.saving === "start"
+    ? firstBuyMonth(f.saveFrom || thisYearMonth(), every)
+    : f.nextDue || null;
+}
+
+/** "₹1,000 a month from Dec 2026. First buy in Apr 2027, then every 4 months." */
+function everyFewPreview(
+  f: EveryFewFields,
+  amount: number | null,
+  every: number,
+): string {
+  const share = amount
+    ? `${formatINR(Math.floor(amount / every))} a month`
+    : "A share each month";
+  const first = everyFewFirstMonth(f, every) ?? thisYearMonth();
+  if (f.saving === "start") {
+    return `${share} from ${formatYearMonth(f.saveFrom || thisYearMonth())}. First buy in ${formatYearMonth(first)}, then every ${every} months.`;
+  }
+  return `${share} is set aside. Next due in ${formatYearMonth(first)}, then every ${every} months.`;
+}
+
+/**
+ * For a payment every few months whose first one comes before a full round of saving could: pick
+ * the month saving starts, and the first one moves to after it.
+ */
+function StartSaving({
+  c,
+  onSave,
+  pending,
+}: {
+  c: Commitment;
+  onSave: (firstMonth: string) => void;
+  pending: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState(thisYearMonth());
+  if (!open) {
+    return (
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        Start saving from...
+      </Button>
+    );
+  }
+  const first = firstBuyMonth(from || thisYearMonth(), c.every_months);
+  return (
+    <div className="flex w-full flex-wrap items-center gap-2 text-[13px]">
+      <Label htmlFor={`save-from-${c.commitment_id}`}>Start saving from</Label>
+      <Input
+        id={`save-from-${c.commitment_id}`}
+        type="month"
+        className="h-9 w-auto"
+        value={from}
+        onChange={(e) => setFrom(e.target.value)}
+      />
+      <span className="text-muted-foreground">
+        First buy in {formatYearMonth(first)}
+      </span>
+      <Button
+        size="sm"
+        disabled={pending || !from}
+        onClick={() => {
+          onSave(first);
+          setOpen(false);
+        }}
+      >
+        Save
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+        Cancel
+      </Button>
+    </div>
   );
 }
 
 function CommitmentsSection({ accounts }: { accounts: Account[] }) {
   const { data: commitments } = useCommitments();
   const blank = {
-    label: "", amount: "", day: "", account: "", to: "", category: "bills", bucket: "needs" as Bucket,
-    yearly: false, dueMonth: "", every: "1", nextDue: "", start: "", end: "",
+    label: "",
+    amount: "",
+    day: "",
+    account: "",
+    to: "",
+    category: "bills",
+    bucket: "needs" as Bucket,
+    yearly: false,
+    dueMonth: "",
+    every: "1",
+    saving: "start" as "start" | "saved",
+    saveFrom: "",
+    nextDue: "",
+    start: "",
+    end: "",
   };
   const [f, setF] = useState(blank);
   const [error, setError] = useState<string | null>(null);
-  const create = usePlannerMutation(planApi.createCommitment, [keys.commitments], { success: "Added" });
+  const create = usePlannerMutation(
+    planApi.createCommitment,
+    [keys.commitments, keys.bills],
+    { success: "Added" },
+  );
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const amount = toPaise(f.amount);
     const day = parseDay(f.day);
     if (!f.label.trim() || amount === null || amount <= 0 || day === null) {
-      return setError("Add a name, a positive amount and the day of the month (1-31).");
+      return setError(
+        "Add a name, a positive amount and the day of the month (1-31).",
+      );
     }
     const every = f.yearly ? 1 : Number(f.every);
-    if (every > 1 && f.end && f.nextDue && f.nextDue > f.end) {
-      return setError("The next due month is after the last month, so it would never fall due.");
+    const firstMonth = every > 1 ? everyFewFirstMonth(f, every) : null;
+    if (firstMonth && f.end && firstMonth > f.end) {
+      return setError(
+        "The first time it falls due is after the last month, so it would never fall due.",
+      );
     }
     setError(null);
     create.mutate(
@@ -212,8 +460,8 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
         frequency: f.yearly ? "yearly" : "monthly",
         due_month: f.yearly && f.dueMonth ? Number(f.dueMonth) : null,
         every_months: every,
-        // Blank means this month: the server fills it in.
-        first_month: every > 1 && f.nextDue ? f.nextDue : null,
+        // Blank (already saved, no month given) means this month: the server fills it in.
+        first_month: firstMonth,
         active: true,
         start_month: f.start || null,
         end_month: f.end || null,
@@ -227,31 +475,67 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
       <CardHeader className="pb-4">
         <CardTitle className="text-[32px]">Fixed payments</CardTitle>
         <p className="max-w-prose text-sm text-muted-foreground">
-          Anything paid on a fixed day: SIPs, house, phone and internet, gym, subscriptions, an RD instalment. Yearly bills
-          are set aside a twelfth a month. Each counts toward Needs, Savings or Spending.
+          Anything paid on a fixed day: SIPs, house, phone and internet, gym,
+          subscriptions, an RD instalment. Yearly bills are set aside a twelfth
+          a month. Each counts toward Needs, Savings or Spending.
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
         <ul className="ledger">
-          {commitments?.map((c) => <CommitmentRow key={c.commitment_id} c={c} accounts={accounts} />)}
+          {commitments?.map((c) => (
+            <CommitmentRow key={c.commitment_id} c={c} accounts={accounts} />
+          ))}
         </ul>
-        {commitments?.length === 0 && <p className="empty-note">Nothing yet.</p>}
-        <form onSubmit={submit} className="form-grid border-t border-border pt-6" noValidate>
+        {commitments?.length === 0 && (
+          <p className="empty-note">Nothing yet.</p>
+        )}
+        <form
+          onSubmit={submit}
+          className="form-grid border-t border-border pt-6"
+          noValidate
+        >
           <div className="field">
             <Label htmlFor="cm-label">Name</Label>
-            <Input id="cm-label" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} placeholder="e.g. Phone bill" />
+            <Input
+              id="cm-label"
+              value={f.label}
+              onChange={(e) => setF({ ...f, label: e.target.value })}
+              placeholder="e.g. Phone bill"
+            />
           </div>
           <div className="field">
-            <Label htmlFor="cm-amount">{f.yearly ? "Amount per year" : Number(f.every) > 1 ? "Amount each time" : "Amount"}</Label>
-            <MoneyInput id="cm-amount" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
+            <Label htmlFor="cm-amount">
+              {f.yearly
+                ? "Amount per year"
+                : Number(f.every) > 1
+                  ? "Amount each time"
+                  : "Amount"}
+            </Label>
+            <MoneyInput
+              id="cm-amount"
+              value={f.amount}
+              onChange={(e) => setF({ ...f, amount: e.target.value })}
+            />
           </div>
           <div className="field">
             <Label htmlFor="cm-day">Day of month</Label>
-            <Input id="cm-day" inputMode="numeric" maxLength={2} value={f.day} onChange={(e) => setF({ ...f, day: e.target.value })} placeholder="10" />
+            <Input
+              id="cm-day"
+              inputMode="numeric"
+              maxLength={2}
+              value={f.day}
+              onChange={(e) => setF({ ...f, day: e.target.value })}
+              placeholder="10"
+            />
           </div>
           <div className="field">
             <Label htmlFor="cm-account">Paid from</Label>
-            <AccountSelect id="cm-account" accounts={accounts} value={f.account} onChange={(v) => setF({ ...f, account: v })} />
+            <AccountSelect
+              id="cm-account"
+              accounts={accounts}
+              value={f.account}
+              onChange={(v) => setF({ ...f, account: v })}
+            />
           </div>
           <label className="col-span-full flex items-start gap-3 text-sm">
             <input
@@ -275,25 +559,67 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
               />
               {Number(f.every) > 1 && (
                 <>
-                  <Label htmlFor="cm-next-due" className="mt-3">Next due month (empty = this month)</Label>
-                  <Input id="cm-next-due" type="month" value={f.nextDue} onChange={(e) => setF({ ...f, nextDue: e.target.value })} />
-                  {toPaise(f.amount) ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatINR(Math.floor(toPaise(f.amount)! / Number(f.every)))} a month is set aside so the money is there when it falls due.
-                    </p>
-                  ) : null}
+                  <Label id="cm-saving-label" className="mt-3">
+                    Saving for it
+                  </Label>
+                  <ChipGroup
+                    label="Saving for it"
+                    value={f.saving}
+                    onChange={(v) => setF({ ...f, saving: v })}
+                    options={[
+                      { value: "start", label: "Start saving now" },
+                      { value: "saved", label: "Already saved up" },
+                    ]}
+                  />
+                  {f.saving === "start" ? (
+                    <>
+                      <Label htmlFor="cm-save-from" className="mt-3">
+                        Start saving from
+                      </Label>
+                      <Input
+                        id="cm-save-from"
+                        type="month"
+                        value={f.saveFrom || thisYearMonth()}
+                        onChange={(e) =>
+                          setF({ ...f, saveFrom: e.target.value })
+                        }
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Label htmlFor="cm-next-due" className="mt-3">
+                        Next due month (empty = this month)
+                      </Label>
+                      <Input
+                        id="cm-next-due"
+                        type="month"
+                        value={f.nextDue}
+                        onChange={(e) =>
+                          setF({ ...f, nextDue: e.target.value })
+                        }
+                      />
+                    </>
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {everyFewPreview(f, toPaise(f.amount), Number(f.every))}
+                  </p>
                 </>
               )}
             </div>
           )}
           {f.yearly && (
             <div className="field col-span-full">
-              <Label id="cm-due-label">Due month (leave empty if you don't remember)</Label>
+              <Label id="cm-due-label">
+                Due month (leave empty if you don't remember)
+              </Label>
               <ChipGroup
                 label="Due month"
                 value={f.dueMonth}
                 onChange={(v) => setF({ ...f, dueMonth: v })}
-                options={[{ value: "", label: "Not sure" }, ...MONTHS.map((m, i) => ({ value: String(i + 1), label: m }))]}
+                options={[
+                  { value: "", label: "Not sure" },
+                  ...MONTHS.map((m, i) => ({ value: String(i + 1), label: m })),
+                ]}
               />
             </div>
           )}
@@ -302,7 +628,9 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
             <ChipGroup
               label="Category"
               value={f.category}
-              onChange={(c) => setF({ ...f, category: c, bucket: defaultBucket(c) })}
+              onChange={(c) =>
+                setF({ ...f, category: c, bucket: defaultBucket(c) })
+              }
               options={CATEGORIES.map((c) => ({ value: c, label: c }))}
             />
           </div>
@@ -315,7 +643,10 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
               label="Counts toward"
               value={f.bucket}
               onChange={(b) => setF({ ...f, bucket: b })}
-              options={BUCKETS.map((b) => ({ value: b, label: BUCKET_LABEL[b] }))}
+              options={BUCKETS.map((b) => ({
+                value: b,
+                label: BUCKET_LABEL[b],
+              }))}
             />
           </div>
           <div className="field col-span-full">
@@ -323,19 +654,38 @@ function CommitmentsSection({ accounts }: { accounts: Account[] }) {
               <Label htmlFor="cm-to">Goes into (optional)</Label>
               <InfoTip text="For an RD or FD top-up: the account the money ends up in, so the projection grows it. Leave empty if the money just leaves (a SIP, a bill)." />
             </div>
-            <AccountSelect id="cm-to" accounts={accounts} value={f.to} onChange={(v) => setF({ ...f, to: v })} />
+            <AccountSelect
+              id="cm-to"
+              accounts={accounts}
+              value={f.to}
+              onChange={(v) => setF({ ...f, to: v })}
+            />
           </div>
           <div className="form-grid col-span-full">
             <div className="field">
               <Label htmlFor="cm-start">First month</Label>
-              <Input id="cm-start" type="month" value={f.start} onChange={(e) => setF({ ...f, start: e.target.value })} />
+              <Input
+                id="cm-start"
+                type="month"
+                value={f.start}
+                onChange={(e) => setF({ ...f, start: e.target.value })}
+              />
             </div>
             <div className="field">
               <Label htmlFor="cm-end">Last month</Label>
-              <Input id="cm-end" type="month" value={f.end} onChange={(e) => setF({ ...f, end: e.target.value })} />
+              <Input
+                id="cm-end"
+                type="month"
+                value={f.end}
+                onChange={(e) => setF({ ...f, end: e.target.value })}
+              />
             </div>
           </div>
-          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="col-span-full text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="form-actions">
             <ResetButton
               label="Clear"
@@ -365,7 +715,9 @@ export function SettingsSection() {
   const [months, setMonths] = useState("3");
   const [autoPost, setAutoPost] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const save = usePlannerMutation(planApi.updateSettings, [keys.settings], { success: "Saved" });
+  const save = usePlannerMutation(planApi.updateSettings, [keys.settings], {
+    success: "Saved",
+  });
 
   const resetDefaults = useResetSettings();
 
@@ -374,10 +726,16 @@ export function SettingsSection() {
   const fillFrom = (d: NonNullable<typeof data>) => {
     setError(null);
     setSpending(
-      d.spending_bps != null ? formatPercent(d.spending_bps) : d.spending_paise == null ? "" : paiseToInput(d.spending_paise),
+      d.spending_bps != null
+        ? formatPercent(d.spending_bps)
+        : d.spending_paise == null
+          ? ""
+          : paiseToInput(d.spending_paise),
     );
     setAllocDay(String(d.allocation_day));
-    setFloor(d.savings_floor_paise == null ? "" : paiseToInput(d.savings_floor_paise));
+    setFloor(
+      d.savings_floor_paise == null ? "" : paiseToInput(d.savings_floor_paise),
+    );
     setMonths(String(d.recovery_months));
     setAutoPost(d.auto_post);
   };
@@ -392,7 +750,11 @@ export function SettingsSection() {
             : paiseToInput(data.spending_paise),
       );
       setAllocDay(String(data.allocation_day));
-      setFloor(data.savings_floor_paise == null ? "" : paiseToInput(data.savings_floor_paise));
+      setFloor(
+        data.savings_floor_paise == null
+          ? ""
+          : paiseToInput(data.savings_floor_paise),
+      );
       setMonths(String(data.recovery_months));
       setAutoPost(data.auto_post);
     }
@@ -409,7 +771,10 @@ export function SettingsSection() {
         : spendParsed.kind === "empty"
           ? Math.floor((income * 20) / 100)
           : null;
-  const rest = income > 0 && summary && spendPaise !== null ? income - summary.budget.needs_paise - spendPaise : null;
+  const rest =
+    income > 0 && summary && spendPaise !== null
+      ? income - summary.budget.needs_paise - spendPaise
+      : null;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -417,13 +782,17 @@ export function SettingsSection() {
     const day = parseDay(allocDay);
     const m = Number(months);
     if (spendParsed.kind === "invalid") {
-      return setError("Spending must be an amount like 18875 or a percentage like 25%.");
+      return setError(
+        "Spending must be an amount like 18875 or a percentage like 25%.",
+      );
     }
     if (floor.trim() && (fl === null || fl < 0)) {
       return setError("The floor must be zero or more.");
     }
     if (day === null || !Number.isInteger(m) || m < 1 || m > 24) {
-      return setError("Allocation day must be 1-31 and months between 1 and 24.");
+      return setError(
+        "Allocation day must be 1-31 and months between 1 and 24.",
+      );
     }
     if (!data) return;
     setError(null);
@@ -443,7 +812,8 @@ export function SettingsSection() {
       <CardHeader className="pb-4">
         <CardTitle className="text-[32px]">Budget</CardTitle>
         <p className="max-w-prose text-sm text-muted-foreground">
-          Needs are your listed bills. You set how much to spend each month; everything left over is savings.
+          Needs are your listed bills. You set how much to spend each month;
+          everything left over is savings.
         </p>
       </CardHeader>
       <CardContent>
@@ -462,21 +832,36 @@ export function SettingsSection() {
               aria-invalid={spendParsed.kind === "invalid"}
             />
             {spendParsed.kind === "invalid" && (
-              <p className="text-xs leading-snug text-destructive">Use an amount like 18875 or a percentage like 25%.</p>
-            )}
-            {spendParsed.kind === "percent" && spendPaise !== null && income > 0 && (
-              <p className="text-xs leading-snug text-muted-foreground">
-                {formatPercent(spendParsed.bps)} of {formatINR(income)} = {formatINR(spendPaise)} a month, and it follows your income.
+              <p className="text-xs leading-snug text-destructive">
+                Use an amount like 18875 or a percentage like 25%.
               </p>
             )}
-            {rest !== null && <p className="text-xs leading-snug text-muted-foreground">That leaves {formatINR(rest)} a month for savings.</p>}
+            {spendParsed.kind === "percent" &&
+              spendPaise !== null &&
+              income > 0 && (
+                <p className="text-xs leading-snug text-muted-foreground">
+                  {formatPercent(spendParsed.bps)} of {formatINR(income)} ={" "}
+                  {formatINR(spendPaise)} a month, and it follows your income.
+                </p>
+              )}
+            {rest !== null && (
+              <p className="text-xs leading-snug text-muted-foreground">
+                That leaves {formatINR(rest)} a month for savings.
+              </p>
+            )}
           </div>
           <div className="field">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="alloc-day">Savings move by day</Label>
               <InfoTip text="The day of the month your needs money and the rest of your savings should have moved to the reserve account." />
             </div>
-            <Input id="alloc-day" inputMode="numeric" maxLength={2} value={allocDay} onChange={(e) => setAllocDay(e.target.value)} />
+            <Input
+              id="alloc-day"
+              inputMode="numeric"
+              maxLength={2}
+              value={allocDay}
+              onChange={(e) => setAllocDay(e.target.value)}
+            />
           </div>
           <div className="field col-span-full">
             <div className="flex items-center gap-1.5">
@@ -485,7 +870,12 @@ export function SettingsSection() {
             </div>
             <div className="flex flex-wrap gap-2">
               <div className="min-w-0 flex-1">
-                <MoneyInput id="floor" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="No floor" />
+                <MoneyInput
+                  id="floor"
+                  value={floor}
+                  onChange={(e) => setFloor(e.target.value)}
+                  placeholder="No floor"
+                />
               </div>
               {summary && summary.pots.reserve.account_name && (
                 <Button
@@ -493,7 +883,13 @@ export function SettingsSection() {
                   variant="outline"
                   size="sm"
                   className="h-10 shrink-0"
-                  onClick={() => setFloor(paiseToInput(Math.max(0, summary.pots.reserve.free_savings_paise)))}
+                  onClick={() =>
+                    setFloor(
+                      paiseToInput(
+                        Math.max(0, summary.pots.reserve.free_savings_paise),
+                      ),
+                    )
+                  }
                 >
                   Use today's free savings
                 </Button>
@@ -502,10 +898,18 @@ export function SettingsSection() {
           </div>
           <div className="field col-span-full">
             <div className="flex items-center gap-1.5">
-              <Label htmlFor="months">Pay an overspend back over (months)</Label>
+              <Label htmlFor="months">
+                Pay an overspend back over (months)
+              </Label>
               <InfoTip text="If you spend more than planned, the working page shows how much to rebuild each month for this many months so no FD is touched." />
             </div>
-            <Input id="months" inputMode="numeric" maxLength={2} value={months} onChange={(e) => setMonths(e.target.value)} />
+            <Input
+              id="months"
+              inputMode="numeric"
+              maxLength={2}
+              value={months}
+              onChange={(e) => setMonths(e.target.value)}
+            />
           </div>
           <label className="col-span-full flex items-start gap-3 text-sm">
             <input
@@ -516,15 +920,27 @@ export function SettingsSection() {
               onChange={(e) => setAutoPost(e.target.checked)}
             />
             <span className="field">
-              <span className="font-medium">Update balances automatically on payday and bill dates</span>
+              <span className="font-medium">
+                Update balances automatically on payday and bill dates
+              </span>
               <span className="text-xs leading-snug text-muted-foreground">
-                Salary is added and fixed payments are taken off your account balances on their dates. You only re-type a balance when it drifts.
+                Salary is added and fixed payments are taken off your account
+                balances on their dates. You only re-type a balance when it
+                drifts.
               </span>
             </span>
           </label>
-          {error && <p role="alert" className="col-span-full text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="col-span-full text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="form-actions">
-            <ResetButton label="Undo my edits" disabled={!data} onReset={() => data && fillFrom(data)} />
+            <ResetButton
+              label="Undo my edits"
+              disabled={!data}
+              onReset={() => data && fillFrom(data)}
+            />
             <ResetButton
               label="Reset to defaults"
               disabled={resetDefaults.isPending}
@@ -550,7 +966,8 @@ const SECTIONS = [
   { id: "fixed", label: "Fixed payments" },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]["id"];
-const isSection = (v: string): v is SectionId => SECTIONS.some((s) => s.id === v);
+const isSection = (v: string): v is SectionId =>
+  SECTIONS.some((s) => s.id === v);
 
 /**
  * The Budget page used to stack six forms into one 4,500px scroll. Now one section shows at a time,
@@ -566,10 +983,16 @@ export default function PlanPage() {
   const wanted = decodeURIComponent(hash.slice(1));
   const active: SectionId = isSection(wanted) ? wanted : "month";
 
-  const counts: Partial<Record<SectionId, number>> = { income: incomes?.length, fixed: commitments?.length };
+  const counts: Partial<Record<SectionId, number>> = {
+    income: incomes?.length,
+    fixed: commitments?.length,
+  };
   const pick = (id: SectionId) => {
     window.scrollTo?.({ top: 0 });
-    navigate({ hash: id === "month" ? "" : `#${id}` }, { replace: true, viewTransition: true });
+    navigate(
+      { hash: id === "month" ? "" : `#${id}` },
+      { replace: true, viewTransition: true },
+    );
   };
 
   return (
@@ -578,7 +1001,10 @@ export default function PlanPage() {
       <main className="page page-narrow">
         <div className="mb-4 md:mb-6">
           <h1 className="page-title">Budget</h1>
-          <p className="page-sub">This month's plan: what to set aside, what's due, and what you can afford.</p>
+          <p className="page-sub">
+            This month's plan: what to set aside, what's due, and what you can
+            afford.
+          </p>
         </div>
 
         <nav
@@ -597,11 +1023,22 @@ export default function PlanPage() {
                   onClick={() => pick(s.id)}
                   className={cn(
                     "inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    on ? "bg-foreground font-medium text-background" : "text-muted-foreground hover:text-foreground",
+                    on
+                      ? "bg-foreground font-medium text-background"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {s.label}
-                  {n ? <span className={cn("text-xs tabular-nums", on ? "opacity-70" : "text-muted-foreground")}>{n}</span> : null}
+                  {n ? (
+                    <span
+                      className={cn(
+                        "text-xs tabular-nums",
+                        on ? "opacity-70" : "text-muted-foreground",
+                      )}
+                    >
+                      {n}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
@@ -617,7 +1054,10 @@ export default function PlanPage() {
           {active === "fixed" && <CommitmentsSection accounts={accounts} />}
           <p className="text-sm text-muted-foreground">
             Pay day, buffers and how the pots split are in{" "}
-            <Link to="/account" className="underline underline-offset-4">Settings › Budget settings</Link>.
+            <Link to="/account" className="underline underline-offset-4">
+              Settings › Budget settings
+            </Link>
+            .
           </p>
         </div>
       </main>

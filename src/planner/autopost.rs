@@ -135,6 +135,8 @@ mod tests {
         (
             "sip".into(),
             CommitmentIn {
+                id: String::new(),
+                waiting_from: None,
                 label: "SIP".into(),
                 amount: rupees * 100,
                 day,

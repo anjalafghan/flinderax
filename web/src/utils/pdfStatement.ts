@@ -22,8 +22,10 @@ const WRAP_LINES = 2.2;
 
 const DATE = /^\s*\d{1,2}[\s/.-]+(?:\d{1,2}|[A-Za-z]{3,9})[\s/.-]+\d{2,4}\b/;
 /** "Date", "Txn Date", and card statements' "Date & Time". */
-const DATE_HEADING = /^(?:txn\.?\s*|transaction\s*|value\s*)?date(?:\s*(?:&|and)\s*time)?$/i;
-const TEXT_HEADING = /^(?:description|narration|particulars|transaction (?:description|details|remarks)|details)$/i;
+const DATE_HEADING =
+  /^(?:txn\.?\s*|transaction\s*|value\s*)?date(?:\s*(?:&|and)\s*time)?$/i;
+const TEXT_HEADING =
+  /^(?:description|narration|particulars|transaction (?:description|details|remarks)|details)$/i;
 /** A running-number column. The importer has no use for it. */
 const INDEX_HEADING = /^(?:#|s\.?\s?no\.?|sr\.?\s?no\.?|sl\.?\s?no\.?)$/i;
 
@@ -34,11 +36,14 @@ interface Line {
 
 /** Groups a page's runs into lines, top to bottom, each left to right. */
 function toLines(items: PdfItem[]): Line[] {
-  const sorted = items.filter((i) => i.str.trim() !== "").sort((a, b) => b.y - a.y || a.x - b.x);
+  const sorted = items
+    .filter((i) => i.str.trim() !== "")
+    .sort((a, b) => b.y - a.y || a.x - b.x);
   const lines: Line[] = [];
   for (const item of sorted) {
     const last = lines[lines.length - 1];
-    if (last && Math.abs(last.y - item.y) <= LINE_TOLERANCE) last.items.push(item);
+    if (last && Math.abs(last.y - item.y) <= LINE_TOLERANCE)
+      last.items.push(item);
     else lines.push({ y: item.y, items: [item] });
   }
   for (const l of lines) l.items.sort((a, b) => a.x - b.x);
@@ -64,12 +69,19 @@ function headerOf(line: Line): Column[] | null {
     if (last && item.x - right <= HEADING_GAP) {
       last.name = `${last.name} ${text}`;
       last.end = item.x + item.w;
-    } else merged.push({ x: item.x, end: item.x + item.w, from: -Infinity, name: text });
+    } else
+      merged.push({
+        x: item.x,
+        end: item.x + item.w,
+        from: -Infinity,
+        name: text,
+      });
     right = item.x + item.w;
   }
   // Body text sits a little left of its heading and amounts are right-aligned under it, so the
   // line between two columns runs halfway between one heading's end and the next one's start.
-  for (let i = 1; i < merged.length; i++) merged[i].from = (merged[i - 1].end + merged[i].x) / 2;
+  for (let i = 1; i < merged.length; i++)
+    merged[i].from = (merged[i - 1].end + merged[i].x) / 2;
   const hasDate = merged.some((c) => DATE_HEADING.test(c.name));
   const hasText = merged.some((c) => TEXT_HEADING.test(c.name));
   return hasDate && hasText && merged.length >= 4 ? merged : null;
@@ -82,7 +94,8 @@ function columnOf(columns: Column[], x: number): number {
   return found;
 }
 
-const csvCell = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+const csvCell = (s: string) =>
+  /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 
 /**
  * CSV text for the transactions table in `pages`, or null when none is found. Rows that wrap onto
@@ -114,7 +127,9 @@ export function statementCsv(pages: PdfItem[][]): string | null {
       const cells: string[] = columns.map(() => "");
       for (const item of line.items) {
         const i = columnOf(columns, item.x);
-        cells[i] = cells[i] ? `${cells[i]} ${item.str.trim()}` : item.str.trim();
+        cells[i] = cells[i]
+          ? `${cells[i]} ${item.str.trim()}`
+          : item.str.trim();
       }
       const dateAt = columns.findIndex((c) => DATE_HEADING.test(c.name));
       if (dateAt >= 0 && DATE.test(cells[dateAt])) {
@@ -122,13 +137,20 @@ export function statementCsv(pages: PdfItem[][]): string | null {
         cells[dateAt] = cells[dateAt].replace(/\s*\|\s*/g, " ");
         rows.push(cells);
         last = cells;
-      } else if (last && cells.every((c, i) => c === "" || i === textCol) && cells[textCol]) {
+      } else if (
+        last &&
+        cells.every((c, i) => c === "" || i === textCol) &&
+        cells[textCol]
+      ) {
         // A wrapped description, directly under its row.
-        if (prevInPage && prevY - line.y <= lineHeight * WRAP_LINES) last[textCol] = `${last[textCol]} ${cells[textCol]}`;
+        if (prevInPage && prevY - line.y <= lineHeight * WRAP_LINES)
+          last[textCol] = `${last[textCol]} ${cells[textCol]}`;
       } else {
         last = null; // a footer, the opening balance, or a line this table does not own
       }
-      if (prevInPage) lineHeight = Math.max(6, Math.min(20, prevInPage.y - line.y)) || lineHeight;
+      if (prevInPage)
+        lineHeight =
+          Math.max(6, Math.min(20, prevInPage.y - line.y)) || lineHeight;
       prevY = line.y;
       prevInPage = line;
     }
@@ -136,21 +158,122 @@ export function statementCsv(pages: PdfItem[][]): string | null {
 
   if (!header || rows.length === 0) return null;
   const keep = header.map((c) => !INDEX_HEADING.test(c.name));
-  const out = [header.filter((_, i) => keep[i]).map((c) => csvCell(c.name)).join(",")];
-  for (const r of rows) out.push(r.filter((_, i) => keep[i]).map(csvCell).join(","));
+  const out = [
+    header
+      .filter((_, i) => keep[i])
+      .map((c) => csvCell(c.name))
+      .join(","),
+  ];
+  for (const r of rows)
+    out.push(
+      r
+        .filter((_, i) => keep[i])
+        .map(csvCell)
+        .join(","),
+    );
   return out.join("\n") + "\n";
 }
 
-/** Reads a statement PDF and returns its transactions as CSV text. */
-export async function pdfToCsv(file: File): Promise<string> {
+/**
+ * A card statement's summary box, as the text on the page. The server reads the amounts and dates
+ * (with the rules it reads the rows with); this only finds them.
+ */
+export interface CardSummaryText {
+  total_due: string;
+  minimum_due: string | null;
+  statement_date: string;
+  due_date: string | null;
+}
+
+const TOTAL_DUE = /^total (?:amount )?due$/i;
+const MINIMUM_DUE = /^minimum (?:amount )?due$/i;
+const DUE_DATE = /^(?:payment )?due date$/i;
+const STATEMENT_DATE = /^statement date$/i;
+const MONEY = /\d[\d,]*\.\d{2}/;
+const DAY = /\d{1,2}[\s/.-]*(?:[A-Za-z]{3,9},?|\d{1,2})[\s/.-]*\d{2,4}/;
+
+/**
+ * The value printed with a label: to its right on the same line, else on the nearest line under it
+ * starting within the label's width (summary boxes put the figure under its heading, the ₹ sign as
+ * a separate run). Returns the joined text of those runs when it matches `pattern`.
+ */
+function valueOf(
+  items: PdfItem[],
+  label: RegExp,
+  pattern: RegExp,
+): string | null {
+  const at = items.find((i) => label.test(i.str.trim()));
+  if (!at) return null;
+  const right = items
+    .filter(
+      (i) =>
+        i !== at &&
+        Math.abs(i.y - at.y) <= LINE_TOLERANCE &&
+        i.x >= at.x + at.w &&
+        i.str.trim() !== "",
+    )
+    .sort((a, b) => a.x - b.x);
+  const sameLine = right.map((i) => i.str.trim()).join(" ");
+  if (
+    right.length > 0 &&
+    right[0].x - (at.x + at.w) < 200 &&
+    pattern.test(sameLine)
+  )
+    return sameLine;
+  const width = Math.max(at.w, 40);
+  const below = items.filter(
+    (i) =>
+      i.y < at.y - LINE_TOLERANCE &&
+      at.y - i.y <= 40 &&
+      i.x >= at.x - 6 &&
+      i.x < at.x + width &&
+      i.str.trim() !== "",
+  );
+  if (below.length === 0) return null;
+  const top = Math.max(...below.map((i) => i.y));
+  const text = below
+    .filter((i) => Math.abs(i.y - top) <= LINE_TOLERANCE)
+    .sort((a, b) => a.x - b.x)
+    .map((i) => i.str.trim())
+    .join(" ");
+  return pattern.test(text) ? text : null;
+}
+
+/** The summary box of a card statement on its first page, or null without a total due and a statement date. */
+export function cardSummary(pages: PdfItem[][]): CardSummaryText | null {
+  const first = pages[0] ?? [];
+  const total_due = valueOf(first, TOTAL_DUE, MONEY);
+  const statement_date = valueOf(first, STATEMENT_DATE, DAY);
+  if (!total_due || !statement_date) return null;
+  return {
+    total_due,
+    minimum_due: valueOf(first, MINIMUM_DUE, MONEY),
+    statement_date,
+    due_date: valueOf(first, DUE_DATE, DAY),
+  };
+}
+
+/** A statement PDF read on this device: its transactions as CSV, and a card statement's summary box. */
+export interface PdfStatement {
+  csv: string;
+  summary: CardSummaryText | null;
+}
+
+/** Reads a statement PDF and returns its transactions as CSV text, with a card's summary box. */
+export async function pdfToCsv(file: File): Promise<PdfStatement> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = "/pdf-worker.mjs";
   let doc;
   try {
-    doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+    doc = await pdfjs.getDocument({
+      data: new Uint8Array(await file.arrayBuffer()),
+      isEvalSupported: false,
+    }).promise;
   } catch (e) {
     if (e instanceof Error && e.name === "PasswordException") {
-      throw new PdfStatementError("This PDF is password protected. Save a copy without the password and try again.");
+      throw new PdfStatementError(
+        "This PDF is password protected. Save a copy without the password and try again.",
+      );
     }
     throw new PdfStatementError("Couldn't open that PDF.");
   }
@@ -158,7 +281,18 @@ export async function pdfToCsv(file: File): Promise<string> {
   for (let n = 1; n <= doc.numPages; n++) {
     const content = await (await doc.getPage(n)).getTextContent();
     pages.push(
-      content.items.flatMap((it) => ("str" in it && it.transform ? [{ str: it.str, x: it.transform[4], y: it.transform[5], w: it.width }] : [])),
+      content.items.flatMap((it) =>
+        "str" in it && it.transform
+          ? [
+              {
+                str: it.str,
+                x: it.transform[4],
+                y: it.transform[5],
+                w: it.width,
+              },
+            ]
+          : [],
+      ),
     );
   }
   void doc.destroy();
@@ -168,5 +302,5 @@ export async function pdfToCsv(file: File): Promise<string> {
       "Couldn't find a table of transactions in that PDF. If it is a scan, or not a bank statement, download the CSV or text export instead.",
     );
   }
-  return csv;
+  return { csv, summary: cardSummary(pages) };
 }

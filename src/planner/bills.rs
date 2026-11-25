@@ -28,6 +28,8 @@ pub struct Bill {
     pub account_id: Option<String>,
     /// Card bills only: already moved to the reserve for it.
     pub covered_paise: i64,
+    /// The fixed payment this is (None for card bills and dates), so it can be put off.
+    pub commitment_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -55,6 +57,7 @@ pub fn calendar(input: &PlanInput, from: Date, to: Date) -> Vec<Bill> {
                 },
                 account_id: c.account_id.clone(),
                 covered_paise: 0,
+                commitment_id: Some(c.id.clone()),
             });
         }
     }
@@ -69,6 +72,7 @@ pub fn calendar(input: &PlanInput, from: Date, to: Date) -> Vec<Bill> {
                     kind: BillKind::CardBill,
                     account_id: card.pay_from.clone(),
                     covered_paise: covered.clamp(0, amount),
+                    commitment_id: None,
                 });
             }
         }
@@ -81,6 +85,7 @@ pub fn calendar(input: &PlanInput, from: Date, to: Date) -> Vec<Bill> {
             kind: BillKind::Date,
             account_id: None,
             covered_paise: 0,
+            commitment_id: None,
         });
     }
     out.sort_by(|a, b| a.date.cmp(&b.date).then_with(|| b.amount_paise.cmp(&a.amount_paise)));
@@ -100,7 +105,14 @@ pub fn sinking_funds(input: &PlanInput) -> Vec<SinkingFund> {
                 Date::from_calendar_date(y, m, 1).ok()?
             };
             let due = commitment_dates(c, today, horizon).into_iter().next()?;
-            let months_left = (due.year() - today.year()) * 12 + (due.month() as i32 - today.month() as i32);
+            let today_mi = crate::planner::month_index(today);
+            // Put off: the saving still runs to the month it was first due, and is all there from then
+            // until it is bought. Putting it off never makes it look less saved.
+            let saved_by = match (c.freq, c.waiting_from) {
+                (Freq::Every { first, .. }, Some(from)) if today_mi < first => from,
+                _ => crate::planner::month_index(due),
+            };
+            let months_left = (saved_by - today_mi).max(0);
             let period = c.freq.period_months();
             let months_saved = (period - i64::from(months_left)).clamp(0, period);
             Some(SinkingFund { label: c.label.clone(), amount_paise: c.amount, due, saved_paise: c.amount * months_saved / period })
@@ -118,6 +130,8 @@ mod tests {
 
     fn commitment(label: &str, rupees: i64, day: u8, freq: Freq, due_month: Option<u8>) -> CommitmentIn {
         CommitmentIn {
+            id: String::new(),
+            waiting_from: None,
             label: label.into(),
             amount: rupees * 100,
             day,
@@ -201,6 +215,8 @@ mod tests {
     #[test]
     fn a_bill_every_few_months_is_periodic_on_the_calendar_with_a_fund_that_fills_up() {
         let perfume = CommitmentIn {
+            id: String::new(),
+            waiting_from: None,
             label: "Perfume".into(),
             amount: 600_000,
             day: 5,

@@ -203,7 +203,7 @@ pub fn parse_date_in(raw: &str, order: DateOrder) -> Option<Date> {
 /// A minus sign or an opening bracket before the number makes it negative. Empty / zero -> None.
 /// When a cell holds two figures ("USD 0.50 ₹ 43.10", a foreign spend and what it cost) the last
 /// one is the amount.
-fn parse_amount(raw: &str) -> Option<i64> {
+pub(crate) fn parse_amount(raw: &str) -> Option<i64> {
     let (sign, number) = last_figure(raw);
     let negative = sign.contains('-') || sign.contains('(');
     let cleaned: String = number.chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();

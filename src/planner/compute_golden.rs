@@ -13,6 +13,8 @@ fn acct(id: &str, balance: i64, locked: bool, role: Role, updated: Option<Date>)
 
 fn commit(label: &str, rupees: i64, day: u8, account: Option<&str>, bucket: Bucket) -> CommitmentIn {
     CommitmentIn {
+        id: String::new(),
+        waiting_from: None,
         label: label.into(),
         amount: rupees * 100,
         day,

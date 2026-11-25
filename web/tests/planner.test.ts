@@ -20,6 +20,7 @@ const bill = (date: string, extra: Partial<Bill> = {}): Bill => ({
   kind: "monthly",
   account_id: null,
   covered_paise: 0,
+  commitment_id: null,
   ...extra,
 });
 
@@ -39,12 +40,30 @@ describe("localIsoDate", () => {
 });
 
 describe("nextBills", () => {
-  const bills = [bill("2026-11-20"), bill("2026-11-09"), bill("2026-11-08"), bill("2026-11-16"), bill("2026-11-30")];
+  const bills = [
+    bill("2026-11-20"),
+    bill("2026-11-09"),
+    bill("2026-11-08"),
+    bill("2026-11-16"),
+    bill("2026-11-30"),
+  ];
 
   it("keeps bills within 7 days, soonest first, at most 3", () => {
-    expect(nextBills(bills, "2026-11-08").map((b) => b.date)).toEqual(["2026-11-08", "2026-11-09"]);
-    const many = [bill("2026-11-12"), bill("2026-11-10"), bill("2026-11-11"), bill("2026-11-09")];
-    expect(nextBills(many, "2026-11-08").map((b) => b.date)).toEqual(["2026-11-09", "2026-11-10", "2026-11-11"]);
+    expect(nextBills(bills, "2026-11-08").map((b) => b.date)).toEqual([
+      "2026-11-08",
+      "2026-11-09",
+    ]);
+    const many = [
+      bill("2026-11-12"),
+      bill("2026-11-10"),
+      bill("2026-11-11"),
+      bill("2026-11-09"),
+    ];
+    expect(nextBills(many, "2026-11-08").map((b) => b.date)).toEqual([
+      "2026-11-09",
+      "2026-11-10",
+      "2026-11-11",
+    ]);
   });
 
   it("returns nothing when no bill is due within the window", () => {
@@ -59,11 +78,23 @@ describe("nextBills", () => {
 describe("groupBillsByWeek", () => {
   it("groups by weeks counted from today, in date order", () => {
     const groups = groupBillsByWeek(
-      [bill("2026-11-20"), bill("2026-11-08"), bill("2026-11-14"), bill("2026-11-30")],
+      [
+        bill("2026-11-20"),
+        bill("2026-11-08"),
+        bill("2026-11-14"),
+        bill("2026-11-30"),
+      ],
       "2026-11-08",
     );
-    expect(groups.map((g) => g.label)).toEqual(["This week", "Next week", "Week of 29 Nov"]);
-    expect(groups[0].bills.map((b) => b.date)).toEqual(["2026-11-08", "2026-11-14"]);
+    expect(groups.map((g) => g.label)).toEqual([
+      "This week",
+      "Next week",
+      "Week of 29 Nov",
+    ]);
+    expect(groups[0].bills.map((b) => b.date)).toEqual([
+      "2026-11-08",
+      "2026-11-14",
+    ]);
     expect(groups[1].bills.map((b) => b.date)).toEqual(["2026-11-20"]);
     expect(groups[2].bills.map((b) => b.date)).toEqual(["2026-11-30"]);
   });
@@ -75,14 +106,25 @@ describe("groupBillsByWeek", () => {
 
 describe("coveredLine", () => {
   it("shows the moved part of a partly covered card bill", () => {
-    expect(coveredLine(bill("2026-11-10", { kind: "card_bill", amount_paise: 500000, covered_paise: 200000 }), fmt)).toBe(
-      "₹2000 of ₹5000 moved",
-    );
+    expect(
+      coveredLine(
+        bill("2026-11-10", {
+          kind: "card_bill",
+          amount_paise: 500000,
+          covered_paise: 200000,
+        }),
+        fmt,
+      ),
+    ).toBe("₹2000 of ₹5000 moved");
   });
 
   it("is null for other bills and for card bills with nothing moved", () => {
-    expect(coveredLine(bill("2026-11-10", { covered_paise: 5 }), fmt)).toBeNull();
-    expect(coveredLine(bill("2026-11-10", { kind: "card_bill" }), fmt)).toBeNull();
+    expect(
+      coveredLine(bill("2026-11-10", { covered_paise: 5 }), fmt),
+    ).toBeNull();
+    expect(
+      coveredLine(bill("2026-11-10", { kind: "card_bill" }), fmt),
+    ).toBeNull();
   });
 });
 
@@ -127,11 +169,15 @@ import { buildAffordPay } from "@/utils/planner";
 
 describe("buildAffordPay", () => {
   it("builds a pay-now request with no extra fields", () => {
-    expect(buildAffordPay("now", { months: "", rate: "", fee: "" })).toEqual({ pay: { mode: "now" } });
+    expect(buildAffordPay("now", { months: "", rate: "", fee: "" })).toEqual({
+      pay: { mode: "now" },
+    });
   });
 
   it("converts an EMI rate in percent to basis points and the fee to paise", () => {
-    expect(buildAffordPay("emi", { months: "12", rate: "14.5", fee: "499" })).toEqual({
+    expect(
+      buildAffordPay("emi", { months: "12", rate: "14.5", fee: "499" }),
+    ).toEqual({
       pay: { mode: "emi", months: 12, rate_bps: 1450, fee_paise: 49900 },
     });
   });
@@ -143,9 +189,17 @@ describe("buildAffordPay", () => {
   });
 
   it("explains a bad month count, rate or fee", () => {
-    expect(buildAffordPay("emi", { months: "0", rate: "", fee: "" })).toHaveProperty("error");
-    expect(buildAffordPay("emi", { months: "1.5", rate: "", fee: "" })).toHaveProperty("error");
-    expect(buildAffordPay("emi", { months: "12", rate: "abc", fee: "" })).toHaveProperty("error");
-    expect(buildAffordPay("emi", { months: "12", rate: "", fee: "-5" })).toHaveProperty("error");
+    expect(
+      buildAffordPay("emi", { months: "0", rate: "", fee: "" }),
+    ).toHaveProperty("error");
+    expect(
+      buildAffordPay("emi", { months: "1.5", rate: "", fee: "" }),
+    ).toHaveProperty("error");
+    expect(
+      buildAffordPay("emi", { months: "12", rate: "abc", fee: "" }),
+    ).toHaveProperty("error");
+    expect(
+      buildAffordPay("emi", { months: "12", rate: "", fee: "-5" }),
+    ).toHaveProperty("error");
   });
 });

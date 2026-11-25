@@ -5,7 +5,7 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    planner::{default_bucket, Bucket},
+    planner::{self, default_bucket, Bucket},
     handlers::{
         account::ensure_account_owned,
         common::{bad_request, not_found, today_local, validate_day, validate_year_month, AppError},
@@ -223,7 +223,8 @@ pub async fn commitment_update(
     let active = p.active.unwrap_or(cur_active != 0);
     let res = sqlx::query!(
         "UPDATE commitments SET label = ?, amount_paise = ?, day_of_month = ?, account_id = ?, category = ?,
-                bucket = ?, frequency = ?, due_month = ?, every_months = ?, first_month = ?, to_account_id = ?, active = ?, start_month = ?, end_month = ?
+                bucket = ?, frequency = ?, due_month = ?, every_months = ?, first_month = ?, to_account_id = ?, active = ?, start_month = ?, end_month = ?,
+                waiting_from = CASE WHEN first_month IS ? THEN waiting_from ELSE NULL END
          WHERE commitment_id = ? AND user_id = ?",
         p.label,
         p.amount_paise,
@@ -239,6 +240,8 @@ pub async fn commitment_update(
         active,
         p.start_month,
         p.end_month,
+        // A new first month is a new schedule: it is no longer waiting on one put off.
+        first_month,
         id,
         user_id
     )
@@ -248,6 +251,65 @@ pub async fn commitment_update(
         return Err(not_found("Commitment not found"));
     }
     Ok(Json(StatusResponse { status: true }))
+}
+
+#[derive(Serialize)]
+pub struct PutOffResponse {
+    /// `2027-01`: the month it now falls due.
+    pub first_month: String,
+    /// `2026-12`: the month it was first due, while it is put off. None after the last undo.
+    pub waiting_from: Option<String>,
+}
+
+async fn load_commitment(state: &AppState, user_id: &str, id: &str) -> Result<crate::planner::CommitmentIn, AppError> {
+    crate::handlers::dashboard::load_commitments(&state.db, user_id)
+        .await?
+        .into_iter()
+        .find(|c| c.id == id)
+        .ok_or_else(|| not_found("Commitment not found"))
+}
+
+async fn store_cadence(state: &AppState, user_id: &str, id: &str, first: i32, waiting: Option<i32>) -> Result<PutOffResponse, AppError> {
+    let out = PutOffResponse { first_month: planner::year_month_of(first), waiting_from: waiting.map(planner::year_month_of) };
+    sqlx::query!(
+        "UPDATE commitments SET first_month = ?, waiting_from = ? WHERE commitment_id = ? AND user_id = ?",
+        out.first_month,
+        out.waiting_from,
+        id,
+        user_id
+    )
+    .execute(&state.db)
+    .await?;
+    Ok(out)
+}
+
+/// `POST /api/plan/commitment/put-off`: "Not this month" for a payment every few months. The next
+/// one moves a month on and the schedule counts on from there; nothing more is set aside meanwhile.
+pub async fn commitment_put_off(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<IdPayload>,
+) -> Result<Json<PutOffResponse>, AppError> {
+    let c = load_commitment(&state, &user_id, &p.id).await?;
+    let (first, waiting) = planner::put_off(&c, today_local()).map_err(|r| {
+        bad_request(match r {
+            planner::PutOffRefusal::NotEveryFewMonths => "Only a payment every few months can be put off",
+            planner::PutOffRefusal::NothingDue => "Nothing is due to put off",
+            planner::PutOffRefusal::PastEnd => "This is its last one: a month later is after its end month",
+        })
+    })?;
+    Ok(Json(store_cadence(&state, &user_id, &p.id, first, Some(waiting)).await?))
+}
+
+/// `POST /api/plan/commitment/put-off/undo`: brings a put-off payment back a month.
+pub async fn commitment_put_off_undo(
+    State(state): State<AppState>,
+    Extension((user_id, _)): User,
+    Json(p): Json<IdPayload>,
+) -> Result<Json<PutOffResponse>, AppError> {
+    let c = load_commitment(&state, &user_id, &p.id).await?;
+    let (first, waiting) = planner::undo_put_off(&c).ok_or_else(|| bad_request("This payment isn't put off"))?;
+    Ok(Json(store_cadence(&state, &user_id, &p.id, first, waiting).await?))
 }
 
 pub async fn commitment_delete(

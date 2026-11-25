@@ -7,6 +7,8 @@ pub fn routes(state: AppState) -> Router {
         .route("/commitment/create", post(plan::commitment_create))
         .route("/commitment/update", post(plan::commitment_update))
         .route("/commitment/delete", post(plan::commitment_delete))
+        .route("/commitment/put-off", post(plan::commitment_put_off))
+        .route("/commitment/put-off/undo", post(plan::commitment_put_off_undo))
         .route("/commitment/list", get(plan::commitment_list))
         .route("/income/create", post(plan::income_create))
         .route("/income/update", post(plan::income_update))
