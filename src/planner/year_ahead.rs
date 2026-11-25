@@ -183,6 +183,8 @@ mod tests {
 
     fn commitment(amount: i64, day: u8, freq: Freq, due_month: Option<u8>) -> CommitmentIn {
         CommitmentIn {
+            id: String::new(),
+            waiting_from: None,
             label: "Rent".into(),
             amount,
             day,

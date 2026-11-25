@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE commitments SET label = ?, amount_paise = ?, day_of_month = ?, account_id = ?, category = ?,\n                bucket = ?, frequency = ?, due_month = ?, every_months = ?, first_month = ?, to_account_id = ?, active = ?, start_month = ?, end_month = ?,\n                waiting_from = CASE WHEN first_month IS ? THEN waiting_from ELSE NULL END\n         WHERE commitment_id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 17
+    },
+    "nullable": []
+  },
+  "hash": "375b99a1f2954887dcd4461d0954723087cf8bc6d4d04c421f7d8a2f8a4e6a0e"
+}

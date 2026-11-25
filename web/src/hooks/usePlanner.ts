@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import {
@@ -15,7 +20,13 @@ import {
   planApi,
   reviewApi,
 } from "@/services/api";
-import type { AffordRequest, GoalInput, NewCommitment, NewTaxEntry, TaxSectionId } from "@/services/types";
+import type {
+  AffordRequest,
+  GoalInput,
+  NewCommitment,
+  NewTaxEntry,
+  TaxSectionId,
+} from "@/services/types";
 
 export const keys = {
   txns: ["ingest-transactions"] as const,
@@ -35,17 +46,23 @@ export const keys = {
   billSuggestions: ["bill-suggestions"] as const,
   goals: ["goals"] as const,
   goalsArchived: ["goals-archived"] as const,
-  reviewMonth: (month: string | undefined) => ["review-month", month ?? "last"] as const,
+  reviewMonth: (month: string | undefined) =>
+    ["review-month", month ?? "last"] as const,
   // A prefix: every tax query (any financial year) is refreshed by a tax write.
   tax: ["review-tax"] as const,
   taxYear: (fy: string | undefined) => ["review-tax", fy ?? "current"] as const,
 };
 
-export const useSummary = () => useQuery({ queryKey: keys.summary, queryFn: dashboardApi.summary });
-export const useAccounts = () => useQuery({ queryKey: keys.accounts, queryFn: accountApi.list });
-export const useCommitments = () => useQuery({ queryKey: keys.commitments, queryFn: planApi.commitments });
-export const useIncomes = () => useQuery({ queryKey: keys.incomes, queryFn: planApi.incomes });
-export const useMoves = () => useQuery({ queryKey: keys.moves, queryFn: movesApi.list });
+export const useSummary = () =>
+  useQuery({ queryKey: keys.summary, queryFn: dashboardApi.summary });
+export const useAccounts = () =>
+  useQuery({ queryKey: keys.accounts, queryFn: accountApi.list });
+export const useCommitments = () =>
+  useQuery({ queryKey: keys.commitments, queryFn: planApi.commitments });
+export const useIncomes = () =>
+  useQuery({ queryKey: keys.incomes, queryFn: planApi.incomes });
+export const useMoves = () =>
+  useQuery({ queryKey: keys.moves, queryFn: movesApi.list });
 export const useDashboardHistory = (months = 12) =>
   useQuery({
     queryKey: [...keys.history, months],
@@ -53,57 +70,151 @@ export const useDashboardHistory = (months = 12) =>
     retry: 1,
   });
 export const useTransactions = (month: string) =>
-  useQuery({ queryKey: [...keys.txns, month], queryFn: () => ingestApi.transactions(month) });
+  useQuery({
+    queryKey: [...keys.txns, month],
+    queryFn: () => ingestApi.transactions(month),
+  });
 export const useSpendSummary = (months = 6) =>
   useQuery({
     queryKey: [...keys.spendSummary, months],
     queryFn: () => ingestApi.summary(months),
     retry: 1,
   });
-export const useIngestKey = () => useQuery({ queryKey: keys.ingestKey, queryFn: ingestApi.keyStatus });
-export const useIngestRules = () => useQuery({ queryKey: keys.ingestRules, queryFn: ingestApi.rules });
+export const useIngestKey = () =>
+  useQuery({ queryKey: keys.ingestKey, queryFn: ingestApi.keyStatus });
+export const useIngestRules = () =>
+  useQuery({ queryKey: keys.ingestRules, queryFn: ingestApi.rules });
 /** Everything a spending write can change. The dashboard summary and history are added by usePlannerMutation. */
-export const INGEST_INVALIDATE: QueryKey[] = [keys.txns, keys.spendSummary, keys.ingestRules, ['streaks']];
-export const useJoySummary = () => useQuery({ queryKey: keys.joy, queryFn: joyApi.summary, retry: 1 });
+export const INGEST_INVALIDATE: QueryKey[] = [
+  keys.txns,
+  keys.spendSummary,
+  keys.ingestRules,
+  ["streaks"],
+];
+export const useJoySummary = () =>
+  useQuery({ queryKey: keys.joy, queryFn: joyApi.summary, retry: 1 });
 /** Joy writes can re-label transactions as dates, so the spending data is refreshed too. */
-export const JOY_INVALIDATE: QueryKey[] = [keys.joy, keys.txns, keys.spendSummary];
+export const JOY_INVALIDATE: QueryKey[] = [
+  keys.joy,
+  keys.txns,
+  keys.spendSummary,
+];
 
 // Bills and goals. Adding a suggestion also adds a fixed payment, so the commitments are refreshed.
 export const useBills = (days = 30) =>
-  useQuery({ queryKey: [...keys.bills, days], queryFn: () => billsApi.list(days), retry: 1 });
+  useQuery({
+    queryKey: [...keys.bills, days],
+    queryFn: () => billsApi.list(days),
+    retry: 1,
+  });
 export const useBillSuggestions = () =>
-  useQuery({ queryKey: keys.billSuggestions, queryFn: billsApi.suggestions, retry: 1 });
+  useQuery({
+    queryKey: keys.billSuggestions,
+    queryFn: billsApi.suggestions,
+    retry: 1,
+  });
 export const useAddSuggestion = () =>
   usePlannerMutation(
     (commitment: NewCommitment) => planApi.createCommitment(commitment),
     [keys.bills, keys.billSuggestions, keys.commitments],
     { success: "Added to your fixed payments" },
   );
-export const useDismissSuggestion = () =>
-  usePlannerMutation((merchant: string) => billsApi.dismiss(merchant), [keys.billSuggestions], {
-    success: "Got it. We won't suggest it again.",
+/** "Not this month" for a payment every few months, with Undo on the toast. */
+export function usePutOff() {
+  const qc = useQueryClient();
+  const refresh = () => {
+    for (const key of [
+      keys.bills,
+      keys.commitments,
+      keys.summary,
+      keys.history,
+    ])
+      qc.invalidateQueries({ queryKey: key });
+  };
+  return useMutation({
+    mutationFn: ({ id }: { id: string; label: string }) => planApi.putOff(id),
+    onSuccess: (res, { id, label }) => {
+      refresh();
+      toast.success(
+        `${label} moved to ${monthName(res.first_month)}. Nothing more is set aside until then.`,
+        {
+          action: {
+            label: "Undo",
+            onClick: () =>
+              planApi
+                .undoPutOff(id)
+                .then(refresh, (e: unknown) =>
+                  toast.error(e instanceof Error ? e.message : "Couldn't undo"),
+                ),
+          },
+        },
+      );
+    },
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Something went wrong"),
   });
+}
 
-export const useGoals = () => useQuery({ queryKey: keys.goals, queryFn: goalsApi.list, retry: 1 });
+/** "2027-01" -> "January". */
+export function monthName(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-IN", {
+    month: "long",
+    timeZone: "UTC",
+  });
+}
+
+export const useDismissSuggestion = () =>
+  usePlannerMutation(
+    (merchant: string) => billsApi.dismiss(merchant),
+    [keys.billSuggestions],
+    {
+      success: "Got it. We won't suggest it again.",
+    },
+  );
+
+export const useGoals = () =>
+  useQuery({ queryKey: keys.goals, queryFn: goalsApi.list, retry: 1 });
 const GOAL_INVALIDATE: QueryKey[] = [keys.goals];
 export const useSaveGoal = () =>
   usePlannerMutation(
-    (g: GoalInput) => (g.goal_id ? goalsApi.update({ ...g, goal_id: g.goal_id }) : goalsApi.create(g)),
+    (g: GoalInput) =>
+      g.goal_id
+        ? goalsApi.update({ ...g, goal_id: g.goal_id })
+        : goalsApi.create(g),
     GOAL_INVALIDATE,
     { success: "Goal saved. You’ve got a plan!" },
   );
 export const useArchiveGoal = () =>
-  usePlannerMutation((goal_id: string) => goalsApi.archive(goal_id), [...GOAL_INVALIDATE, keys.goalsArchived], { success: "Goal archived" });
-export const useArchivedGoals = () => useQuery({ queryKey: keys.goalsArchived, queryFn: goalsApi.archived, retry: 1 });
+  usePlannerMutation(
+    (goal_id: string) => goalsApi.archive(goal_id),
+    [...GOAL_INVALIDATE, keys.goalsArchived],
+    { success: "Goal archived" },
+  );
+export const useArchivedGoals = () =>
+  useQuery({
+    queryKey: keys.goalsArchived,
+    queryFn: goalsApi.archived,
+    retry: 1,
+  });
 export const useUnarchiveGoal = () =>
-  usePlannerMutation((goal_id: string) => goalsApi.unarchive(goal_id), [...GOAL_INVALIDATE, keys.goalsArchived], { success: "Goal is back" });
+  usePlannerMutation(
+    (goal_id: string) => goalsApi.unarchive(goal_id),
+    [...GOAL_INVALIDATE, keys.goalsArchived],
+    { success: "Goal is back" },
+  );
 export const useResetSettings = () =>
-  usePlannerMutation(() => planApi.resetSettings(), [keys.settings], { success: "Budget settings are back to the defaults" });
+  usePlannerMutation(() => planApi.resetSettings(), [keys.settings], {
+    success: "Budget settings are back to the defaults",
+  });
 export const useRestoreSuggestions = () =>
-  usePlannerMutation(() => billsApi.restore(), [keys.billSuggestions], { success: "Dismissed suggestions are back" });
+  usePlannerMutation(() => billsApi.restore(), [keys.billSuggestions], {
+    success: "Dismissed suggestions are back",
+  });
 export const useContribute = () =>
   usePlannerMutation(
-    (v: { goal_id: string; amount_paise: number }) => goalsApi.contribute(v.goal_id, v.amount_paise),
+    (v: { goal_id: string; amount_paise: number }) =>
+      goalsApi.contribute(v.goal_id, v.amount_paise),
     GOAL_INVALIDATE,
     { success: "Saved" },
   );
@@ -112,10 +223,12 @@ export const useContribute = () =>
 export const useAfford = () =>
   useMutation({
     mutationFn: (r: AffordRequest) => affordApi.check(r),
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Could not check that"),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Could not check that"),
   });
 
-export const useSettings = () => useQuery({ queryKey: keys.settings, queryFn: planApi.settings });
+export const useSettings = () =>
+  useQuery({ queryKey: keys.settings, queryFn: planApi.settings });
 export const useBreakdown = (cardId: string | undefined) =>
   useQuery({
     queryKey: keys.breakdown(cardId ?? ""),
@@ -130,31 +243,52 @@ export const useBreakdown = (cardId: string | undefined) =>
 export function usePlannerMutation<TVars, TResult>(
   fn: (vars: TVars) => Promise<TResult>,
   invalidate: QueryKey[],
-  messages: { success?: string | ((result: TResult) => string | undefined); error?: string } = {},
+  messages: {
+    success?: string | ((result: TResult) => string | undefined);
+    error?: string;
+  } = {},
 ) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: fn,
     onSuccess: (result: TResult) => {
-      for (const key of [...invalidate, keys.summary, keys.history]) qc.invalidateQueries({ queryKey: key });
-      const text = typeof messages.success === "function" ? messages.success(result) : messages.success;
+      for (const key of [...invalidate, keys.summary, keys.history])
+        qc.invalidateQueries({ queryKey: key });
+      const text =
+        typeof messages.success === "function"
+          ? messages.success(result)
+          : messages.success;
       if (text) toast.success(text);
     },
     onError: (e: unknown) => {
-      toast.error(messages.error ?? (e instanceof Error ? e.message : "Something went wrong"));
+      toast.error(
+        messages.error ??
+          (e instanceof Error ? e.message : "Something went wrong"),
+      );
     },
   });
 }
 
 // Review: month close (read-only) and tax (writes refresh every tax query).
 export const useReviewMonth = (month: string | undefined) =>
-  useQuery({ queryKey: keys.reviewMonth(month), queryFn: () => reviewApi.month(month), retry: false });
+  useQuery({
+    queryKey: keys.reviewMonth(month),
+    queryFn: () => reviewApi.month(month),
+    retry: false,
+  });
 
 export const useTaxReview = (fy?: string) =>
-  useQuery({ queryKey: keys.taxYear(fy), queryFn: () => reviewApi.tax(fy), retry: 1 });
+  useQuery({
+    queryKey: keys.taxYear(fy),
+    queryFn: () => reviewApi.tax(fy),
+    retry: 1,
+  });
 
 /** Tax writes only change tax data, so this refreshes the tax queries and nothing else. */
-function useTaxMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>, success?: string) {
+function useTaxMutation<TVars, TResult>(
+  fn: (vars: TVars) => Promise<TResult>,
+  success?: string,
+) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: fn,
@@ -162,16 +296,26 @@ function useTaxMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>, s
       qc.invalidateQueries({ queryKey: keys.tax });
       if (success) toast.success(success);
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Something went wrong"),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Something went wrong"),
   });
 }
 
 export const useAddTaxEntry = () =>
-  useTaxMutation((e: NewTaxEntry) => reviewApi.addTaxEntry(e), "Deduction added");
+  useTaxMutation(
+    (e: NewTaxEntry) => reviewApi.addTaxEntry(e),
+    "Deduction added",
+  );
 export const useClearTaxEntries = () =>
-  useTaxMutation((fy: string | undefined) => reviewApi.clearTaxEntries(fy), "Deductions cleared");
+  useTaxMutation(
+    (fy: string | undefined) => reviewApi.clearTaxEntries(fy),
+    "Deductions cleared",
+  );
 export const useDeleteTaxEntry = () =>
-  useTaxMutation((entry_id: string) => reviewApi.deleteTaxEntry(entry_id), "Deduction removed");
+  useTaxMutation(
+    (entry_id: string) => reviewApi.deleteTaxEntry(entry_id),
+    "Deduction removed",
+  );
 export const useSetCommitmentTaxSection = () =>
   useTaxMutation(
     (v: { commitment_id: string; tax_section: TaxSectionId | null }) =>

@@ -1896,3 +1896,68 @@ async fn road_ahead_gathers_life_goals_and_payments_in_date_order() {
     assert!(wedding["per_month_paise"].as_i64().unwrap() > 0);
     assert!(r["pace_all_paise"].as_i64().unwrap() >= wedding["per_month_paise"].as_i64().unwrap());
 }
+
+#[tokio::test]
+async fn not_this_month_puts_off_a_payment_every_few_months_and_undo_brings_it_back() {
+    let app = test_app().await;
+    let t = new_user(&app, "10.0.1.10", "putter").await;
+    let ym = |k: i32| {
+        let d = joy::handlers::common::today_local();
+        let mi = d.year() * 12 + d.month() as i32 - 1 + k;
+        format!("{:04}-{:02}", mi.div_euclid(12), mi.rem_euclid(12) + 1)
+    };
+    let (_, b) = authed_post(
+        &app,
+        &t,
+        "/api/plan/commitment/create",
+        json!({"label": "Perfume", "amount_paise": 400_000, "day_of_month": 10, "bucket": "wants", "every_months": 4, "first_month": ym(1)}),
+    )
+    .await;
+    let id = serde_json::from_str::<Value>(&b).unwrap()["id"].as_str().unwrap().to_string();
+    let (_, b) = authed_post(&app, &t, "/api/plan/commitment/create", json!({"label": "SIP", "amount_paise": 2_500_000, "day_of_month": 10})).await;
+    let sip = serde_json::from_str::<Value>(&b).unwrap()["id"].as_str().unwrap().to_string();
+
+    // The bill carries its id, so the list can offer "Not this month".
+    let bills = authed_get(&app, &t, "/api/bills?days=120").await;
+    let perfume = bills["bills"].as_array().unwrap().iter().find(|b| b["label"] == "Perfume").unwrap().clone();
+    assert_eq!(perfume["commitment_id"], json!(id), "{bills}");
+
+    let put_off = |id: String| {
+        let (app, t) = (&app, &t);
+        async move { authed_post(app, t, "/api/plan/commitment/put-off", json!({"id": id})).await }
+    };
+    let undo = |id: String| {
+        let (app, t) = (&app, &t);
+        async move { authed_post(app, t, "/api/plan/commitment/put-off/undo", json!({"id": id})).await }
+    };
+    let (s, b) = put_off(id.clone()).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap(), json!({"first_month": ym(2), "waiting_from": ym(1)}));
+    let (_, b) = put_off(id.clone()).await;
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap(), json!({"first_month": ym(3), "waiting_from": ym(1)}));
+
+    let (_, b) = undo(id.clone()).await;
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap(), json!({"first_month": ym(2), "waiting_from": ym(1)}));
+    let (_, b) = undo(id.clone()).await;
+    assert_eq!(serde_json::from_str::<Value>(&b).unwrap(), json!({"first_month": ym(1), "waiting_from": null}));
+    let (s, _) = undo(id.clone()).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "nothing left to undo");
+
+    // A monthly bill can't be put off; someone else's payment isn't there.
+    let (s, _) = put_off(sip).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let other = new_user(&app, "10.0.1.11", "stranger").await;
+    let (s, _) = authed_post(&app, &other, "/api/plan/commitment/put-off", json!({"id": id})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+
+    // Editing it to a new first month ends the wait.
+    put_off(id.clone()).await;
+    let row = authed_get(&app, &t, "/api/plan/commitment/list").await.as_array().unwrap().iter().find(|r| r["label"] == "Perfume").unwrap().clone();
+    let mut edited = row.clone();
+    edited["first_month"] = json!(ym(5));
+    let (s, b) = authed_post(&app, &t, "/api/plan/commitment/update", edited).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let exported = authed_get(&app, &t, "/api/export").await;
+    let stored = exported["data"]["commitments"].as_array().unwrap().iter().find(|c| c["label"] == "Perfume").unwrap().clone();
+    assert_eq!((stored["first_month"].clone(), stored["waiting_from"].clone()), (json!(ym(5)), Value::Null));
+}

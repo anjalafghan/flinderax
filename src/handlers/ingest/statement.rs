@@ -22,6 +22,9 @@ pub struct StatementPayload {
     /// The bank account or card the statement belongs to (optional; sets last 4 and the balance).
     pub account_id: Option<String>,
     pub card_id: Option<String>,
+    /// A card statement's summary box (total due, dates), when the client read one.
+    #[serde(default)]
+    pub card_summary: Option<CardSummaryText>,
 }
 
 #[derive(Serialize)]
@@ -55,6 +58,139 @@ pub struct StatementResult {
     pub not_on_statement: usize,
     /// A payee the user seems to pay and receive from, when no holder names are saved.
     pub holder_name_suggestion: Option<String>,
+    /// A card statement's summary box (from a PDF), and what it did to the card's bill.
+    pub card_bill: Option<CardBillFromStatement>,
+}
+
+/// A card statement's summary box as text read off the page (the PDF reader finds it; the server
+/// reads the amounts and dates with the same rules as the rows).
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct CardSummaryText {
+    pub total_due: String,
+    pub minimum_due: Option<String>,
+    pub statement_date: String,
+    pub due_date: Option<String>,
+}
+
+/// A card statement's summary, read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct CardSummary {
+    pub total_due: i64,
+    pub minimum_due: Option<i64>,
+    pub statement_date: Date,
+    pub due_date: Option<Date>,
+}
+
+/// An amount owed on a card: "₹58,239.00" -> 5823900. A credit balance ("1,200.00 Cr") owes nothing.
+fn owed(raw: &str) -> Option<i64> {
+    if !raw.chars().any(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let lower = raw.trim().to_lowercase();
+    if lower.ends_with("cr") || lower.ends_with("cr.") {
+        return Some(0);
+    }
+    Some(crate::statement::parse_amount(raw).map_or(0, i64::abs))
+}
+
+impl CardSummaryText {
+    /// `None` when the total due or the statement date can't be read: then nothing is recorded.
+    pub(super) fn read(&self) -> Option<CardSummary> {
+        Some(CardSummary {
+            total_due: owed(&self.total_due)?,
+            minimum_due: self.minimum_due.as_deref().and_then(owed),
+            statement_date: crate::statement::parse_date(&self.statement_date)?,
+            due_date: self.due_date.as_deref().and_then(crate::statement::parse_date),
+        })
+    }
+}
+
+/// Records a card statement's summary as the card's latest snapshot, dated on the statement date,
+/// unless that statement was recorded already or a snapshot newer than it exists. Outstanding is the
+/// total due plus the EMI principal not yet billed, so the next-bill estimate keeps the EMIs. A
+/// card with no billing cycle saved gets the statement's (fills blanks only).
+pub(super) async fn apply_card_summary(
+    conn: &mut sqlx::SqliteConnection,
+    user_id: &str,
+    card_id: &str,
+    summary: &CardSummary,
+    today: Date,
+) -> Result<CardBillFromStatement, AppError> {
+    let card_name: String = sqlx::query_scalar("SELECT card_name FROM cards WHERE card_id = ? AND user_id = ?")
+        .bind(card_id)
+        .bind(user_id)
+        .fetch_one(&mut *conn)
+        .await?;
+    let statement_date = summary.statement_date.to_string();
+    let mut out = CardBillFromStatement {
+        card_name,
+        status: "recorded",
+        total_due_paise: summary.total_due,
+        minimum_due_paise: summary.minimum_due,
+        statement_date: statement_date.clone(),
+        due_date: summary.due_date.map(|d| d.to_string()),
+        kept_since: None,
+    };
+
+    let already: Option<i64> = sqlx::query_scalar("SELECT 1 FROM card_snapshots WHERE card_id = ? AND statement_on = ?")
+        .bind(card_id)
+        .bind(&statement_date)
+        .fetch_optional(&mut *conn)
+        .await?;
+    if already.is_some() {
+        out.status = "already";
+        return Ok(out);
+    }
+    // A snapshot typed (or read from a statement) after this statement's date is newer: keep it.
+    let newest: Option<String> = sqlx::query_scalar("SELECT MAX(substr(created_at, 1, 10)) FROM card_snapshots WHERE card_id = ?")
+        .bind(card_id)
+        .fetch_one(&mut *conn)
+        .await?;
+    if let Some(newest) = newest.filter(|d| *d > statement_date) {
+        out.status = "kept_newer";
+        out.kept_since = Some(newest);
+        return Ok(out);
+    }
+
+    let emi_unbilled = crate::handlers::card_cycle::emi_remaining(&mut *conn, card_id, today).await?;
+    let outstanding = summary.total_due + emi_unbilled;
+    let starting: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM card_snapshots WHERE card_id = ?")
+        .bind(card_id)
+        .fetch_one(&mut *conn)
+        .await?;
+    // End of the statement's day in India (UTC is 5:30 behind), so it sorts after that day's typed ones.
+    let dated = format!("{statement_date} 18:29:59");
+    sqlx::query(
+        "INSERT INTO card_snapshots (snapshot_id, card_id, total_due_paise, outstanding_paise, is_starting, statement_on, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(nanoid!())
+    .bind(card_id)
+    .bind(summary.total_due)
+    .bind(outstanding)
+    .bind(starting == 0)
+    .bind(&statement_date)
+    .bind(&dated)
+    .execute(&mut *conn)
+    .await?;
+    // The legacy history needs the card's running row (a card restored from a backup may lack it).
+    sqlx::query("INSERT OR IGNORE INTO card_running_state (card_id, last_total_due_paise, last_delta_paise) VALUES (?, 0, 0)")
+        .bind(card_id)
+        .execute(&mut *conn)
+        .await?;
+    crate::handlers::card::record_total(&mut *conn, card_id, outstanding).await?;
+    if let Some(due) = summary.due_date {
+        sqlx::query(
+            "UPDATE cards SET statement_day = COALESCE(statement_day, ?), due_day = COALESCE(due_day, ?) WHERE card_id = ? AND user_id = ?",
+        )
+        .bind(i64::from(summary.statement_date.day()))
+        .bind(i64::from(due.day()))
+        .bind(card_id)
+        .bind(user_id)
+        .execute(&mut *conn)
+        .await?;
+    }
+    Ok(out)
 }
 
 /// The identity of a statement row. It deliberately leaves out the card or account the file is
@@ -195,6 +331,8 @@ pub struct StatementInput {
     pub card_id: Option<String>,
     /// The columns the user mapped. Without one, the layout is auto-detected.
     pub mapping: Option<Mapping>,
+    /// A card statement's summary box, read off the PDF. Used only when importing to a card.
+    pub card_summary: Option<CardSummaryText>,
 }
 
 /// The bank account or card a statement is imported to, and its last digits.
@@ -531,6 +669,7 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
             closing_paise,
             not_on_statement: 0,
             holder_name_suggestion: None,
+            card_bill: None,
         },
     };
     let mut tx = db.begin().await?;
@@ -539,6 +678,9 @@ pub async fn import_statement(db: &sqlx::SqlitePool, user_id: &str, input: State
     }
     let mut res = import.res;
 
+    if let (Some(card_id), Some(summary)) = (&target.card_id, input.card_summary.as_ref().and_then(CardSummaryText::read)) {
+        res.card_bill = Some(apply_card_summary(&mut tx, user_id, card_id, &summary, today_local()).await?);
+    }
     if let Some(account_id) = &target.account_id {
         apply_closing_balance(&mut tx, user_id, account_id, &parsed, (chain_ok, closing_paise), opening_paise, &mut res).await?;
     }
@@ -578,7 +720,7 @@ pub async fn statement(
     Extension((user_id, _)): User,
     Json(p): Json<StatementPayload>,
 ) -> Result<Json<StatementResult>, AppError> {
-    let input = StatementInput { csv: p.csv, account_id: p.account_id, card_id: p.card_id, mapping: None };
+    let input = StatementInput { csv: p.csv, account_id: p.account_id, card_id: p.card_id, mapping: None, card_summary: p.card_summary };
     Ok(Json(import_and_catch_up(&state.db, &user_id, input).await?))
 }
 
@@ -596,6 +738,8 @@ pub(super) struct StatementForm {
     mapping: Option<String>,
     save_profile: bool,
     label: String,
+    /// A card statement's summary box as JSON (`CardSummaryText`).
+    card_summary: Option<String>,
 }
 
 pub(super) async fn read_statement_form(mut multipart: Multipart) -> Result<StatementForm, AppError> {
@@ -608,6 +752,7 @@ pub(super) async fn read_statement_form(mut multipart: Multipart) -> Result<Stat
             "mapping" => form.mapping = Some(field.text().await.map_err(multipart_error)?),
             "save_profile" => form.save_profile = matches!(field.text().await.map_err(multipart_error)?.trim(), "true" | "1" | "on"),
             "label" => form.label = field.text().await.map_err(multipart_error)?,
+            "card_summary" => form.card_summary = Some(field.text().await.map_err(multipart_error)?),
             _ => {}
         }
     }
@@ -693,7 +838,9 @@ pub async fn statement_upload(State(state): State<AppState>, Extension((user_id,
 
     // Only a mapping the user sent is kept as a layout; the signature comes from this file's header.
     let to_save = explicit.filter(|_| form.save_profile).map(|m| (crate::statement::signature(&csv, m.header_row), m));
-    let input = StatementInput { csv, account_id: form.account_id, card_id: form.card_id, mapping };
+    // A summary that can't be read is left out rather than failing the import.
+    let card_summary = form.card_summary.as_deref().and_then(|raw| serde_json::from_str::<CardSummaryText>(raw).ok());
+    let input = StatementInput { csv, account_id: form.account_id, card_id: form.card_id, mapping, card_summary };
     let result = import_and_catch_up(&state.db, &user_id, input).await?;
     if let Some((signature, mapping)) = to_save {
         save_layout(&state.db, &user_id, &signature, &mapping, &form.label).await?;

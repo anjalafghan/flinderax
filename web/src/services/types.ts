@@ -38,7 +38,10 @@ export interface NewAccount {
   last_4_digits?: string | null;
 }
 
-export type AccountUpdate = Omit<NewAccount, "balance_paise"> & { account_id: string; locked: boolean };
+export type AccountUpdate = Omit<NewAccount, "balance_paise"> & {
+  account_id: string;
+  locked: boolean;
+};
 
 export type Bucket = "needs" | "savings" | "wants";
 
@@ -226,10 +229,18 @@ export interface DashboardSummary {
     left_paise: number;
     overspend_paise: number;
   };
-  recovery: { owed_paise: number; months: number; per_month_paise: number } | null;
+  recovery: {
+    owed_paise: number;
+    months: number;
+    per_month_paise: number;
+  } | null;
   next_period: NextPeriod | null;
   upcoming: UpcomingItem[];
-  actions: { text: string; severity: "urgent" | "warn" | "info"; ledger: LedgerAction | null }[];
+  actions: {
+    text: string;
+    severity: "urgent" | "warn" | "info";
+    ledger: LedgerAction | null;
+  }[];
   stale: { what: string; days_old: number }[];
 }
 
@@ -463,6 +474,28 @@ export interface StatementResult {
   not_on_statement: number;
   /** A payee the user seems to pay and receive from, offered as their own name when none are saved. */
   holder_name_suggestion: string | null;
+  /** A card statement's summary box, and what it did to the card's bill. */
+  card_bill?: CardBillFromStatement | null;
+}
+
+/** As the PDF reader finds it: the text on the page. */
+export interface CardSummaryText {
+  total_due: string;
+  minimum_due: string | null;
+  statement_date: string;
+  due_date: string | null;
+}
+
+export interface CardBillFromStatement {
+  card_name: string;
+  /** recorded: the card's bill now comes from this statement; already: recorded before; kept_newer: a newer snapshot stays. */
+  status: "recorded" | "already" | "kept_newer";
+  total_due_paise: number;
+  minimum_due_paise: number | null;
+  /** "YYYY-MM-DD" */
+  statement_date: string;
+  due_date: string | null;
+  kept_since: string | null;
 }
 
 /** How a file's amounts say which side a row is on. */
@@ -511,6 +544,8 @@ export interface StatementNeedsMapping {
 export interface StatementTarget {
   account_id?: string;
   card_id?: string;
+  /** A card statement's summary box read off the PDF; sent only with a card. */
+  card_summary?: CardSummaryText | null;
   mapping?: StatementMapping;
   save_profile?: boolean;
   label?: string;
@@ -590,6 +625,16 @@ export interface Bill {
   account_id: string | null;
   /** For card bills: how much of this is already moved aside. */
   covered_paise: number;
+  /** The fixed payment this is; null for card bills and dates. */
+  commitment_id: string | null;
+}
+
+/** Where a payment every few months stands after "Not this month" (or its undo). */
+export interface PutOff {
+  /** "YYYY-MM": the month it now falls due. */
+  first_month: string;
+  /** "YYYY-MM": the month it was first due, while it is put off. */
+  waiting_from: string | null;
 }
 
 export interface SinkingFund {
@@ -696,7 +741,11 @@ export interface MonthReview {
   allowance_paise: number;
   over_by_paise: number;
   top_categories: { category: string; amount_paise: number }[];
-  dates: { spent_paise: number; budget_paise: number | null; your_share_paise: number } | null;
+  dates: {
+    spent_paise: number;
+    budget_paise: number | null;
+    your_share_paise: number;
+  } | null;
   savings_rate_bps: number | null;
   net_worth_change_paise: number | null;
   sentences: string[];

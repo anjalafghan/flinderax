@@ -44,7 +44,8 @@ async fn load_incomes(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<(Strin
 async fn load_commitments(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<(String, CommitmentIn)>, AppError> {
     Ok(sqlx::query!(
         r#"SELECT commitment_id AS "commitment_id!", label, amount_paise, day_of_month, account_id, bucket,
-                  frequency, due_month, every_months, first_month, to_account_id, active AS "active: bool", start_month, end_month
+                  frequency, due_month, every_months, first_month, to_account_id, active AS "active: bool", start_month, end_month,
+                  waiting_from
            FROM commitments
            WHERE user_id = ? AND active = 1 AND (account_id IS NOT NULL OR to_account_id IS NOT NULL)"#,
         user_id
@@ -54,8 +55,9 @@ async fn load_commitments(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<(S
     .into_iter()
     .map(|c| {
         (
-            c.commitment_id,
+            c.commitment_id.clone(),
             CommitmentIn {
+                id: c.commitment_id,
                 label: c.label,
                 amount: c.amount_paise,
                 day: c.day_of_month as u8,
@@ -67,6 +69,7 @@ async fn load_commitments(db: &sqlx::SqlitePool, user_id: &str) -> Result<Vec<(S
                 to_account_id: c.to_account_id,
                 start_month: c.start_month.as_deref().and_then(parse_year_month),
                 end_month: c.end_month.as_deref().and_then(parse_year_month),
+                waiting_from: c.waiting_from.as_deref().and_then(parse_year_month),
             },
         )
     })

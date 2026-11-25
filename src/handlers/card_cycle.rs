@@ -488,6 +488,24 @@ pub async fn pending_clear(
     Ok(Json(StatusOk { status: true }))
 }
 
+/// A card's EMI principal not yet billed, each EMI aged to `today`'s month.
+pub(crate) async fn emi_remaining(conn: &mut sqlx::SqliteConnection, card_id: &str, today: Date) -> Result<i64, AppError> {
+    let now_idx = month_index(today);
+    let rows: Vec<(i64, i64, i64, String)> = sqlx::query_as(
+        "SELECT monthly_paise, remaining_principal_paise, months_left, COALESCE(as_of_month, strftime('%Y-%m', created_at))
+         FROM card_emis WHERE card_id = ?",
+    )
+    .bind(card_id)
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|(monthly, remaining, left, as_of)| {
+            emi_effective(monthly, remaining, left, parse_year_month(&as_of).unwrap_or(now_idx), now_idx).1
+        })
+        .sum())
+}
+
 // ---------- spending inferred from snapshots ----------
 
 struct Snap {

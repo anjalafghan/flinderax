@@ -137,6 +137,7 @@
           "account_name": "HDFC",
           "balance_paise": 5512950
         },
+        "card_bill": null,
         "categorized": 6,
         "chain_ok": true,
         "closing_paise": 5512950,
@@ -163,6 +164,7 @@
           "account_name": "HDFC",
           "balance_paise": 5512950
         },
+        "card_bill": null,
         "categorized": 0,
         "chain_ok": true,
         "closing_paise": 5512950,
@@ -189,6 +191,7 @@
           "account_name": "HDFC",
           "balance_paise": 5512950
         },
+        "card_bill": null,
         "categorized": 0,
         "chain_ok": true,
         "closing_paise": 5512950,
@@ -215,6 +218,7 @@
           "account_name": "HDFC",
           "balance_paise": 5482950
         },
+        "card_bill": null,
         "categorized": 1,
         "chain_ok": true,
         "closing_paise": 5482950,
@@ -244,6 +248,7 @@
           "statement_paise": 962950
         },
         "balance_updated": null,
+        "card_bill": null,
         "categorized": 0,
         "chain_ok": true,
         "closing_paise": 962950,
@@ -267,6 +272,7 @@
         "added": 0,
         "balance_kept": null,
         "balance_updated": null,
+        "card_bill": null,
         "categorized": 0,
         "chain_ok": true,
         "closing_paise": 100,
@@ -290,6 +296,7 @@
         "added": 1,
         "balance_kept": null,
         "balance_updated": null,
+        "card_bill": null,
         "categorized": 3,
         "chain_ok": false,
         "closing_paise": null,
@@ -313,6 +320,7 @@
         "added": 0,
         "balance_kept": null,
         "balance_updated": null,
+        "card_bill": null,
         "categorized": 0,
         "chain_ok": false,
         "closing_paise": null,
@@ -371,6 +379,7 @@
         "added": 2,
         "balance_kept": null,
         "balance_updated": null,
+        "card_bill": null,
         "categorized": 0,
         "chain_ok": true,
         "closing_paise": 962950,
@@ -397,6 +406,7 @@
           "account_name": "HDFC",
           "balance_paise": 5522950
         },
+        "card_bill": null,
         "categorized": 1,
         "chain_ok": false,
         "closing_paise": 5522950,

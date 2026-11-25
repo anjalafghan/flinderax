@@ -172,6 +172,8 @@ pub struct AccountIn {
 
 #[derive(Debug, Clone)]
 pub struct CommitmentIn {
+    /// The stored commitment's id ("" in tests that never need it).
+    pub id: String,
     pub label: String,
     pub amount: i64,
     /// Day of the month it is paid.
@@ -188,6 +190,9 @@ pub struct CommitmentIn {
     /// Month index (`year * 12 + month0`), see [`month_index`].
     pub start_month: Option<i32>,
     pub end_month: Option<i32>,
+    /// Month index a payment every few months was first due before it was put off (see
+    /// [`put_off`]). Its money is already set aside, so nothing more is until it falls due.
+    pub waiting_from: Option<i32>,
 }
 
 #[derive(Debug, Clone)]
@@ -618,10 +623,70 @@ pub fn commitment_dates(c: &CommitmentIn, from: Date, to: Date) -> Vec<Date> {
 /// What `c` costs per month: yearly bills are set aside at a twelfth a month.
 pub fn monthly_equivalent(c: &CommitmentIn, month_idx: i32) -> i64 {
     let in_range = !(c.start_month.is_some_and(|s| month_idx < s) || c.end_month.is_some_and(|e| month_idx > e));
-    if !c.active || !in_range {
+    if !c.active || !in_range || c.is_waiting(month_idx) {
         return 0;
     }
     c.amount / c.freq.period_months()
+}
+
+impl CommitmentIn {
+    /// Put off and waiting in month `mi`: from the month it was first due until the month it now
+    /// falls due. Its money is already set aside.
+    pub fn is_waiting(&self, mi: i32) -> bool {
+        match (self.freq, self.waiting_from) {
+            (Freq::Every { first, .. }, Some(from)) => mi >= from && mi < first,
+            _ => false,
+        }
+    }
+}
+
+/// Why a payment can't be put off.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PutOffRefusal {
+    /// Only a payment every few months can be put off (a monthly bill or a yearly one can't).
+    NotEveryFewMonths,
+    /// Inactive, or nothing falls due in the next year.
+    NothingDue,
+    /// The next one is its last: a month later is after its end month.
+    PastEnd,
+}
+
+/// The stored cadence after putting off a payment every few months: `(first_month, waiting_from)`
+/// as month indices. The next one due (today or later) moves a month on, and the schedule counts
+/// on from there. Putting the same one off again keeps the month it was first due.
+pub fn put_off(c: &CommitmentIn, today: Date) -> Result<(i32, i32), PutOffRefusal> {
+    let Freq::Every { months, first } = c.freq else {
+        return Err(PutOffRefusal::NotEveryFewMonths);
+    };
+    let horizon = today + Duration::days(31 * (i64::from(months) + 1));
+    let due = commitment_dates(c, today, horizon).into_iter().next().ok_or(PutOffRefusal::NothingDue)?;
+    let due_mi = month_index(due);
+    let new_first = due_mi + 1;
+    if c.end_month.is_some_and(|e| new_first > e) {
+        return Err(PutOffRefusal::PastEnd);
+    }
+    let waiting = match c.waiting_from {
+        // Already put off, and this is the same one: it was first due back then.
+        Some(from) if due_mi == first && from < first => from,
+        _ => due_mi,
+    };
+    Ok((new_first, waiting))
+}
+
+/// Undoes one [`put_off`]: `(first_month, waiting_from)`, the payment back a month. `None` when
+/// it isn't put off.
+pub fn undo_put_off(c: &CommitmentIn) -> Option<(i32, Option<i32>)> {
+    let (Freq::Every { first, .. }, Some(from)) = (c.freq, c.waiting_from) else { return None };
+    if first <= from {
+        return None;
+    }
+    let back = first - 1;
+    Some((back, (back > from).then_some(from)))
+}
+
+/// `2026-12` for a month index.
+pub fn year_month_of(mi: i32) -> String {
+    format!("{:04}-{:02}", mi.div_euclid(12), mi.rem_euclid(12) + 1)
 }
 
 /// Everything due from today up to `payday2`, soonest first.

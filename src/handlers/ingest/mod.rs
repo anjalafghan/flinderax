@@ -74,6 +74,22 @@ pub struct BalanceKept {
     pub statement_on: String,
 }
 
+/// What a card statement's summary box did to the card's bill.
+#[derive(Serialize, Debug, PartialEq, Eq)]
+pub struct CardBillFromStatement {
+    pub card_name: String,
+    /// recorded: the card's bill now comes from this statement. already: this statement was
+    /// recorded before. kept_newer: a snapshot newer than the statement was kept.
+    pub status: &'static str,
+    pub total_due_paise: i64,
+    pub minimum_due_paise: Option<i64>,
+    /// "YYYY-MM-DD"
+    pub statement_date: String,
+    pub due_date: Option<String>,
+    /// kept_newer: the date of the snapshot that was kept.
+    pub kept_since: Option<String>,
+}
+
 #[derive(Serialize)]
 pub struct IngestResult {
     /// created | duplicate | unrecognized
@@ -987,13 +1003,13 @@ mod statement_tests {
     }
 
     async fn import(state: &AppState, csv: &str, account: Option<&str>) -> StatementResult {
-        let input = StatementInput { csv: csv.to_string(), account_id: account.map(str::to_string), card_id: None, mapping: None };
+        let input = StatementInput { csv: csv.to_string(), account_id: account.map(str::to_string), card_id: None, mapping: None, card_summary: None };
         import_statement(&state.db, "u", input).await.unwrap_or_else(|e| panic!("import failed: {}", e.1))
     }
 
     /// An import against the card `cardA`, where a single amount column is spending.
     async fn import_card(state: &AppState, csv: &str) -> StatementResult {
-        let input = StatementInput { csv: csv.to_string(), account_id: None, card_id: Some("cardA".into()), mapping: None };
+        let input = StatementInput { csv: csv.to_string(), account_id: None, card_id: Some("cardA".into()), mapping: None, card_summary: None };
         import_statement(&state.db, "u", input).await.unwrap_or_else(|e| panic!("import failed: {}", e.1))
     }
 
@@ -1506,5 +1522,127 @@ mod statement_tests {
         let status = resp.status();
         let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         (status, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    // ---------- a card statement's summary box ----------
+
+    fn nov_summary() -> CardSummaryText {
+        CardSummaryText {
+            total_due: "C58,239.00".into(),
+            minimum_due: Some("C2,920.00".into()),
+            statement_date: "24 Nov, 2026".into(),
+            due_date: Some("14 Dec, 2026".into()),
+        }
+    }
+
+    async fn import_card_with(state: &AppState, csv: &str, summary: Option<CardSummaryText>) -> StatementResult {
+        let input = StatementInput { csv: csv.to_string(), account_id: None, card_id: Some("cardA".into()), mapping: None, card_summary: summary };
+        import_statement(&state.db, "u", input).await.unwrap_or_else(|e| panic!("import failed: {}", e.1))
+    }
+
+    #[test]
+    fn a_summary_box_reads_with_the_row_rules() {
+        let s = nov_summary().read().unwrap();
+        assert_eq!((s.total_due, s.minimum_due), (5_823_900, Some(292_000)));
+        assert_eq!((s.statement_date.to_string(), s.due_date.map(|d| d.to_string())), ("2026-11-24".into(), Some("2026-12-14".into())));
+        // A credit balance owes nothing; a missing total or date reads as no summary at all.
+        assert_eq!(CardSummaryText { total_due: "1,200.00 Cr".into(), ..nov_summary() }.read().unwrap().total_due, 0);
+        assert_eq!(CardSummaryText { total_due: "C0.00".into(), ..nov_summary() }.read().unwrap().total_due, 0);
+        assert!(CardSummaryText { total_due: "".into(), ..nov_summary() }.read().is_none());
+        assert!(CardSummaryText { statement_date: "soon".into(), ..nov_summary() }.read().is_none());
+    }
+
+    #[tokio::test]
+    async fn a_card_statement_summary_becomes_the_cards_bill_once() {
+        let state = test_state().await;
+        let today = today_local();
+        // An EMI on the card: its unbilled principal stays in outstanding, so the next bill keeps it.
+        sqlx::query(
+            "INSERT INTO card_emis (emi_id, card_id, label, monthly_paise, remaining_principal_paise, months_left, as_of_month)
+             VALUES ('e1', 'cardA', 'Phone', 300000, 1500000, 5, ?)",
+        )
+        .bind(format!("{:04}-{:02}", today.year(), today.month() as u8))
+        .execute(&state.db)
+        .await
+        .unwrap();
+
+        let res = import_card_with(&state, CARD_CSV, Some(nov_summary())).await;
+        let bill = res.card_bill.expect("a card import with a summary reports it");
+        assert_eq!((bill.status, bill.total_due_paise, bill.card_name.as_str()), ("recorded", 5_823_900, "A"));
+        let (total, outstanding, on, created, starting): (i64, i64, String, String, bool) = sqlx::query_as(
+            "SELECT total_due_paise, outstanding_paise, statement_on, created_at, is_starting FROM card_snapshots WHERE card_id = 'cardA'",
+        )
+        .fetch_one(&state.db)
+        .await
+        .unwrap();
+        assert_eq!((total, outstanding), (5_823_900, 5_823_900 + 1_500_000));
+        assert_eq!(on, "2026-11-24");
+        assert!(created.starts_with("2026-11-24"), "dated on the statement, not the import: {created}");
+        assert!(starting, "the card's first snapshot is what was owed when tracking began");
+        // The card had no billing cycle saved: it now has the statement's.
+        let cycle: (Option<i64>, Option<i64>) =
+            sqlx::query_as("SELECT statement_day, due_day FROM cards WHERE card_id = 'cardA'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(cycle, (Some(24), Some(14)));
+        let card = crate::handlers::card_cycle::load_breakdowns(&state.db, "u", Some("cardA"), today).await.unwrap_or_else(|e| panic!("{}", e.1)).remove(0);
+        assert_eq!(card.due_now_paise, 5_823_900);
+        assert_eq!(card.next_bill_est_paise, 300_000, "next bill: the EMI instalment, nothing unbilled yet");
+
+        // The same statement again: nothing new.
+        let again = import_card_with(&state, CARD_CSV, Some(nov_summary())).await;
+        assert_eq!(again.card_bill.unwrap().status, "already");
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM card_snapshots").await, 1);
+    }
+
+    #[tokio::test]
+    async fn a_newer_snapshot_is_kept_and_a_cycle_already_saved_is_not_changed() {
+        let state = test_state().await;
+        for q in [
+            "UPDATE cards SET statement_day = 20, due_day = 8 WHERE card_id = 'cardA'",
+            "INSERT INTO card_snapshots (snapshot_id, card_id, total_due_paise, outstanding_paise, created_at) VALUES ('typed', 'cardA', 100, 200, '2026-11-26 10:00:00')",
+        ] {
+            sqlx::query(q).execute(&state.db).await.unwrap();
+        }
+        let bill = import_card_with(&state, CARD_CSV, Some(nov_summary())).await.card_bill.unwrap();
+        assert_eq!((bill.status, bill.kept_since.as_deref()), ("kept_newer", Some("2026-11-26")));
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM card_snapshots").await, 1);
+
+        // An older typed one is replaced as the latest; the saved cycle stays.
+        sqlx::query("UPDATE card_snapshots SET created_at = '2026-11-02 10:00:00'").execute(&state.db).await.unwrap();
+        let bill = import_card_with(&state, CARD_CSV, Some(nov_summary())).await.card_bill.unwrap();
+        assert_eq!(bill.status, "recorded");
+        let starting: bool = sqlx::query_scalar("SELECT is_starting FROM card_snapshots WHERE statement_on IS NOT NULL").fetch_one(&state.db).await.unwrap();
+        assert!(!starting, "not the card's first snapshot");
+        let cycle: (Option<i64>, Option<i64>) =
+            sqlx::query_as("SELECT statement_day, due_day FROM cards WHERE card_id = 'cardA'").fetch_one(&state.db).await.unwrap();
+        assert_eq!(cycle, (Some(20), Some(8)));
+    }
+
+    #[tokio::test]
+    async fn a_summary_is_ignored_without_a_card_or_when_it_cant_be_read() {
+        let state = test_state().await;
+        let unreadable = CardSummaryText { statement_date: "".into(), ..nov_summary() };
+        assert!(import_card_with(&state, CARD_CSV, Some(unreadable)).await.card_bill.is_none());
+        let input = StatementInput { csv: csv(ROWS), account_id: Some("acctB".into()), card_id: None, mapping: None, card_summary: Some(nov_summary()) };
+        let res = import_statement(&state.db, "u", input).await.unwrap_or_else(|e| panic!("{}", e.1));
+        assert!(res.card_bill.is_none());
+        assert_eq!(count_where(&state.db, "SELECT COUNT(*) FROM card_snapshots").await, 0);
+    }
+
+    #[tokio::test]
+    async fn the_upload_form_carries_the_summary_and_a_bad_one_does_not_fail_the_import() {
+        let state = test_state().await;
+        let summary = serde_json::to_string(&serde_json::json!({
+            "total_due": "C58,239.00", "minimum_due": null, "statement_date": "24 Nov, 2026", "due_date": "14 Dec, 2026"
+        }))
+        .unwrap();
+        let (status, body) = post_form(&state, "/statement/upload", multipart_fields(&[("card_id", "cardA"), ("card_summary", &summary)], CARD_CSV.as_bytes())).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(v["card_bill"]["status"], "recorded", "{v}");
+        assert_eq!(v["card_bill"]["due_date"], "2026-12-14");
+
+        let (status, body) = post_form(&state, "/statement/upload", multipart_fields(&[("card_id", "cardA"), ("card_summary", "not json")], CARD_CSV.as_bytes())).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&body).unwrap()["card_bill"], serde_json::Value::Null);
     }
 }

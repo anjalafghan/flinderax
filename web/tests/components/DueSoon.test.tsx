@@ -33,12 +33,19 @@ const bill = (offset: number, label: string) => ({
   kind: "monthly" as const,
   account_id: null,
   covered_paise: 0,
+  commitment_id: null,
 });
 
 describe("DueSoonCard", () => {
   it("lists the bills due within a week as a ledger with a total, and a link to all bills", () => {
     withData({
-      bills: [bill(1, "Gym"), bill(2, "Phone"), bill(3, "Internet"), bill(4, "Rent"), bill(20, "Far away")],
+      bills: [
+        bill(1, "Gym"),
+        bill(2, "Phone"),
+        bill(3, "Internet"),
+        bill(4, "Rent"),
+        bill(20, "Far away"),
+      ],
       total_paise: 0,
       sinking_funds: [],
     });
@@ -50,7 +57,10 @@ describe("DueSoonCard", () => {
     expect(card).toHaveTextContent("Monthly · tomorrow");
     expect(card).toHaveTextContent("Total this week₹1,996");
     expect(card).not.toHaveTextContent("Far away");
-    expect(screen.getByRole("link", { name: "All bills" })).toHaveAttribute("href", "/plan#bills");
+    expect(screen.getByRole("link", { name: "All bills" })).toHaveAttribute(
+      "href",
+      "/plan#bills",
+    );
   });
 
   it("hides itself when nothing is due within a week", () => {

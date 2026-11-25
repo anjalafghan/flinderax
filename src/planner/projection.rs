@@ -747,6 +747,8 @@ mod tests {
 
     fn commitment(label: &str, rupees: i64, day: u8, acct: &str, bucket: Bucket) -> CommitmentIn {
         CommitmentIn {
+            id: String::new(),
+            waiting_from: None,
             label: label.into(),
             amount: rupees * 100,
             day,

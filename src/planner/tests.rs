@@ -10,6 +10,8 @@ fn acct(id: &str, name: &str, paise: i64, locked: bool, role: Role, updated: Dat
 
 fn commitment(label: &str, rupees: i64, day: u8, account: Option<&str>, bucket: Bucket) -> CommitmentIn {
     CommitmentIn {
+        id: String::new(),
+        waiting_from: None,
         label: label.into(),
         amount: rupees * 100,
         day,
@@ -695,4 +697,108 @@ fn freq_from_columns_reads_the_stored_cadence_and_falls_back_to_the_safe_side() 
     assert_eq!(F::from_columns("monthly", -3, Some("2026-11")), F::Monthly);
     // A yearly bill ignores a leftover gap.
     assert_eq!(F::from_columns("yearly", 4, Some("2026-11")), F::Yearly);
+}
+
+// ---------- "not this month" ----------
+
+/// A perfume every four months, first due 10 Dec 2026 (the screenshot's case), seen on 25 Nov.
+fn perfume() -> CommitmentIn {
+    let mut c = every(4, date!(2026 - 12 - 01));
+    c.day = 10;
+    c.amount = 400_000;
+    c
+}
+
+#[test]
+fn putting_off_moves_the_next_one_a_month_and_the_schedule_counts_on_from_there() {
+    let mut c = perfume();
+    let today = date!(2026 - 11 - 25);
+    let (first, waiting) = put_off(&c, today).unwrap();
+    assert_eq!((year_month_of(first), year_month_of(waiting)), ("2027-01".to_string(), "2026-12".to_string()));
+    c.freq = Freq::Every { months: 4, first };
+    c.waiting_from = Some(waiting);
+    // January, then every four months from January.
+    assert_eq!(commitment_dates(&c, today, date!(2027 - 10 - 01)), vec![date!(2027 - 01 - 10), date!(2027 - 05 - 10), date!(2027 - 09 - 10)]);
+
+    // Put off again: still waiting since December.
+    let (first, waiting) = put_off(&c, today).unwrap();
+    assert_eq!((year_month_of(first), year_month_of(waiting)), ("2027-02".to_string(), "2026-12".to_string()));
+}
+
+#[test]
+fn nothing_more_is_set_aside_while_a_put_off_one_waits_and_its_fund_shows_full() {
+    let mut c = perfume();
+    c.freq = Freq::Every { months: 4, first: month_index(date!(2027 - 02 - 01)) };
+    c.waiting_from = Some(month_index(date!(2026 - 12 - 01)));
+    assert_eq!(monthly_equivalent(&c, month_index(date!(2026 - 11 - 01))), 100_000, "saving for it");
+    assert_eq!(monthly_equivalent(&c, month_index(date!(2026 - 12 - 01))), 0, "waiting");
+    assert_eq!(monthly_equivalent(&c, month_index(date!(2027 - 01 - 01))), 0, "still waiting");
+    assert_eq!(monthly_equivalent(&c, month_index(date!(2027 - 02 - 01))), 100_000, "bought: saving for the next");
+
+    let mut i = fixture();
+    i.today = date!(2027 - 01 - 05);
+    i.commitments = vec![c];
+    let f = &bills::sinking_funds(&i)[0];
+    assert_eq!((f.due, f.saved_paise), (date!(2027 - 02 - 10), 400_000));
+}
+
+#[test]
+fn undo_brings_it_back_a_month_and_stops_waiting_when_it_is_back_where_it_was() {
+    let mut c = perfume();
+    c.freq = Freq::Every { months: 4, first: month_index(date!(2027 - 02 - 01)) };
+    c.waiting_from = Some(month_index(date!(2026 - 12 - 01)));
+    let (first, waiting) = undo_put_off(&c).unwrap();
+    assert_eq!((year_month_of(first), waiting.map(year_month_of)), ("2027-01".to_string(), Some("2026-12".to_string())));
+    c.freq = Freq::Every { months: 4, first };
+    c.waiting_from = waiting;
+    let (first, waiting) = undo_put_off(&c).unwrap();
+    assert_eq!((year_month_of(first), waiting), ("2026-12".to_string(), None));
+    c.freq = Freq::Every { months: 4, first };
+    c.waiting_from = waiting;
+    assert_eq!(undo_put_off(&c), None);
+}
+
+#[test]
+fn only_a_payment_every_few_months_with_one_to_come_can_be_put_off() {
+    let today = date!(2026 - 11 - 25);
+    let monthly = commitment("SIP", 25_000, 10, Some(KOTAK), Bucket::Savings);
+    assert_eq!(put_off(&monthly, today), Err(PutOffRefusal::NotEveryFewMonths));
+    let mut c = perfume();
+    c.end_month = Some(month_index(date!(2026 - 12 - 01)));
+    assert_eq!(put_off(&c, today), Err(PutOffRefusal::PastEnd));
+    c.end_month = None;
+    c.active = false;
+    assert_eq!(put_off(&c, today), Err(PutOffRefusal::NothingDue));
+}
+
+#[test]
+fn a_new_cycle_put_off_later_starts_waiting_afresh() {
+    // Put off in December, bought in January; in May the next one is put off: waiting from May.
+    let mut c = perfume();
+    c.freq = Freq::Every { months: 4, first: month_index(date!(2027 - 01 - 01)) };
+    c.waiting_from = Some(month_index(date!(2026 - 12 - 01)));
+    let (first, waiting) = put_off(&c, date!(2027 - 04 - 20)).unwrap();
+    assert_eq!((year_month_of(first), year_month_of(waiting)), ("2027-06".to_string(), "2027-05".to_string()));
+}
+
+#[test]
+fn putting_off_ahead_of_time_never_makes_it_look_less_saved() {
+    // Clothes every 3 months, due 10 Dec, seen on 25 Nov: two thirds saved. Put off to January,
+    // it is still two thirds saved; the plan sets the last third aside in November as before.
+    let mut c = perfume();
+    c.label = "new clothes".into();
+    c.amount = 220_000;
+    c.freq = Freq::Every { months: 3, first: month_index(date!(2026 - 12 - 01)) };
+    let mut i = fixture();
+    i.today = date!(2026 - 11 - 25);
+    i.commitments = vec![c.clone()];
+    let before = bills::sinking_funds(&i)[0].saved_paise;
+    let (first, waiting) = put_off(&c, i.today).unwrap();
+    c.freq = Freq::Every { months: 3, first };
+    c.waiting_from = Some(waiting);
+    i.commitments = vec![c.clone()];
+    let after = &bills::sinking_funds(&i)[0];
+    assert_eq!((after.due, after.saved_paise), (date!(2027 - 01 - 10), before));
+    assert_eq!(before, 146_666);
+    assert_eq!(monthly_equivalent(&c, month_index(date!(2026 - 11 - 01))), 73_333, "November still saves for it");
 }
