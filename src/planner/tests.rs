@@ -587,6 +587,10 @@ fn rupee_formatting_uses_indian_grouping() {
     assert_eq!(format_inr(12_345_600), "₹1,23,456");
     assert_eq!(format_inr(754_990_000), "₹75,49,900");
     assert_eq!(format_inr(-150), "-₹1.50");
+    assert_eq!(format_inr(-100), "-₹1");
+    assert_eq!(format_inr(5), "₹0.05");
+    assert_eq!(format_inr(i64::MAX), "₹92,23,37,20,36,85,47,758.07");
+    assert_eq!(format_inr(i64::MIN), "-₹92,23,37,20,36,85,47,758.08");
 }
 
 // ---------- planned dates ----------

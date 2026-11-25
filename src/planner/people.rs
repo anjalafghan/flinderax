@@ -11,6 +11,9 @@ use crate::planner::{
     short_date,
 };
 
+/// Days counted as one month in "caught up N months ago".
+const DAYS_PER_MONTH: i64 = 30;
+
 /// A person is `due_soon` this many days before the catch-up date.
 pub const CATCH_UP_SOON_DAYS: i64 = 7;
 /// Upcoming dates look this many days ahead.
@@ -385,7 +388,7 @@ fn ago(last: Option<Date>, today: Date) -> String {
     } else if days < 60 {
         plural(days / 7, "week")
     } else {
-        plural(days / 30, "month")
+        plural(days / DAYS_PER_MONTH, "month")
     };
     format!("Last caught up {when} ago.")
 }
