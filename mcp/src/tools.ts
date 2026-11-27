@@ -20,6 +20,17 @@ export const tools: ToolDef[] = [
     description: "One compact daily summary: bills and commitments due in seven days, safe-to-spend this month, reward fund score, wedding and emergency fund pace, unread bank-text count, and the next kept date (sealed titles stay hidden). Money is integer paise.",
     path: () => "/api/brief",
   },
+  {
+    name: "preview_draw",
+    description: "Preview one date-jar slip that fits a specified evening without recording a draw, peek, or kept date. Give the evening date and optional budget in integer paise and maximum duration.",
+    input: {
+      when: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      budget_paise: z.number().int().min(0).optional(),
+      max_duration: z.enum(["short", "half_day", "full_day", "weekend"]).optional(),
+    },
+    path: () => "/api/dates/preview-draw",
+    query: (a) => ({ when: a.when, budget_paise: a.budget_paise, max_duration: a.max_duration }),
+  },
   // Money (Flinderax). Amounts are integer paise (100 paise = 1 rupee).
   {
     name: "money_summary",
