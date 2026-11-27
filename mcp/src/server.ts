@@ -116,6 +116,44 @@ export function buildServer(client: JoyClient, allowedScopes?: string[]): McpSer
     }),
   );
 
+  if (!allowedScopes || (allowedScopes.includes("money:read") && allowedScopes.includes("dates:read"))) {
+    server.registerTool(
+      "pace_status",
+      {
+        description: "Compare this month's money spending and Dates spending with the pace so far. Reports ahead, on pace, or behind; amounts are paise.",
+        inputSchema: {},
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async () => {
+        try {
+          const b = await client.get("/api/brief") as {
+            as_of: string;
+            money_allowance_this_month_paise: number;
+            money_spent_this_month_paise: number;
+            dates_budget_this_month_paise: number | null;
+            dates_spent_this_month_paise: number;
+          };
+          const [year, month, day] = b.as_of.split("-").map(Number);
+          const days = new Date(year, month, 0).getDate();
+          const ratio = day / days;
+          const pace = (spent: number, budget: number | null) => {
+            if (budget === null) return { status: "no_budget", spent_paise: spent, expected_by_today_paise: null };
+            const expected = Math.floor(budget * ratio);
+            return { status: spent > expected ? "ahead" : spent < expected ? "behind" : "on_pace", spent_paise: spent, expected_by_today_paise: expected };
+          };
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify({
+              money: pace(b.money_spent_this_month_paise, b.money_allowance_this_month_paise),
+              dates: pace(b.dates_spent_this_month_paise, b.dates_budget_this_month_paise),
+            }, null, 2) }],
+          };
+        } catch (e) {
+          return failed(e, "Could not check this month's pace.");
+        }
+      },
+    );
+  }
+
   registerInbox(server, client, allowedScopes);
   registerCustomDates(server, client, allowedScopes);
 
