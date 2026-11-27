@@ -175,7 +175,7 @@ function Strip() {
                     key={`${l.on}-${l.label}-${i}`}
                     className="flex justify-between gap-4 text-[13px] text-muted-foreground"
                   >
-                    <span className="inline-flex items-center gap-2">
+                    <span className="inline-flex min-w-0 items-center gap-2">
                       <i
                         aria-hidden
                         className="inline-block h-2 w-2 shrink-0 rounded-full"
@@ -188,7 +188,7 @@ function Strip() {
                       />
                       {`${formatDay(l.on)} · ${l.label}`}
                     </span>
-                    <span className="tabular-nums">{`${l.direction === "in" ? "+" : "−"}${formatINR(l.amount_paise)}`}</span>
+                    <span className="shrink-0 whitespace-nowrap tabular-nums">{`${l.direction === "in" ? "+" : "−"}${formatINR(l.amount_paise)}`}</span>
                   </li>
                 ))}
               </ul>
@@ -296,8 +296,9 @@ function AddForm() {
           <option value="in">Coming in</option>
         </Select>
       </div>
-      <label className="col-span-full flex items-center gap-2 text-sm">
+      <label className="col-span-full flex min-h-10 items-center gap-2 text-sm">
         <input
+          className="h-4 w-4"
           type="checkbox"
           checked={yearly}
           onChange={(e) => setYearly(e.target.checked)}

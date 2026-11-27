@@ -1450,3 +1450,38 @@
     fill: hsl(var(--c-rose));
   }
 }
+/* ── phones ─────────────────────────────────────────────────── */
+.joy .p-slips {
+  /* the mark buttons sit on the slip; lift them over the slip-wide link, like .slip-extra */
+  .slip-want {
+    position: relative;
+    z-index: 2;
+  }
+  /* One column on a phone: the marks get the whole width (one row, not three), and
+     Plan it / Take out sit on their own row at the bottom right. */
+  @media (max-width: 599px) {
+    .slip {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .slip-acts {
+      grid-column: 1;
+      grid-row: auto;
+      justify-content: flex-end;
+      margin: 2px -2px -6px 0;
+    }
+    .slip-want .btn-why {
+      min-height: 40px;
+    }
+  }
+  /* The app's tab bar is fixed at the bottom of a phone (62px tall, 0.75rem or the safe area
+     up): the sticky save bar and the floating "Write a slip" sit above it, not behind it. */
+  @media (max-width: 767px) {
+    .write-actions {
+      bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 62px);
+      padding-bottom: 12px;
+    }
+    .fab {
+      bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 74px);
+    }
+  }
+}

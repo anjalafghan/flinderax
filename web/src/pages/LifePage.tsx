@@ -193,7 +193,7 @@ function PlanSummary({
       </div>
 
       <div className="flex flex-col gap-3.5">
-        <p className="m-0 font-display text-[48px] font-light leading-[0.95] tracking-[-0.03em] sm:text-[80px]">
+        <p className="m-0 overflow-x-clip font-display text-[48px] font-light leading-[0.95] tracking-[-0.03em] sm:text-[80px]">
           <RupeeOdometer
             paise={m.total_step_up_sip_paise}
             text={formatINR(m.total_step_up_sip_paise)}

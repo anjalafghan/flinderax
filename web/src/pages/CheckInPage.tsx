@@ -209,7 +209,10 @@ function TotalsRow({ now, before }: { now: Totals; before: Totals | null }) {
       {cells.map((c) => (
         <div
           key={c.label}
-          className={cn("flex flex-col gap-1 rounded-[18px] border p-4", c.tint)}
+          className={cn(
+            "flex min-w-0 flex-col gap-1 overflow-x-clip rounded-[18px] border p-4",
+            c.tint,
+          )}
         >
           <dt className="text-[13px] text-muted-foreground">{c.label}</dt>
           <dd className={cn("m-0 font-display text-[26px] leading-none", c.ink)}>
@@ -238,8 +241,11 @@ function StatementsStep({ status, n }: { status: CheckinStatus; n: number }) {
       {status.uploads.length > 0 ? (
         <ul className="ledger">
           {status.uploads.map((u) => (
-            <li key={`${u.kind}:${u.id}`} className="ledger-row">
-              <span className="flex min-w-0 flex-col gap-1">
+            <li
+              key={`${u.kind}:${u.id}`}
+              className="ledger-row flex-wrap gap-y-2"
+            >
+              <span className="flex min-w-[9rem] flex-1 flex-col gap-1">
                 <span className="text-[15px] font-medium">{u.name}</span>
                 <span className="text-[13px] text-muted-foreground">
                   {u.covered_to
@@ -354,7 +360,7 @@ function BodyStep({ status }: { status: CheckinStatus }) {
       {!step.done && (
         <Link
           to="/health"
-          className="self-start text-sm font-medium text-primary"
+          className="inline-flex min-h-10 items-center self-start text-sm font-medium text-primary"
         >
           Add your weight
         </Link>
@@ -510,7 +516,7 @@ function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
             <p className="m-0 text-[15px]">{data.lifeline.line}</p>
             <Link
               to="/life"
-              className="self-start text-sm font-medium text-primary"
+              className="inline-flex min-h-10 items-center self-start text-sm font-medium text-primary"
             >
               Open the life line
             </Link>
@@ -551,11 +557,13 @@ function QuarterStep({ status, n }: { status: CheckinStatus; n: number }) {
             <ul className="ledger">
               {data.habits.slice(0, 3).map((h) => (
                 <li key={h.key} className="ledger-row">
-                  <span className="text-[15px] font-medium">{h.title}</span>
+                  <span className="min-w-0 text-[15px] font-medium">
+                    {h.title}
+                  </span>
                   {h.action && (
                     <Link
                       to={h.action.to}
-                      className="text-sm font-medium text-primary"
+                      className="inline-flex min-h-10 shrink-0 items-center whitespace-nowrap text-sm font-medium text-primary"
                     >
                       {h.action.label}
                     </Link>

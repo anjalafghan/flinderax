@@ -963,7 +963,7 @@ export function SettingsSection() {
               <InfoTip text="Savings in the reserve account that card bills must never eat. You'll be warned if it drops below this." />
             </div>
             <div className="flex flex-wrap gap-2">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-28">
                 <MoneyInput
                   id="floor"
                   value={floor}
@@ -1148,7 +1148,10 @@ export default function PlanPage() {
           {active === "fixed" && <CommitmentsSection accounts={accounts} />}
           <p className="text-sm text-muted-foreground">
             Pay day, buffers and how the pots split are in{" "}
-            <Link to="/account" className="underline underline-offset-4">
+            <Link
+              to="/account"
+              className="inline-flex min-h-10 items-center underline underline-offset-4 md:min-h-0"
+            >
               Settings › Budget settings
             </Link>
             .

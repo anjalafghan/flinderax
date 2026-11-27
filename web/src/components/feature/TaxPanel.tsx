@@ -90,7 +90,7 @@ function RegimeCard({ regime }: { regime: TaxRegime }) {
         <p className="text-xl font-bold leading-snug sm:text-2xl">
           {regimeHeadline(regime)}
         </p>
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 min-[360px]:flex-row">
           <RegimeBox
             name="Old regime"
             tax={regime.old_tax_paise}
@@ -404,8 +404,8 @@ export function TaxPanel() {
 
           {reminder && (
             <Card>
-              <CardContent className="flex items-center justify-between gap-4 p-5 md:p-6 text-sm">
-                <div className="min-w-0">
+              <CardContent className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-5 md:p-6 text-sm">
+                <div className="min-w-[10rem] flex-1">
                   <p className="font-semibold">{reminder.text}</p>
                   <p className="text-xs text-muted-foreground">
                     {reminder.date}

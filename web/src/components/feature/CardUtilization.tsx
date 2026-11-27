@@ -55,8 +55,8 @@ export function CardUtilization({ cards }: { cards: HistoryCard[] }) {
                 />
               </div>
               <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="flex items-baseline justify-between gap-3 text-sm">
-                <p className="min-w-0 truncate font-medium">{c.name}</p>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-sm">
+                <p className="min-w-0 max-w-full truncate font-medium">{c.name}</p>
                 {hasLimit ? (
                   <p className="shrink-0 tabular-nums text-muted-foreground">
                     {formatINR(c.outstanding_paise)} of{" "}

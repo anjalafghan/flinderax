@@ -28,14 +28,14 @@ export function RecentMoves() {
         {(all ? data : data.slice(0, 8)).map((m) => (
           <li key={m.move_id} className="ledger-row text-sm">
             <div className="min-w-0">
-              <p className="flex items-center gap-2 font-medium">
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
                 <span
                   className={
                     m.mode === "moved"
-                      ? "pill pill-mint"
+                      ? "pill pill-mint whitespace-nowrap"
                       : m.mode === "already_covered"
-                        ? "pill pill-sky"
-                        : "pill pill-sun"
+                        ? "pill pill-sky whitespace-nowrap"
+                        : "pill pill-sun whitespace-nowrap"
                   }
                 >
                   {LABEL[m.mode]}
@@ -50,6 +50,7 @@ export function RecentMoves() {
             <Button
               variant="ghost"
               size="sm"
+              className="shrink-0"
               disabled={undo.isPending}
               onClick={() => undo.mutate(m.move_id)}
               title="Undo this (balances go back too)"

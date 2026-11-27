@@ -20,7 +20,9 @@ export interface ChartMarker {
 
 const W = 640;
 const H = 260;
-const PAD = { l: 52, r: 12, t: 12, b: 28 };
+// Axis text is sized by class: the 640-wide viewBox shrinks to about 300px on a phone, so labels
+// there are drawn at about twice the size (and every other month label is dropped) to stay legible.
+const PAD = { l: 72, r: 12, t: 12, b: 34 };
 
 /** A small dependency-free line chart. Money in paise; markers flag months to worry about. */
 export function LineChart({
@@ -75,10 +77,10 @@ export function LineChart({
               strokeWidth={1}
             />
             <text
-              x={PAD.l - 6}
+              x={PAD.l - 8}
               y={y(t) + 4}
               textAnchor="end"
-              className="fill-muted-foreground"
+              className="fill-muted-foreground text-[20px] md:text-[11px]"
               fontSize={10}
             >
               {formatCompactINR(Math.round(t))}
@@ -101,8 +103,11 @@ export function LineChart({
               key={l}
               x={x(i)}
               y={H - 8}
-              textAnchor="middle"
-              className="fill-muted-foreground"
+              textAnchor={i === 0 ? "start" : i === labels.length - 1 ? "end" : "middle"}
+              className={cn(
+                "fill-muted-foreground text-[20px] md:text-[11px]",
+                i % (every * 2) !== 0 && "max-md:hidden",
+              )}
               fontSize={10}
             >
               {l}

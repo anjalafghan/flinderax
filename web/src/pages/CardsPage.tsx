@@ -103,14 +103,20 @@ export default function CardsPage() {
             )}
           </div>
           {hasCards && cards.length > 1 && (
-            <div className="mt-2 flex justify-center gap-2">
+            <div className="mt-2 flex justify-center max-sm:mt-0">
               {cards.map((c, idx) => (
+                // The visible dot stays small; the button around it is a full tap target.
                 <button
                   key={c.card_id}
                   onClick={() => setActiveIndex(idx)}
-                  className={`h-2 rounded-full transition-all ${idx === activeIndex ? "w-6 bg-brand-gradient" : "w-2 bg-brand/25"}`}
+                  className="flex items-center justify-center px-1 max-sm:h-10 max-sm:min-w-10"
                   aria-label={`Go to ${c.card_name}`}
-                />
+                >
+                  <span
+                    aria-hidden
+                    className={`h-2 rounded-full transition-all ${idx === activeIndex ? "w-6 bg-brand-gradient" : "w-2 bg-brand/25"}`}
+                  />
+                </button>
               ))}
             </div>
           )}

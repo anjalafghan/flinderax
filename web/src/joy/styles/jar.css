@@ -695,6 +695,15 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* small phones: let "Tonight · Any budget · Any mood" wrap rather than lose the mood to "…" */
+  @media (max-width: 400px) {
+    .jar-preferences > summary {
+      gap: 10px;
+    }
+    .jar-preferences-copy > span {
+      white-space: normal;
+    }
+  }
   .jar-preferences-action {
     flex: none;
     align-items: end;

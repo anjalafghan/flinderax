@@ -151,7 +151,7 @@ export default function AccountPage() {
           Category rules live with your spending:{" "}
           <Link
             to="/spending"
-            className="font-medium text-brand-ink underline decoration-brand/40 underline-offset-4"
+            className="inline-flex min-h-10 items-center font-medium text-brand-ink underline decoration-brand/40 underline-offset-4 md:min-h-0"
           >
             Money › Spending › Rules
           </Link>

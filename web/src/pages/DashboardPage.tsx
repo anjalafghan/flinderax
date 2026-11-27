@@ -79,7 +79,7 @@ function CardsLine() {
     <Link
       to="/cards"
       viewTransition
-      className="group flex min-h-[64px] items-center gap-4 rounded-[18px] border border-border bg-card px-4 no-underline transition-colors hover:bg-secondary/70"
+      className="group flex min-h-[64px] items-center gap-4 rounded-[18px] border border-border bg-card px-4 py-3 no-underline transition-colors hover:bg-secondary/70"
     >
       <Bubble icon={CreditCard} />
       <span className="flex min-w-0 flex-1 flex-col">
@@ -105,7 +105,7 @@ function GlanceLine() {
     <Link
       to="/glance"
       viewTransition
-      className="group flex min-h-[64px] items-center gap-4 rounded-[18px] border border-border bg-card px-4 no-underline transition-colors hover:bg-secondary/70"
+      className="group flex min-h-[64px] items-center gap-4 rounded-[18px] border border-border bg-card px-4 py-3 no-underline transition-colors hover:bg-secondary/70"
     >
       <Bubble icon={LayoutGrid} />
       <span className="flex min-w-0 flex-1 flex-col">

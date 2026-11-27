@@ -55,6 +55,17 @@
 .joy main {
   padding-bottom: 120px;
 }
+/* Phones: the fixed tab bar sits on the safe area, so the last card has to clear that too. */
+@media (max-width: 767px) {
+  .joy main {
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+  }
+  /* "Get a code to send" wraps under "Waiting for…": line it up with the text, not 22px in. */
+  .joy .waiting-bar .btn-quiet {
+    padding-inline: 0;
+    min-height: 44px;
+  }
+}
 .joy main:focus {
   outline: none;
 }
@@ -119,6 +130,23 @@
 .joy .set-card label {
   font-weight: 600;
   font-size: var(--step--1);
+}
+/* The ₹ prefix in the partner and settle-up cards: slips.css styles `.money` only inside
+   .p-slips, so here the sign sat on a line of its own above the input. */
+.joy .set-card .money {
+  position: relative;
+}
+.joy .set-card .money-sign {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+.joy .set-card .money .set-input {
+  padding-left: 32px;
+  font-variant-numeric: tabular-nums;
 }
 .joy .code-big {
   font: 700 var(--step-2)/1.1 var(--font-display);
