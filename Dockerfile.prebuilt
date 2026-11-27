@@ -1,8 +1,15 @@
 # Fast deploy image: the server is cross-compiled on the Mac (scripts/build-prebuilt.sh) and the web
 # app built with bun there too, so this image only copies them in. Same runtime as Dockerfile's last
 # stage; keep the two in step. CI (fly-deploy.yml) still builds from source with Dockerfile.
-# The build context is the staging folder the script makes: ./joy and ./dist.
-FROM debian:bookworm-20261104-slim
+# The build context is the staging folder the script makes: ./joy, ./dist and ./mcp.
+# The remote MCP server (mcp/src/http.ts): Joy runs it under Bun on loopback and forwards /mcp to it.
+FROM oven/bun:1.4.1 AS mcp
+WORKDIR /app/mcp
+COPY mcp/package.json mcp/bun.lock ./
+RUN bun install --production --frozen-lockfile
+COPY mcp/src ./src
+
+FROM debian:bookworm-20261104-slim AS runtime
 WORKDIR /app
 # tzdata: TZ=Asia/Kolkata decides local dates. ca-certificates: HTTPS to the weather API (rustls).
 RUN apt-get update \
@@ -11,6 +18,9 @@ RUN apt-get update \
     && mkdir -p /data
 COPY dist ./dist
 COPY joy /usr/local/bin/joy
+COPY --from=mcp /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=mcp /app/mcp ./mcp
+ENV JOY_MCP_ENTRY=/app/mcp/src/http.ts
 ENV STATIC_DIR=/app/dist
 ENV TZ=Asia/Kolkata
 EXPOSE 3000

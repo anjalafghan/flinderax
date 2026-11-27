@@ -4,6 +4,7 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity, clippy::result_large_err)]
 pub mod alerts;
 pub mod app;
+pub mod mcp_proxy;
 pub mod merchant_rules;
 pub mod backup;
 pub mod handlers;

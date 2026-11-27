@@ -56,6 +56,14 @@ Or `claude mcp add joy -e JOY_USERNAME=... -e JOY_PASSWORD=... -- bun run /path/
 Environment: `JOY_URL` (default https://joy.fly.dev), and either `JOY_TOKEN` (a bearer token) or
 `JOY_USERNAME` + `JOY_PASSWORD` (signs in, and again if the session expires).
 
+## Remote (Claude on the phone, claude.ai, scheduled agents)
+
+The same tools are served at `https://joy.fly.dev/mcp` over Streamable HTTP. Joy starts
+`src/http.ts` under Bun on loopback (`src/mcp_proxy.rs`) and forwards `/mcp` to it, so there is no
+second app to deploy. Add a custom connector with that URL and a scoped API token from Settings
+(Bearer `joy_…`); a read-only token only ever sees the read tools. Login tokens and passwords are
+refused. Locally, set `JOY_MCP_ENTRY=$PWD/mcp/src/http.ts` when running the server to turn it on.
+
 ## Develop
 
 `bun install && bun test` in this folder. Add a tool by adding a row to `src/tools.ts`.
