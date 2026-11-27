@@ -26,7 +26,8 @@ const TITLE =
 const BUBBLE =
   "flex h-10 w-10 shrink-0 items-center justify-center rounded-full";
 const NOTE = "m-0 text-sm text-muted-foreground";
-const TEXT_LINK = "self-start text-sm font-medium text-primary";
+const TEXT_LINK =
+  "inline-flex min-h-10 items-center self-start text-sm font-medium text-primary";
 function WorkSteps() {
   const work = useWork();
   if (!work.data) return null;

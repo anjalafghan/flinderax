@@ -97,7 +97,7 @@ const SYMBOL =
 const SYMBOL_TEXT = 'inline-block whitespace-pre';
 const BLUR = 'absolute h-0 w-0 overflow-hidden';
 const MEASURE =
-  'pointer-events-none invisible absolute top-0 left-0 h-0 overflow-hidden whitespace-nowrap *:inline-block';
+  'pointer-events-none invisible absolute top-0 left-0 h-0 w-0 overflow-hidden whitespace-nowrap *:inline-block';
 
 const TAU = Math.PI * 2;
 const NUMERIC = new Set(['integer', 'group', 'decimal', 'fraction']);

@@ -59,13 +59,13 @@ export default function SpendingPage() {
                       aria-selected={addMode === m.id}
                       onClick={() => setAddMode(m.id)}
                       className={cn(
-                        "inline-flex h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors",
+                        "inline-flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 text-sm font-medium transition-colors sm:px-3",
                         addMode === m.id
                           ? "bg-brand-gradient shadow-[0_8px_18px_-10px_hsl(var(--brand)/0.8)]"
                           : "text-muted-foreground hover:bg-brand-tint hover:text-brand-ink",
                       )}
                     >
-                      <m.icon className="h-4 w-4" aria-hidden />
+                      <m.icon className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden />
                       {m.label}
                     </button>
                   ))}
@@ -134,7 +134,10 @@ export default function SpendingPage() {
           <div className="stack border-t border-border p-6 md:p-8">
             <p className="text-sm text-muted-foreground">
               Alert forwarding and your partner's date share are in{" "}
-              <Link to="/account" className="font-medium text-primary">
+              <Link
+                to="/account"
+                className="inline-flex min-h-10 items-center font-medium text-primary md:min-h-0"
+              >
                 Settings
               </Link>
               .

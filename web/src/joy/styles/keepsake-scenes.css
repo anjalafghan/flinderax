@@ -493,6 +493,21 @@
 .joy .mu-ghosts li {
   min-width: 0;
 }
+/* phone: minmax(140px) fit only one column inside the room, so 70 slips made a ~9000px list */
+@media (max-width: 599px) {
+  .joy .mu-room {
+    padding-inline: 16px;
+  }
+  .joy .mu-ghosts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 12px;
+  }
+}
+.joy .mu-empty a {
+  display: inline-block;
+  padding-block: 12px;
+  margin-block: -12px;
+}
 .joy .mu-ghosts a {
   display: grid;
   grid-template-rows: 96px auto;

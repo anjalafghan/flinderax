@@ -21,7 +21,7 @@ export default function WorkingPage() {
         <div className="mb-6 md:mb-8">
           <Link
             to="/"
-            className="mb-3 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+            className="mb-3 inline-flex min-h-10 items-center text-sm text-muted-foreground hover:text-foreground md:min-h-0"
           >
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Today
           </Link>

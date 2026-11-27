@@ -150,7 +150,7 @@ export function SubTabs() {
       <div className="-mx-4 border-b border-brand/20 md:mx-0">
         <ScrollFade
           watch={pathname}
-          className="gap-6 px-4 py-0 md:gap-8 md:px-0"
+          className="scroll-px-10 gap-6 px-4 py-0 md:gap-8 md:px-0"
         >
           {group.items.map((t) => {
             const on = subtabOn(t, pathname);
@@ -162,8 +162,8 @@ export function SubTabs() {
                 viewTransition
                 aria-current={on ? "page" : undefined}
                 className={cn(
-                  "relative inline-flex min-h-11 shrink-0 items-center whitespace-nowrap text-sm no-underline transition-colors",
-                  "after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:rounded-full after:bg-[linear-gradient(90deg,hsl(var(--brand)),hsl(var(--brand-2)))] after:transition-transform after:duration-300 after:origin-left",
+                  "relative -mx-3 inline-flex min-h-11 shrink-0 items-center whitespace-nowrap px-3 text-sm no-underline transition-colors",
+                  "after:absolute after:inset-x-3 after:bottom-0 after:h-[3px] after:rounded-full after:bg-[linear-gradient(90deg,hsl(var(--brand)),hsl(var(--brand-2)))] after:transition-transform after:duration-300 after:origin-left",
                   on
                     ? "font-medium text-brand-ink after:scale-x-100"
                     : "text-muted-foreground after:scale-x-0 hover:text-brand-ink hover:after:scale-x-50",

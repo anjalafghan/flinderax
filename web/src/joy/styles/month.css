@@ -846,6 +846,13 @@
   .m-empty-p a {
     color: var(--pen);
   }
+  @media (pointer: coarse) {
+    .m-empty-p a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
+  }
 
   /* turning the page: page chrome, under the board */
   .m-pages {
@@ -923,6 +930,23 @@
     }
   }
 
+  /* phone: beside its receipt a print was squeezed to ~100px (caption one letter a line); the print
+   takes the full row and the receipt drops under the keepsake, as it does for entries without one */
+  @media (max-width: 599px) {
+    .m-entry[data-photo]:not(.m-exhibit) > .m-print {
+      grid-column: 1 / -1;
+    }
+    .m-entry[data-photo]:not(.m-exhibit) > .m-receipt-wrap {
+      grid-row: auto;
+      margin: -0.9em 0 0;
+    }
+    /* a long title no longer runs off the board */
+    .m-exhibit .m-ex-tag {
+      max-width: 92%;
+      white-space: normal;
+      line-height: 1.05;
+    }
+  }
   @media (min-width: 600px) {
     .m-sheet {
       padding: 56px 40px 44px;

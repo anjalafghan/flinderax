@@ -679,12 +679,13 @@ export default function GlancePage() {
                 {trips.map((t) => (
                   <li
                     key={t.id}
-                    className="grid grid-cols-[minmax(0,40%)_1fr_auto] items-center gap-3 text-[13px]"
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 text-[13px] sm:grid-cols-[minmax(0,40%)_1fr_auto] sm:gap-3"
                   >
                     <span className="truncate" title={t.title}>
                       {t.title}
                     </span>
-                    <span className="h-2 overflow-hidden rounded-full bg-muted">
+                    {/* Phones: the bar runs under the name and price, so the name keeps its room. */}
+                    <span className="col-span-2 row-start-2 h-2 overflow-hidden rounded-full bg-muted sm:col-span-1 sm:row-start-auto">
                       <span
                         className="block h-full rounded-full"
                         style={{

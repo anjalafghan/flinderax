@@ -65,27 +65,27 @@ export function ComingUpCard() {
           return (
             <li
               key={`${i.kind}-${i.on}-${i.title}`}
-              className="flex min-h-11 items-center justify-between gap-3 rounded-2xl px-1.5 text-sm transition-colors hover:bg-secondary/70"
+              className="grid min-h-11 grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-2xl px-1.5 py-1 text-sm transition-colors hover:bg-secondary/70 sm:grid-cols-[2rem_minmax(0,1fr)_auto_auto] sm:py-0"
             >
-              <span className="flex min-w-0 items-center gap-3">
-                <span
-                  aria-hidden
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground"
-                >
-                  <k.icon className="h-4 w-4" strokeWidth={1.8} />
-                </span>
-                <Link
-                  to={i.link || "/"}
-                  className="min-w-0 truncate font-medium hover:underline"
-                >
-                  {i.title}
-                </Link>
+              <span
+                aria-hidden
+                className="row-span-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground sm:row-span-1"
+              >
+                <k.icon className="h-4 w-4" strokeWidth={1.8} />
               </span>
-              <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
-                {i.detail && <span>{i.detail}</span>}
-                <span className="pill">
-                  {i.when}
+              <Link
+                to={i.link || "/"}
+                className="col-start-2 row-start-1 min-w-0 truncate font-medium hover:underline"
+              >
+                {i.title}
+              </Link>
+              {i.detail && (
+                <span className="col-start-2 row-start-2 truncate text-xs text-muted-foreground tabular-nums sm:col-start-3 sm:row-start-1 sm:text-sm">
+                  {i.detail}
                 </span>
+              )}
+              <span className="pill col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap sm:col-start-4 sm:row-span-1 sm:-ml-1">
+                {i.when}
               </span>
             </li>
           );

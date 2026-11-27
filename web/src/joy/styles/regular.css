@@ -54,6 +54,11 @@
     display: flex;
     align-items: center;
   }
+  @media (pointer: coarse) {
+    .reg-else summary {
+      min-height: 44px;
+    }
+  }
   .reg-else-form {
     display: flex;
     flex-wrap: wrap;
@@ -275,6 +280,14 @@
     background: var(--slip);
     color: var(--ink);
     max-width: 100%;
+  }
+  /* Under 16px, iOS Safari zooms the page when a field takes focus. */
+  @media (max-width: 767px) {
+    .rl-form input[type="text"],
+    .rl-form input[type="url"],
+    .rl-form input[type="date"] {
+      font-size: 16px;
+    }
   }
   .rl-days {
     display: flex;

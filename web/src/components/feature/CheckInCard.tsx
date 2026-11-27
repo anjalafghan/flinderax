@@ -64,14 +64,14 @@ export function CheckInCard({ dueOnly = false }: { dueOnly?: boolean }) {
       aria-labelledby="checkin-card-title"
       className="flex flex-col gap-3 rounded-[22px] border border-border bg-card px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-2"
     >
-      <header className="flex min-w-0 flex-1 items-center gap-3">
+      <header className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
         <span
           aria-hidden
           className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary text-muted-foreground"
         >
           <ClipboardCheck className="h-5 w-5" strokeWidth={1.7} />
         </span>
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-1 basis-40 flex-col gap-2">
           <h2
             id="checkin-card-title"
             className="m-0 text-[16px] font-semibold leading-tight"
@@ -84,7 +84,7 @@ export function CheckInCard({ dueOnly = false }: { dueOnly?: boolean }) {
         </div>
         <Link
           to="/checkin"
-          className="bg-brand-gradient inline-flex min-h-10 shrink-0 items-center justify-center rounded-full px-5 text-sm font-semibold no-underline sm:ml-auto"
+          className="bg-brand-gradient inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-5 text-sm font-semibold no-underline max-sm:w-full sm:ml-auto sm:min-h-10"
         >
           {data.status === "ok" ? "Open check-in" : "Start check-in"}
         </Link>

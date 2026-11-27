@@ -907,6 +907,13 @@
       padding-top: 14px;
     }
   }
+  /* 320px: five hearts and the clear mark (6 × 44px) ran past a rated slip's edge */
+  @media (max-width: 359px) {
+    .k-heart,
+    .k-clear {
+      width: 40px;
+    }
+  }
   /* unrated: the clear mark takes no room unless it has keyboard focus */
   .k-clear-in:checked:not(:focus-visible) + .k-clear {
     width: 0;

@@ -238,7 +238,10 @@ function RecentWeeks({ recent }: { recent: DietOverview["recent"] }) {
       <ol className="ledger">
         {recent.map((w) => (
           <li key={w.week_start} className="ledger-row">
-            <span className="text-[15px]">{`Week of ${formatDay(w.week_start)}`}</span>
+            <span className="min-w-0 text-[15px]">
+              <span className="max-sm:sr-only">Week of </span>
+              {formatDay(w.week_start)}
+            </span>
             <span className="flex shrink-0 items-center gap-3 text-[13px]">
               <span
                 className={cn(

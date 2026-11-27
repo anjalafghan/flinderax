@@ -58,7 +58,7 @@ function Stat({
 }) {
   return (
     <div
-      className="relative flex min-w-0 flex-col gap-1.5 overflow-hidden rounded-[18px] border px-4 py-4"
+      className="relative flex min-w-0 flex-col gap-1.5 overflow-hidden rounded-[18px] border px-3.5 py-4 min-[360px]:px-4"
       style={{
         borderColor: hue(color, 0.35),
         background: `linear-gradient(160deg, ${hue(color, 0.16)}, ${hue(color, 0.03)} 70%)`,
@@ -72,7 +72,7 @@ function Stat({
       <span className="text-[13px] text-muted-foreground">{label}</span>
       <span
         className={cn(
-          "font-display text-[26px] leading-none",
+          "font-display text-[22px] leading-none min-[360px]:text-[26px]",
           tone === "good" && "text-good",
           tone === "over" && "text-over",
         )}

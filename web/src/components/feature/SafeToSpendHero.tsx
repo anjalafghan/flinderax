@@ -319,7 +319,7 @@ export function SafeToSpendHero({ summary }: { summary: DashboardSummary }) {
         </span>
         <Link
           to="/working"
-          className="min-h-6 font-semibold text-brand-ink no-underline hover:underline"
+          className="inline-flex min-h-10 items-center font-semibold text-brand-ink no-underline hover:underline md:min-h-6"
         >
           See the working →
         </Link>

@@ -143,7 +143,7 @@ describe("HealthPage", () => {
       .parentElement as HTMLElement;
     expect(within(recent).getAllByText("Saved")).toHaveLength(6);
     expect(within(recent).getAllByText("No entry")).toHaveLength(6);
-    expect(within(recent).getByText("Week of 2 Nov")).toBeInTheDocument();
+    expect(recent).toHaveTextContent("Week of 2 Nov");
   });
 
   it("asks for habits when none are tracked", async () => {

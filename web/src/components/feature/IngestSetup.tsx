@@ -94,11 +94,11 @@ export function IngestSetup() {
     <details className="group glass rounded-[28px] p-4 md:p-6">
       <summary className="cursor-pointer list-none">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="font-display brand-text text-[32px] leading-none tracking-tight">
+          <div className="min-w-0">
+            <h2 className="font-display brand-text text-[26px] leading-none tracking-tight sm:text-[32px]">
               Automatic import setup
             </h2>
-            <p className="max-w-prose text-sm text-muted-foreground">
+            <p className="mt-1.5 max-w-prose text-sm text-muted-foreground sm:mt-0">
               {isError
                 ? "Couldn't check the import key."
                 : hasKey

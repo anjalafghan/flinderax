@@ -71,8 +71,11 @@ function MonthBars({ money }: { money: FoodMoney }) {
         {money.months.map((m) => (
           <li key={m.month} className="ledger-row">
             <span className="font-medium">{monthName(m.month)}</span>
-            <span className="text-right text-muted-foreground">
-              {`Eating out ${rupees(m.eating_out_paise)}, groceries ${rupees(m.groceries_paise)}, ${m.delivery_orders} ${m.delivery_orders === 1 ? "order" : "orders"}`}
+            {/* Each figure stays whole when the line wraps on a phone. */}
+            <span className="min-w-0 text-right text-muted-foreground">
+              <span className="whitespace-nowrap">{`Eating out ${rupees(m.eating_out_paise)},`}</span>{" "}
+              <span className="whitespace-nowrap">{`groceries ${rupees(m.groceries_paise)},`}</span>{" "}
+              <span className="whitespace-nowrap">{`${m.delivery_orders} ${m.delivery_orders === 1 ? "order" : "orders"}`}</span>
             </span>
           </li>
         ))}

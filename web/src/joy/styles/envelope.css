@@ -169,6 +169,9 @@
     color: var(--ink);
     box-shadow: none;
     transform: rotate(-0.6deg);
+    /* a pasted link or long place name wraps instead of pushing the letter past a phone's edge */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .js .env-letter {
     display: none;
@@ -224,7 +227,7 @@
   }
   .env-route li {
     display: grid;
-    grid-template-columns: 5.4em 1fr;
+    grid-template-columns: 5.4em minmax(0, 1fr);
     gap: 10px;
     font-size: var(--step--1);
     line-height: 1.4;

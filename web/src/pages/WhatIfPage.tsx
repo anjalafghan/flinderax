@@ -333,7 +333,7 @@ export default function WhatIfPage() {
                   step={6}
                   value={months}
                   onChange={(e) => setMonths(Number(e.target.value))}
-                  className="w-full"
+                  className="w-full max-md:h-10"
                 />
               </div>
               <div className="field">
@@ -348,7 +348,7 @@ export default function WhatIfPage() {
                   step={5}
                   value={spendPct}
                   onChange={(e) => setSpendPct(Number(e.target.value))}
-                  className="w-full"
+                  className="w-full max-md:h-10"
                 />
               </div>
             </div>

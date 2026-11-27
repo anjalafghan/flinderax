@@ -5,6 +5,7 @@ import { SeasonsEditor } from "@/components/feature/people/SeasonsEditor";
 import { toast } from "sonner";
 
 import { Retry } from "@/components/ui/retry";
+import { cn } from "@/utils/cn";
 import {
   MONTH_NAMES,
   NOTE,
@@ -59,9 +60,9 @@ export function GiftPlanCard() {
         <div
           role="img"
           aria-label={summary}
-          className="flex h-40 items-end gap-2"
+          className="flex h-40 items-end gap-1 sm:gap-2"
         >
-          {data.months.map((m) => (
+          {data.months.map((m, i) => (
             <div
               key={m.month}
               className="flex h-full min-w-0 flex-1 flex-col justify-end gap-2"
@@ -73,7 +74,13 @@ export function GiftPlanCard() {
                   height: `${Math.max(2, Math.round((m.budget_paise / peak) * 100))}%`,
                 }}
               />
-              <span className="text-center text-[11px] text-muted-foreground">
+              {/* Phones label every other month so the names don't run together. */}
+              <span
+                className={cn(
+                  "text-center text-[11px] text-muted-foreground",
+                  i % 2 === 1 && "max-sm:invisible",
+                )}
+              >
                 {monthShort(m.month)}
               </span>
             </div>

@@ -131,7 +131,7 @@ export default function CreateCardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center rounded-xl bg-[radial-gradient(90%_90%_at_50%_0%,hsl(var(--brand-tint)),hsl(var(--chip)))] p-8">
+            <div className="flex items-center justify-center rounded-xl bg-[radial-gradient(90%_90%_at_50%_0%,hsl(var(--brand-tint)),hsl(var(--chip)))] p-4 sm:p-8">
               <CreditCard
                 id="preview"
                 name={name || "CARD NAME"}

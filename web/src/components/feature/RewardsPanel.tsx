@@ -500,10 +500,11 @@ export function RewardsPanel() {
                   aria-label="Reward ideas"
                 >
                   {ideas.map((i) => (
-                    <li key={i.name}>
+                    <li key={i.name} className="max-w-full">
                       <Button
                         size="sm"
                         variant="outline"
+                        className="max-w-full max-md:h-auto max-md:min-h-11 max-md:whitespace-normal max-md:py-2 max-md:text-left"
                         title={i.note}
                         onClick={() => {
                           setPreset(i);

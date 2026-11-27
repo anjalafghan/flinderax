@@ -75,7 +75,7 @@ export function EducationSummary({ data }: { data: EducationOut }) {
             <span className="text-base text-muted-foreground">a month</span>
           </p>
           <dl
-            className="mt-3 grid grid-cols-3 gap-3 text-sm"
+            className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3"
             aria-label="Range of monthly top-up"
           >
             {[

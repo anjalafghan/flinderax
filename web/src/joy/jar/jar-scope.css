@@ -407,6 +407,22 @@
     .tonight .draw-row {
       bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
       padding-bottom: 10px;
+      /* Draw a slip gets the whole width, the two toggles share one row under it: at 320px they
+         used to stack into three rows and the sticky bar took a third of the screen. */
+      justify-content: center;
+      gap: 2px 10px;
+    }
+    .tonight .draw-row #draw.btn-draw {
+      flex-basis: 100%;
+    }
+    .tonight .draw-row .shake-opt {
+      min-height: 40px;
+      font-size: 1.1rem;
+    }
+  }
+  @media (max-width: 360px) {
+    .tonight .draw-row .shake-opt {
+      font-size: 1.02rem;
     }
   }
 }

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/services/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 const SCOPES = [
   ["money:read", "Read money"],
@@ -111,21 +114,23 @@ export function ApiTokensCard() {
         <div className="rounded-2xl border border-brand/30 bg-brand-tint p-4" role="status">
           <p className="font-medium">Copy this token now. It will only be shown once.</p>
           <code className="mt-2 block break-all text-sm">{oneTimeToken}</code>
-          <button type="button" className="btn mt-3" onClick={() => void navigator.clipboard?.writeText(oneTimeToken)}>Copy token</button>
-          <button type="button" className="btn ml-2 mt-3" onClick={() => setOneTimeToken("")}>I saved it</button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => void navigator.clipboard?.writeText(oneTimeToken)}>Copy token</Button>
+          <Button type="button" variant="outline" onClick={() => setOneTimeToken("")}>I saved it</Button>
+          </div>
         </div>
       )}
       <form onSubmit={(e) => void create(e)} className="stack">
         <label className="field">
           <span>Token name</span>
-          <input className="set-input" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required placeholder="Claude daily brief" />
+          <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required placeholder="Claude daily brief" />
         </label>
         <fieldset className="stack">
           <legend className="font-medium">Access</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {SCOPES.map(([scope, label]) => (
-              <label key={scope} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={scopes.includes(scope)} onChange={(e) => setScopes((old) => e.target.checked ? [...old, scope] : old.filter((s) => s !== scope))} />
+              <label key={scope} className="flex min-h-10 items-center gap-3 text-sm md:min-h-0">
+                <input type="checkbox" className="h-5 w-5 shrink-0 accent-brand md:h-4 md:w-4" checked={scopes.includes(scope)} onChange={(e) => setScopes((old) => e.target.checked ? [...old, scope] : old.filter((s) => s !== scope))} />
                 {label}
               </label>
             ))}
@@ -133,11 +138,11 @@ export function ApiTokensCard() {
         </fieldset>
         <label className="field">
           <span>Expires</span>
-          <select className="set-input" value={expiry} onChange={(e) => setExpiry(e.target.value)}>
+          <Select value={expiry} onChange={(e) => setExpiry(e.target.value)}>
             <option value="30">In 30 days</option><option value="90">In 90 days</option><option value="180">In 180 days</option><option value="365">In 1 year</option><option value="">Never</option>
-          </select>
+          </Select>
         </label>
-        <button className="btn btn-stamp w-fit" type="submit" disabled={busy || !name.trim() || scopes.length === 0}>Create token</button>
+        <Button className="w-fit" type="submit" disabled={busy || !name.trim() || scopes.length === 0}>Create token</Button>
       </form>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="stack">
@@ -145,17 +150,17 @@ export function ApiTokensCard() {
         {tokens.length === 0 ? <p className="text-sm text-muted-foreground">No assistant tokens yet.</p> : tokens.map((t) => (
           <article key={t.id} className="rounded-2xl border border-border p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><p className="font-medium">{t.name}{t.revoked_at ? " · Revoked" : ""}</p><p className="text-xs text-muted-foreground">{t.scopes.join(", ")}</p></div>
-              {!t.revoked_at && <button type="button" className="btn" disabled={busy} onClick={() => void revoke(t.id)}>Revoke</button>}
+              <div className="min-w-0"><p className="break-words font-medium">{t.name}{t.revoked_at ? " · Revoked" : ""}</p><p className="break-words text-xs text-muted-foreground">{t.scopes.join(", ")}</p></div>
+              {!t.revoked_at && <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void revoke(t.id)}>Revoke</Button>}
             </div>
             <p className="mt-2 text-xs text-muted-foreground">Created {date(t.created_at)} · Last used {date(t.last_used_at)} · Expires {date(t.expires_at)}</p>
           </article>
         ))}
       </div>
       <details>
-        <summary className="cursor-pointer font-medium">Recent assistant activity</summary>
+        <summary className="min-h-10 cursor-pointer content-center font-medium">Recent assistant activity</summary>
         <ul className="mt-3 max-h-64 space-y-2 overflow-auto text-xs">
-          {audit.length === 0 ? <li className="text-muted-foreground">No token activity yet.</li> : audit.map((a) => <li key={a.id}>{date(a.created_at)} · {a.method} {a.route} · {a.status}</li>)}
+          {audit.length === 0 ? <li className="text-muted-foreground">No token activity yet.</li> : audit.map((a) => <li key={a.id} className="break-words">{date(a.created_at)} · {a.method} {a.route} · {a.status}</li>)}
         </ul>
       </details>
     </section>

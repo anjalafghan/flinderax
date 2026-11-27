@@ -53,21 +53,21 @@ function AreaBar({ a, focus }: { a: AreaScore; focus: boolean }) {
       }}
     >
       <div className="flex items-center justify-between gap-2 text-[13px]">
-        <span className="flex items-center gap-1.5 font-medium">
+        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 font-medium">
           <span
             aria-hidden
-            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-background"
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-background"
             style={{ background: `hsl(var(--c-${c}))` }}
           >
             <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
           </span>
           {a.label}
-          <span className="font-normal text-muted-foreground">
+          <span className="whitespace-nowrap font-normal text-muted-foreground">
             · {pct(a.weight_bps)} of the pot
           </span>
         </span>
         <span
-          className="font-semibold tabular-nums"
+          className="shrink-0 font-semibold tabular-nums"
           style={{ color: `hsl(var(--c-${c}))` }}
         >
           {pct(a.score_bps)}

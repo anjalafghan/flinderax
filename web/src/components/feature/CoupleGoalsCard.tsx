@@ -133,7 +133,7 @@ export function CoupleGoalsCard() {
                 aria-label={`Add to ${g.name}`}
                 inputMode="decimal"
                 placeholder="₹"
-                className="min-h-11 w-28 rounded-xl border border-rose/30 bg-background px-3 py-1 focus-visible:border-rose"
+                className="min-h-11 w-28 rounded-xl border border-rose/30 bg-background px-3 py-1 text-base focus-visible:border-rose md:text-sm"
                 value={amounts[g.goal_id] ?? ""}
                 onChange={(e) =>
                   setAmounts((a) => ({ ...a, [g.goal_id]: e.target.value }))
@@ -156,28 +156,28 @@ export function CoupleGoalsCard() {
           Start a goal together
         </summary>
         <div className="mt-2 grid gap-2 text-sm">
-          <label>
+          <label className="flex flex-col gap-1 sm:block">
             What are you saving for?
             <input
-              className="ml-2 rounded border border-border bg-background px-2 py-1"
+              className="min-h-11 rounded-xl border border-border bg-background px-3 py-1 text-base md:text-sm sm:ml-2 sm:min-h-0 sm:rounded sm:px-2"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </label>
-          <label>
+          <label className="flex flex-col gap-1 sm:block">
             How much (₹)?
             <input
-              className="ml-2 w-32 rounded border border-border bg-background px-2 py-1"
+              className="min-h-11 rounded-xl border border-border bg-background px-3 py-1 text-base md:text-sm sm:ml-2 sm:min-h-0 sm:w-32 sm:rounded sm:px-2"
               inputMode="decimal"
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
             />
           </label>
-          <label>
+          <label className="flex flex-col gap-1 sm:block">
             By when (optional)
             <input
               type="date"
-              className="ml-2 rounded border border-border bg-background px-2 py-1"
+              className="min-h-11 rounded-xl border border-border bg-background px-3 py-1 text-base md:text-sm sm:ml-2 sm:min-h-0 sm:rounded sm:px-2"
               value={form.date}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
             />

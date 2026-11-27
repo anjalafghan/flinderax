@@ -256,7 +256,7 @@ export default function SortPayeesPage() {
                 <p>Everything is tagged. Nice.</p>
                 <Link
                   to="/spending"
-                  className="font-medium text-foreground underline underline-offset-4"
+                  className="inline-flex min-h-10 items-center font-medium text-foreground underline underline-offset-4 md:min-h-0"
                 >
                   Back to Spending
                 </Link>
