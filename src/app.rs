@@ -112,6 +112,9 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/goals", protected(&state, routes::goals::routes(state.clone())))
         .nest("/api/activity", protected(&state, routes::activity::routes(state.clone())))
         .nest("/api/rewards", protected(&state, routes::rewards::routes(state.clone())))
+        .nest("/api/tokens", protected(&state, routes::api_tokens::routes(state.clone())))
+        .nest("/api/brief", protected(&state, Router::new().route("/", axum::routing::get(crate::handlers::brief::get)).with_state(state.clone())))
+        .route("/api/token-info", axum::routing::get(crate::handlers::api_tokens::token_info).with_state(state.clone()).layer(trace_layer()).layer(middleware::from_fn_with_state(state.clone(), token_validator_middleware)))
         .nest(
             "/api/export",
             protected(&state, Router::new().route("/", axum::routing::get(crate::handlers::export::export)).with_state(state.clone())),
@@ -191,6 +194,102 @@ pub fn build_router(state: AppState) -> Router {
         .layer(tower_http::catch_panic::CatchPanicLayer::new())
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct AuthContext {
+    /// Present only for a scoped API token. Session cookies and PASETO login tokens have none.
+    pub token_id: Option<String>,
+    pub scopes: Vec<String>,
+}
+
+/// A scope set for every request made with a scoped token. Unknown API routes fail closed.
+fn required_scopes(path: &str, method: &axum::http::Method) -> Option<&'static [&'static str]> {
+    use axum::http::Method;
+    const MONEY_READ: &[&str] = &["money:read"];
+    const DATES_READ: &[&str] = &["dates:read"];
+    const BRIEF_READ: &[&str] = &["money:read", "dates:read"];
+    const MONEY_WRITE: &[&str] = &["money:write"];
+    const DATES_WRITE: &[&str] = &["dates:write"];
+    const INBOX_WRITE: &[&str] = &["inbox:write"];
+    const ANALYSIS_WRITE: &[&str] = &["analysis:write"];
+    const NO_SCOPE: &[&str] = &[];
+
+    let is_read = matches!(*method, Method::GET | Method::HEAD | Method::OPTIONS);
+    if path.starts_with("/api/brief") {
+        return Some(BRIEF_READ);
+    }
+    if path == "/api/token-info" {
+        return Some(NO_SCOPE);
+    }
+    if path == "/api/export" || path == "/api/export/" {
+        return Some(BRIEF_READ);
+    }
+    // Bulk restore, push registration, and couple membership are account-level actions, not
+    // assistant actions. An API token must never be able to replace the account or alter its link.
+    if path.starts_with("/api/import") || path.starts_with("/api/push/")
+        || matches!(path, "/api/couple/create" | "/api/couple/invite" | "/api/couple/join" | "/api/couple/leave")
+    {
+        return None;
+    }
+    if path == "/api/tokens" || path.starts_with("/api/tokens/") {
+        return None;
+    }
+    if path.starts_with("/api/dates/") || path == "/api/dates" || path.starts_with("/api/joy/")
+        || path.starts_with("/api/couple/") || path.starts_with("/api/couple-goals/")
+        || path.starts_with("/api/coming-up")
+    {
+        return Some(if is_read { DATES_READ } else { DATES_WRITE });
+    }
+    if path.starts_with("/api/ingest/unrecognized") {
+        return Some(if is_read { MONEY_READ } else { INBOX_WRITE });
+    }
+    if path.starts_with("/api/analyses") {
+        return Some(if is_read { MONEY_READ } else { ANALYSIS_WRITE });
+    }
+    if ["/api/card/", "/api/account/", "/api/plan/", "/api/dashboard/", "/api/moves/", "/api/ingest/", "/api/bills/", "/api/year/", "/api/decisions/", "/api/checkin/", "/api/analyses/", "/api/goals/", "/api/review/", "/api/rewards/"]
+        .iter().any(|prefix| path.starts_with(prefix))
+    {
+        return Some(if is_read { MONEY_READ } else { MONEY_WRITE });
+    }
+    None
+}
+
+async fn api_token_auth(token: &str, state: &AppState) -> Result<(String, String, String, Vec<String>), AppError> {
+    use sha2::{Digest, Sha256};
+    let hash = format!("{:x}", Sha256::digest(token.as_bytes()));
+    let row: Option<(String, String, String, String)> = sqlx::query_as(
+        "SELECT t.id, t.user_id, u.user_role, t.scopes FROM api_tokens t
+         JOIN users u ON u.user_id = t.user_id
+         WHERE t.token_hash = ? AND t.revoked_at IS NULL
+           AND (t.expires_at IS NULL OR t.expires_at > unixepoch())",
+    )
+    .bind(hash)
+    .fetch_optional(&state.db)
+    .await?;
+    let (id, user_id, role, scopes) = row.ok_or_else(sign_in_again)?;
+    sqlx::query("UPDATE api_tokens SET last_used_at = unixepoch() WHERE id = ?")
+        .bind(&id)
+        .execute(&state.db)
+        .await?;
+    let scopes = serde_json::from_str(&scopes).unwrap_or_default();
+    Ok((id, user_id, role, scopes))
+}
+
+async fn audit_write(state: &AppState, token_id: &str, user_id: &str, method: &str, route: &str, status: u16) {
+    if let Err(err) = sqlx::query(
+        "INSERT INTO audit_log (token_id, user_id, method, route, status) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(token_id)
+    .bind(user_id)
+    .bind(method)
+    .bind(route)
+    .bind(i64::from(status))
+    .execute(&state.db)
+    .await
+    {
+        tracing::error!("Could not write API-token audit row: {err}");
+    }
+}
+
 /// Unknown paths: app routes ("/money", "/joy/slips") get index.html so the client router takes over;
 /// a missing file ("/chunk-old.js" after a deploy) gets a plain 404. Answering a script request with
 /// HTML makes the browser fail with a MIME error instead of letting the app reload itself.
@@ -223,10 +322,41 @@ pub async fn token_validator_middleware(
             if from_cookie && !matches!(*request.method(), axum::http::Method::GET | axum::http::Method::HEAD | axum::http::Method::OPTIONS) && !headers.contains_key("x-joy") {
                 return Err(AppError(StatusCode::FORBIDDEN, "Missing request header.".to_string()));
             }
+            if !from_cookie && token.starts_with("joy_") {
+                let (token_id, user_id, role, scopes) = api_token_auth(token, &state).await?;
+                let matched_path = request.extensions().get::<axum::extract::MatchedPath>().map(|m| m.as_str());
+                // `Router::nest` strips its prefix from the URI before inner layers run. Prefer
+                // Axum's matched route template so both scope selection and audit use the full,
+                // parameter-free route; retain the URI path for the unmatched-route fallback.
+                let path = matched_path.unwrap_or_else(|| request.uri().path());
+                let route = matched_path.unwrap_or("unmatched").to_string();
+                let method = request.method().to_string();
+                let required = required_scopes(path, request.method());
+                let Some(required) = required else {
+                    if request.method() != axum::http::Method::GET && request.method() != axum::http::Method::HEAD && request.method() != axum::http::Method::OPTIONS {
+                        audit_write(&state, &token_id, &user_id, &method, &route, StatusCode::FORBIDDEN.as_u16()).await;
+                    }
+                    return Err(AppError(StatusCode::FORBIDDEN, "This route is not available to API tokens.".into()));
+                };
+                if required.iter().any(|s| !scopes.iter().any(|granted| granted == s)) {
+                    if request.method() != axum::http::Method::GET && request.method() != axum::http::Method::HEAD && request.method() != axum::http::Method::OPTIONS {
+                        audit_write(&state, &token_id, &user_id, &method, &route, StatusCode::FORBIDDEN.as_u16()).await;
+                    }
+                    return Err(AppError(StatusCode::FORBIDDEN, "This token does not have the required scope.".into()));
+                }
+                request.extensions_mut().insert((user_id.clone(), role.clone()));
+                request.extensions_mut().insert(AuthContext { token_id: Some(token_id.clone()), scopes });
+                let response = next.run(request).await;
+                if method != "GET" && method != "HEAD" && method != "OPTIONS" {
+                    audit_write(&state, &token_id, &user_id, &method, &route, response.status().as_u16()).await;
+                }
+                return Ok(response);
+            }
             let (user_id, role, version) = authenticate(token, &state).await?;
             // Renew a session that is past its halfway point; the client swaps the token in.
             let renewal = renewal(token, &user_id, &role, version, &state);
             request.extensions_mut().insert((user_id, role));
+            request.extensions_mut().insert(AuthContext::default());
             let mut response = next.run(request).await;
             if let Some((new_token, expires_at)) = renewal {
                 if from_cookie {
@@ -340,4 +470,27 @@ async fn old_joy_envelope(axum::extract::Path(token): axum::extract::Path<String
         return axum::http::StatusCode::NOT_FOUND.into_response();
     }
     axum::response::Redirect::permanent(&format!("/joy/e/{token}")).into_response()
+}
+
+#[cfg(test)]
+mod api_token_scope_tests {
+    use super::required_scopes;
+    use axum::http::Method;
+
+    #[test]
+    fn sensitive_routes_require_their_scopes() {
+        assert_eq!(required_scopes("/api/dates/jar", &Method::GET), Some(&["dates:read"][..]));
+        assert_eq!(required_scopes("/api/dates/budget", &Method::POST), Some(&["dates:write"][..]));
+        assert_eq!(required_scopes("/api/ingest/unrecognized/42", &Method::DELETE), Some(&["inbox:write"][..]));
+        assert_eq!(required_scopes("/api/analyses", &Method::GET), Some(&["money:read"][..]));
+        assert_eq!(required_scopes("/api/analyses", &Method::POST), Some(&["analysis:write"][..]));
+        assert_eq!(required_scopes("/api/coming-up/", &Method::GET), Some(&["dates:read"][..]));
+        assert_eq!(required_scopes("/api/brief", &Method::GET), Some(&["money:read", "dates:read"][..]));
+        assert_eq!(required_scopes("/api/export", &Method::GET), Some(&["money:read", "dates:read"][..]));
+        assert_eq!(required_scopes("/api/tokens", &Method::GET), None);
+        assert_eq!(required_scopes("/api/import/", &Method::POST), None);
+        assert_eq!(required_scopes("/api/couple/leave", &Method::POST), None);
+        assert_eq!(required_scopes("/api/people/", &Method::GET), None);
+        assert_eq!(required_scopes("/not-api", &Method::GET), None);
+    }
 }

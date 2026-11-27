@@ -50,3 +50,4 @@ INSERT INTO reward_months (user_id, month, score_bps, earned_paise, saved_paise,
 INSERT INTO planned_outflows (outflow_id, user_id, label, on_day, amount_paise, direction, kind, yearly) VALUES ('rt-out', '{U}', 'Car insurance', '2027-02-10', 1800000, 'out', 'premium', 1);
 INSERT INTO activity_log (user_id, kind, day, ref_id, points) VALUES ('{U}', 'checkin', '2026-11-08', '2026-11-08', 1);
 INSERT INTO analyses (analysis_id, user_id, title, body, source, created_on) VALUES ('rt-analysis', '{U}', 'October', 'Spent less on food.', 'claude', '2026-11-02');
+INSERT INTO audit_log (token_id, user_id, method, route, status) VALUES ('rt-token', '{U}', 'POST', '/api/example', 200);

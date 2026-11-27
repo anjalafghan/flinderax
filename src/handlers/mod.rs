@@ -45,5 +45,7 @@ pub mod rewards;
 pub mod streaks;
 pub mod work;
 pub mod analyses;
+pub mod api_tokens;
+pub mod brief;
 pub mod year;
 pub mod decisions;

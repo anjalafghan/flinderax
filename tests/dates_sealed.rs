@@ -154,6 +154,22 @@ impl T {
         sqlx::query_scalar(sql).fetch_one(&self.db).await.unwrap()
     }
 
+    async fn api_token(&self, username_prefix: &str, scopes: &[&str], expires_at: Option<i64>, revoked: bool) -> String {
+        let user_id: String = sqlx::query_scalar("SELECT user_id FROM users WHERE user_name LIKE ? ORDER BY rowid DESC LIMIT 1")
+            .bind(format!("{username_prefix}%"))
+            .fetch_one(&self.db).await.unwrap();
+        let token = format!("joy_{}{}", "T".repeat(40), COUNTER.fetch_add(1, Ordering::SeqCst));
+        sqlx::query("INSERT INTO api_tokens (id, user_id, name, token_hash, scopes, expires_at, revoked_at) VALUES (?, ?, 'test', ?, ?, ?, ?)")
+            .bind(format!("test-{}", COUNTER.fetch_add(1, Ordering::SeqCst)))
+            .bind(user_id)
+            .bind(joy::handlers::api_tokens::hash_token(&token))
+            .bind(serde_json::to_string(scopes).unwrap())
+            .bind(expires_at)
+            .bind(revoked.then_some(1_i64))
+            .execute(&self.db).await.unwrap();
+        token
+    }
+
     async fn id_of(&self, couple: &str, title: &str) -> i64 {
         sqlx::query_scalar("SELECT id FROM joy_activities WHERE couple_id = ? AND title = ?")
             .bind(couple)
@@ -183,6 +199,71 @@ impl T {
             .find(|i| i["id"] == hid)
             .unwrap_or_else(|| panic!("no item {hid} in {}", page.text))
     }
+}
+
+#[tokio::test]
+async fn scoped_tokens_deny_writes_reject_revoked_and_expired_and_audit_denials() {
+    let t = setup().await;
+    let (_rohit, _neha, _, slip_id, _) = t.sealed_setup().await;
+    let writer = t.api_token("neha", &["dates:write"], None, false).await;
+    let saved = t.post("/api/dates/budget", &writer, json!({"amount": "1200", "back": "/joy/kept"})).await;
+    assert_eq!(saved.status, StatusCode::OK, "{}", saved.text);
+    assert_eq!(t.scalar("SELECT COUNT(*) FROM audit_log WHERE method = 'POST' AND status = 200").await, 1);
+
+    let read_only = t.api_token("neha", &["dates:read"], None, false).await;
+    let forbidden = t.post("/api/dates/budget", &read_only, json!({})).await;
+    assert_eq!(forbidden.status, StatusCode::FORBIDDEN, "{}", forbidden.text);
+    assert_eq!(t.scalar("SELECT COUNT(*) FROM audit_log WHERE method = 'POST' AND status = 403").await, 1);
+    let route: String = sqlx::query_scalar("SELECT route FROM audit_log ORDER BY id DESC LIMIT 1").fetch_one(&t.db).await.unwrap();
+    assert!(route.contains("budget"), "audit route should be a route template: {route}");
+
+    let sealed = t.get(&format!("/api/dates/slips/{slip_id}"), &read_only).await;
+    assert_eq!(sealed.status, StatusCode::NOT_FOUND, "{}", sealed.text);
+    assert!(!sealed.text.contains("Zanzibar"));
+
+    let expired = t.api_token("neha", &["dates:read"], Some(time::OffsetDateTime::now_utc().unix_timestamp() - 1), false).await;
+    assert_eq!(t.get("/api/dates/jar", &expired).await.status, StatusCode::UNAUTHORIZED);
+    let revoked = t.api_token("neha", &["dates:read"], None, true).await;
+    assert_eq!(t.get("/api/dates/jar", &revoked).await.status, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn preview_draw_does_not_record_a_draw() {
+    let t = setup().await;
+    let (_rohit, _neha, _, _, _) = t.sealed_setup().await;
+    let read_only = t.api_token("neha", &["dates:read"], None, false).await;
+    let before = t.scalar("SELECT COUNT(*) FROM joy_draws").await;
+    let preview = t.get("/api/dates/preview-draw?when=2026-11-28&budget_paise=100000", &read_only).await;
+    assert_eq!(preview.status, StatusCode::OK, "{}", preview.text);
+    assert_eq!(t.scalar("SELECT COUNT(*) FROM joy_draws").await, before, "preview must not record a draw");
+}
+
+#[tokio::test]
+async fn scoped_tokens_keep_quiet_wants_and_middle_answers_private() {
+    let t = setup().await;
+    let (_rohit, _neha, couple) = t.couple().await;
+    let rohit_token = t.api_token("rohit", &["dates:write", "dates:read"], None, false).await;
+    let neha_token = t.api_token("neha", &["dates:read"], None, false).await;
+
+    let slip_id = t.id_of(&couple, COOK).await;
+    assert_eq!(t.post(&format!("/api/dates/slips/{slip_id}/want"), &rohit_token, json!({"level": "want"})).await.status, StatusCode::OK);
+    let slips = t.get("/api/dates/slips", &neha_token).await;
+    assert_eq!(slips.status, StatusCode::OK, "{}", slips.text);
+    let slip = slips.json["groups"].as_array().unwrap().iter()
+        .flat_map(|g| g["items"].as_array().unwrap())
+        .find(|i| i["id"] == slip_id).unwrap();
+    assert_eq!((slip["my_want"].as_str(), slip["both_want"].as_bool()), (Some(""), Some(false)));
+
+    let checkin = t.post("/api/dates/middle", &rohit_token, json!({
+        "energy": "high", "budget": 3000, "max_duration": "full_day", "reach": "far", "vibe": "adventurous"
+    })).await;
+    assert_eq!(checkin.status, StatusCode::OK, "{}", checkin.text);
+    let jar = t.get("/api/dates/jar", &neha_token).await;
+    assert_eq!(jar.status, StatusCode::OK, "{}", jar.text);
+    let middle = &jar.json["middle"];
+    assert_eq!((middle["partner_in"].as_bool(), middle["both_in"].as_bool(), middle["mine"].is_null()), (Some(true), Some(false), true));
+    assert_eq!(middle["budgets"][2]["selected"], true, "the reader sees their default, not the writer's budget");
+    assert!(!middle.to_string().contains("adventurous\",\"selected\":true"), "partner's vibe must remain private");
 }
 
 const PLAY: &str = "A play at Prithvi Theatre";
