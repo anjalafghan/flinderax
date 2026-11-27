@@ -10,6 +10,13 @@ RUN bun install --frozen-lockfile
 COPY web/ web/
 RUN bun run --cwd web build
 
+# The remote MCP server (mcp/src/http.ts): Joy runs it under Bun on loopback and forwards /mcp to it.
+FROM oven/bun:1.4.1 AS mcp
+WORKDIR /app/mcp
+COPY mcp/package.json mcp/bun.lock ./
+RUN bun install --production --frozen-lockfile
+COPY mcp/src ./src
+
 # Stage 2: build the Rust server
 # Rust matches the local toolchain; bookworm matches the runtime image below.
 FROM lukemathwalker/cargo-chef:0.1.78-rust-1.99.1-bookworm AS chef
@@ -42,6 +49,9 @@ RUN apt-get update \
     && mkdir -p /data
 COPY --from=builder /app/target/deploy/joy /usr/local/bin
 COPY --from=frontend /app/web/dist ./dist
+COPY --from=mcp /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=mcp /app/mcp ./mcp
+ENV JOY_MCP_ENTRY=/app/mcp/src/http.ts
 ENV STATIC_DIR=/app/dist
 ENV TZ=Asia/Kolkata
 EXPOSE 3000

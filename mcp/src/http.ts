@@ -5,18 +5,22 @@ import { buildServer } from "./server.ts";
 
 const port = Number(process.env.PORT ?? 3001);
 const baseUrl = (process.env.JOY_URL ?? "https://joy.fly.dev").replace(/\/+$/, "");
-const hosts = (process.env.JOY_MCP_HOSTS ?? "localhost,127.0.0.1,joy-mcp.fly.dev")
+const hosts = (process.env.JOY_MCP_HOSTS ?? "localhost,127.0.0.1")
   .split(",").map((x) => x.trim()).filter(Boolean);
 
-if (!/^https:\/\//.test(baseUrl) && process.env.NODE_ENV === "production") {
+// Joy starts this server itself (src/mcp_proxy.rs), and it calls Joy back on loopback, so plain
+// HTTP to 127.0.0.1 never leaves the machine. Anything else must be HTTPS in production.
+const loopback = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(baseUrl);
+if (!/^https:\/\//.test(baseUrl) && !loopback && process.env.NODE_ENV === "production") {
   throw new Error("JOY_URL must use HTTPS in production.");
 }
+const bind = process.env.JOY_MCP_BIND ?? "0.0.0.0";
 
 const unauthorized = () => new Response("Unauthorized", { status: 401, headers: { "www-authenticate": "Bearer" } });
 
 Bun.serve({
   port,
-  hostname: "0.0.0.0",
+  hostname: bind,
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === "/healthz") return new Response("ok");
@@ -59,4 +63,4 @@ Bun.serve({
   },
 });
 
-console.info(`Joy MCP listening on :${port}`);
+console.info(`Joy MCP listening on ${bind}:${port}`);

@@ -168,6 +168,8 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/hook", routes::ingest::hook_routes(state.clone()).layer(trace_layer()))
         // Unknown API paths must 404 instead of falling through to the SPA's index.html.
         .route("/api/{*rest}", any(api_not_found))
+        // Remote MCP for Claude connectors; the Bun side checks the scoped Bearer token itself.
+        .route("/mcp", any(crate::mcp_proxy::proxy).layer(trace_layer()))
         .route("/healthz", axum::routing::get(healthz).with_state(state.clone()))
         // Joy's envelope links were already sent on WhatsApp, so the old /e/{token} address still redirects.
         .route("/e/{token}", axum::routing::get(old_joy_envelope))

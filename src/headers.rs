@@ -50,7 +50,7 @@ fn is_immutable_asset(path: &str) -> bool {
 pub async fn security_headers(req: Request, next: Next) -> Response {
     let https = req.headers().get("x-forwarded-proto").and_then(|v| v.to_str().ok()) == Some("https");
     let path = req.uri().path();
-    let api = path.starts_with("/api/");
+    let api = path.starts_with("/api/") || path == "/mcp";
     let cache = if api {
         "no-store"
     } else if is_immutable_asset(path) {

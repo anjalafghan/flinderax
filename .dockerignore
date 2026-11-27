@@ -19,7 +19,8 @@ fly.toml
 # to a test, a doc or a script from invalidating the `COPY . .` layers and recompiling the server.
 e2e/
 tests/
-mcp/
+# mcp/ is in the image (the remote MCP server); only its installed packages stay out.
+mcp/node_modules/
 tools/
 backups/
 docs/

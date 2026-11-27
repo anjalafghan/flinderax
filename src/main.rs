@@ -128,6 +128,8 @@ async fn main() -> Result<(), sqlx::Error> {
     info!("Running Server!");
 
     let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    // Remote MCP at /mcp (Bun child process on loopback); off unless JOY_MCP_ENTRY is set.
+    joy::mcp_proxy::start(&port);
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
         .map_err(|e| sqlx::Error::Io(std::io::Error::new(e.kind(), format!("could not bind port {port}: {e}"))))?;
