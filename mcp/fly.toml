@@ -2,7 +2,7 @@ app = 'joy-mcp'
 primary_region = 'sin'
 
 [build]
-dockerfile = 'mcp/Dockerfile'
+dockerfile = 'Dockerfile'
 
 [env]
 PORT = '8080'
