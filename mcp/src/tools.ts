@@ -31,6 +31,11 @@ export const tools: ToolDef[] = [
     path: () => "/api/dates/preview-draw",
     query: (a) => ({ when: a.when, budget_paise: a.budget_paise, max_duration: a.max_duration }),
   },
+  {
+    name: "pending_did_it_happen",
+    description: "Kept dates whose day has passed and nobody has confirmed or cancelled them. Sealed titles remain hidden for the partner.",
+    path: () => "/api/dates/pending-happened",
+  },
   // Money (Flinderax). Amounts are integer paise (100 paise = 1 rupee).
   {
     name: "money_summary",

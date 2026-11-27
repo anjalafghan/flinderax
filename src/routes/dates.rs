@@ -15,6 +15,7 @@ pub fn routes(state: AppState) -> Router {
         .route("/jar", get(decide::page))
         .route("/pick", post(decide::pick))
         .route("/preview-draw", get(decide::preview_draw))
+        .route("/pending-happened", get(crate::handlers::pending_dates::pending_did_it_happen))
         .route("/match", post(decide::matching))
         .route("/accept/{id}", post(decide::accept))
         .route("/middle", post(middle::check_in))
