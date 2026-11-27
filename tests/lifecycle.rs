@@ -364,13 +364,84 @@ async fn healthz_answers_200_without_a_token_and_503_when_the_database_is_gone()
     assert_eq!(r.status, StatusCode::SERVICE_UNAVAILABLE);
 }
 
+#[tokio::test]
+async fn api_tokens_are_shown_once_listed_and_revocable() {
+    let t = setup().await;
+    let (name, _, session) = t.user("mcp").await;
+    let listed = t.get("/api/tokens", &session).await;
+    assert_eq!(listed.status, StatusCode::OK, "{}", listed.text);
+    assert_eq!(listed.json.as_array().unwrap().len(), 0);
+
+    let created = t.post("/api/tokens", &session, json!({
+        "name": "Claude daily brief",
+        "scopes": ["money:read", "dates:read"],
+        "expires_in_days": 90
+    })).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text);
+    let raw = created.json["token"].as_str().unwrap();
+    let id = created.json["id"].as_str().unwrap();
+    let hash: String = sqlx::query_scalar("SELECT token_hash FROM api_tokens WHERE id = ?").bind(id).fetch_one(&t.db).await.unwrap();
+    assert_ne!(hash, raw);
+    assert_eq!(hash, joy::handlers::api_tokens::hash_token(raw));
+
+    let again = t.get("/api/tokens", &session).await;
+    assert_eq!(again.status, StatusCode::OK);
+    assert!(!again.text.contains(raw), "the list never shows raw tokens");
+    assert_eq!(again.json[0]["name"], "Claude daily brief");
+    assert_eq!(again.json[0]["revoked_at"], Value::Null);
+
+    let denied = t.get("/api/tokens", raw).await;
+    assert_eq!(denied.status, StatusCode::FORBIDDEN, "API tokens cannot manage tokens");
+    let revoked = t.post(&format!("/api/tokens/{id}/revoke"), &session, json!({})).await;
+    assert_eq!(revoked.status, StatusCode::NO_CONTENT, "{}", revoked.text);
+    assert_eq!(t.get("/api/dashboard/summary", raw).await.status, StatusCode::UNAUTHORIZED);
+    let _ = name;
+}
+
+#[tokio::test]
+async fn brief_works_with_scoped_tokens() {
+    let t = setup().await;
+    let (_, _, session) = t.user("brief").await;
+    let created = t.post("/api/tokens", &session, json!({
+        "name": "daily brief",
+        "scopes": ["money:read", "dates:read"],
+        "expires_in_days": 90
+    })).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text);
+    let token = created.json["token"].as_str().unwrap();
+
+    let brief = t.get("/api/brief", token).await;
+    assert_eq!(brief.status, StatusCode::OK, "{}", brief.text);
+    assert!(brief.json["due_next_7_days"].is_array());
+    assert!(brief.json["safe_to_spend_this_month_paise"].is_i64());
+    assert!(brief.json["reward_fund_score_bps"].is_i64());
+    assert!(brief.json["unread_bank_text_count"].is_i64());
+
+}
+
+#[tokio::test]
+async fn pending_dates_works_with_a_dates_read_token() {
+    let t = setup().await;
+    let (_, _, session) = t.user("pending").await;
+    let created = t.post("/api/tokens", &session, json!({
+        "name": "pending dates",
+        "scopes": ["dates:read"],
+        "expires_in_days": 90
+    })).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text);
+    let token = created.json["token"].as_str().unwrap();
+    let pending = t.get("/api/dates/pending-happened", token).await;
+    assert_eq!(pending.status, StatusCode::OK, "{}", pending.text);
+    assert!(pending.json.is_array());
+}
+
 /// A table that holds a user's or couple's rows must be in the export or on this list of tables
 /// kept out on purpose. Adding a table without deciding which fails here.
 #[tokio::test]
 async fn every_user_table_is_exported_or_deliberately_left_out() {
     // Secrets, sessions and bookkeeping that must never leave in a download.
     const DENIED: &[&str] = &[
-        "users", "ingest_keys", "reminder_feeds", "signup_codes", "_sqlx_migrations",
+        "users", "ingest_keys", "reminder_feeds", "signup_codes", "_sqlx_migrations", "api_tokens",
         "joy_seed_activities", "couples", "couple_invites", "idempotency_keys", "push_subscriptions",
     ];
     let t = setup().await;

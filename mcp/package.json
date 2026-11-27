@@ -6,6 +6,7 @@
   "description": "Read-only MCP connector for the joy app (money + dates)",
   "scripts": {
     "start": "bun run src/index.ts",
+    "start:http": "bun run src/http.ts",
     "test": "bun test"
   },
   "dependencies": {
