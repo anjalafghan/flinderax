@@ -52,8 +52,9 @@ export const DRESS_PROMPT = [
   "Never touch slips that were drawn from the jar, and never reveal a sealed surprise or my partner's private answers.",
 ].join("\n");
 
-export function registerCustomDates(server: McpServer, client: JoyClient) {
-  server.registerTool(
+export function registerCustomDates(server: McpServer, client: JoyClient, allowedScopes?: string[]) {
+  const has = (scope: string) => !allowedScopes || allowedScopes.includes(scope);
+  if (has("dates:read")) server.registerTool(
     "dates_custom",
     {
       description:
@@ -72,7 +73,7 @@ export function registerCustomDates(server: McpServer, client: JoyClient) {
     },
   );
 
-  server.registerTool(
+  if (has("dates:write")) server.registerTool(
     "dates_dress_custom",
     {
       description:
@@ -104,7 +105,7 @@ export function registerCustomDates(server: McpServer, client: JoyClient) {
     },
   );
 
-  server.registerPrompt(
+  if (has("dates:write")) server.registerPrompt(
     "dress_custom_dates",
     {
       title: "Turn hand-marked days into proper slips",

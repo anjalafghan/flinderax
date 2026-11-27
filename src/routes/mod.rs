@@ -19,4 +19,5 @@ pub mod activity;
 pub mod rewards;
 pub mod work;
 pub mod analyses;
+pub mod api_tokens;
 pub mod year;

@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { cn } from "@/utils/cn";
 import { DatesSettingsCards } from "@/joy/pages/SettingsPage";
+import { ApiTokensCard } from "@/components/feature/ApiTokensCard";
 import "@/joy/styles/index.css";
 import "@/joy/styles/app.css";
 
@@ -140,6 +141,7 @@ export default function AccountPage() {
           </SectionHeading>
           <SettingsSection />
         </section>
+        <ApiTokensCard />
         <section aria-label="Partner and Dates" className="space-y-3">
           <div className="joy joy-embed">
             <DatesSettingsCards />

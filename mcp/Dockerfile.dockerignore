@@ -1,0 +1,7 @@
+**
+!mcp/
+!mcp/Dockerfile
+!mcp/package.json
+!mcp/bun.lock
+!mcp/src/
+!mcp/src/**

@@ -710,15 +710,40 @@ pub async fn pick(
     body: Option<Json<PickForm>>,
 ) -> Result<Json<PickCard>, AppError> {
     let f = body.map(|j| j.0).unwrap_or_default();
+    Ok(Json(pick_inner(s, user_id, f, true).await?))
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct PreviewQuery {
+    pub when: Option<String>,
+    pub budget_paise: Option<i64>,
+    pub max_duration: Option<String>,
+}
+
+/// A read-only preview of what the jar would draw. It does not log a draw, peek or history row.
+pub async fn preview_draw(
+    State(s): State<AppState>,
+    Extension((user_id, _)): Extension<(String, String)>,
+    Query(q): Query<PreviewQuery>,
+) -> Result<Json<PickCard>, AppError> {
+    if q.budget_paise.is_some_and(|p| p < 0) {
+        return Err(crate::handlers::common::bad_request("budget_paise cannot be negative"));
+    }
+    let budget = q.budget_paise.map(|p| format!("{}.{:02}", p / 100, p % 100)).unwrap_or_default();
+    let f = PickForm { when: q.when.unwrap_or_default(), budget, max_duration: q.max_duration.unwrap_or_default(), ..PickForm::default() };
+    Ok(Json(pick_inner(s, user_id, f, false).await?))
+}
+
+async fn pick_inner(s: AppState, user_id: String, f: PickForm, record_draw: bool) -> Result<PickCard, AppError> {
     let j = joy(&s, &user_id).await?;
     let (db, couple, ctx) = (&s.db, j.couple.as_str(), &j.ctx);
     let d = drawer(ctx, j.who);
     let middle = if f.is_middle() { middle::tonight(db, couple).await? } else { None };
     if f.is_middle() && middle.is_none() {
-        return Ok(Json(PickCard {
+        return Ok(PickCard {
             message: "Once you've both checked in for tonight, the jar draws from the middle.".into(),
             ..PickCard::blank()
-        }));
+        });
     }
     let f = match &middle {
         Some(m) => f.met(m),
@@ -735,7 +760,7 @@ pub async fn pick(
     let filters = jar.filters(&f, rain_for(ctx, jar.slot.as_ref()).await.is_some());
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map_err(internal)?.as_secs() as i64;
     let result = picker::pick(&cands, &filters, &excluded, now, &mut thread_rng());
-    if let PickResult::Pick(id) = &result {
+    if record_draw && let PickResult::Pick(id) = &result {
         let chances = picker::draw_probabilities(&cands, &filters, &excluded, now);
         if let Some((_, p)) = chances.iter().find(|(c, _)| c == id) {
             // A failed log must never fail the draw.
@@ -752,7 +777,7 @@ pub async fn pick(
         }
         PickResult::NoMatch(h) => no_match_card(ctx, &f, &filters, jar.slot, middle.is_some(), h),
     };
-    Ok(Json(card_out))
+    Ok(card_out)
 }
 
 #[allow(clippy::too_many_arguments)]
