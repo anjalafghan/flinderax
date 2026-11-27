@@ -1,0 +1,30 @@
+app = 'joy-mcp'
+primary_region = 'sin'
+
+[build]
+dockerfile = 'mcp/Dockerfile'
+
+[env]
+PORT = '8080'
+JOY_URL = 'https://joy.fly.dev'
+JOY_MCP_HOSTS = 'joy-mcp.fly.dev'
+NODE_ENV = 'production'
+
+[http_service]
+internal_port = 8080
+force_https = true
+auto_stop_machines = 'suspend'
+auto_start_machines = true
+min_machines_running = 0
+
+[[http_service.checks]]
+method = 'GET'
+path = '/healthz'
+interval = '30s'
+timeout = '5s'
+grace_period = '10s'
+
+[[vm]]
+memory = '256mb'
+cpu_kind = 'shared'
+cpus = 1

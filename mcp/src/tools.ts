@@ -15,6 +15,11 @@ const year = z.number().int().min(2000).max(2100);
 const month = z.number().int().min(1).max(12);
 
 export const tools: ToolDef[] = [
+  {
+    name: "get_brief",
+    description: "One compact daily summary: bills and commitments due in seven days, safe-to-spend this month, reward fund score, wedding and emergency fund pace, unread bank-text count, and the next kept date (sealed titles stay hidden). Money is integer paise.",
+    path: () => "/api/brief",
+  },
   // Money (Flinderax). Amounts are integer paise (100 paise = 1 rupee).
   {
     name: "money_summary",

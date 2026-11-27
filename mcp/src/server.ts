@@ -14,9 +14,21 @@ import {
   type NewTxn,
 } from "./inbox.ts";
 
-export function buildServer(client: JoyClient): McpServer {
+export function scopesForReadTool(name: string): string[] {
+  if (name === "get_brief" || name === "money_export_all" || name === "pace_status") {
+    return ["money:read", "dates:read"];
+  }
+  if (name.startsWith("dates_") || name === "preview_draw" || name === "pending_did_it_happen") {
+    return ["dates:read"];
+  }
+  return ["money:read"];
+}
+
+export function buildServer(client: JoyClient, allowedScopes?: string[]): McpServer {
   const server = new McpServer({ name: "joy", version: "0.1.0" });
   for (const t of tools) {
+    const required = scopesForReadTool(t.name);
+    if (allowedScopes && required.some((s) => !allowedScopes.includes(s))) continue;
     server.registerTool(
       t.name,
       {
@@ -43,7 +55,7 @@ export function buildServer(client: JoyClient): McpServer {
     );
   }
 
-  server.registerTool(
+  if (!allowedScopes || allowedScopes.includes("dates:read")) server.registerTool(
     "dates_near",
     {
       description:
@@ -83,7 +95,7 @@ export function buildServer(client: JoyClient): McpServer {
     },
   );
 
-  server.registerPrompt(
+  if (!allowedScopes || allowedScopes.includes("dates:read")) server.registerPrompt(
     "plan_outing",
     {
       title: "Plan a day out from the slips",
@@ -104,10 +116,10 @@ export function buildServer(client: JoyClient): McpServer {
     }),
   );
 
-  registerInbox(server, client);
-  registerCustomDates(server, client);
+  registerInbox(server, client, allowedScopes);
+  registerCustomDates(server, client, allowedScopes);
 
-  server.registerTool(
+  if (!allowedScopes || allowedScopes.includes("analysis:write")) server.registerTool(
     "save_analysis",
     {
       description:
@@ -150,7 +162,7 @@ export function buildServer(client: JoyClient): McpServer {
     },
   );
 
-  server.registerPrompt(
+  if (!allowedScopes || allowedScopes.includes("analysis:write")) server.registerPrompt(
     "analyse_money",
     {
       title: "Analyse my money and save it to the app",
@@ -186,8 +198,9 @@ const failed = (e: unknown, fallback: string) => ({
 });
 
 /** The inbox of bank texts the parser missed: read them masked, post what they say, clear them. */
-export function registerInbox(server: McpServer, client: JoyClient) {
-  server.registerTool(
+export function registerInbox(server: McpServer, client: JoyClient, allowedScopes?: string[]) {
+  const has = (scope: string) => !allowedScopes || allowedScopes.includes(scope);
+  if (has("money:read")) server.registerTool(
     "money_unrecognized",
     {
       description:
@@ -212,7 +225,7 @@ export function registerInbox(server: McpServer, client: JoyClient) {
     },
   );
 
-  server.registerTool(
+  if (has("money:write")) server.registerTool(
     "money_add_transaction",
     {
       description:
@@ -271,7 +284,7 @@ export function registerInbox(server: McpServer, client: JoyClient) {
     },
   );
 
-  server.registerTool(
+  if (has("inbox:write")) server.registerTool(
     "money_dismiss_unrecognized",
     {
       description:
@@ -298,7 +311,7 @@ export function registerInbox(server: McpServer, client: JoyClient) {
     },
   );
 
-  server.registerTool(
+  if (has("money:write")) server.registerTool(
     "money_categorize_payee",
     {
       description:
@@ -343,7 +356,7 @@ export function registerInbox(server: McpServer, client: JoyClient) {
     },
   );
 
-  server.registerTool(
+  if (has("money:write")) server.registerTool(
     "money_parse_text",
     {
       description:
@@ -370,7 +383,7 @@ export function registerInbox(server: McpServer, client: JoyClient) {
     },
   );
 
-  server.registerPrompt(
+  if (has("money:write") && has("inbox:write")) server.registerPrompt(
     "sort_inbox",
     {
       title: "Sort the bank texts joy could not read",
